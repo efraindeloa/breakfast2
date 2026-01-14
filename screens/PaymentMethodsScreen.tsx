@@ -1,0 +1,419 @@
+
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+interface Card {
+  id: number;
+  color: string;
+  textColor: string;
+  number: string;
+  exp: string;
+  name: string;
+  brand: string;
+  isMastercard?: boolean;
+  isDisabled?: boolean;
+}
+
+interface OrderItem {
+  id: number;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+const PaymentMethodsScreen: React.FC = () => {
+  const navigate = useNavigate();
+  const [includeTip, setIncludeTip] = useState(true);
+  const [tipMode, setTipMode] = useState<'percentage' | 'fixed'>('percentage');
+  const [tipPercentage, setTipPercentage] = useState(10);
+  const [tipFixedAmount, setTipFixedAmount] = useState('');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'card' | 'cash' | null>(null);
+  const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
+
+  // Datos de ejemplo de la orden
+  const orderItems: OrderItem[] = [
+    { id: 1, name: 'Bowl de Frutas Silvestres', quantity: 1, price: 12.50 },
+    { id: 2, name: 'Tostadas de Aguacate', quantity: 2, price: 30.00 },
+    { id: 3, name: 'Café Americano Lg', quantity: 1, price: 5.00 },
+  ];
+
+  // Tarjetas disponibles
+  const cards: Card[] = [
+    {
+      id: 1,
+      color: 'from-[#e0f2fe] to-[#bae6fd]',
+      textColor: 'text-[#0369a1]',
+      number: '**** **** **** 4242',
+      exp: '12/26',
+      name: 'ALEX GONZALEZ',
+      brand: 'VISA',
+      isDisabled: false,
+    },
+    {
+      id: 2,
+      color: 'from-[#ffedd5] to-[#fed7aa]',
+      textColor: 'text-[#9a3412]',
+      number: '**** **** **** 8888',
+      exp: '09/25',
+      name: 'ALEX GONZALEZ',
+      brand: 'Mastercard',
+      isMastercard: true,
+      isDisabled: false,
+    },
+  ];
+
+  const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  
+  const calculateTip = () => {
+    if (!includeTip) return 0;
+    if (tipMode === 'percentage') {
+      return subtotal * (tipPercentage / 100);
+    } else {
+      const fixed = parseFloat(tipFixedAmount) || 0;
+      return fixed;
+    }
+  };
+
+  const tip = calculateTip();
+  const total = subtotal + tip;
+
+  return (
+    <div className="pb-32 overflow-y-auto">
+      <header className="flex items-center bg-white dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-50">
+        <div className="size-12 flex items-center" onClick={() => navigate(-1)}>
+          <span className="material-symbols-outlined cursor-pointer">arrow_back_ios</span>
+        </div>
+        <h2 className="text-lg font-bold flex-1 text-center">Pagar cuenta</h2>
+        <div className="w-12 flex items-center justify-end">
+          <span className="material-symbols-outlined">notifications</span>
+        </div>
+      </header>
+
+      <div className="px-4 pt-5 pb-2">
+        <h3 className="text-xl font-bold text-primary">¡Esperamos que hayas disfrutado tus alimentos!</h3>
+        <p className="text-[#6b7280] dark:text-gray-400 mt-1">Revisa tu orden y selecciona el método de pago.</p>
+      </div>
+
+      {/* Resumen de la Orden */}
+      <div className="px-4 py-4">
+        <h4 className="text-lg font-bold mb-4">Resumen de la Orden</h4>
+        <div className="bg-white dark:bg-[#2d2516] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-[#3d3321] space-y-3">
+          {orderItems.map((item) => (
+            <div key={item.id} className="flex justify-between items-center">
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-[#181411] dark:text-white">
+                  {item.name} x{item.quantity}
+                </p>
+              </div>
+              <p className="text-sm font-semibold text-[#181411] dark:text-white">
+                ${(item.price * item.quantity).toFixed(2)}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Método de Pago */}
+      <div className="px-4 py-4">
+        <h4 className="text-lg font-bold mb-4">Método de Pago</h4>
+        
+        {/* Opción Efectivo */}
+        <div className="mb-4">
+          <label
+            onClick={() => {
+              setSelectedPaymentMethod('cash');
+              setSelectedCardId(null);
+            }}
+            className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+              selectedPaymentMethod === 'cash'
+                ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+          >
+            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+              selectedPaymentMethod === 'cash'
+                ? 'border-primary bg-primary'
+                : 'border-gray-300 dark:border-gray-600'
+            }`}>
+              {selectedPaymentMethod === 'cash' && (
+                <span className="material-symbols-outlined text-white text-sm">check</span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 flex-1">
+              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10">
+                <span className="material-symbols-outlined text-primary text-xl">payments</span>
+              </div>
+              <div>
+                <p className="font-semibold text-[#181411] dark:text-white">Pagar en Efectivo</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Paga directamente en el restaurante</p>
+              </div>
+            </div>
+          </label>
+        </div>
+
+        {/* Opción Tarjeta */}
+        <div className="mb-4">
+          <label
+            onClick={() => {
+              setSelectedPaymentMethod('card');
+              if (cards.length > 0 && !selectedCardId) {
+                setSelectedCardId(cards[0].id);
+              }
+            }}
+            className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all mb-3 ${
+              selectedPaymentMethod === 'card'
+                ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+          >
+            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+              selectedPaymentMethod === 'card'
+                ? 'border-primary bg-primary'
+                : 'border-gray-300 dark:border-gray-600'
+            }`}>
+              {selectedPaymentMethod === 'card' && (
+                <span className="material-symbols-outlined text-white text-sm">check</span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 flex-1">
+              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10">
+                <span className="material-symbols-outlined text-primary text-xl">credit_card</span>
+              </div>
+              <div>
+                <p className="font-semibold text-[#181411] dark:text-white">Pagar con Tarjeta</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Selecciona una tarjeta guardada</p>
+              </div>
+            </div>
+          </label>
+
+          {/* Selección de Tarjetas */}
+          {selectedPaymentMethod === 'card' && (
+            <div className="mt-3 space-y-2">
+              {cards.filter(card => !card.isDisabled).map((card) => (
+                <label
+                  key={card.id}
+                  onClick={() => setSelectedCardId(card.id)}
+                  className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                    selectedCardId === card.id
+                      ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    selectedCardId === card.id
+                      ? 'border-primary bg-primary'
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}>
+                    {selectedCardId === card.id && (
+                      <span className="material-symbols-outlined text-white text-xs">check</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-1">
+                    <span className="material-symbols-outlined text-primary">credit_card</span>
+                    <div>
+                      <p className="text-sm font-semibold text-[#181411] dark:text-white">{card.brand}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">{card.number}</p>
+                    </div>
+                  </div>
+                </label>
+              ))}
+              <button
+                onClick={() => navigate('/add-card')}
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/30 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all"
+              >
+                <span className="material-symbols-outlined text-primary">add</span>
+                <span className="text-sm font-semibold text-primary">Agregar nueva tarjeta</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="px-4 py-4">
+        <div className="bg-white dark:bg-[#2d2516] rounded-xl p-5 shadow-sm border border-gray-100 dark:border-[#3d3321]">
+          <div className="space-y-3">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
+              <span className="text-[#181411] dark:text-white font-semibold">${subtotal.toFixed(2)}</span>
+            </div>
+            
+            {/* Tip Section */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={includeTip} 
+                      onChange={(e) => setIncludeTip(e.target.checked)} 
+                    />
+                    <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400 text-sm font-medium">Incluir Propina</span>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs">Opcional</p>
+                  </div>
+                </div>
+                <span className={`text-sm font-semibold ${includeTip ? 'text-[#181411] dark:text-white' : 'text-gray-400'}`}>
+                  ${tip.toFixed(2)}
+                </span>
+              </div>
+
+              {includeTip && (
+                <div className="mt-4 space-y-3">
+                  {/* Mode Toggle */}
+                  <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                    <button
+                      onClick={() => setTipMode('percentage')}
+                      className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-all ${
+                        tipMode === 'percentage'
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-[#181411] dark:hover:text-white'
+                      }`}
+                    >
+                      Porcentaje
+                    </button>
+                    <button
+                      onClick={() => setTipMode('fixed')}
+                      className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-all ${
+                        tipMode === 'fixed'
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-[#181411] dark:hover:text-white'
+                      }`}
+                    >
+                      Cantidad Fija
+                    </button>
+                  </div>
+
+                  {/* Percentage Mode */}
+                  {tipMode === 'percentage' && (
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        {[10, 15, 20].map((percent) => (
+                          <button
+                            key={percent}
+                            onClick={() => setTipPercentage(percent)}
+                            className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-semibold transition-all ${
+                              tipPercentage === percent
+                                ? 'bg-primary text-white shadow-sm'
+                                : 'bg-white dark:bg-[#2d2516] border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-primary/50'
+                            }`}
+                          >
+                            {percent}%
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={tipPercentage}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 0;
+                            setTipPercentage(Math.min(100, Math.max(0, value)));
+                          }}
+                          className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] text-[#181411] dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                          placeholder="Otro %"
+                        />
+                        <span className="text-gray-500 dark:text-gray-400 text-sm">%</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Fixed Amount Mode */}
+                  {tipMode === 'fixed' && (
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-semibold">$</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={tipFixedAmount}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
+                              setTipFixedAmount(value);
+                            }
+                          }}
+                          className="w-full pl-8 pr-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] text-[#181411] dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        {[5, 10, 20, 50].map((amount) => (
+                          <button
+                            key={amount}
+                            onClick={() => setTipFixedAmount(amount.toString())}
+                            className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${
+                              tipFixedAmount === amount.toString()
+                                ? 'bg-primary text-white shadow-sm'
+                                : 'bg-white dark:bg-[#2d2516] border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-primary/50'
+                            }`}
+                          >
+                            ${amount}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
+              <div className="flex justify-between">
+                <span className="text-[#181411] dark:text-white text-lg font-bold">TOTAL:</span>
+                <span className="text-primary text-xl font-bold">${total.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Solicitar Asistencia */}
+      <div className="px-4 py-4">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-4">
+          <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed mb-4">
+            Si tienes alguna duda o detectas alguna inconsistencia en tu orden, selecciona «Solicitar asistencia» y un asistente acudirá a tu mesa.
+          </p>
+          <button
+            onClick={() => {
+              // Aquí se podría implementar la lógica para solicitar asistencia
+              alert('Asistencia solicitada. Un asistente acudirá a tu mesa pronto.');
+            }}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-95"
+          >
+            <span className="material-symbols-outlined">support_agent</span>
+            <span>Solicitar asistencia</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Botón Confirmar Pago */}
+      <div className="px-4 py-4 pb-8">
+        <button
+          disabled={!selectedPaymentMethod || (selectedPaymentMethod === 'card' && !selectedCardId)}
+          onClick={() => {
+            if (selectedPaymentMethod && (selectedPaymentMethod === 'cash' || selectedCardId)) {
+              navigate('/payment-success');
+            }
+          }}
+          className={`w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform ${
+            !selectedPaymentMethod || (selectedPaymentMethod === 'card' && !selectedCardId)
+              ? 'opacity-50 cursor-not-allowed'
+              : ''
+          }`}
+        >
+          <span>Confirmar Pago</span>
+          <span className="material-symbols-outlined">check_circle</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default PaymentMethodsScreen;

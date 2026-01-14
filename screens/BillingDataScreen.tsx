@@ -1,0 +1,75 @@
+
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+
+const BillingDataScreen: React.FC = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="flex flex-col h-screen pb-32">
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 ios-blur border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center p-4 justify-between">
+          <span className="material-symbols-outlined text-xl cursor-pointer" onClick={() => navigate(-1)}>arrow_back_ios</span>
+          <h2 className="text-lg font-bold flex-1 text-center pr-10">Datos Fiscales</h2>
+        </div>
+      </header>
+
+      <main className="flex-1 overflow-y-auto px-4 pt-6">
+        <div className="flex gap-1 w-full h-1">
+          <div className="flex-1 bg-primary rounded-full"></div>
+          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+        </div>
+        <p className="text-xs font-semibold text-primary mt-2 uppercase tracking-wider">Paso 1 de 4</p>
+
+        <section className="pt-4">
+          <h3 className="text-3xl font-extrabold leading-tight">Información de Facturación</h3>
+          <p className="text-gray-600 dark:text-gray-400 text-base mt-2">
+            Completa tus datos para generar facturas automáticas en tus consumos de desayuno de forma rápida y sencilla.
+          </p>
+        </section>
+
+        <form className="mt-6 space-y-4">
+          <div>
+            <label className="text-sm font-semibold mb-1.5 block ml-1">RFC</label>
+            <input className="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-800/50 h-14 p-4 focus:ring-primary focus:border-primary" placeholder="XAXX010101000" />
+            <p className="text-gray-500 text-xs mt-2 ml-1 flex items-center gap-1">
+              <span className="material-symbols-outlined text-sm">info</span> Introduce tu RFC a 12 o 13 caracteres.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold mb-1.5 block ml-1">Razón Social</label>
+            <input className="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-800/50 h-14 p-4" placeholder="Nombre legal completo" />
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold mb-1.5 block ml-1">Uso de CFDI</label>
+            <select className="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-800/50 h-14 px-4 appearance-none">
+              <option value="">Selecciona una opción</option>
+              <option value="G03">G03 - Gastos en general</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold mb-1.5 block ml-1">Régimen Fiscal</label>
+            <select className="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-800/50 h-14 px-4 appearance-none">
+              <option value="">Selecciona tu régimen</option>
+              <option value="601">601 - General de Ley Personas Morales</option>
+            </select>
+            <p className="text-gray-500 text-xs mt-2 ml-1">Debe coincidir con tu Constancia de Situación Fiscal.</p>
+          </div>
+        </form>
+      </main>
+
+      <div className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-background-dark/90 ios-blur border-t border-gray-100 p-4 pb-12 z-50">
+        <button onClick={() => navigate('/billing-step-2')} className="w-full bg-primary hover:bg-[#e07d1d] text-white font-bold py-4 rounded-xl text-lg shadow-lg shadow-primary/20 active:scale-95 transition-all">
+          Guardar y Continuar
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default BillingDataScreen;

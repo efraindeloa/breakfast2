@@ -1,0 +1,8 @@
+
+{
+  "name": "Desayuno Fiscal",
+  "description": "Una aplicación elegante para gestionar tus facturas y datos fiscales de tus desayunos favoritos.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

@@ -183,19 +183,37 @@ const DishDetailScreen: React.FC = () => {
   };
 
   const handleAddToOrder = () => {
-    // Agregar la cantidad seleccionada al carrito
-    for (let i = 0; i < quantity; i++) {
-      addToCart(dish.id);
+    // Calcular precio total con proteína si está seleccionada
+    const basePrice = parseFloat(dish.price.replace('$', ''));
+    const proteinPrice = selectedProtein ? proteins.find(p => p.id === selectedProtein)?.price || 0 : 0;
+    const finalPrice = basePrice + proteinPrice;
+    
+    // Construir notas con proteína e instrucciones especiales
+    let notes = '';
+    if (selectedProtein) {
+      const proteinName = proteins.find(p => p.id === selectedProtein)?.name || '';
+      notes += proteinName;
+    }
+    if (specialInstructions) {
+      if (notes) notes += '. ';
+      notes += specialInstructions;
     }
     
-    // Mostrar feedback visual
-    setShowAddedFeedback(true);
-    setTimeout(() => {
-      setShowAddedFeedback(false);
-    }, 2000);
+    // Agregar la cantidad seleccionada al carrito
+    for (let i = 0; i < quantity; i++) {
+      addToCart({
+        id: dish.id,
+        name: dish.name,
+        price: finalPrice,
+        notes: notes,
+      });
+    }
+    
+    // Regresar al menú después de agregar
+    navigate('/menu');
   };
 
-  const cartQuantity = cart[dish.id] || 0;
+  const cartQuantity = cart.filter(item => item.id === dish.id).reduce((sum, item) => sum + item.quantity, 0);
 
   // Obtener icono según el origen
   const getOriginIcon = (origin: OriginType) => {
@@ -381,30 +399,12 @@ const DishDetailScreen: React.FC = () => {
       </main>
 
       {/* Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-background-dark/95 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 p-4 pb-8 z-50">
-        <div className="max-w-md mx-auto flex items-center gap-3">
-          {/* Contador de cantidad */}
-          <div className="flex items-center border-2 border-gray-200 dark:border-gray-700 rounded-xl h-14 px-2 bg-white dark:bg-gray-900">
-            <button
-              onClick={() => handleQuantityChange(-1)}
-              className="w-10 h-10 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
-              disabled={quantity === 1}
-            >
-              <span className="material-symbols-outlined">remove</span>
-            </button>
-            <span className="w-12 text-center font-bold text-[#181611] dark:text-white">{quantity}</span>
-            <button
-              onClick={() => handleQuantityChange(1)}
-              className="w-10 h-10 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
-            >
-              <span className="material-symbols-outlined">add</span>
-            </button>
-          </div>
-
+      <div className="fixed bottom-20 left-0 right-0 max-w-[430px] mx-auto bg-white/95 dark:bg-background-dark/95 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 p-4 z-50">
+        <div className="max-w-md mx-auto">
           {/* Botón Agregar */}
           <button
             onClick={handleAddToOrder}
-            className={`relative flex-1 h-14 bg-primary text-white font-bold text-lg rounded-xl shadow-lg shadow-primary/30 flex items-center justify-center gap-2 active:scale-95 transition-all ${
+            className={`relative w-full h-14 bg-primary text-white font-bold text-lg rounded-xl shadow-lg shadow-primary/30 flex items-center justify-center gap-2 active:scale-95 transition-all ${
               showAddedFeedback ? 'bg-green-500' : ''
             }`}
           >

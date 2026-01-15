@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface Card {
@@ -47,6 +47,100 @@ const ProfileScreen: React.FC = () => {
   });
   const [editingField, setEditingField] = useState<'name' | 'email' | 'phone' | null>(null);
   const [editValue, setEditValue] = useState('');
+  const defaultImage = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCpDz7kylj-nzXQ8dgTtg0umbheeBshTyl9RxUnJSp0BUjFcWJ3sxgOubkQ8zmiPon5fihqbaOxTagMXDyKVNgvKz26RDTYgirEcCoN4D63BS70Z756QE8GvMF0f9jY4ay6NQGHThIUrY9LyBJ36TnvGVD55nEjl3MkjHlHN1Lu8GWsNcmjYRbb1fvVeEXa3U082ocTXHk5jBmvqBPt1G5iwzCVNqXclTyviqCl15lCCSj96Ih0QAmRstK-YiKSnnxj97uPAvxJUJVd';
+  const [profileImage, setProfileImage] = useState<string>(defaultImage);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string>('');
+  const [cropData, setCropData] = useState({ x: 0, y: 0, size: 200 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [showImageMenu, setShowImageMenu] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Cargar imagen desde localStorage al iniciar
+  useEffect(() => {
+    const savedImage = localStorage.getItem('profileImage');
+    if (savedImage) {
+      setProfileImage(savedImage);
+    }
+  }, []);
+
+  // Guardar imagen en localStorage cuando cambia
+  useEffect(() => {
+    if (profileImage && profileImage !== defaultImage) {
+      localStorage.setItem('profileImage', profileImage);
+    }
+  }, [profileImage]);
+
+  // Cerrar menú al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showImageMenu && menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        // Verificar si el clic fue en el botón de editar
+        const target = e.target as HTMLElement;
+        const button = target.closest('button');
+        if (button && button.querySelector('.material-symbols-outlined')) {
+          return; // No cerrar si el clic fue en el botón
+        }
+        setShowImageMenu(false);
+      }
+    };
+    if (showImageMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showImageMenu]);
+
+  // Manejar eventos globales de mouse para el arrastre del recorte
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (!containerRef.current || !imageRef.current) return;
+      const bounds = getImageBounds();
+      if (!bounds) return;
+      
+      const rect = containerRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
+      // Calcular nueva posición del recorte
+      let newCropX = mouseX - dragStart.x;
+      let newCropY = mouseY - dragStart.y;
+      const cropSize = cropData.size / bounds.scaleX;
+      
+      // Limitar dentro de los bordes de la imagen
+      newCropX = Math.max(bounds.x, Math.min(newCropX, bounds.x + bounds.width - cropSize));
+      newCropY = Math.max(bounds.y, Math.min(newCropY, bounds.y + bounds.height - cropSize));
+      
+      // Convertir de vuelta a coordenadas de imagen natural
+      const newCropXNatural = (newCropX - bounds.x) * bounds.scaleX;
+      const newCropYNatural = (newCropY - bounds.y) * bounds.scaleY;
+      
+      setCropData(prev => ({ ...prev, x: newCropXNatural, y: newCropYNatural }));
+    };
+
+    const handleGlobalMouseUp = () => {
+      setIsDragging(false);
+      document.body.style.overflow = '';
+    };
+
+    document.addEventListener('mousemove', handleGlobalMouseMove, { passive: false });
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.body.style.overflow = '';
+    };
+  }, [isDragging, dragStart, cropData.size]);
 
   const toggleCardStatus = (cardId: number) => {
     setCards(cards.map(card => 
@@ -72,10 +166,351 @@ const ProfileScreen: React.FC = () => {
     setEditValue('');
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar que sea una imagen
+      if (!file.type.startsWith('image/')) {
+        alert('Por favor selecciona un archivo de imagen válido');
+        return;
+      }
+      
+      // Validar tamaño (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('La imagen es demasiado grande. Por favor selecciona una imagen menor a 5MB');
+        return;
+      }
+
+      // Crear una URL temporal para la imagen y abrir modal de recorte
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setImageToCrop(reader.result);
+          setShowCropModal(true);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+    // Limpiar el input para permitir seleccionar el mismo archivo nuevamente
+    e.target.value = '';
+  };
+
+  const getImageBounds = () => {
+    if (!imageRef.current || !containerRef.current) return null;
+    const img = imageRef.current;
+    const container = containerRef.current;
+    const imgRect = img.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    
+    // Calcular dimensiones reales de la imagen escalada
+    const imgAspect = img.naturalWidth / img.naturalHeight;
+    const containerAspect = containerRect.width / containerRect.height;
+    
+    let imgDisplayWidth: number;
+    let imgDisplayHeight: number;
+    let imgDisplayX: number;
+    let imgDisplayY: number;
+    
+    if (imgAspect > containerAspect) {
+      // Imagen más ancha que el contenedor
+      imgDisplayWidth = containerRect.width;
+      imgDisplayHeight = containerRect.width / imgAspect;
+      imgDisplayX = 0;
+      imgDisplayY = (containerRect.height - imgDisplayHeight) / 2;
+    } else {
+      // Imagen más alta que el contenedor
+      imgDisplayHeight = containerRect.height;
+      imgDisplayWidth = containerRect.height * imgAspect;
+      imgDisplayX = (containerRect.width - imgDisplayWidth) / 2;
+      imgDisplayY = 0;
+    }
+    
+    return {
+      x: imgDisplayX,
+      y: imgDisplayY,
+      width: imgDisplayWidth,
+      height: imgDisplayHeight,
+      scaleX: img.naturalWidth / imgDisplayWidth,
+      scaleY: img.naturalHeight / imgDisplayHeight
+    };
+  };
+
+  const handleCropStart = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!containerRef.current) return;
+    const bounds = getImageBounds();
+    if (!bounds) return;
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    // Convertir cropData a coordenadas de pantalla
+    const cropX = bounds.x + (cropData.x / bounds.scaleX);
+    const cropY = bounds.y + (cropData.y / bounds.scaleY);
+    const cropSize = cropData.size / bounds.scaleX;
+    
+    // Verificar si el clic está dentro del área de recorte
+    if (mouseX >= cropX && mouseX <= cropX + cropSize && 
+        mouseY >= cropY && mouseY <= cropY + cropSize) {
+      setIsDragging(true);
+      setDragStart({
+        x: mouseX - cropX,
+        y: mouseY - cropY,
+      });
+      
+      // Prevenir scroll del body cuando se está arrastrando
+      document.body.style.overflow = 'hidden';
+    }
+  };
+
+
+  const handleZoom = (delta: number) => {
+    const bounds = getImageBounds();
+    if (!bounds) return;
+    
+    const minSize = 100;
+    const maxSize = Math.min(bounds.width * bounds.scaleX, bounds.height * bounds.scaleY);
+    
+    const newSize = Math.max(minSize, Math.min(cropData.size + delta, maxSize));
+    
+    // Mantener el centro del recorte
+    const centerX = cropData.x + cropData.size / 2;
+    const centerY = cropData.y + cropData.size / 2;
+    
+    let newX = centerX - newSize / 2;
+    let newY = centerY - newSize / 2;
+    
+    // Limitar dentro de los bordes
+    newX = Math.max(0, Math.min(newX, bounds.width * bounds.scaleX - newSize));
+    newY = Math.max(0, Math.min(newY, bounds.height * bounds.scaleY - newSize));
+    
+    setCropData({ x: newX, y: newY, size: newSize });
+  };
+
+  const handleCropConfirm = () => {
+    if (!canvasRef.current || !imageRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const image = imageRef.current;
+    const size = cropData.size;
+    
+    // Configurar canvas
+    canvas.width = 400;
+    canvas.height = 400;
+    
+    // Dibujar imagen recortada
+    ctx.drawImage(
+      image,
+      cropData.x, cropData.y, size, size,
+      0, 0, 400, 400
+    );
+    
+    // Convertir a base64 y guardar
+    const croppedImage = canvas.toDataURL('image/png');
+    setProfileImage(croppedImage);
+    setShowCropModal(false);
+    setImageToCrop('');
+  };
+
+  const handleCropCancel = () => {
+    setShowCropModal(false);
+    setImageToCrop('');
+    setCropData({ x: 0, y: 0, size: 200 });
+  };
+
+  const handleDeleteImage = () => {
+    setProfileImage(defaultImage);
+    localStorage.removeItem('profileImage');
+    setShowImageMenu(false);
+  };
+
+  const handleEditImage = () => {
+    fileInputRef.current?.click();
+    setShowImageMenu(false);
+  };
+
+  const handleEditExistingImage = () => {
+    if (profileImage && profileImage !== defaultImage) {
+      setImageToCrop(profileImage);
+      setShowCropModal(true);
+      setShowImageMenu(false);
+    }
+  };
+
+  const enhanceImage = (imageSrc: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(imageSrc);
+          return;
+        }
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        // Dibujar imagen original
+        ctx.drawImage(img, 0, 0);
+
+        // Obtener datos de píxeles
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        // Aplicar mejoras mejoradas
+        for (let i = 0; i < data.length; i += 4) {
+          // Mejorar contraste y brillo (valores más agresivos)
+          const contrast = 1.25; // Aumentar contraste más
+          const brightness = 1.08; // Aumentar brillo
+          
+          // Aplicar contraste mejorado
+          data[i] = Math.min(255, Math.max(0, ((data[i] / 255 - 0.5) * contrast + 0.5) * 255 * brightness));
+          data[i + 1] = Math.min(255, Math.max(0, ((data[i + 1] / 255 - 0.5) * contrast + 0.5) * 255 * brightness));
+          data[i + 2] = Math.min(255, Math.max(0, ((data[i + 2] / 255 - 0.5) * contrast + 0.5) * 255 * brightness));
+
+          // Mejorar saturación de colores (más vibrante)
+          const saturation = 1.3;
+          const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+          data[i] = Math.min(255, Math.max(0, gray + (data[i] - gray) * saturation));
+          data[i + 1] = Math.min(255, Math.max(0, gray + (data[i + 1] - gray) * saturation));
+          data[i + 2] = Math.min(255, Math.max(0, gray + (data[i + 2] - gray) * saturation));
+          
+          // Mejorar exposición (hacer la imagen más clara sin perder detalles)
+          const exposure = 1.05;
+          data[i] = Math.min(255, data[i] * exposure);
+          data[i + 1] = Math.min(255, data[i + 1] * exposure);
+          data[i + 2] = Math.min(255, data[i + 2] * exposure);
+        }
+
+        // Aplicar nitidez usando un filtro de convolución simple
+        const sharpened = applySharpenFilter(imageData);
+        
+        // Poner los datos mejorados de vuelta
+        ctx.putImageData(sharpened, 0, 0);
+
+        // Convertir a base64
+        const enhancedImage = canvas.toDataURL('image/png', 0.95);
+        resolve(enhancedImage);
+      };
+      img.onerror = () => resolve(imageSrc);
+      img.src = imageSrc;
+    });
+  };
+
+  const applySharpenFilter = (imageData: ImageData): ImageData => {
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+    const newData = new Uint8ClampedArray(data);
+
+    // Kernel de nitidez (sharpen)
+    const kernel = [
+      0, -1, 0,
+      -1, 5, -1,
+      0, -1, 0
+    ];
+
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        for (let c = 0; c < 3; c++) { // RGB, no alpha
+          let sum = 0;
+          for (let ky = -1; ky <= 1; ky++) {
+            for (let kx = -1; kx <= 1; kx++) {
+              const idx = ((y + ky) * width + (x + kx)) * 4 + c;
+              const kernelIdx = (ky + 1) * 3 + (kx + 1);
+              sum += data[idx] * kernel[kernelIdx];
+            }
+          }
+          const idx = (y * width + x) * 4 + c;
+          newData[idx] = Math.min(255, Math.max(0, sum));
+        }
+      }
+    }
+
+    return new ImageData(newData, width, height);
+  };
+
+  const handleEnhanceImage = async () => {
+    if (profileImage && profileImage !== defaultImage) {
+      setShowImageMenu(false);
+      
+      // Usar mejora básica mejorada (funciona sin problemas de CORS)
+      // Las APIs de IA requieren backend debido a políticas CORS
+      const enhanced = await enhanceImage(profileImage);
+      setProfileImage(enhanced);
+      
+      // Nota: Para usar IA real, necesitarías un backend que haga las llamadas
+      // ya que Hugging Face y otras APIs bloquean CORS desde el navegador
+    }
+  };
+
+  // Mejora de imagen con IA usando Hugging Face con proxy CORS
+  const enhanceImageWithAI = async (imageSrc: string): Promise<string> => {
+    // Convertir base64 a blob
+    const response = await fetch(imageSrc);
+    const blob = await response.blob();
+    
+    // Hugging Face Inference API con proxy CORS
+    const HF_API_KEY = '';
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', blob);
+      
+      // Usar proxy CORS público para evitar problemas de CORS
+      // Alternativa: usar https://cors-anywhere.herokuapp.com/ o crear tu propio proxy
+      const proxyUrl = 'https://api.allorigins.win/raw?url=';
+      const targetUrl = 'https://api-inference.huggingface.co/models/caidas/swin2SR-classical-sr-x2-64';
+      
+      // Intentar primero sin proxy (por si acaso funciona)
+      let hfResponse;
+      try {
+        hfResponse = await fetch(targetUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${HF_API_KEY}`,
+          },
+          body: formData,
+        });
+      } catch (corsError) {
+        // Si falla por CORS, usar proxy
+        console.log('CORS error, usando proxy...');
+        // Nota: Los proxies públicos pueden tener límites
+        // Para producción, se recomienda crear tu propio proxy backend
+        throw new Error('CORS blocked');
+      }
+      
+      if (hfResponse && hfResponse.ok) {
+        const enhancedBlob = await hfResponse.blob();
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(enhancedBlob);
+        });
+      } else {
+        throw new Error('Hugging Face API failed');
+      }
+    } catch (error) {
+      console.error('Error con Hugging Face:', error);
+      
+      // Fallback: Usar mejora básica mejorada (más agresiva)
+      // Esto funciona sin problemas de CORS
+      console.log('Usando mejora básica mejorada como alternativa...');
+      return await enhanceImage(imageSrc);
+    }
+  };
+
   return (
     <div className="pb-24">
       <header className="flex items-center bg-white dark:bg-[#2d2116] p-4 pb-2 justify-between sticky top-0 z-50 border-b border-gray-100 dark:border-gray-800">
-        <div className="size-12 flex items-center justify-start text-[#181411] dark:text-white">
+        <div className="size-12 flex items-center justify-start text-[#181411] dark:text-white" onClick={() => navigate(-1)}>
           <span className="material-symbols-outlined cursor-pointer">arrow_back_ios</span>
         </div>
         <h2 className="text-lg font-bold flex-1 text-center">Mi Perfil</h2>
@@ -88,11 +523,87 @@ const ProfileScreen: React.FC = () => {
         <div className="flex w-full flex-col gap-4 items-center">
           <div className="relative">
             <div className="aspect-square rounded-full min-h-32 w-32 border-4 border-primary/20 bg-center bg-cover"
-                 style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuCpDz7kylj-nzXQ8dgTtg0umbheeBshTyl9RxUnJSp0BUjFcWJ3sxgOubkQ8zmiPon5fihqbaOxTagMXDyKVNgvKz26RDTYgirEcCoN4D63BS70Z756QE8GvMF0f9jY4ay6NQGHThIUrY9LyBJ36TnvGVD55nEjl3MkjHlHN1Lu8GWsNcmjYRbb1fvVeEXa3U082ocTXHk5jBmvqBPt1G5iwzCVNqXclTyviqCl15lCCSj96Ih0QAmRstK-YiKSnnxj97uPAvxJUJVd")' }}>
+                 style={{ backgroundImage: profileImage !== defaultImage ? `url("${profileImage}")` : 'none', backgroundColor: profileImage === defaultImage ? '#f3f4f6' : 'transparent' }}>
+              {profileImage === defaultImage && (
+                <div className="w-full h-full flex items-center justify-center">
+                  <span className="material-symbols-outlined text-4xl text-gray-400">person</span>
+                </div>
+              )}
             </div>
-            <div className="absolute bottom-1 right-1 bg-primary text-white p-1 rounded-full border-2 border-white">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowImageMenu(!showImageMenu);
+              }}
+              className="absolute bottom-1 right-1 bg-primary text-white p-1 rounded-full border-2 border-white cursor-pointer hover:bg-primary/90 transition-colors active:scale-95 z-10"
+            >
               <span className="material-symbols-outlined text-sm">edit</span>
-            </div>
+            </button>
+            
+            {/* Menú desplegable */}
+            {showImageMenu && (
+              <div 
+                ref={menuRef}
+                className="absolute left-full top-1/2 -translate-y-1/2 ml-3 bg-white dark:bg-[#2d2116] rounded-md shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-[60] w-[120px]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Agregar/Cambiar foto - siempre visible */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditImage();
+                  }}
+                  className="w-full px-2.5 py-1.5 text-left text-xs font-medium text-[#181411] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5 border-b border-gray-100 dark:border-gray-700"
+                >
+                  <span className="material-symbols-outlined text-sm">photo_camera</span>
+                  <span>{profileImage === defaultImage ? 'Agregar foto' : 'Cambiar foto'}</span>
+                </button>
+                
+                {/* Editar foto y Eliminar foto - solo cuando hay imagen personalizada */}
+                {profileImage !== defaultImage && (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditExistingImage();
+                      }}
+                      className="w-full px-2.5 py-1.5 text-left text-xs font-medium text-[#181411] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5 border-b border-gray-100 dark:border-gray-700"
+                    >
+                      <span className="material-symbols-outlined text-sm">crop</span>
+                      <span>Editar foto</span>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEnhanceImage();
+                      }}
+                      className="w-full px-2.5 py-1.5 text-left text-xs font-medium text-[#181411] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5 border-b border-gray-100 dark:border-gray-700"
+                    >
+                      <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                      <span>Mejorar foto</span>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteImage();
+                      }}
+                      className="w-full px-2.5 py-1.5 text-left text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center gap-1.5"
+                    >
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                      <span>Eliminar foto</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
+            />
           </div>
           <div className="flex flex-col items-center">
             <p className="text-[24px] font-bold">¡Hola, Carlos! ☀️</p>
@@ -253,6 +764,11 @@ const ProfileScreen: React.FC = () => {
         </div>
       </section>
 
+      {/* Mis datos de facturación */}
+      <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
+        <MenuItem icon="receipt_long" title="Mis datos de facturación" subtitle="Gestiona tu información fiscal" onClick={() => navigate('/billing-step-1')} />
+      </section>
+
       {/* Tarjetas de Crédito */}
       <section className="bg-white dark:bg-[#2d2116] mb-2 px-4 py-4">
         <h3 className="text-lg font-bold mb-4">Mis Tarjetas</h3>
@@ -271,45 +787,8 @@ const ProfileScreen: React.FC = () => {
 
       <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
         <h3 className="text-lg font-bold py-4">Mi Actividad</h3>
-        <MenuItem icon="history" title="Historial de Órdenes" subtitle="Revisa tus desayunos anteriores" />
-        <MenuItem icon="receipt_long" title="Mis Facturas" subtitle="Descarga tus comprobantes fiscales" onClick={() => navigate('/billing-step-1')} />
-      </section>
-
-      {/* Historial de Pagos */}
-      <section className="bg-white dark:bg-[#2d2116] mb-2 px-4 py-4">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold">Historial de Pagos</h3>
-          <button 
-            onClick={() => navigate('/transactions')}
-            className="text-primary text-sm font-semibold hover:text-primary/80 transition-colors flex items-center gap-1"
-          >
-            Ver todo
-            <span className="material-symbols-outlined text-sm">chevron_right</span>
-          </button>
-        </div>
-        <div className="space-y-3">
-          <PaymentHistoryItem 
-            restaurantName="Café del Sol" 
-            date="Hoy, 8:45 AM" 
-            amount="$12.50" 
-            logo="https://lh3.googleusercontent.com/aida-public/AB6AXuBc2H-XYiq7VOCFCpx2cuCePgbQE7ZDrkxgLFu-itmo_MSFUGuJ4MEK9gfv4p-Lur7DUSWI21FL7WjRrLtfWx6nu7z0mjAn2bhClTodzDi-pzY6r3wzdPoDRYMS1cM7ZBlUns8GzyAI7djeA6qN2gngbm8XYIbP5M6fXO48cdOauM5hZYsfaZ6Mxl204e6c5lXbMZh9Shgmz6nScvzItmVrWwCvhFVLdRbJtmqHe_EdQndGNhwA5EeplOu2NO9sXkEhh-WocuJ1KcoU"
-            cardLast4="4242"
-          />
-          <PaymentHistoryItem 
-            restaurantName="La Panadería Artesanal" 
-            date="Ayer, 9:15 AM" 
-            amount="$8.75" 
-            logo="https://lh3.googleusercontent.com/aida-public/AB6AXuBkUTW04rD1StMdw5VuFmivxCsbvN_VFjrpbP1fqnSpdDL84rU6b3Mm6VZOi1IGaMZZSGyhRpeuhIyuBuI2qoIJnrvssVJjWywIGD53-994UzA3AXankHvqmjFerRER3Xtv8vI4AXqh2K8rN1puxxdNFmj94DJHZyLW_ViLJYZiW-DiUZ_Z8LlJVyPu-o9dZ004NABiXUsqXvcel_zsQBdyc13Vm9JsBE1FHo2kwkmYEHAejYBBBKvLwheTiiwnprPzmk1jwASDobqC"
-            cardLast4="8888"
-          />
-          <PaymentHistoryItem 
-            restaurantName="Brunch & Co." 
-            date="22 Oct, 10:02 AM" 
-            amount="$15.20" 
-            logo="https://lh3.googleusercontent.com/aida-public/AB6AXuDNanplizQsqu_AWgfvOvcfFVNxOTL41X1kCPX1xvEMEsYo9o0WTi5Zp4q-4XKvx8ixXcz9vsSZrCafyWPVQjOxr0skT0HWuaKy2QIBpPU9lHutFSJgkLDlcksL-7CNVKdtkKJaxm4-_Qf-9Zs8CHDtVEK_nLT9Lvx2F1w3rR5aJ0_sVNdNhSKOeqx2atLUGjzVCZnSpfVYviNGCLiGQ8ScYzXfPiY-fLU0OJrfN2_RXnrYGklyPMwO4hkStBj8oI_4Dc0breu5o4hK"
-            cardLast4="4242"
-          />
-        </div>
+        <MenuItem icon="history" title="Historial de Órdenes" subtitle="Revisa tus desayunos anteriores" onClick={() => navigate('/order-history')} />
+        <MenuItem icon="payments" title="Historial de Pagos" subtitle="Revisa tus transacciones anteriores" onClick={() => navigate('/transactions')} />
       </section>
 
       <div className="px-4 mt-8">
@@ -317,6 +796,180 @@ const ProfileScreen: React.FC = () => {
           Cerrar Sesión
         </button>
       </div>
+
+      {/* Modal de recorte de imagen */}
+      {showCropModal && (
+        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#2d2116] rounded-2xl p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-xl font-bold text-center text-[#181411] dark:text-white mb-4">
+              Recortar Foto de Perfil
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 text-center text-sm mb-6">
+              Ajusta la posición y el tamaño de tu foto
+            </p>
+            
+            <div 
+              ref={containerRef}
+              className="relative w-full aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden mb-4"
+            >
+              <div
+                className="relative w-full h-full"
+                style={{ userSelect: 'none', cursor: isDragging ? 'grabbing' : 'default' }}
+              >
+                <img
+                  ref={imageRef}
+                  src={imageToCrop}
+                  alt="Preview"
+                  className="absolute inset-0 w-full h-full object-contain"
+                  onLoad={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    if (!containerRef.current) return;
+                    
+                    const containerRect = containerRef.current.getBoundingClientRect();
+                    const imgAspect = img.naturalWidth / img.naturalHeight;
+                    const containerAspect = containerRect.width / containerRect.height;
+                    
+                    let imgDisplayWidth: number;
+                    let imgDisplayHeight: number;
+                    
+                    if (imgAspect > containerAspect) {
+                      imgDisplayWidth = containerRect.width;
+                      imgDisplayHeight = containerRect.width / imgAspect;
+                    } else {
+                      imgDisplayHeight = containerRect.height;
+                      imgDisplayWidth = containerRect.height * imgAspect;
+                    }
+                    
+                    const scaleX = img.naturalWidth / imgDisplayWidth;
+                    const scaleY = img.naturalHeight / imgDisplayHeight;
+                    
+                    // Tamaño inicial del recorte (80% del tamaño más pequeño)
+                    const initialSize = Math.min(img.naturalWidth, img.naturalHeight) * 0.8;
+                    
+                    setCropData({ 
+                      x: (img.naturalWidth - initialSize) / 2, 
+                      y: (img.naturalHeight - initialSize) / 2, 
+                      size: initialSize 
+                    });
+                  }}
+                />
+                
+                {/* Overlay oscuro - usando múltiples divs para mejor compatibilidad */}
+                {(() => {
+                  const bounds = getImageBounds();
+                  if (!bounds) return null;
+                  
+                  const cropX = bounds.x + (cropData.x / bounds.scaleX);
+                  const cropY = bounds.y + (cropData.y / bounds.scaleY);
+                  const cropSize = cropData.size / bounds.scaleX;
+                  
+                  return (
+                    <>
+                      {/* Top overlay */}
+                      <div 
+                        className="absolute top-0 left-0 right-0 bg-black/50 pointer-events-none"
+                        style={{ height: `${cropY}px` }}
+                      ></div>
+                      {/* Bottom overlay */}
+                      <div 
+                        className="absolute bottom-0 left-0 right-0 bg-black/50 pointer-events-none"
+                        style={{ height: `${bounds.height - cropY - cropSize}px` }}
+                      ></div>
+                      {/* Left overlay */}
+                      <div 
+                        className="absolute left-0 bg-black/50 pointer-events-none"
+                        style={{ 
+                          top: `${cropY}px`,
+                          bottom: `${bounds.height - cropY - cropSize}px`,
+                          width: `${cropX}px`
+                        }}
+                      ></div>
+                      {/* Right overlay */}
+                      <div 
+                        className="absolute right-0 bg-black/50 pointer-events-none"
+                        style={{ 
+                          top: `${cropY}px`,
+                          bottom: `${bounds.height - cropY - cropSize}px`,
+                          width: `${bounds.width - cropX - cropSize}px`
+                        }}
+                      ></div>
+                    </>
+                  );
+                })()}
+                
+                {/* Marco de recorte */}
+                {(() => {
+                  const bounds = getImageBounds();
+                  if (!bounds) return null;
+                  
+                  const cropX = bounds.x + (cropData.x / bounds.scaleX);
+                  const cropY = bounds.y + (cropData.y / bounds.scaleY);
+                  const cropSize = cropData.size / bounds.scaleX;
+                  
+                  return (
+                    <div 
+                      className="absolute border-2 border-white shadow-lg z-10"
+                      style={{
+                        left: `${cropX}px`,
+                        top: `${cropY}px`,
+                        width: `${cropSize}px`,
+                        height: `${cropSize}px`,
+                        cursor: isDragging ? 'grabbing' : 'grab',
+                        pointerEvents: 'auto'
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        handleCropStart(e as any);
+                      }}
+                    >
+                      {/* Esquinas de recorte */}
+                      <div className="absolute -top-1 -left-1 w-4 h-4 border-t-4 border-l-4 border-white pointer-events-none"></div>
+                      <div className="absolute -top-1 -right-1 w-4 h-4 border-t-4 border-r-4 border-white pointer-events-none"></div>
+                      <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-4 border-l-4 border-white pointer-events-none"></div>
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-4 border-r-4 border-white pointer-events-none"></div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+            
+            {/* Controles de zoom */}
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <button
+                onClick={() => handleZoom(-20)}
+                className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg">remove</span>
+              </button>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Zoom</span>
+              <button
+                onClick={() => handleZoom(20)}
+                className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg">add</span>
+              </button>
+            </div>
+            
+            {/* Botones de acción */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleCropCancel}
+                className="flex-1 py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCropConfirm}
+                className="flex-1 py-3 px-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 transition-colors active:scale-95"
+              >
+                Confirmar
+              </button>
+            </div>
+            
+            <canvas ref={canvasRef} className="hidden" />
+          </div>
+        </div>
+      )}
 
       {/* Modal de confirmación de eliminación */}
       {showDeleteConfirm !== null && (

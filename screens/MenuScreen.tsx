@@ -7,6 +7,10 @@ type OriginType = 'mar' | 'tierra' | 'aire' | 'vegetariano' | 'vegano' | '';
 const MenuScreen: React.FC = () => {
   const navigate = useNavigate();
   const { cart, addToCart } = useCart();
+  
+  const getCartQuantity = (dishId: number) => {
+    return cart.filter(item => item.id === dishId).reduce((sum, item) => sum + item.quantity, 0);
+  };
   const [selectedCategory, setSelectedCategory] = useState('Entradas');
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -220,7 +224,7 @@ const MenuScreen: React.FC = () => {
             <div className="text-primary flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
               <span className="material-symbols-outlined">restaurant_menu</span>
             </div>
-            <h1 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Gourmet IA</h1>
+            <h1 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Don Kamaron Restaurant</h1>
           </div>
           <div className="flex items-center gap-3">
             <button 
@@ -233,24 +237,6 @@ const MenuScreen: React.FC = () => {
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full"></span>
               )}
             </button>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar..."
-                className="w-32 h-10 pl-10 pr-4 rounded-full bg-white dark:bg-[#322a1a] border border-[#f4f3f0] dark:border-[#3d3321] text-sm text-[#181611] dark:text-stone-300 placeholder:text-[#897c61] dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-              <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[#897c61] dark:text-stone-400 text-lg">search</span>
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[#897c61] dark:text-stone-400 hover:text-[#181611] dark:hover:text-stone-300"
-                >
-                  <span className="material-symbols-outlined text-lg">close</span>
-                </button>
-              )}
-            </div>
           </div>
         </div>
         
@@ -420,15 +406,21 @@ const MenuScreen: React.FC = () => {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    addToCart(dish.id);
+                    const price = parseFloat(dish.price.replace('$', ''));
+                    addToCart({
+                      id: dish.id,
+                      name: dish.name,
+                      price: price,
+                      notes: '',
+                    });
                   }}
                   className="relative flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors active:scale-95"
                   title="Agregar a la orden"
                 >
                   <span className="material-symbols-outlined text-lg">add_shopping_cart</span>
-                  {cart[dish.id] > 0 && (
+                  {getCartQuantity(dish.id) > 0 && (
                     <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center shadow-sm">
-                      {cart[dish.id]}
+                      {getCartQuantity(dish.id)}
                     </span>
                   )}
                 </button>

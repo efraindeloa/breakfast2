@@ -17,15 +17,25 @@ import RegisterScreen from './screens/RegisterScreen';
 import AddCardScreen from './screens/AddCardScreen';
 import TransactionsScreen from './screens/TransactionsScreen';
 import PaymentSuccessScreen from './screens/PaymentSuccessScreen';
+import OrderHistoryScreen from './screens/OrderHistoryScreen';
+import TransactionDetailScreen from './screens/TransactionDetailScreen';
+import InviteUsersScreen from './screens/InviteUsersScreen';
+import GroupOrderManagementScreen from './screens/GroupOrderManagementScreen';
+import OrderConfirmedScreen from './screens/OrderConfirmedScreen';
+import OrderDetailScreen from './screens/OrderDetailScreen';
 import BottomNav from './components/BottomNav';
 import { CartProvider } from './contexts/CartContext';
+import { RestaurantProvider } from './contexts/RestaurantContext';
+import { GroupOrderProvider } from './contexts/GroupOrderContext';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   return (
-    <CartProvider>
-      <HashRouter>
+    <RestaurantProvider>
+      <CartProvider>
+        <GroupOrderProvider>
+          <HashRouter>
       <div className="max-w-[430px] mx-auto min-h-screen bg-white dark:bg-background-dark relative shadow-2xl overflow-hidden flex flex-col">
         <Routes>
           <Route path="/" element={<WelcomeScreen onLogin={() => setIsAuthenticated(true)} />} />
@@ -43,13 +53,21 @@ const App: React.FC = () => {
           <Route path="/payment-success" element={<PaymentSuccessScreen />} />
           <Route path="/add-card" element={<AddCardScreen />} />
           <Route path="/transactions" element={<TransactionsScreen />} />
+          <Route path="/transaction-detail/:id" element={<TransactionDetailScreen />} />
+          <Route path="/order-history" element={<OrderHistoryScreen />} />
+          <Route path="/invite-users" element={isAuthenticated ? <InviteUsersScreen /> : <Navigate to="/" />} />
+          <Route path="/group-order-management" element={isAuthenticated ? <GroupOrderManagementScreen /> : <Navigate to="/" />} />
+          <Route path="/order-confirmed" element={isAuthenticated ? <OrderConfirmedScreen /> : <Navigate to="/" />} />
+          <Route path="/order-detail" element={isAuthenticated ? <OrderDetailScreen /> : <Navigate to="/" />} />
           <Route path="/settings" element={<SettingsScreen />} />
         </Routes>
         
         {isAuthenticated && <BottomNav />}
       </div>
     </HashRouter>
-    </CartProvider>
+        </GroupOrderProvider>
+      </CartProvider>
+    </RestaurantProvider>
   );
 };
 

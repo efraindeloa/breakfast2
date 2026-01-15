@@ -1,56 +1,272 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-interface OrderItem {
-  id: number;
-  name: string;
-  notes: string;
-  price: number;
-  quantity: number;
-}
+import { useGroupOrder } from '../contexts/GroupOrderContext';
+import { useCart, CartItem } from '../contexts/CartContext';
 
 const OrderScreen: React.FC = () => {
   const navigate = useNavigate();
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([
-    {
-      id: 1,
-      name: 'Bowl de Frutas Silvestres',
-      notes: 'Con extra granola y miel de abeja.',
-      price: 12.50,
-      quantity: 1,
-    },
-    {
-      id: 2,
-      name: 'Tostadas de Aguacate',
-      notes: 'Huevo poché término medio.',
-      price: 30.00,
-      quantity: 2,
-    },
-    {
-      id: 3,
-      name: 'Café Americano Lg',
-      notes: 'Sin azúcar, leche de almendras aparte.',
-      price: 5.00,
-      quantity: 1,
-    },
-  ]);
+  const {
+    isGroupOrder,
+    isConfirmed,
+    participants,
+    currentUserParticipant,
+    setIsGroupOrder,
+    setCurrentUserParticipant,
+    updateParticipantOrder,
+    updateParticipantInstructions,
+    setParticipantReady,
+    confirmGroupOrder,
+    canConfirmOrder,
+  } = useGroupOrder();
+  
+  const { 
+    cart: orderItems, 
+    updateCartItemQuantity, 
+    removeFromCart, 
+    updateCartItemNotes 
+  } = useCart();
   const [editingNotesId, setEditingNotesId] = useState<number | null>(null);
   const [editingNotesText, setEditingNotesText] = useState('');
   const [orderSpecialInstructions, setOrderSpecialInstructions] = useState('');
   const [isEditingOrderInstructions, setIsEditingOrderInstructions] = useState(false);
+  const [isGroupOrderCollapsed, setIsGroupOrderCollapsed] = useState(false);
+  
+  // Estado de la orden
+  type OrderStatus = 
+    | 'orden_enviada' 
+    | 'orden_recibida' 
+    | 'en_preparacion' 
+    | 'lista_para_entregar' 
+    | 'en_entrega' 
+    | 'entregada' 
+    | 'con_incidencias' 
+    | 'orden_cerrada' 
+    | 'cancelada';
+  
+  // Estado de la orden con timestamps
+  interface OrderStatusWithTimestamp {
+    status: OrderStatus;
+    timestamp: string;
+  }
+
+  const [orderStatusData, setOrderStatusData] = useState<OrderStatusWithTimestamp | null>(() => {
+    // Si la orden está confirmada, establecer estado inicial
+    if (isConfirmed) {
+      return {
+        status: 'orden_enviada',
+        timestamp: new Date().toISOString(),
+      };
+    }
+    // Intentar cargar desde localStorage
+    const savedData = localStorage.getItem('orderStatusData');
+    if (savedData) {
+      try {
+        return JSON.parse(savedData);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
+
+  const orderStatus = orderStatusData?.status || null;
+
+  // Sincronizar con isConfirmed
+  useEffect(() => {
+    if (isConfirmed && !orderStatusData) {
+      const newStatusData: OrderStatusWithTimestamp = {
+        status: 'orden_enviada',
+        timestamp: new Date().toISOString(),
+      };
+      setOrderStatusData(newStatusData);
+      localStorage.setItem('orderStatusData', JSON.stringify(newStatusData));
+    }
+    // Si la orden no está confirmada y no hay items, limpiar estado
+    if (!isConfirmed && orderItems.length === 0 && orderStatusData) {
+      setOrderStatusData(null);
+      localStorage.removeItem('orderStatusData');
+    }
+  }, [isConfirmed, orderStatusData, orderItems.length]);
+
+  // Guardar estado en localStorage cuando cambie
+  useEffect(() => {
+    if (orderStatusData) {
+      localStorage.setItem('orderStatusData', JSON.stringify(orderStatusData));
+    } else {
+      localStorage.removeItem('orderStatusData');
+    }
+  }, [orderStatusData]);
+
+  // Sincronizar orden del usuario actual con el contexto de orden grupal
+  const prevOrderItemsRef = useRef<CartItem[]>([]);
+  const prevInstructionsRef = useRef<string>('');
+
+  useEffect(() => {
+    if (isGroupOrder && currentUserParticipant) {
+      // Solo actualizar si realmente cambió
+      const orderItemsChanged = JSON.stringify(orderItems) !== JSON.stringify(prevOrderItemsRef.current);
+      if (orderItemsChanged) {
+        updateParticipantOrder(currentUserParticipant.id, orderItems);
+        prevOrderItemsRef.current = orderItems;
+      }
+    }
+  }, [orderItems, isGroupOrder, currentUserParticipant?.id, updateParticipantOrder]);
+
+  useEffect(() => {
+    if (isGroupOrder && currentUserParticipant) {
+      // Solo actualizar si realmente cambió
+      if (orderSpecialInstructions !== prevInstructionsRef.current) {
+        updateParticipantInstructions(currentUserParticipant.id, orderSpecialInstructions);
+        prevInstructionsRef.current = orderSpecialInstructions;
+      }
+    }
+  }, [orderSpecialInstructions, isGroupOrder, currentUserParticipant?.id, updateParticipantInstructions]);
+
+  const handleConvertToGroupOrder = () => {
+    setIsGroupOrder(true);
+    // Crear participante para el usuario actual
+    const currentUser: typeof currentUserParticipant = {
+      id: 'current-user',
+      name: 'Tú',
+      email: 'usuario@email.com',
+      orderItems: orderItems,
+      specialInstructions: orderSpecialInstructions,
+      status: 'joined',
+      isReady: false,
+    };
+    setCurrentUserParticipant(currentUser);
+    navigate('/invite-users');
+  };
+
+  const handleToggleReady = () => {
+    if (currentUserParticipant) {
+      const newReadyState = !currentUserParticipant.isReady;
+      setParticipantReady(currentUserParticipant.id, newReadyState);
+    }
+  };
+
+  const handleConfirmOrder = () => {
+    if (canConfirmOrder()) {
+      confirmGroupOrder();
+      // Establecer estado inicial cuando se confirma la orden
+      const newStatusData: OrderStatusWithTimestamp = {
+        status: 'orden_enviada',
+        timestamp: new Date().toISOString(),
+      };
+      setOrderStatusData(newStatusData);
+      localStorage.setItem('orderStatusData', JSON.stringify(newStatusData));
+      // La orden se envía a la cocina, no se paga todavía
+      // El pago será después de que los comensales terminen de comer
+      navigate('/order-confirmed');
+    }
+  };
+
+  // Función para obtener la información del estatus
+  const getStatusInfo = (status: OrderStatus) => {
+    switch (status) {
+      case 'orden_enviada':
+        return {
+          label: 'Orden Enviada',
+          icon: 'send',
+          color: 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400',
+          borderColor: 'border-blue-200 dark:border-blue-800',
+          description: 'Tu orden ha sido enviada y está esperando confirmación del restaurante',
+        };
+      case 'orden_recibida':
+        return {
+          label: 'Orden Recibida',
+          icon: 'check_circle',
+          color: 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400',
+          borderColor: 'border-green-200 dark:border-green-800',
+          description: 'El restaurante ha aceptado tu orden y está validando disponibilidad',
+        };
+      case 'en_preparacion':
+        return {
+          label: 'En Preparación',
+          icon: 'restaurant',
+          color: 'bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400',
+          borderColor: 'border-orange-200 dark:border-orange-800',
+          description: 'La cocina está preparando tu orden',
+        };
+      case 'lista_para_entregar':
+        return {
+          label: 'Lista para Entregar',
+          icon: 'check',
+          color: 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400',
+          borderColor: 'border-purple-200 dark:border-purple-800',
+          description: 'Tu orden está lista y será entregada en breve',
+        };
+      case 'en_entrega':
+        return {
+          label: 'En Entrega',
+          icon: 'delivery_dining',
+          color: 'bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400',
+          borderColor: 'border-indigo-200 dark:border-indigo-800',
+          description: 'El mesero está en camino a tu mesa',
+        };
+      case 'entregada':
+        return {
+          label: 'Entregada',
+          icon: 'done_all',
+          color: 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400',
+          borderColor: 'border-green-200 dark:border-green-800',
+          description: 'Tu orden ha sido entregada. ¡Disfruta tu comida!',
+        };
+      case 'con_incidencias':
+        return {
+          label: 'Con Incidencias',
+          icon: 'warning',
+          color: 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400',
+          borderColor: 'border-red-200 dark:border-red-800',
+          description: 'Se ha reportado un problema con tu orden. Estamos resolviéndolo',
+        };
+      case 'orden_cerrada':
+        return {
+          label: 'Orden Cerrada',
+          icon: 'receipt_long',
+          color: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400',
+          borderColor: 'border-gray-200 dark:border-gray-700',
+          description: 'La orden ha sido cerrada y pagada',
+        };
+      case 'cancelada':
+        return {
+          label: 'Cancelada',
+          icon: 'cancel',
+          color: 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400',
+          borderColor: 'border-red-200 dark:border-red-800',
+          description: 'La orden ha sido cancelada',
+        };
+      default:
+        return {
+          label: 'Sin Estado',
+          icon: 'help',
+          color: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400',
+          borderColor: 'border-gray-200 dark:border-gray-700',
+          description: '',
+        };
+    }
+  };
+
+  const getPendingCount = () => {
+    if (!isGroupOrder) return 0;
+    const pendingParticipants = participants.filter(p => !p.isReady).length;
+    const pendingCurrentUser = currentUserParticipant && !currentUserParticipant.isReady ? 1 : 0;
+    return pendingParticipants + pendingCurrentUser;
+  };
+
+  // Calcular el total de la orden
+  const orderTotal = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   const handleQuantityChange = (id: number, delta: number) => {
-    setOrderItems((items) =>
-      items.map((item) =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-          : item
-      )
-    );
+    const item = orderItems.find(i => i.id === id);
+    if (item) {
+      const newQuantity = Math.max(1, item.quantity + delta);
+      updateCartItemQuantity(id, newQuantity);
+    }
   };
 
   const handleRemoveItem = (id: number) => {
-    setOrderItems((items) => items.filter((item) => item.id !== id));
+    removeFromCart(id);
   };
 
   const handleEditNotes = (id: number) => {
@@ -62,11 +278,7 @@ const OrderScreen: React.FC = () => {
   };
 
   const handleSaveNotes = (id: number) => {
-    setOrderItems((items) =>
-      items.map((item) =>
-        item.id === id ? { ...item, notes: editingNotesText } : item
-      )
-    );
+    updateCartItemNotes(id, editingNotesText);
     setEditingNotesId(null);
     setEditingNotesText('');
   };
@@ -97,10 +309,151 @@ const OrderScreen: React.FC = () => {
             <p className="text-[#181411] dark:text-white text-sm font-semibold">Mesa #04</p>
             <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">24 Oct, 2023</p>
           </div>
+          {!isGroupOrder && orderItems.length > 0 && (
+            <button
+              onClick={handleConvertToGroupOrder}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-semibold text-sm transition-colors"
+            >
+              <span className="material-symbols-outlined text-base">group_add</span>
+              Orden Grupal
+            </button>
+          )}
         </div>
 
+        {/* Group Order Participants Section */}
+        {isGroupOrder && (
+          <div className="mb-6">
+            <div className="bg-white dark:bg-[#2d2516] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-[#3d3321]">
+              {isConfirmed && (
+                <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <span className="material-symbols-outlined text-green-600 dark:text-green-400 shrink-0">check_circle</span>
+                    <div className="flex-1">
+                      <p className="text-sm text-green-700 dark:text-green-300 font-medium mb-1">
+                        Orden confirmada y enviada a la cocina
+                      </p>
+                      <p className="text-xs text-green-600 dark:text-green-400">
+                        Disfruta tu comida. El pago se realizará cuando termines.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center justify-between mb-3">
+                <button
+                  onClick={() => setIsGroupOrderCollapsed(!isGroupOrderCollapsed)}
+                  className="flex items-center gap-2 flex-1 text-left"
+                >
+                  <span className={`material-symbols-outlined text-primary transition-transform ${isGroupOrderCollapsed ? '' : 'rotate-90'}`}>
+                    chevron_right
+                  </span>
+                  <h3 className="text-[#181411] dark:text-white text-base font-bold flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">groups</span>
+                    Orden Grupal ({participants.length + 1} {participants.length === 0 ? 'persona' : 'personas'})
+                  </h3>
+                </button>
+                {!isConfirmed && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => navigate('/group-order-management')}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-sm font-semibold transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-sm">visibility</span>
+                      Ver todo
+                    </button>
+                    <button
+                      onClick={() => navigate('/invite-users')}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-sm font-semibold transition-colors hover:bg-primary/90"
+                    >
+                      <span className="material-symbols-outlined text-sm">person_add</span>
+                      Invitar
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {!isGroupOrderCollapsed && (
+                <>
+              
+              {/* Current User */}
+              {currentUserParticipant && (
+                <div className="mb-3 pb-3 border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-primary text-sm">person</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-[#181411] dark:text-white text-sm">{currentUserParticipant.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {currentUserParticipant.orderItems.length} {currentUserParticipant.orderItems.length === 1 ? 'artículo' : 'artículos'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {currentUserParticipant.isReady ? (
+                        <span className="px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">check_circle</span>
+                          Listo
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 text-xs font-medium">
+                          Seleccionando
+                        </span>
+                      )}
+                      <span className="px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium">
+                        Tú
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Other Participants */}
+              {participants.length > 0 && (
+                <div className="space-y-2">
+                  {participants.map((participant) => (
+                    <div key={participant.id} className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
+                        {participant.avatar ? (
+                          <img src={participant.avatar} alt={participant.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="material-symbols-outlined text-gray-400 text-sm">person</span>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-[#181411] dark:text-white text-sm">{participant.name}</p>
+                          {participant.isFavorite && (
+                            <span className="material-symbols-outlined text-yellow-500 text-xs">star</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {participant.orderItems.length} {participant.orderItems.length === 1 ? 'artículo' : 'artículos'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {participant.isReady ? (
+                          <span className="px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium flex items-center gap-1">
+                            <span className="material-symbols-outlined text-xs">check_circle</span>
+                            Listo
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 text-xs font-medium">
+                            Seleccionando
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Continue Exploring Section */}
-        {orderItems.length > 0 && (
+        {orderItems.length > 0 && !isConfirmed && (
           <div className="mb-6">
             <button
               onClick={() => navigate('/menu')}
@@ -182,13 +535,15 @@ const OrderScreen: React.FC = () => {
                         ) : (
                           <p className="text-gray-400 dark:text-gray-500 text-sm italic">Sin instrucciones especiales</p>
                         )}
-                        <button
-                          onClick={() => handleEditNotes(item.id)}
-                          className="mt-1 text-primary text-xs font-semibold hover:text-primary/80 transition-colors flex items-center gap-1"
-                        >
-                          <span className="material-symbols-outlined text-xs">edit</span>
-                          {item.notes ? 'Editar' : 'Agregar'} instrucciones
-                        </button>
+                        {!isConfirmed && (
+                          <button
+                            onClick={() => handleEditNotes(item.id)}
+                            className="mt-1 text-primary text-xs font-semibold hover:text-primary/80 transition-colors flex items-center gap-1"
+                          >
+                            <span className="material-symbols-outlined text-xs">edit</span>
+                            {item.notes ? 'Editar' : 'Agregar'} instrucciones
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -197,31 +552,33 @@ const OrderScreen: React.FC = () => {
                   <p className="text-[#181411] dark:text-white text-base font-bold">${item.price.toFixed(2)}</p>
                 </div>
               </div>
-              <div className="flex items-center justify-between mt-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-full px-2 py-1">
-                    <button
-                      onClick={() => handleQuantityChange(item.id, -1)}
-                      className="w-8 h-8 flex items-center justify-center text-primary hover:scale-110 transition-transform"
-                    >
-                      <span className="material-symbols-outlined text-lg">remove</span>
-                    </button>
-                    <span className="text-[#181411] dark:text-white text-base font-semibold w-8 text-center">{item.quantity}</span>
-                    <button
-                      onClick={() => handleQuantityChange(item.id, 1)}
-                      className="w-8 h-8 flex items-center justify-center text-primary hover:scale-110 transition-transform"
-                    >
-                      <span className="material-symbols-outlined text-lg">add</span>
-                    </button>
+              {!isConfirmed && (
+                <div className="flex items-center justify-between mt-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-full px-2 py-1">
+                      <button
+                        onClick={() => handleQuantityChange(item.id, -1)}
+                        className="w-8 h-8 flex items-center justify-center text-primary hover:scale-110 transition-transform"
+                      >
+                        <span className="material-symbols-outlined text-lg">remove</span>
+                      </button>
+                      <span className="text-[#181411] dark:text-white text-base font-semibold w-8 text-center">{item.quantity}</span>
+                      <button
+                        onClick={() => handleQuantityChange(item.id, 1)}
+                        className="w-8 h-8 flex items-center justify-center text-primary hover:scale-110 transition-transform"
+                      >
+                        <span className="material-symbols-outlined text-lg">add</span>
+                      </button>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => handleRemoveItem(item.id)}
+                    className="text-red-500 hover:text-red-600 p-2"
+                  >
+                    <span className="material-symbols-outlined text-xl">delete</span>
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleRemoveItem(item.id)}
-                  className="text-red-500 hover:text-red-600 p-2"
-                >
-                  <span className="material-symbols-outlined text-xl">delete</span>
-                </button>
-              </div>
+              )}
             </div>
             ))
           )}
@@ -280,13 +637,15 @@ const OrderScreen: React.FC = () => {
                           Sin instrucciones especiales para la orden
                         </p>
                       )}
-                      <button
-                        onClick={() => setIsEditingOrderInstructions(true)}
-                        className="text-primary text-sm font-semibold hover:text-primary/80 transition-colors flex items-center gap-1"
-                      >
-                        <span className="material-symbols-outlined text-sm">edit</span>
-                        {orderSpecialInstructions ? 'Editar' : 'Agregar'} instrucciones
-                      </button>
+                      {!isConfirmed && (
+                        <button
+                          onClick={() => setIsEditingOrderInstructions(true)}
+                          className="text-primary text-sm font-semibold hover:text-primary/80 transition-colors flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-sm">edit</span>
+                          {orderSpecialInstructions ? 'Editar' : 'Agregar'} instrucciones
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -296,7 +655,7 @@ const OrderScreen: React.FC = () => {
         )}
 
         {/* Suggested Products */}
-        {orderItems.length > 0 && (
+        {orderItems.length > 0 && !isConfirmed && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[#181411] dark:text-white text-lg font-bold">Sugerencias</h2>
@@ -333,13 +692,118 @@ const OrderScreen: React.FC = () => {
         )}
 
 
-        {/* Confirm Order Button */}
+        {/* Ready Button for Group Orders */}
+        {isGroupOrder && currentUserParticipant && !isConfirmed && (
+          <div className="mb-6">
+            <div className="bg-white dark:bg-[#2d2516] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-[#3d3321]">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-[#181411] dark:text-white font-semibold text-sm mb-1">
+                    ¿Terminaste de seleccionar tus alimentos?
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {currentUserParticipant.isReady 
+                      ? 'Puedes desmarcar si necesitas hacer cambios'
+                      : 'Marca cuando hayas terminado de agregar todos tus productos'}
+                  </p>
+                </div>
+                <button
+                  onClick={handleToggleReady}
+                  className={`ml-4 flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
+                    currentUserParticipant.isReady
+                      ? 'bg-green-500 hover:bg-green-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {currentUserParticipant.isReady ? (
+                    <>
+                      <span className="material-symbols-outlined text-sm">check_circle</span>
+                      <span>Listo</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-sm">radio_button_unchecked</span>
+                      <span>Marcar como listo</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Order Total */}
+        {orderItems.length > 0 && (
+          <div className="mb-6 bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border-2 border-primary/20 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">receipt_long</span>
+                <span className="text-[#181411] dark:text-white text-base font-semibold">Total de la orden</span>
+              </div>
+              <span className="text-primary text-2xl font-bold">${orderTotal.toFixed(2)}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Confirm Order Button or Pay Button */}
         {orderItems.length > 0 && (
           <div className="mb-6">
-            <button className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform">
-              <span>Confirmar Orden</span>
-              <span className="material-symbols-outlined">restaurant</span>
-            </button>
+            {isConfirmed ? (
+              <button
+                onClick={() => navigate('/payments')}
+                className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
+              >
+                <span>Pagar cuenta</span>
+                <span className="material-symbols-outlined">payment</span>
+              </button>
+            ) : isGroupOrder ? (
+              <>
+                {canConfirmOrder() ? (
+                  <button
+                    onClick={handleConfirmOrder}
+                    className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
+                  >
+                    <span>Confirmar y Enviar Orden</span>
+                    <span className="material-symbols-outlined">restaurant</span>
+                  </button>
+                ) : (
+                  <div className="w-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-bold py-4 rounded-xl text-lg flex items-center justify-center gap-3 cursor-not-allowed">
+                    <span className="material-symbols-outlined">lock</span>
+                    <span>
+                      Esperando a que todos terminen ({getPendingCount()} pendiente{getPendingCount() !== 1 ? 's' : ''})
+                    </span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {orderStatus === 'orden_enviada' ? (
+                  <button
+                    onClick={() => navigate('/menu')}
+                    className="w-full bg-primary/10 hover:bg-primary/20 text-primary font-bold py-4 rounded-xl text-lg border-2 border-primary/30 flex items-center justify-center gap-3 active:scale-95 transition-transform"
+                  >
+                    <span className="material-symbols-outlined">edit</span>
+                    <span>Cambiar mi orden</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      const newStatusData: OrderStatusWithTimestamp = {
+                        status: 'orden_enviada',
+                        timestamp: new Date().toISOString(),
+                      };
+                      setOrderStatusData(newStatusData);
+                      localStorage.setItem('orderStatusData', JSON.stringify(newStatusData));
+                      navigate('/order-confirmed');
+                    }}
+                    className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
+                  >
+                    <span>Confirmar y Enviar Orden</span>
+                    <span className="material-symbols-outlined">restaurant</span>
+                  </button>
+                )}
+              </>
+            )}
           </div>
         )}
       </main>

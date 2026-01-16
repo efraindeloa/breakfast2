@@ -294,10 +294,12 @@ const OrderScreen: React.FC = () => {
       <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
         <div className="flex items-center p-4 pb-2 justify-between">
           <div className="flex items-center gap-2">
-            <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-primary dark:text-primary">
-              <span className="material-symbols-outlined text-[28px]">chevron_left</span>
+            <button onClick={() => navigate(-1)} className="p-2 -ml-2 w-10 h-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">
+              <span className="material-symbols-outlined text-[20px] text-[#8a7560] dark:text-[#d4c4a8]">chevron_left</span>
             </button>
-            <h1 className="text-[#181411] dark:text-white text-lg font-semibold tracking-tight">Mi Orden</h1>
+            <h1 className="text-[#181411] dark:text-white text-lg font-semibold tracking-tight">
+              {isGroupOrder ? 'Orden Grupal' : 'Mi Orden'}
+            </h1>
           </div>
         </div>
       </header>
@@ -344,12 +346,11 @@ const OrderScreen: React.FC = () => {
                   onClick={() => setIsGroupOrderCollapsed(!isGroupOrderCollapsed)}
                   className="flex items-center gap-2 flex-1 text-left"
                 >
-                  <span className={`material-symbols-outlined text-primary transition-transform ${isGroupOrderCollapsed ? '' : 'rotate-90'}`}>
+                  <span className={`material-symbols-outlined text-[#8a7560] dark:text-[#d4c4a8] transition-transform ${isGroupOrderCollapsed ? '' : 'rotate-90'}`}>
                     chevron_right
                   </span>
                   <h3 className="text-[#181411] dark:text-white text-base font-bold flex items-center gap-2">
                     <span className="material-symbols-outlined text-primary">groups</span>
-                    Orden Grupal ({participants.length + 1} {participants.length === 0 ? 'persona' : 'personas'})
                   </h3>
                 </button>
                 {!isConfirmed && (

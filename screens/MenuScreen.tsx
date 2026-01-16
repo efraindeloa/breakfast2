@@ -455,13 +455,6 @@ const MenuScreen: React.FC = () => {
         </div>
       </section>
 
-      {/* AI Translation FAB */}
-      <div className="fixed bottom-24 right-6 z-[60]">
-        <button className="flex h-14 items-center gap-2 rounded-full bg-[#181611] dark:bg-primary px-6 shadow-2xl transition-all hover:scale-105 active:scale-95 border border-white/10">
-          <span className="material-symbols-outlined text-primary dark:text-white">auto_fix_high</span>
-          <span className="text-white text-sm font-bold">Traducir con IA</span>
-        </button>
-      </div>
 
       {/* Modal de Filtros */}
       {showFilters && (
@@ -495,7 +488,13 @@ const MenuScreen: React.FC = () => {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl">{filter.icon}</span>
+                        <span className={`material-symbols-outlined text-2xl ${
+                          selectedOrigin === filter.value
+                            ? 'text-primary'
+                            : 'text-[#181611] dark:text-white'
+                        }`}>
+                          {filter.icon}
+                        </span>
                         <span className={`font-bold text-sm ${
                           selectedOrigin === filter.value
                             ? 'text-primary'

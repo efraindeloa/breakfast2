@@ -1,28 +1,263 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface RegisterScreenProps {
   onLogin: () => void;
 }
 
+interface CountryCode {
+  code: string;
+  dialCode: string;
+  name: string;
+}
+
+const countryCodes: CountryCode[] = [
+  { code: 'MX', dialCode: '+52', name: 'México' },
+  { code: 'US', dialCode: '+1', name: 'Estados Unidos' },
+  { code: 'CA', dialCode: '+1', name: 'Canadá' },
+  { code: 'ES', dialCode: '+34', name: 'España' },
+  { code: 'AR', dialCode: '+54', name: 'Argentina' },
+  { code: 'CO', dialCode: '+57', name: 'Colombia' },
+  { code: 'CL', dialCode: '+56', name: 'Chile' },
+  { code: 'PE', dialCode: '+51', name: 'Perú' },
+  { code: 'VE', dialCode: '+58', name: 'Venezuela' },
+  { code: 'EC', dialCode: '+593', name: 'Ecuador' },
+  { code: 'GT', dialCode: '+502', name: 'Guatemala' },
+  { code: 'CU', dialCode: '+53', name: 'Cuba' },
+  { code: 'BO', dialCode: '+591', name: 'Bolivia' },
+  { code: 'DO', dialCode: '+1', name: 'República Dominicana' },
+  { code: 'HN', dialCode: '+504', name: 'Honduras' },
+  { code: 'PY', dialCode: '+595', name: 'Paraguay' },
+  { code: 'SV', dialCode: '+503', name: 'El Salvador' },
+  { code: 'NI', dialCode: '+505', name: 'Nicaragua' },
+  { code: 'CR', dialCode: '+506', name: 'Costa Rica' },
+  { code: 'PA', dialCode: '+507', name: 'Panamá' },
+  { code: 'UY', dialCode: '+598', name: 'Uruguay' },
+  { code: 'BR', dialCode: '+55', name: 'Brasil' },
+];
+
 const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [emailOrPhone, setEmailOrPhone] = useState('');
+  const [selectedCountryCode, setSelectedCountryCode] = useState<CountryCode>(countryCodes[0]);
+  const [showCountrySelector, setShowCountrySelector] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [emailOrPhoneError, setEmailOrPhoneError] = useState<string>('');
+  const [passwordError, setPasswordError] = useState<string>('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string>('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleContinue = () => {
-    // Aquí se podría agregar validación y lógica de registro
-    onLogin();
-    navigate('/home');
+  // Función para hacer scroll al campo que tiene el focus
+  const scrollToFocusedField = (element: HTMLInputElement | null) => {
+    if (element && containerRef.current) {
+      setTimeout(() => {
+        const container = containerRef.current;
+        if (container) {
+          const elementRect = element.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          const scrollTop = container.scrollTop;
+          const elementTop = elementRect.top - containerRect.top + scrollTop;
+          
+          // Calcular la posición para centrar el campo en la vista
+          const scrollPosition = elementTop - (containerRect.height / 2) + (elementRect.height / 2);
+          
+          container.scrollTo({
+            top: Math.max(0, scrollPosition),
+            behavior: 'smooth'
+          });
+        }
+      }, 100);
+    }
   };
 
-  const handleSocialAuth = () => {
-    onLogin();
-    navigate('/home');
+  // Detectar si el input es un teléfono o email
+  const inputType = useMemo(() => {
+    const trimmed = emailOrPhone.trim();
+    if (!trimmed) return null;
+    
+    // Si contiene @, es definitivamente email
+    if (trimmed.includes('@')) {
+      return 'email';
+    }
+    
+    // Si solo tiene números, espacios, + y guiones, es teléfono
+    if (/^[\d\s+\-()]+$/.test(trimmed)) {
+      // Si tiene letras, no es teléfono
+      if (/[a-zA-Z]/.test(trimmed)) {
+        return 'email';
+      }
+      return 'phone';
+    }
+    
+    // Si tiene letras y no tiene @, podría ser email incompleto
+    if (/[a-zA-Z]/.test(trimmed)) {
+      return 'email';
+    }
+    
+    // Por defecto, si solo tiene números, es teléfono
+    return 'phone';
+  }, [emailOrPhone]);
+
+
+  // Validar formato de email
+  const isValidEmail = useMemo(() => {
+    if (inputType !== 'email' || !emailOrPhone.trim()) return true;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(emailOrPhone.trim());
+  }, [emailOrPhone, inputType]);
+
+  // Validar formato de teléfono
+  const isValidPhone = useMemo(() => {
+    if (inputType !== 'phone' || !emailOrPhone.trim()) return true;
+    const phoneNumber = emailOrPhone.replace(/[\s\-()]/g, '');
+    // Remover el código de país si ya está incluido
+    const dialCodeRegex = new RegExp(`^\\+?${selectedCountryCode.dialCode.replace('+', '')}`);
+    const numberWithoutCode = phoneNumber.replace(dialCodeRegex, '');
+    // Mínimo 7 dígitos, máximo 15 dígitos (sin contar código de país)
+    const digitsOnly = numberWithoutCode.replace(/\D/g, '');
+    return digitsOnly.length >= 7 && digitsOnly.length <= 15;
+  }, [emailOrPhone, inputType, selectedCountryCode]);
+
+  // Validaciones de contraseña
+  const passwordValidations = useMemo(() => {
+    return {
+      minLength: password.length >= 8,
+      hasNumber: /\d/.test(password),
+      hasLowercase: /[a-z]/.test(password),
+      hasUppercase: /[A-Z]/.test(password),
+      hasSymbol: /[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\\/]/.test(password),
+      passwordsMatch: password === confirmPassword && password.length > 0,
+    };
+  }, [password, confirmPassword]);
+
+  // Validar que todos los campos estén completos y válidos
+  const isFormValid = useMemo(() => {
+    // Validar que el campo de email/teléfono esté lleno y sea válido
+    const isEmailOrPhoneValid = emailOrPhone.trim() !== '' && 
+      (inputType === 'email' ? isValidEmail : inputType === 'phone' ? isValidPhone : false);
+    
+    // Validar que todas las reglas de contraseña se cumplan
+    const isPasswordValid = Object.values(passwordValidations).every(valid => valid);
+    
+    return isEmailOrPhoneValid && isPasswordValid;
+  }, [emailOrPhone, inputType, isValidEmail, isValidPhone, passwordValidations]);
+
+  // Limpiar mensajes de error cuando el usuario corrige los campos
+  useEffect(() => {
+    if (emailOrPhoneError && (emailOrPhone.trim() && (inputType === 'email' ? isValidEmail : inputType === 'phone' ? isValidPhone : false))) {
+      setEmailOrPhoneError('');
+    }
+    if (passwordError && password.trim() && Object.values(passwordValidations).slice(0, 5).every(valid => valid)) {
+      setPasswordError('');
+    }
+    if (confirmPasswordError && confirmPassword.trim() && passwordValidations.passwordsMatch) {
+      setConfirmPasswordError('');
+    }
+  }, [emailOrPhone, password, confirmPassword, emailOrPhoneError, passwordError, confirmPasswordError, inputType, isValidEmail, isValidPhone, passwordValidations]);
+
+  const handleContinue = () => {
+    // Limpiar mensajes de error anteriores
+    setEmailOrPhoneError('');
+    setPasswordError('');
+    setConfirmPasswordError('');
+    
+    // Validar campo de correo/teléfono
+    if (!emailOrPhone.trim()) {
+      setEmailOrPhoneError('Por favor introduce un correo electrónico o un número de teléfono');
+      setTimeout(() => {
+        inputRef.current?.focus();
+        scrollToFocusedField(inputRef.current);
+      }, 0);
+      return;
+    }
+    
+    // Validar formato de correo/teléfono
+    if (inputType === 'email' && !isValidEmail) {
+      setEmailOrPhoneError('Por favor ingresa un correo electrónico válido');
+      setTimeout(() => {
+        inputRef.current?.focus();
+        scrollToFocusedField(inputRef.current);
+      }, 0);
+      return;
+    }
+    
+    if (inputType === 'phone' && !isValidPhone) {
+      setEmailOrPhoneError('Por favor ingresa un número de teléfono válido');
+      setTimeout(() => {
+        inputRef.current?.focus();
+        scrollToFocusedField(inputRef.current);
+      }, 0);
+      return;
+    }
+    
+    // Validar contraseña
+    if (!password.trim()) {
+      setPasswordError('Por favor introduce una contraseña');
+      setTimeout(() => {
+        passwordRef.current?.focus();
+        scrollToFocusedField(passwordRef.current);
+      }, 0);
+      return;
+    }
+    
+    // Validar reglas de contraseña
+    const missingRules: string[] = [];
+    if (!passwordValidations.minLength) missingRules.push('8 caracteres');
+    if (!passwordValidations.hasNumber) missingRules.push('1 número');
+    if (!passwordValidations.hasLowercase) missingRules.push('1 minúscula');
+    if (!passwordValidations.hasUppercase) missingRules.push('1 mayúscula');
+    if (!passwordValidations.hasSymbol) missingRules.push('1 símbolo');
+    
+    if (missingRules.length > 0) {
+      setPasswordError(`La contraseña no cumple con las siguientes reglas: ${missingRules.join(', ')}`);
+      setTimeout(() => {
+        passwordRef.current?.focus();
+        scrollToFocusedField(passwordRef.current);
+      }, 0);
+      return;
+    }
+    
+    // Validar confirmación de contraseña
+    if (!confirmPassword.trim()) {
+      setConfirmPasswordError('Por favor confirma tu contraseña');
+      setTimeout(() => {
+        confirmPasswordRef.current?.focus();
+        scrollToFocusedField(confirmPasswordRef.current);
+      }, 0);
+      return;
+    }
+    
+    if (!passwordValidations.passwordsMatch) {
+      setConfirmPasswordError('Las contraseñas no coinciden. Por favor verifica que ambas contraseñas sean iguales');
+      setTimeout(() => {
+        confirmPasswordRef.current?.focus();
+        scrollToFocusedField(confirmPasswordRef.current);
+      }, 0);
+      return;
+    }
+    
+    // Si todas las validaciones pasan
+    if (isFormValid) {
+      // Aquí se podría agregar validación y lógica de registro
+      onLogin();
+      navigate('/home');
+    }
   };
 
   return (
     <div className="relative flex h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-background-dark">
+      <header className="sticky top-0 z-50 bg-background-light dark:bg-background-dark p-4 pb-2 border-b border-gray-100 dark:border-gray-800">
+        <button onClick={() => navigate(-1)} className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">
+          <span className="material-symbols-outlined cursor-pointer text-[#8a7560] dark:text-[#d4c4a8]">chevron_left</span>
+        </button>
+      </header>
+
       <div className="@container w-full">
         <div className="@[480px]:px-4 @[480px]:py-3">
           <div
@@ -43,89 +278,267 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
         </p>
       </div>
 
-      <div className="flex flex-col flex-1 px-6">
+      <div ref={containerRef} className="flex flex-col flex-1 px-6 overflow-y-auto pb-24">
         <div className="max-w-[480px] mx-auto w-full space-y-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
-              Correo electrónico
+              Correo electrónico o número de teléfono
             </label>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">
-                mail
-              </span>
-              <input
-                className="w-full h-14 pl-12 pr-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="ejemplo@correo.com"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+            <div className="relative flex items-center">
+              {inputType === 'phone' && (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowCountrySelector(!showCountrySelector)}
+                    className="flex items-center gap-2 h-14 pl-4 pr-3 rounded-l-xl bg-white dark:bg-white/5 border-r border-gray-200 dark:border-gray-700 text-[#181411] dark:text-white text-sm font-medium hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
+                  >
+                    <span>{selectedCountryCode.dialCode}</span>
+                    <span className="material-symbols-outlined text-lg">
+                      {showCountrySelector ? 'expand_less' : 'expand_more'}
+                    </span>
+                  </button>
+                  
+                  {showCountrySelector && (
+                    <>
+                      <div 
+                        className="fixed inset-0 z-40" 
+                        onClick={() => setShowCountrySelector(false)}
+                      />
+                      <div className="absolute top-full left-0 mt-2 w-64 max-h-60 overflow-y-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+                        {countryCodes.map((country) => (
+                          <button
+                            key={country.code}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCountryCode(country);
+                              setShowCountrySelector(false);
+                            }}
+                            className={`w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between ${
+                              selectedCountryCode.code === country.code ? 'bg-primary/10' : ''
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-medium text-[#181411] dark:text-white">
+                                {country.dialCode}
+                              </span>
+                              <span className="text-sm text-gray-600 dark:text-gray-300">
+                                {country.name}
+                              </span>
+                            </div>
+                            {selectedCountryCode.code === country.code && (
+                              <span className="material-symbols-outlined text-primary text-lg">
+                                check
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              
+              <div className="relative flex-1">
+                <span className={`material-symbols-outlined absolute ${inputType === 'phone' ? 'left-4' : 'left-4'} top-1/2 -translate-y-1/2 text-primary`}>
+                  {inputType === 'phone' ? 'phone_iphone' : 'mail'}
+                </span>
+                <input
+                  ref={inputRef}
+                  className={`w-full h-14 ${inputType === 'phone' ? 'pl-12 pr-4 rounded-r-xl' : 'pl-12 pr-4 rounded-xl'} border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary ${
+                    (inputType === 'email' && !isValidEmail) || (inputType === 'phone' && !isValidPhone)
+                      ? 'ring-2 ring-red-500'
+                      : ''
+                  }`}
+                  placeholder={inputType === 'phone' ? `${selectedCountryCode.dialCode} 000 000 0000` : 'ejemplo@correo.com'}
+                  type="text"
+                  inputMode={inputType === 'phone' ? 'tel' : 'email'}
+                  value={emailOrPhone}
+                  onFocus={(e) => {
+                    scrollToFocusedField(e.target);
+                  }}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const input = e.target;
+                    const cursorPosition = input.selectionStart || 0;
+                    
+                    setEmailOrPhone(value);
+                    // Limpiar mensaje de error cuando el usuario empieza a escribir
+                    if (emailOrPhoneError) {
+                      setEmailOrPhoneError('');
+                    }
+                    
+                    // Preservar la posición del cursor después del re-render
+                    requestAnimationFrame(() => {
+                      if (inputRef.current) {
+                        try {
+                          const newPosition = Math.min(cursorPosition, value.length);
+                          inputRef.current.setSelectionRange(newPosition, newPosition);
+                        } catch (e) {
+                          // Ignorar errores
+                        }
+                      }
+                    });
+                  }}
+                />
+              </div>
             </div>
+            
+            {/* Mensajes de validación */}
+            {emailOrPhoneError && (
+              <p className="text-xs text-red-500 px-1 mt-1">
+                {emailOrPhoneError}
+              </p>
+            )}
+            {!emailOrPhoneError && inputType === 'email' && emailOrPhone.trim() && !isValidEmail && (
+              <p className="text-xs text-red-500 px-1 mt-1">
+                Por favor ingresa un número de teléfono o correo electrónico válido
+              </p>
+            )}
+            {!emailOrPhoneError && inputType === 'phone' && emailOrPhone.trim() && !isValidPhone && (
+              <p className="text-xs text-red-500 px-1 mt-1">
+                Por favor ingresa un número de teléfono válido
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
-              Número de teléfono
+              Contraseña
             </label>
             <div className="relative">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">
-                phone_iphone
+                lock
               </span>
               <input
-                className="w-full h-14 pl-12 pr-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="+52 000 000 0000"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                ref={passwordRef}
+                className="w-full h-14 pl-12 pr-12 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Ingresa tu contraseña"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onFocus={(e) => {
+                  scrollToFocusedField(e.target);
+                }}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  // Limpiar mensaje de error cuando el usuario empieza a escribir
+                  if (passwordError) {
+                    setPasswordError('');
+                  }
+                }}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-primary transition-colors"
+              >
+                <span className="material-symbols-outlined text-xl">
+                  {showPassword ? 'visibility_off' : 'visibility'}
+                </span>
+              </button>
             </div>
+            {/* Mensaje de error de contraseña */}
+            {passwordError && (
+              <p className="text-xs text-red-500 px-1 mt-1">
+                {passwordError}
+              </p>
+            )}
           </div>
 
-          <div className="pt-4">
-            <button
-              onClick={handleContinue}
-              className="flex items-center justify-center rounded-xl h-14 bg-primary text-white text-base font-bold w-full shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform"
-            >
-              Continuar
-            </button>
-          </div>
+          {/* Validaciones de contraseña */}
+          {password.length > 0 && (
+            <div className="flex flex-wrap gap-x-4 gap-y-3 justify-center w-full">
+              <div className="flex gap-3 items-center w-[148px]">
+                <div className={`flex justify-center items-center w-8 h-8 rounded-full ${passwordValidations.minLength ? 'text-green-500' : 'text-red-500'}`}>
+                  <span className="material-symbols-outlined text-2xl">
+                    {passwordValidations.minLength ? 'check_circle' : 'cancel'}
+                  </span>
+                </div>
+                <p className={passwordValidations.minLength ? 'text-green-500' : 'text-red-500'}>8 caracteres</p>
+              </div>
+              <div className="flex gap-3 items-center w-[148px]">
+                <div className={`flex justify-center items-center w-8 h-8 rounded-full ${passwordValidations.hasNumber ? 'text-green-500' : 'text-red-500'}`}>
+                  <span className="material-symbols-outlined text-2xl">
+                    {passwordValidations.hasNumber ? 'check_circle' : 'cancel'}
+                  </span>
+                </div>
+                <p className={passwordValidations.hasNumber ? 'text-green-500' : 'text-red-500'}>1 número</p>
+              </div>
+              <div className="flex gap-3 items-center w-[148px]">
+                <div className={`flex justify-center items-center w-8 h-8 rounded-full ${passwordValidations.hasLowercase ? 'text-green-500' : 'text-red-500'}`}>
+                  <span className="material-symbols-outlined text-2xl">
+                    {passwordValidations.hasLowercase ? 'check_circle' : 'cancel'}
+                  </span>
+                </div>
+                <p className={passwordValidations.hasLowercase ? 'text-green-500' : 'text-red-500'}>1 minúscula</p>
+              </div>
+              <div className="flex gap-3 items-center w-[148px]">
+                <div className={`flex justify-center items-center w-8 h-8 rounded-full ${passwordValidations.hasUppercase ? 'text-green-500' : 'text-red-500'}`}>
+                  <span className="material-symbols-outlined text-2xl">
+                    {passwordValidations.hasUppercase ? 'check_circle' : 'cancel'}
+                  </span>
+                </div>
+                <p className={passwordValidations.hasUppercase ? 'text-green-500' : 'text-red-500'}>1 mayúscula</p>
+              </div>
+              <div className="flex gap-3 items-center w-[148px]">
+                <div className={`flex justify-center items-center w-8 h-8 rounded-full ${passwordValidations.hasSymbol ? 'text-green-500' : 'text-red-500'}`}>
+                  <span className="material-symbols-outlined text-2xl">
+                    {passwordValidations.hasSymbol ? 'check_circle' : 'cancel'}
+                  </span>
+                </div>
+                <p className={passwordValidations.hasSymbol ? 'text-green-500' : 'text-red-500'}>1 símbolo</p>
+              </div>
+              <div className="flex gap-3 items-center w-[148px]">
+                <div className={`flex justify-center items-center w-8 h-8 rounded-full ${passwordValidations.passwordsMatch ? 'text-green-500' : 'text-red-500'}`}>
+                  <span className="material-symbols-outlined text-2xl">
+                    {passwordValidations.passwordsMatch ? 'check_circle' : 'cancel'}
+                  </span>
+                </div>
+                <p className={passwordValidations.passwordsMatch ? 'text-green-500' : 'text-red-500'}>Confirmación</p>
+              </div>
+            </div>
+          )}
 
-          <div className="relative flex items-center py-4">
-            <div className="flex-grow border-t border-[#e5e7eb] dark:border-white/10"></div>
-            <span className="flex-shrink mx-4 text-xs font-medium text-[#181411]/40 dark:text-white/30 uppercase tracking-widest">
-              O continúa con
-            </span>
-            <div className="flex-grow border-t border-[#e5e7eb] dark:border-white/10"></div>
-          </div>
-
-          <div className="flex gap-4 justify-center">
-            <button
-              onClick={handleSocialAuth}
-              className="flex flex-1 items-center justify-center rounded-xl h-12 bg-white dark:bg-white/5 border border-[#e5e7eb] dark:border-white/10 shadow-sm active:bg-gray-50 dark:active:bg-white/10 transition-colors"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-              </svg>
-            </button>
-            <button
-              onClick={handleSocialAuth}
-              className="flex flex-1 items-center justify-center rounded-xl h-12 bg-white dark:bg-white/5 border border-[#e5e7eb] dark:border-white/10 shadow-sm active:bg-gray-50 dark:active:bg-white/10 transition-colors"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-              </svg>
-            </button>
-            <button
-              onClick={handleSocialAuth}
-              className="flex flex-1 items-center justify-center rounded-xl h-12 bg-white dark:bg-white/5 border border-[#e5e7eb] dark:border-white/10 shadow-sm active:bg-gray-50 dark:active:bg-white/10 transition-colors"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#1877F2">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-              </svg>
-            </button>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
+              Repetir contraseña
+            </label>
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">
+                lock
+              </span>
+              <input
+                ref={confirmPasswordRef}
+                className="w-full h-14 pl-12 pr-12 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Repite tu contraseña"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onFocus={(e) => {
+                  scrollToFocusedField(e.target);
+                }}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  // Limpiar mensaje de error cuando el usuario empieza a escribir
+                  if (confirmPasswordError) {
+                    setConfirmPasswordError('');
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-primary transition-colors"
+              >
+                <span className="material-symbols-outlined text-xl">
+                  {showConfirmPassword ? 'visibility_off' : 'visibility'}
+                </span>
+              </button>
+            </div>
+            {/* Mensaje de error de confirmación de contraseña */}
+            {confirmPasswordError && (
+              <p className="text-xs text-red-500 px-1 mt-1">
+                {confirmPasswordError}
+              </p>
+            )}
           </div>
         </div>
 
@@ -140,6 +553,20 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
             </span>
           </p>
         </div>
+      </div>
+
+      {/* Botón Registrarse sticky en la parte inferior */}
+      <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto px-6 pb-6 pt-4 bg-background-light dark:bg-background-dark border-t border-gray-100 dark:border-gray-800 z-50">
+        <button
+          onClick={handleContinue}
+          className={`flex items-center justify-center rounded-xl h-14 text-white text-base font-bold w-full shadow-lg active:scale-[0.98] transition-transform ${
+            isFormValid 
+              ? 'bg-primary shadow-primary/30 cursor-pointer' 
+              : 'bg-gray-400 dark:bg-gray-600 cursor-pointer opacity-60'
+          }`}
+        >
+          Registrarse
+        </button>
       </div>
 
       <div className="h-6 bg-background-light dark:bg-background-dark"></div>

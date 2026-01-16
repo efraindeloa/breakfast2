@@ -23,7 +23,9 @@ import InviteUsersScreen from './screens/InviteUsersScreen';
 import GroupOrderManagementScreen from './screens/GroupOrderManagementScreen';
 import OrderConfirmedScreen from './screens/OrderConfirmedScreen';
 import OrderDetailScreen from './screens/OrderDetailScreen';
+import JoinTableScreen from './screens/JoinTableScreen';
 import BottomNav from './components/BottomNav';
+import AssistantButton from './components/AssistantButton';
 import { CartProvider } from './contexts/CartContext';
 import { RestaurantProvider } from './contexts/RestaurantContext';
 import { GroupOrderProvider } from './contexts/GroupOrderContext';
@@ -59,10 +61,12 @@ const App: React.FC = () => {
           <Route path="/group-order-management" element={isAuthenticated ? <GroupOrderManagementScreen /> : <Navigate to="/" />} />
           <Route path="/order-confirmed" element={isAuthenticated ? <OrderConfirmedScreen /> : <Navigate to="/" />} />
           <Route path="/order-detail" element={isAuthenticated ? <OrderDetailScreen /> : <Navigate to="/" />} />
+          <Route path="/join-table" element={isAuthenticated ? <JoinTableScreen /> : <Navigate to="/" />} />
           <Route path="/settings" element={<SettingsScreen />} />
         </Routes>
         
         {isAuthenticated && <BottomNav />}
+        {isAuthenticated && <AssistantButton />}
       </div>
     </HashRouter>
         </GroupOrderProvider>

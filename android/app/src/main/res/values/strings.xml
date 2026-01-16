@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">appsistente</string>
+    <string name="title_activity_main">appsistente</string>
+    <string name="package_name">com.appsistente.app</string>
+    <string name="custom_url_scheme">com.appsistente.app</string>
+</resources>

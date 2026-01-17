@@ -3,7 +3,7 @@
 <html lang="es" class="light">
 <head>
     <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" name="viewport"/>
     <title>Desayuno Fiscal</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
@@ -85,6 +85,65 @@
         }
         .toggle-checkbox:checked + .toggle-label .toggle-dot {
             transform: translateX(100%);
+        }
+        /* Safe area para evitar que el contenido se superponga con la barra de estado */
+        .safe-top {
+            padding-top: env(safe-area-inset-top, 24px);
+        }
+        /* Aplicar padding-top a todos los elementos sticky que están en top-0 */
+        [class*="sticky"][class*="top-0"] {
+            padding-top: env(safe-area-inset-top, 24px) !important;
+        }
+        header[class*="sticky"] {
+            padding-top: env(safe-area-inset-top, 24px) !important;
+        }
+        div[class*="sticky"][class*="top-0"] {
+            padding-top: env(safe-area-inset-top, 24px) !important;
+        }
+        /* Responsividad mejorada */
+        @media (min-width: 768px) {
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: flex-start;
+                min-height: 100vh;
+            }
+            #root {
+                width: 100%;
+                max-width: 768px;
+            }
+        }
+        /* Asegurar que los elementos se adapten a diferentes tamaños */
+        * {
+            box-sizing: border-box;
+        }
+        img, video {
+            max-width: 100%;
+            height: auto;
+        }
+        /* Mejorar la responsividad de textos y elementos */
+        @media (max-width: 640px) {
+            .text-responsive {
+                font-size: clamp(0.875rem, 2.5vw, 1rem);
+            }
+        }
+        /* Asegurar que los contenedores se adapten */
+        .container-responsive {
+            width: 100%;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        @media (min-width: 640px) {
+            .container-responsive {
+                padding-left: 1.5rem;
+                padding-right: 1.5rem;
+            }
+        }
+        @media (min-width: 1024px) {
+            .container-responsive {
+                padding-left: 2rem;
+                padding-right: 2rem;
+            }
         }
     </style>
 <script type="importmap">

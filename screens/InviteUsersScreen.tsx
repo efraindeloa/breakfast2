@@ -137,7 +137,7 @@ const InviteUsersScreen: React.FC = () => {
 
   return (
     <div className="pb-32 overflow-y-auto bg-background-light dark:bg-background-dark min-h-screen">
-      <header className="flex items-center bg-white dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-50 border-b border-gray-100 dark:border-gray-800">
+      <header className="flex items-center bg-white dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-50 border-b border-gray-100 dark:border-gray-800 safe-top">
         <button onClick={() => navigate(-1)} className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">
           <span className="material-symbols-outlined cursor-pointer text-[#8a7560] dark:text-[#d4c4a8]">arrow_back_ios</span>
         </button>
@@ -311,7 +311,7 @@ const InviteUsersScreen: React.FC = () => {
 
         {/* Botón de invitar seleccionados */}
         {selectedUsers.size > 0 && (
-          <div className="fixed bottom-20 left-0 right-0 max-w-[430px] mx-auto px-4 z-40">
+          <div className="fixed bottom-20 left-0 right-0 w-full px-4 z-40 md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2">
             <button
               onClick={handleInviteSelected}
               className="w-full py-4 px-6 rounded-xl bg-primary text-white font-bold text-lg flex items-center justify-center gap-2 shadow-lg hover:bg-primary/90 transition-colors"

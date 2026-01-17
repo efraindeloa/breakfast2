@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "cap:add": "npx cap add",
     "cap:sync": "npx cap sync",
-    "cap:open": "npx cap open"
+    "cap:open": "npx cap open",
+    "android:build": "npm run build && npx cap sync && cd android && gradlew.bat assembleDebug",
+    "android:release": "npm run build && npx cap sync && cd android && gradlew.bat assembleRelease"
   },
   "dependencies": {
     "react": "^19.2.3",

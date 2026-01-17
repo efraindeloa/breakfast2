@@ -63,7 +63,7 @@ const SettingsScreen: React.FC = () => {
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background-light dark:bg-background-dark">
       {/* Top App Bar */}
-      <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+      <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 safe-top">
         <div className="flex items-center justify-between px-4 h-16">
           <div className="flex items-center">
             <button 

@@ -38,7 +38,7 @@ const App: React.FC = () => {
       <CartProvider>
         <GroupOrderProvider>
           <HashRouter>
-      <div className="max-w-[430px] mx-auto min-h-screen bg-white dark:bg-background-dark relative shadow-2xl overflow-hidden flex flex-col">
+      <div className="w-full max-w-full min-h-screen bg-white dark:bg-background-dark relative overflow-hidden flex flex-col md:max-w-2xl md:mx-auto md:shadow-2xl">
         <Routes>
           <Route path="/" element={<WelcomeScreen onLogin={() => setIsAuthenticated(true)} />} />
           <Route path="/register" element={<RegisterScreen onLogin={() => setIsAuthenticated(true)} />} />

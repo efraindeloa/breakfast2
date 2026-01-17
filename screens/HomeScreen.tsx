@@ -6,7 +6,7 @@ const HomeScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background-light dark:bg-background-dark">
-      <header className="sticky top-0 z-20 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
+      <header className="sticky top-0 z-20 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 safe-top">
         <div className="flex items-center p-4 pb-2 justify-between">
           <div className="flex size-10 shrink-0 items-center overflow-hidden rounded-full border-2 border-primary/20">
             <div 
@@ -28,7 +28,7 @@ const HomeScreen: React.FC = () => {
 
       <main className="flex-1 overflow-y-auto pb-32 hide-scrollbar">
         <h3 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6">Acciones Rápidas</h3>
-        <div className="grid grid-cols-2 gap-3 p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 max-w-4xl mx-auto">
           <div 
             onClick={() => navigate('/menu')}
             className="flex flex-col gap-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 items-start shadow-sm hover:border-primary transition-colors cursor-pointer group"

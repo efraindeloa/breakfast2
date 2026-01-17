@@ -252,7 +252,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
 
   return (
     <div className="relative flex h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-background-dark">
-      <header className="sticky top-0 z-50 bg-background-light dark:bg-background-dark p-4 pb-2 border-b border-gray-100 dark:border-gray-800">
+      <header className="sticky top-0 z-50 bg-background-light dark:bg-background-dark p-4 pb-2 border-b border-gray-100 dark:border-gray-800 safe-top">
         <button onClick={() => navigate(-1)} className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">
           <span className="material-symbols-outlined cursor-pointer text-[#8a7560] dark:text-[#d4c4a8]">chevron_left</span>
         </button>
@@ -556,7 +556,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
       </div>
 
       {/* Botón Registrarse sticky en la parte inferior */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto px-6 pb-6 pt-4 bg-background-light dark:bg-background-dark border-t border-gray-100 dark:border-gray-800 z-50">
+      <div className="fixed bottom-0 left-0 right-0 w-full px-4 sm:px-6 pb-6 pt-4 bg-background-light dark:bg-background-dark border-t border-gray-100 dark:border-gray-800 z-50 md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2">
         <button
           onClick={handleContinue}
           className={`flex items-center justify-center rounded-xl h-14 text-white text-base font-bold w-full shadow-lg active:scale-[0.98] transition-transform ${

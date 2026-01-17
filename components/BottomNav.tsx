@@ -193,7 +193,7 @@ const BottomNav: React.FC = () => {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto bg-white/80 dark:bg-background-dark/80 backdrop-blur-lg border-t border-gray-100 dark:border-white/10 px-6 py-3 flex justify-between items-center pb-8 z-50">
+      <nav className="fixed bottom-0 left-0 right-0 w-full bg-white/80 dark:bg-background-dark/80 backdrop-blur-lg border-t border-gray-100 dark:border-white/10 px-4 sm:px-6 py-3 flex justify-between items-center pb-8 z-50 md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2">
         {navItems.map((item) => {
         const isOrdersPath = item.path === '/orders';
         const isActive = isOrdersPath 

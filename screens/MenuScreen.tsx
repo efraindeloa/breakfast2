@@ -218,7 +218,7 @@ const MenuScreen: React.FC = () => {
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-24 bg-background-light dark:bg-background-dark">
       {/* Header Section */}
-      <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+      <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md safe-top">
         <div className="flex items-center p-4 pb-2 justify-between">
           <div className="flex items-center gap-2">
             <div className="text-primary flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
@@ -280,7 +280,7 @@ const MenuScreen: React.FC = () => {
                   <div 
                     key={dish.id}
                     onClick={() => navigate(`/dish/${dish.id}`)}
-                    className="flex h-full flex-1 flex-col gap-3 rounded-xl min-w-[280px] max-w-[280px] bg-white dark:bg-gray-900 p-2 shadow-sm border border-gray-100 dark:border-gray-800 shrink-0 cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
+                    className="flex h-full flex-1 flex-col gap-3 rounded-xl w-full sm:min-w-[200px] sm:max-w-[280px] bg-white dark:bg-gray-900 p-2 shadow-sm border border-gray-100 dark:border-gray-800 shrink-0 cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
                   >
                     <div 
                       className="w-full bg-center bg-no-repeat aspect-[16/10] bg-cover rounded-lg flex flex-col relative" 
@@ -476,7 +476,7 @@ const MenuScreen: React.FC = () => {
                 <label className="block text-sm font-semibold text-[#181611] dark:text-white mb-3">
                   Origen de la Proteína
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {originFilters.map((filter) => (
                     <button
                       key={filter.value}

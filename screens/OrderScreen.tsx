@@ -291,7 +291,7 @@ const OrderScreen: React.FC = () => {
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-24 bg-background-light dark:bg-background-dark">
       {/* Header Section */}
-      <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+      <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md safe-top">
         <div className="flex items-center p-4 pb-2 justify-between">
           <div className="flex items-center gap-2">
             <button onClick={() => navigate(-1)} className="p-2 -ml-2 w-10 h-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">

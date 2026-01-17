@@ -399,7 +399,7 @@ const DishDetailScreen: React.FC = () => {
       </main>
 
       {/* Bottom Action Bar */}
-      <div className="fixed bottom-20 left-0 right-0 max-w-[430px] mx-auto bg-white/95 dark:bg-background-dark/95 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 p-4 z-50">
+      <div className="fixed bottom-20 left-0 right-0 w-full bg-white/95 dark:bg-background-dark/95 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 p-4 z-50 md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2">
         <div className="max-w-md mx-auto">
           {/* Botón Agregar */}
           <button

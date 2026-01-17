@@ -257,7 +257,7 @@ const OrderHistoryScreen: React.FC = () => {
 
   return (
     <div className="pb-32 overflow-y-auto bg-background-light dark:bg-background-dark min-h-screen">
-      <header className="flex items-center bg-white dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-50 border-b border-gray-100 dark:border-gray-800">
+      <header className="flex items-center bg-white dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-50 border-b border-gray-100 dark:border-gray-800 safe-top">
         <div className="size-12 flex items-center" onClick={() => navigate(-1)}>
           <span className="material-symbols-outlined cursor-pointer">arrow_back_ios</span>
         </div>

@@ -46,7 +46,7 @@ const JoinTableScreen: React.FC = () => {
   return (
     <div className="bg-background-light dark:bg-background-dark min-h-screen flex flex-col pb-32">
       {/* TopAppBar */}
-      <div className="flex items-center bg-white/80 dark:bg-background-dark/80 backdrop-blur-md p-4 pb-2 justify-between sticky top-0 z-50">
+      <div className="flex items-center bg-white/80 dark:bg-background-dark/80 backdrop-blur-md p-4 pb-2 justify-between sticky top-0 z-50 safe-top">
         <button 
           onClick={() => navigate(-1)} 
           className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm"
@@ -164,7 +164,7 @@ const JoinTableScreen: React.FC = () => {
       </div>
 
       {/* Sticky Footer Action */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto bg-white dark:bg-background-dark border-t border-zinc-100 dark:border-zinc-800 px-6 pt-4 pb-8 z-[60]">
+      <div className="fixed bottom-0 left-0 right-0 w-full bg-white dark:bg-background-dark border-t border-zinc-100 dark:border-zinc-800 px-4 sm:px-6 pt-4 pb-8 z-[60] md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2">
         <button
           onClick={handleFinalJoin}
           disabled={!tableCode.trim() || !hasValidCode}

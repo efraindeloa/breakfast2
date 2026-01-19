@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGroupOrder } from '../contexts/GroupOrderContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 const GroupOrderManagementScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { participants, currentUserParticipant, removeParticipant, isConfirmed, setParticipantReady, canConfirmOrder, confirmGroupOrder } = useGroupOrder();
 
   const allParticipants = useMemo(() => {
@@ -31,7 +33,7 @@ const GroupOrderManagementScreen: React.FC = () => {
         <button onClick={() => navigate(-1)} className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">
           <span className="material-symbols-outlined cursor-pointer text-[#8a7560] dark:text-[#d4c4a8]">arrow_back_ios</span>
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center">Orden Grupal</h2>
+        <h2 className="text-lg font-bold flex-1 text-center">{t('groupOrder.title')}</h2>
         <div className="w-12"></div>
       </header>
 
@@ -40,7 +42,7 @@ const GroupOrderManagementScreen: React.FC = () => {
         <div className="bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border-2 border-primary/20 rounded-xl p-4 mb-6">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Total de la Orden Grupal</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">{t('groupOrder.groupOrderTotal')}</p>
               <p className="text-2xl font-bold text-[#181411] dark:text-white mt-1">
                 ${calculateGroupTotal.toFixed(2)}
               </p>
@@ -50,7 +52,7 @@ const GroupOrderManagementScreen: React.FC = () => {
             </div>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {allParticipants.length} {allParticipants.length === 1 ? 'persona' : 'personas'} en la orden
+            {allParticipants.length} {allParticipants.length === 1 ? t('groupOrder.person') : t('groupOrder.people')} {t('groupOrder.inOrder')}
           </p>
         </div>
 
@@ -83,7 +85,7 @@ const GroupOrderManagementScreen: React.FC = () => {
                         )}
                         {isCurrentUser && (
                           <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                            Tú
+                            {t('groupOrder.you')}
                           </span>
                         )}
                       </div>
@@ -125,7 +127,7 @@ const GroupOrderManagementScreen: React.FC = () => {
                 ) : (
                   <div className="mb-3 py-2 text-center">
                     <p className="text-sm text-gray-400 dark:text-gray-500 italic">
-                      Sin artículos en la orden
+                      {t('groupOrder.noItemsInOrder')}
                     </p>
                   </div>
                 )}
@@ -133,7 +135,7 @@ const GroupOrderManagementScreen: React.FC = () => {
                 {/* Instrucciones Especiales */}
                 {participant.specialInstructions && (
                   <div className="mb-3 pt-3 border-t border-gray-100 dark:border-white/10">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Instrucciones especiales:</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('groupOrder.specialInstructions')}:</p>
                     <p className="text-sm text-[#181411] dark:text-white italic">
                       {participant.specialInstructions}
                     </p>
@@ -142,7 +144,7 @@ const GroupOrderManagementScreen: React.FC = () => {
 
                 {/* Total del Participante */}
                 <div className="pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-[#181411] dark:text-white">Subtotal:</span>
+                  <span className="text-sm font-semibold text-[#181411] dark:text-white">{t('groupOrder.subtotal')}:</span>
                   <span className="text-lg font-bold text-primary">${participantTotal.toFixed(2)}</span>
                 </div>
 
@@ -152,11 +154,11 @@ const GroupOrderManagementScreen: React.FC = () => {
                     {participant.isReady ? (
                       <span className="px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium flex items-center gap-1">
                         <span className="material-symbols-outlined text-xs">check_circle</span>
-                        Listo
+                        {t('groupOrder.ready')}
                       </span>
                     ) : (
                       <span className="px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 text-xs font-medium">
-                        Seleccionando
+                        {t('groupOrder.selecting')}
                       </span>
                     )}
                   </div>
@@ -167,7 +169,7 @@ const GroupOrderManagementScreen: React.FC = () => {
                       ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
                       : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                   }`}>
-                    {participant.status === 'joined' ? 'Unido' : participant.status === 'ordered' ? 'Ordenó' : 'Pendiente'}
+                    {participant.status === 'joined' ? t('groupOrder.joined') : participant.status === 'ordered' ? t('groupOrder.ordered') : t('groupOrder.pending')}
                   </span>
                 </div>
               </div>
@@ -183,7 +185,7 @@ const GroupOrderManagementScreen: React.FC = () => {
               className="w-full py-3 px-4 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-semibold flex items-center justify-center gap-2 transition-colors border-2 border-dashed border-primary/30"
             >
               <span className="material-symbols-outlined">person_add</span>
-              Invitar más personas
+              {t('groupOrder.inviteMorePeople')}
             </button>
           )}
           
@@ -196,7 +198,7 @@ const GroupOrderManagementScreen: React.FC = () => {
               className="w-full py-4 px-6 rounded-xl bg-primary text-white font-bold text-lg flex items-center justify-center gap-2 shadow-lg hover:bg-primary/90 transition-colors"
             >
               <span className="material-symbols-outlined">restaurant</span>
-              Confirmar y Enviar Orden
+              {t('groupOrder.confirmAndSendOrder')}
             </button>
           )}
           
@@ -204,7 +206,7 @@ const GroupOrderManagementScreen: React.FC = () => {
             <div className="w-full py-4 px-6 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-bold text-lg flex items-center justify-center gap-2 cursor-not-allowed">
               <span className="material-symbols-outlined">lock</span>
               <span>
-                Esperando a que todos terminen ({getPendingCount()} pendiente{getPendingCount() !== 1 ? 's' : ''})
+                {t('groupOrder.waitingForAll')} ({getPendingCount()} {getPendingCount() !== 1 ? t('groupOrder.pendingPlural') : t('groupOrder.pending')})
               </span>
             </div>
           )}
@@ -212,7 +214,7 @@ const GroupOrderManagementScreen: React.FC = () => {
           {isConfirmed && (
             <div className="w-full py-4 px-6 rounded-xl bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-semibold text-lg flex items-center justify-center gap-2">
               <span className="material-symbols-outlined">check_circle</span>
-              <span>Orden confirmada</span>
+              <span>{t('groupOrder.orderConfirmed')}</span>
             </div>
           )}
         </div>

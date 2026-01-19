@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from '../contexts/LanguageContext';
 import AssistantModal from './AssistantModal';
 
 const POSITION_STORAGE_KEY = 'assistant_button_position';
@@ -13,6 +14,7 @@ const NAVBAR_BOTTOM_THRESHOLD = 100; // Distancia desde el fondo para considerar
 const NAVBAR_HEIGHT = 80; // Altura aproximada de la navbar
 
 const AssistantButton: React.FC = () => {
+  const { t } = useTranslation();
   const [showAssistant, setShowAssistant] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isCompact, setIsCompact] = useState(false);

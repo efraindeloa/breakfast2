@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface RegisterScreenProps {
   onLogin: () => void;
@@ -38,6 +39,7 @@ const countryCodes: CountryCode[] = [
 
 const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [selectedCountryCode, setSelectedCountryCode] = useState<CountryCode>(countryCodes[0]);
   const [showCountrySelector, setShowCountrySelector] = useState(false);
@@ -169,7 +171,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
     
     // Validar campo de correo/teléfono
     if (!emailOrPhone.trim()) {
-      setEmailOrPhoneError('Por favor introduce un correo electrónico o un número de teléfono');
+      setEmailOrPhoneError(t('register.pleaseEnterEmailOrPhone'));
       setTimeout(() => {
         inputRef.current?.focus();
         scrollToFocusedField(inputRef.current);
@@ -179,7 +181,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
     
     // Validar formato de correo/teléfono
     if (inputType === 'email' && !isValidEmail) {
-      setEmailOrPhoneError('Por favor ingresa un correo electrónico válido');
+      setEmailOrPhoneError(t('register.invalidEmail'));
       setTimeout(() => {
         inputRef.current?.focus();
         scrollToFocusedField(inputRef.current);
@@ -188,7 +190,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
     }
     
     if (inputType === 'phone' && !isValidPhone) {
-      setEmailOrPhoneError('Por favor ingresa un número de teléfono válido');
+      setEmailOrPhoneError(t('register.invalidPhone'));
       setTimeout(() => {
         inputRef.current?.focus();
         scrollToFocusedField(inputRef.current);
@@ -198,7 +200,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
     
     // Validar contraseña
     if (!password.trim()) {
-      setPasswordError('Por favor introduce una contraseña');
+      setPasswordError(t('register.pleaseEnterPassword'));
       setTimeout(() => {
         passwordRef.current?.focus();
         scrollToFocusedField(passwordRef.current);
@@ -208,14 +210,14 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
     
     // Validar reglas de contraseña
     const missingRules: string[] = [];
-    if (!passwordValidations.minLength) missingRules.push('8 caracteres');
-    if (!passwordValidations.hasNumber) missingRules.push('1 número');
-    if (!passwordValidations.hasLowercase) missingRules.push('1 minúscula');
-    if (!passwordValidations.hasUppercase) missingRules.push('1 mayúscula');
-    if (!passwordValidations.hasSymbol) missingRules.push('1 símbolo');
+    if (!passwordValidations.minLength) missingRules.push(t('register.passwordRuleMinLength'));
+    if (!passwordValidations.hasNumber) missingRules.push(t('register.passwordRuleNumber'));
+    if (!passwordValidations.hasLowercase) missingRules.push(t('register.passwordRuleLowercase'));
+    if (!passwordValidations.hasUppercase) missingRules.push(t('register.passwordRuleUppercase'));
+    if (!passwordValidations.hasSymbol) missingRules.push(t('register.passwordRuleSymbol'));
     
     if (missingRules.length > 0) {
-      setPasswordError(`La contraseña no cumple con las siguientes reglas: ${missingRules.join(', ')}`);
+      setPasswordError(`${t('register.passwordDoesNotMeet')}: ${missingRules.join(', ')}`);
       setTimeout(() => {
         passwordRef.current?.focus();
         scrollToFocusedField(passwordRef.current);
@@ -225,7 +227,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
     
     // Validar confirmación de contraseña
     if (!confirmPassword.trim()) {
-      setConfirmPasswordError('Por favor confirma tu contraseña');
+      setConfirmPasswordError(t('register.pleaseConfirmPassword'));
       setTimeout(() => {
         confirmPasswordRef.current?.focus();
         scrollToFocusedField(confirmPasswordRef.current);
@@ -234,7 +236,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
     }
     
     if (!passwordValidations.passwordsMatch) {
-      setConfirmPasswordError('Las contraseñas no coinciden. Por favor verifica que ambas contraseñas sean iguales');
+      setConfirmPasswordError(t('register.passwordsDoNotMatch'));
       setTimeout(() => {
         confirmPasswordRef.current?.focus();
         scrollToFocusedField(confirmPasswordRef.current);
@@ -271,10 +273,10 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
 
       <div className="flex flex-col items-center px-6 relative -mt-6 z-10">
         <h1 className="text-[#181411] dark:text-white tracking-tight text-[32px] font-bold leading-tight text-center pb-1">
-          ¡Buen día!
+          {t('register.title')}
         </h1>
         <p className="text-[#181411]/60 dark:text-white/60 text-base font-normal leading-normal pb-6 text-center">
-          Ingresa tus datos para continuar
+          {t('register.subtitle')}
         </p>
       </div>
 
@@ -282,7 +284,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
         <div className="max-w-[480px] mx-auto w-full space-y-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
-              Correo electrónico o número de teléfono
+              {t('register.emailOrPhone')}
             </label>
             <div className="relative flex items-center">
               {inputType === 'phone' && (
@@ -349,7 +351,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
                       ? 'ring-2 ring-red-500'
                       : ''
                   }`}
-                  placeholder={inputType === 'phone' ? `${selectedCountryCode.dialCode} 000 000 0000` : 'ejemplo@correo.com'}
+                  placeholder={inputType === 'phone' ? `${selectedCountryCode.dialCode} ${t('register.phonePlaceholder')}` : t('register.emailPlaceholder')}
                   type="text"
                   inputMode={inputType === 'phone' ? 'tel' : 'email'}
                   value={emailOrPhone}
@@ -396,14 +398,14 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
             )}
             {!emailOrPhoneError && inputType === 'phone' && emailOrPhone.trim() && !isValidPhone && (
               <p className="text-xs text-red-500 px-1 mt-1">
-                Por favor ingresa un número de teléfono válido
+                {t('register.invalidPhone')}
               </p>
             )}
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
-              Contraseña
+              {t('register.password')}
             </label>
             <div className="relative">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">
@@ -412,7 +414,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
               <input
                 ref={passwordRef}
                 className="w-full h-14 pl-12 pr-12 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Ingresa tu contraseña"
+                placeholder={t('register.passwordPlaceholder')}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onFocus={(e) => {
@@ -453,7 +455,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
                     {passwordValidations.minLength ? 'check_circle' : 'cancel'}
                   </span>
                 </div>
-                <p className={passwordValidations.minLength ? 'text-green-500' : 'text-red-500'}>8 caracteres</p>
+                <p className={passwordValidations.minLength ? 'text-green-500' : 'text-red-500'}>{t('register.passwordRuleMinLength')}</p>
               </div>
               <div className="flex gap-3 items-center w-[148px]">
                 <div className={`flex justify-center items-center w-8 h-8 rounded-full ${passwordValidations.hasNumber ? 'text-green-500' : 'text-red-500'}`}>
@@ -461,7 +463,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
                     {passwordValidations.hasNumber ? 'check_circle' : 'cancel'}
                   </span>
                 </div>
-                <p className={passwordValidations.hasNumber ? 'text-green-500' : 'text-red-500'}>1 número</p>
+                <p className={passwordValidations.hasNumber ? 'text-green-500' : 'text-red-500'}>{t('register.passwordRuleNumber')}</p>
               </div>
               <div className="flex gap-3 items-center w-[148px]">
                 <div className={`flex justify-center items-center w-8 h-8 rounded-full ${passwordValidations.hasLowercase ? 'text-green-500' : 'text-red-500'}`}>
@@ -469,7 +471,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
                     {passwordValidations.hasLowercase ? 'check_circle' : 'cancel'}
                   </span>
                 </div>
-                <p className={passwordValidations.hasLowercase ? 'text-green-500' : 'text-red-500'}>1 minúscula</p>
+                <p className={passwordValidations.hasLowercase ? 'text-green-500' : 'text-red-500'}>{t('register.passwordRuleLowercase')}</p>
               </div>
               <div className="flex gap-3 items-center w-[148px]">
                 <div className={`flex justify-center items-center w-8 h-8 rounded-full ${passwordValidations.hasUppercase ? 'text-green-500' : 'text-red-500'}`}>
@@ -477,7 +479,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
                     {passwordValidations.hasUppercase ? 'check_circle' : 'cancel'}
                   </span>
                 </div>
-                <p className={passwordValidations.hasUppercase ? 'text-green-500' : 'text-red-500'}>1 mayúscula</p>
+                <p className={passwordValidations.hasUppercase ? 'text-green-500' : 'text-red-500'}>{t('register.passwordRuleUppercase')}</p>
               </div>
               <div className="flex gap-3 items-center w-[148px]">
                 <div className={`flex justify-center items-center w-8 h-8 rounded-full ${passwordValidations.hasSymbol ? 'text-green-500' : 'text-red-500'}`}>
@@ -485,7 +487,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
                     {passwordValidations.hasSymbol ? 'check_circle' : 'cancel'}
                   </span>
                 </div>
-                <p className={passwordValidations.hasSymbol ? 'text-green-500' : 'text-red-500'}>1 símbolo</p>
+                <p className={passwordValidations.hasSymbol ? 'text-green-500' : 'text-red-500'}>{t('register.passwordRuleSymbol')}</p>
               </div>
               <div className="flex gap-3 items-center w-[148px]">
                 <div className={`flex justify-center items-center w-8 h-8 rounded-full ${passwordValidations.passwordsMatch ? 'text-green-500' : 'text-red-500'}`}>
@@ -493,7 +495,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
                     {passwordValidations.passwordsMatch ? 'check_circle' : 'cancel'}
                   </span>
                 </div>
-                <p className={passwordValidations.passwordsMatch ? 'text-green-500' : 'text-red-500'}>Confirmación</p>
+                <p className={passwordValidations.passwordsMatch ? 'text-green-500' : 'text-red-500'}>{t('register.passwordConfirmation')}</p>
               </div>
             </div>
           )}
@@ -544,12 +546,12 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
 
         <div className="mt-auto py-8">
           <p className="text-[#8a7560] dark:text-primary/70 text-sm font-medium leading-normal text-center">
-            ¿Ya tienes cuenta?{' '}
+            {t('register.alreadyHaveAccount')}{' '}
             <span
               className="underline cursor-pointer text-primary font-bold"
               onClick={() => navigate('/')}
             >
-              Inicia sesión
+              {t('register.login')}
             </span>
           </p>
         </div>
@@ -565,7 +567,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
               : 'bg-gray-400 dark:bg-gray-600 cursor-pointer opacity-60'
           }`}
         >
-          Registrarse
+          {t('register.createAccount')}
         </button>
       </div>
 

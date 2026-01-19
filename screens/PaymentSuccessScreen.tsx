@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface Email {
   id: number;
@@ -17,6 +18,7 @@ interface FiscalData {
 
 const PaymentSuccessScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [wantsInvoice, setWantsInvoice] = useState<boolean | null>(null);
   const [selectedEmailId, setSelectedEmailId] = useState<number | null>(null);
   const [fiscalDataConfirmed, setFiscalDataConfirmed] = useState(false);
@@ -68,7 +70,7 @@ const PaymentSuccessScreen: React.FC = () => {
         </div>
 
         <h3 className="text-2xl font-bold text-[#181411] dark:text-white mb-2 text-center">
-          ¡Pago realizado con éxito!
+          {t('paymentSuccess.title')}
         </h3>
 
         {/* Pregunta sobre factura */}
@@ -76,7 +78,7 @@ const PaymentSuccessScreen: React.FC = () => {
           <div className="w-full max-w-md">
             <div className="bg-white dark:bg-[#2d2516] rounded-xl p-6 shadow-sm border border-gray-100 dark:border-[#3d3321]">
               <h4 className="text-lg font-bold text-[#181411] dark:text-white mb-4 text-center">
-                ¿Deseas recibir la factura?
+                {t('paymentSuccess.wantInvoice')}
               </h4>
               <div className="flex gap-3">
                 <button
@@ -88,13 +90,13 @@ const PaymentSuccessScreen: React.FC = () => {
                   }}
                   className="flex-1 bg-primary text-white font-semibold py-3 rounded-lg hover:bg-primary/90 transition-colors active:scale-95"
                 >
-                  Sí
+                  {t('common.yes')}
                 </button>
                 <button
                   onClick={() => setWantsInvoice(false)}
                   className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:scale-95"
                 >
-                  No
+                  {t('common.no')}
                 </button>
               </div>
             </div>
@@ -109,7 +111,7 @@ const PaymentSuccessScreen: React.FC = () => {
               <div className="bg-white dark:bg-[#2d2516] rounded-xl p-6 shadow-sm border border-gray-100 dark:border-[#3d3321]">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-lg font-bold text-[#181411] dark:text-white">
-                    Verifica tus datos fiscales
+                    {t('paymentSuccess.verifyFiscalData')}
                   </h4>
                   {!isEditingFiscalData && (
                     <button
@@ -117,7 +119,7 @@ const PaymentSuccessScreen: React.FC = () => {
                       className="text-primary hover:text-primary/80 transition-colors flex items-center gap-1 text-sm font-semibold"
                     >
                       <span className="material-symbols-outlined text-sm">edit</span>
-                      Editar
+                      {t('common.edit')}
                     </button>
                   )}
                 </div>
@@ -125,7 +127,7 @@ const PaymentSuccessScreen: React.FC = () => {
                 {isEditingFiscalData ? (
                   <div className="space-y-4 mb-4">
                     <div>
-                      <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">RFC</label>
+                      <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">{t('billing.rfc')}</label>
                       <input
                         type="text"
                         value={editingFiscalData.rfc}
@@ -145,7 +147,7 @@ const PaymentSuccessScreen: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Uso de CFDI</label>
+                      <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">{t('billing.cfdiUsage')}</label>
                       <select
                         value={editingFiscalData.usoCFDI}
                         onChange={(e) => setEditingFiscalData({ ...editingFiscalData, usoCFDI: e.target.value })}
@@ -157,7 +159,7 @@ const PaymentSuccessScreen: React.FC = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Régimen Fiscal</label>
+                      <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">{t('billing.taxRegime')}</label>
                       <select
                         value={editingFiscalData.regimenFiscal}
                         onChange={(e) => setEditingFiscalData({ ...editingFiscalData, regimenFiscal: e.target.value })}
@@ -173,13 +175,13 @@ const PaymentSuccessScreen: React.FC = () => {
                         onClick={handleSaveFiscalData}
                         className="flex-1 bg-primary text-white font-semibold py-2 rounded-lg text-sm hover:bg-primary/90 transition-colors"
                       >
-                        Guardar
+                        {t('common.save')}
                       </button>
                       <button
                         onClick={handleCancelEdit}
                         className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold py-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                       >
-                        Cancelar
+                        {t('common.cancel')}
                       </button>
                     </div>
                   </div>
@@ -191,15 +193,15 @@ const PaymentSuccessScreen: React.FC = () => {
                         <p className="text-sm font-semibold text-[#181411] dark:text-white">{fiscalData.rfc}</p>
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Razón Social</p>
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">{t('billing.businessName')}</p>
                         <p className="text-sm font-semibold text-[#181411] dark:text-white">{fiscalData.razonSocial}</p>
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Uso de CFDI</p>
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">{t('billing.cfdiUsage')}</p>
                         <p className="text-sm font-semibold text-[#181411] dark:text-white">{fiscalData.usoCFDI}</p>
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Régimen Fiscal</p>
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">{t('billing.taxRegime')}</p>
                         <p className="text-sm font-semibold text-[#181411] dark:text-white">{fiscalData.regimenFiscal}</p>
                       </div>
                     </div>
@@ -215,7 +217,7 @@ const PaymentSuccessScreen: React.FC = () => {
                           Confirmo que mis datos fiscales son correctos
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Si necesitas actualizar tus datos, puedes hacerlo desde tu perfil.
+                          {t('paymentSuccess.updateFromProfile')}
                         </p>
                       </div>
                     </label>
@@ -261,7 +263,7 @@ const PaymentSuccessScreen: React.FC = () => {
                   className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/30 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all"
                 >
                   <span className="material-symbols-outlined text-primary text-sm">add</span>
-                  <span className="text-sm font-semibold text-primary">Agregar otro correo</span>
+                  <span className="text-sm font-semibold text-primary">{t('paymentSuccess.addAnotherEmail')}</span>
                 </button>
               </div>
             </div>
@@ -283,7 +285,7 @@ const PaymentSuccessScreen: React.FC = () => {
                 : ''
             }`}
           >
-            <span>Finalizar</span>
+            <span>{t('paymentSuccess.finish')}</span>
             <span className="material-symbols-outlined">check_circle</span>
           </button>
         </div>

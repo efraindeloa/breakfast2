@@ -24,20 +24,25 @@ import GroupOrderManagementScreen from './screens/GroupOrderManagementScreen';
 import OrderConfirmedScreen from './screens/OrderConfirmedScreen';
 import OrderDetailScreen from './screens/OrderDetailScreen';
 import JoinTableScreen from './screens/JoinTableScreen';
+import FavoritesScreen from './screens/FavoritesScreen';
 import BottomNav from './components/BottomNav';
 import AssistantButton from './components/AssistantButton';
 import { CartProvider } from './contexts/CartContext';
 import { RestaurantProvider } from './contexts/RestaurantContext';
 import { GroupOrderProvider } from './contexts/GroupOrderContext';
+import { LanguageProvider } from './contexts/LanguageContext';
+import { FavoritesProvider } from './contexts/FavoritesContext';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   return (
-    <RestaurantProvider>
-      <CartProvider>
-        <GroupOrderProvider>
-          <HashRouter>
+    <LanguageProvider>
+      <RestaurantProvider>
+        <CartProvider>
+          <FavoritesProvider>
+            <GroupOrderProvider>
+            <HashRouter>
       <div className="w-full max-w-full min-h-screen bg-white dark:bg-background-dark relative overflow-hidden flex flex-col md:max-w-2xl md:mx-auto md:shadow-2xl">
         <Routes>
           <Route path="/" element={<WelcomeScreen onLogin={() => setIsAuthenticated(true)} />} />
@@ -63,15 +68,18 @@ const App: React.FC = () => {
           <Route path="/order-detail" element={isAuthenticated ? <OrderDetailScreen /> : <Navigate to="/" />} />
           <Route path="/join-table" element={isAuthenticated ? <JoinTableScreen /> : <Navigate to="/" />} />
           <Route path="/settings" element={<SettingsScreen />} />
+          <Route path="/favorites" element={isAuthenticated ? <FavoritesScreen /> : <Navigate to="/" />} />
         </Routes>
         
         {isAuthenticated && <BottomNav />}
         {isAuthenticated && <AssistantButton />}
       </div>
-    </HashRouter>
-        </GroupOrderProvider>
-      </CartProvider>
-    </RestaurantProvider>
+            </HashRouter>
+          </GroupOrderProvider>
+          </FavoritesProvider>
+        </CartProvider>
+      </RestaurantProvider>
+    </LanguageProvider>
   );
 };
 

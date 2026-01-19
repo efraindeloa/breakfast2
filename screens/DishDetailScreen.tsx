@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
+import { useTranslation } from '../contexts/LanguageContext';
+import { useFavorites } from '../contexts/FavoritesContext';
 
 type OriginType = 'mar' | 'tierra' | 'aire' | 'vegetariano' | 'vegano' | '';
 
@@ -153,13 +155,34 @@ const DishDetailScreen: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { cart, addToCart } = useCart();
+  const { t } = useTranslation();
+  const { isFavorite: checkIsFavorite, addFavorite, removeFavorite } = useFavorites();
   const [quantity, setQuantity] = useState(1);
   const [selectedProtein, setSelectedProtein] = useState<string | null>(null);
   const [specialInstructions, setSpecialInstructions] = useState('');
-  const [isFavorite, setIsFavorite] = useState(false);
   const [showAddedFeedback, setShowAddedFeedback] = useState(false);
 
   const dish = allDishes.find(d => d.id === parseInt(id || '0'));
+  
+  // Verificar si el platillo es favorito
+  const isFavorite = dish ? checkIsFavorite(dish.id) : false;
+
+  // Funciones auxiliares para obtener nombres y descripciones traducidas
+  const getDishName = (dishId: number): string => {
+    try {
+      return t(`dishes.${dishId}.name`) || `dish-${dishId}`;
+    } catch {
+      return `dish-${dishId}`;
+    }
+  };
+
+  const getDishDescription = (dishId: number): string => {
+    try {
+      return t(`dishes.${dishId}.description`) || '';
+    } catch {
+      return '';
+    }
+  };
 
   // Si no se encuentra el plato, redirigir al menú
   if (!dish) {
@@ -203,7 +226,7 @@ const DishDetailScreen: React.FC = () => {
     for (let i = 0; i < quantity; i++) {
       addToCart({
         id: dish.id,
-        name: dish.name,
+        name: getDishName(dish.id),
         price: finalPrice,
         notes: notes,
       });
@@ -247,7 +270,25 @@ const DishDetailScreen: React.FC = () => {
           </button>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsFavorite(!isFavorite)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (dish) {
+                  if (isFavorite) {
+                    removeFavorite(dish.id);
+                  } else {
+                    addFavorite({
+                      id: dish.id,
+                      name: dish.name,
+                      description: dish.description,
+                      price: dish.price,
+                      image: dish.image,
+                      category: dish.category,
+                      origin: dish.origin,
+                      badges: dish.badges,
+                    });
+                  }
+                }
+              }}
               className={`w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center transition-colors ${
                 isFavorite
                   ? 'bg-red-500/90 text-white'
@@ -270,13 +311,13 @@ const DishDetailScreen: React.FC = () => {
             {dish.badges.includes('vegano') && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/90 backdrop-blur-md text-white text-xs font-bold">
                 <span className="material-symbols-outlined text-sm">eco</span>
-                Vegano
+                {t('dishDetail.vegan')}
               </div>
             )}
             {dish.badges.includes('especialidad') && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/90 backdrop-blur-md text-white text-xs font-bold">
                 <span className="material-symbols-outlined text-sm">star</span>
-                Especialidad
+                {t('dishDetail.specialty')}
               </div>
             )}
           </div>
@@ -289,16 +330,16 @@ const DishDetailScreen: React.FC = () => {
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-[#181611] dark:text-white leading-tight mb-2">
-                {dish.name}
+                {getDishName(dish.id)}
               </h1>
               <div className="flex items-center gap-2 flex-wrap">
                 {dish.origin && getOriginIcon(dish.origin) && (
                   <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs font-medium">
                     <span className="material-symbols-outlined text-sm">{getOriginIcon(dish.origin)}</span>
-                    {dish.origin === 'mar' && 'Del Mar'}
-                    {dish.origin === 'tierra' && 'Tierra'}
-                    {dish.origin === 'aire' && 'Aire'}
-                    {dish.origin === 'vegetariano' && 'Vegetariano'}
+                    {dish.origin === 'mar' && t('dishDetail.fromSea')}
+                    {dish.origin === 'tierra' && t('dishDetail.fromLand')}
+                    {dish.origin === 'aire' && t('dishDetail.fromAir')}
+                    {dish.origin === 'vegetariano' && t('dishDetail.vegetarian')}
                   </div>
                 )}
                 <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-medium">
@@ -308,7 +349,7 @@ const DishDetailScreen: React.FC = () => {
                 {cartQuantity > 0 && (
                   <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs font-medium">
                     <span className="material-symbols-outlined text-sm">shopping_cart</span>
-                    {cartQuantity} en carrito
+                    {cartQuantity} {t('dishDetail.inCart')}
                   </div>
                 )}
               </div>
@@ -320,7 +361,7 @@ const DishDetailScreen: React.FC = () => {
 
           {/* Descripción */}
           <p className="text-base text-gray-600 dark:text-gray-300 leading-relaxed mb-6">
-            {dish.description}
+            {getDishDescription(dish.id)}
           </p>
 
           {/* Personalización - Solo para ciertas categorías */}
@@ -328,10 +369,10 @@ const DishDetailScreen: React.FC = () => {
             <div className="space-y-6 mb-6">
               {/* Selección de Proteína */}
               <div>
-                <h3 className="text-lg font-bold text-[#181611] dark:text-white mb-3 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-[#181611] dark:text-white mb-3 flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary">restaurant</span>
-                  Agrega tu proteína
-                  <span className="text-sm font-normal text-gray-500 dark:text-gray-400">(Opcional)</span>
+                  {t('dishDetail.addProtein')}
+                  <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({t('dishDetail.optional')})</span>
                 </h3>
                 <div className="space-y-2">
                   {proteins.map((protein) => (
@@ -366,11 +407,11 @@ const DishDetailScreen: React.FC = () => {
               <div>
                 <h3 className="text-lg font-bold text-[#181611] dark:text-white mb-3 flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary">edit_note</span>
-                  Instrucciones especiales
+                  {t('dishDetail.specialInstructions')}
                 </h3>
                 <textarea
                   className="w-full bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-4 text-sm text-[#181611] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none"
-                  placeholder="Ej. Sin cebolla, salsa aparte, bien cocido..."
+                  placeholder={t('dishDetail.specialInstructionsPlaceholder')}
                   rows={3}
                   value={specialInstructions}
                   onChange={(e) => setSpecialInstructions(e.target.value)}
@@ -384,14 +425,14 @@ const DishDetailScreen: React.FC = () => {
             <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 flex gap-3 mb-6">
               <span className="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>
               <p className="text-xs text-green-700 dark:text-green-300 leading-relaxed">
-                <span className="font-bold">Sin productos de origen animal.</span> Este plato es apto para dietas vegetarianas y veganas.
+                <span className="font-bold">{t('dishDetail.noAnimalProducts')}</span> {t('dishDetail.suitableForVegans')}
               </p>
             </div>
           ) : (
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex gap-3 mb-6">
               <span className="material-symbols-outlined text-amber-600 dark:text-amber-400">info</span>
               <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-                <span className="font-bold">Aviso de alérgenos:</span> Este plato puede contener lácteos, gluten u otros alérgenos. Por favor, infórmanos si tienes alguna alergia alimentaria específica.
+                <span className="font-bold">{t('dishDetail.allergenWarning')}:</span> {t('dishDetail.allergenMessage')}
               </p>
             </div>
           )}
@@ -411,12 +452,12 @@ const DishDetailScreen: React.FC = () => {
             {showAddedFeedback ? (
               <>
                 <span className="material-symbols-outlined text-xl">check_circle</span>
-                <span>¡Agregado!</span>
+                <span>{t('dishDetail.added')}</span>
               </>
             ) : (
               <>
                 <span className="material-symbols-outlined text-xl">add_shopping_cart</span>
-                <span>Agregar</span>
+                <span>{t('dishDetail.add')}</span>
                 <span className="text-xl font-bold">${totalPrice.toFixed(2)}</span>
                 {cartQuantity > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[24px] h-6 px-1.5 rounded-full bg-white text-primary text-xs font-bold flex items-center justify-center shadow-lg border-2 border-primary">

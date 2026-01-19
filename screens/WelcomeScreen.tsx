@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface WelcomeScreenProps {
   onLogin: () => void;
@@ -8,6 +9,7 @@ interface WelcomeScreenProps {
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -33,10 +35,10 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
 
       <div className="flex flex-col items-center px-6 relative -mt-6 z-10">
         <h1 className="text-[#181411] dark:text-white tracking-tight text-[32px] font-bold leading-tight text-center pb-1">
-          ¡Buen día!
+          {t('welcome.goodDay')}
         </h1>
         <p className="text-[#181411]/60 dark:text-white/60 text-base font-normal leading-normal pb-6 text-center">
-          Comienza tu experiencia con el mejor sabor de la mañana
+          {t('welcome.subtitleMessage')}
         </p>
       </div>
 
@@ -44,7 +46,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
         <div className="max-w-[480px] mx-auto w-full space-y-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
-              Correo electrónico o número de teléfono
+              {t('welcome.emailOrPhone')}
             </label>
             <div className="relative">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">
@@ -52,7 +54,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
               </span>
               <input
                 className="w-full h-14 pl-12 pr-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="ejemplo@correo.com o +52 000 000 0000"
+                placeholder={t('welcome.emailOrPhonePlaceholder')}
                 type="text"
                 value={emailOrPhone}
                 onChange={(e) => setEmailOrPhone(e.target.value)}
@@ -62,7 +64,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
 
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
-              Contraseña
+              {t('welcome.password')}
             </label>
             <div className="relative">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">
@@ -70,7 +72,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
               </span>
               <input
                 className="w-full h-14 pl-12 pr-12 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Ingresa tu contraseña"
+                placeholder={t('welcome.passwordPlaceholder')}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -92,7 +94,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
               onClick={() => navigate('/forgot-password')}
               className="text-sm text-primary font-medium hover:text-primary/80 transition-colors"
             >
-              Olvidé mi contraseña
+              {t('welcome.forgotPassword')}
             </button>
           </div>
 
@@ -101,17 +103,17 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
               onClick={handleLogin}
               className="flex items-center justify-center rounded-xl h-14 bg-primary text-white text-base font-bold w-full shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform"
             >
-              Ingresar
+              {t('welcome.login')}
             </button>
           </div>
 
           <p className="text-[#8a7560] dark:text-primary/70 text-sm font-medium leading-normal text-center pt-4">
-            ¿Aún no tienes una cuenta?{' '}
+            {t('welcome.noAccount')}{' '}
             <span
               className="underline cursor-pointer text-primary font-bold"
               onClick={() => navigate('/register')}
             >
-              Regístrate
+              {t('welcome.register')}
             </span>
           </p>
         </div>

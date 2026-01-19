@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import AssistantModal from './AssistantModal';
 
 const DOCKED_STATE_KEY = 'assistant_button_docked';
@@ -153,6 +154,7 @@ const BottomNav: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { getCartItemCount } = useCart();
+  const { t } = useTranslation();
   const cartCount = getCartItemCount();
 
   // Verificar si hay una orden enviada
@@ -184,11 +186,11 @@ const BottomNav: React.FC = () => {
   };
 
   const navItems = [
-    { label: 'Inicio', icon: 'home', path: '/home' },
-    { label: 'Menú', icon: 'restaurant_menu', path: '/menu' },
-    { label: 'Mi orden', icon: 'receipt_long', path: '/orders' },
-    { label: 'Pagos', icon: 'account_balance_wallet', path: '/payments' },
-    { label: 'Perfil', icon: 'person', path: '/profile' },
+    { label: t('navigation.home'), icon: 'home', path: '/home' },
+    { label: t('navigation.menu'), icon: 'restaurant_menu', path: '/menu' },
+    { label: t('navigation.myOrder'), icon: 'receipt_long', path: '/orders' },
+    { label: t('navigation.payments'), icon: 'account_balance_wallet', path: '/payments' },
+    { label: t('navigation.profile'), icon: 'person', path: '/profile' },
   ];
 
   return (
@@ -250,7 +252,7 @@ const BottomNav: React.FC = () => {
           style={{ 
             cursor: isDragging ? 'grabbing' : 'grab',
           }}
-          title="Arrastra hacia arriba para desanclar"
+          title={t('assistant.dragToUndock')}
         >
           <span 
             className="material-symbols-outlined text-[28px] relative z-10"
@@ -272,7 +274,7 @@ const BottomNav: React.FC = () => {
               textShadow: '0 0 8px rgba(0, 200, 255, 0.8), 0 0 16px rgba(0, 200, 255, 0.4)',
             }}
           >
-            Asistente
+            {t('navigation.assistant')}
           </span>
         </button>
       )}

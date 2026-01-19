@@ -1,25 +1,41 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage, useTranslation } from '../contexts/LanguageContext';
 
-const languages = [
+// Los 10 idiomas más populares al inicio
+const popularLanguages = [
+  'Español',
+  'Inglés',
+  'Portugués',
+  'Francés',
+  'Chino mandarín',
+  'Hindi',
+  'Japonés',
+  'Ruso',
+  'Italiano',
+  'Coreano'
+];
+
+// Resto de idiomas ordenados alfabéticamente
+const otherLanguages = [
   'Albanés', 'Amárico', 'Armenio', 'Asamés', 'Azerí',
   'Bambara', 'Bengalí', 'Birmano', 'Bosnio', 'Búlgaro',
-  'Catalán', 'Cebuano', 'Checo', 'Chino mandarín', 'Coreano', 'Croata',
+  'Catalán', 'Cebuano', 'Checo', 'Croata',
   'Danés',
-  'Eslovaco', 'Esloveno', 'Español', 'Estonio',
-  'Farsi (Persa)', 'Finés', 'Francés', 'Fula',
+  'Eslovaco', 'Esloveno', 'Estonio',
+  'Farsi (Persa)', 'Finés', 'Fula',
   'Gallego', 'Griego', 'Guaraní', 'Gujarati',
-  'Hausa', 'Hebreo', 'Hindi', 'Holandés (Neerlandés)', 'Húngaro',
-  'Igbo', 'Indonesio', 'Inglés', 'Italiano',
-  'Japonés', 'Javanés',
+  'Hausa', 'Hebreo', 'Holandés (Neerlandés)', 'Húngaro',
+  'Igbo', 'Indonesio',
+  'Javanés',
   'Kannada', 'Kazajo', 'Khmer', 'Kinyarwanda', 'Kirguís',
   'Lao', 'Letón', 'Lingala', 'Lituano',
   'Malayalam', 'Maratí', 'Maya yucateco', 'Min Nan',
   'Nepalí', 'Noruego', 'Náhuatl',
   'Oriya (Odia)',
-  'Polaco', 'Portugués', 'Punjabi',
+  'Polaco', 'Punjabi',
   'Quechua',
-  'Rumano', 'Ruso',
+  'Rumano',
   'Serbio', 'Sesotho', 'Setswana', 'Shona', 'Sindhi', 'Sueco', 'Suajili', 'Sundanés',
   'Tagalo (Filipino)', 'Tailandés', 'Tamil', 'Tártaro', 'Telugu', 'Tigriña', 'Tok Pisin', 'Turco', 'Turcomano',
   'Ucraniano', 'Urdu', 'Uzbeko',
@@ -30,12 +46,52 @@ const languages = [
   'Zulu'
 ];
 
+// Combinar: populares primero, luego el resto
+const languages = [...popularLanguages, ...otherLanguages];
+
 const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('Español');
+  const { language: currentLanguage, setLanguage: setAppLanguage } = useLanguage();
+  const { t } = useTranslation();
+  const [language, setLanguage] = useState(() => {
+    const saved = localStorage.getItem('selectedLanguage');
+    return saved || 'Español';
+  });
   const [smartTranslation, setSmartTranslation] = useState(true);
   const [suggestions, setSuggestions] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  // Cargar idioma guardado al montar el componente
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem('selectedLanguage');
+    if (savedLanguage && languages.includes(savedLanguage)) {
+      setLanguage(savedLanguage);
+    }
+  }, []);
+
+  // Función para guardar el idioma seleccionado
+  const handleSaveLanguage = () => {
+    // Mapear nombre del idioma al código
+    const languageMap: Record<string, 'es' | 'en' | 'pt' | 'fr'> = {
+      'Español': 'es',
+      'English': 'en',
+      'Inglés': 'en',
+      'Português': 'pt',
+      'Portugués': 'pt',
+      'Français': 'fr',
+      'Francés': 'fr'
+    };
+    
+    const langCode = languageMap[language] || 'es';
+    setAppLanguage(langCode);
+    
+    // Guardar en localStorage
+    localStorage.setItem('selectedLanguage', language);
+    setSaved(true);
+    // Ocultar el mensaje después de 2 segundos
+    setTimeout(() => setSaved(false), 2000);
+  };
 
   // Filtrar idiomas por búsqueda
   const filteredLanguages = useMemo(() => {
@@ -47,18 +103,42 @@ const SettingsScreen: React.FC = () => {
     );
   }, [searchQuery]);
 
-  // Agrupar idiomas por letra inicial
+  // Agrupar idiomas por letra inicial, pero mantener los populares al inicio
   const groupedLanguages = useMemo(() => {
+    // Si hay búsqueda, agrupar normalmente
+    if (searchQuery.trim()) {
+      const groups: Record<string, string[]> = {};
+      filteredLanguages.forEach(lang => {
+        const firstLetter = lang.charAt(0).toUpperCase();
+        if (!groups[firstLetter]) {
+          groups[firstLetter] = [];
+        }
+        groups[firstLetter].push(lang);
+      });
+      return groups;
+    }
+    
+    // Si no hay búsqueda, crear grupos especiales: populares primero
     const groups: Record<string, string[]> = {};
-    filteredLanguages.forEach(lang => {
+    
+    // Grupo especial para idiomas populares
+    const popularInFiltered = filteredLanguages.filter(lang => popularLanguages.includes(lang));
+    if (popularInFiltered.length > 0) {
+      groups['★'] = popularInFiltered; // Usar estrella como marcador especial
+    }
+    
+    // Resto de idiomas agrupados por letra inicial
+    const otherInFiltered = filteredLanguages.filter(lang => !popularLanguages.includes(lang));
+    otherInFiltered.forEach(lang => {
       const firstLetter = lang.charAt(0).toUpperCase();
       if (!groups[firstLetter]) {
         groups[firstLetter] = [];
       }
       groups[firstLetter].push(lang);
     });
+    
     return groups;
-  }, [filteredLanguages]);
+  }, [filteredLanguages, searchQuery]);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background-light dark:bg-background-dark">
@@ -73,16 +153,16 @@ const SettingsScreen: React.FC = () => {
               <span className="material-symbols-outlined text-[20px] text-[#8a7560] dark:text-[#d4c4a8]">chevron_left</span>
             </button>
           </div>
-          <h1 className="text-[#181411] dark:text-white text-lg font-semibold tracking-tight">Configuración</h1>
+          <h1 className="text-[#181411] dark:text-white text-lg font-semibold tracking-tight">{t('settings.title')}</h1>
           <div className="w-10"></div>
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto pb-32">
+      <main className="flex-1 overflow-y-auto pb-40">
         {/* AI Configuration Section */}
         <section className="mt-4">
           <div className="px-4 pb-2">
-            <h2 className="text-[#181411] dark:text-white text-sm font-bold uppercase tracking-wider opacity-60">Inteligencia Artificial</h2>
+            <h2 className="text-[#181411] dark:text-white text-sm font-bold uppercase tracking-wider opacity-60">{t('settings.ai.title')}</h2>
           </div>
           <div className="mx-4 bg-white dark:bg-[#2d241c] rounded-xl border border-solid border-[#e6e0db] dark:border-[#3d3228] overflow-hidden shadow-sm">
             {/* Smart Translation Toggle */}
@@ -92,8 +172,8 @@ const SettingsScreen: React.FC = () => {
                   <span className="material-symbols-outlined text-[26px]">auto_awesome</span>
                 </div>
                 <div className="flex flex-col justify-center max-w-[200px]">
-                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">Traducción Inteligente</p>
-                  <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">Traduce automáticamente menús y reseñas en tiempo real</p>
+                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('settings.ai.smartTranslation')}</p>
+                  <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">{t('settings.ai.smartTranslationDesc')}</p>
                 </div>
               </div>
               <Toggle checked={smartTranslation} onChange={setSmartTranslation} />
@@ -108,8 +188,8 @@ const SettingsScreen: React.FC = () => {
                   <span className="material-symbols-outlined text-[26px]">restaurant</span>
                 </div>
                 <div className="flex flex-col justify-center max-w-[200px]">
-                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">Sugerencias Gastronómicas</p>
-                  <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">Basado en tus preferencias anteriores</p>
+                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('settings.ai.suggestions')}</p>
+                  <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">{t('settings.ai.suggestionsDesc')}</p>
                 </div>
               </div>
               <Toggle checked={suggestions} onChange={setSuggestions} />
@@ -122,7 +202,7 @@ const SettingsScreen: React.FC = () => {
           <div className="bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-xl p-4 flex gap-4">
             <span className="material-symbols-outlined text-primary">info</span>
             <p className="text-[#8a7560] dark:text-[#c4b19d] text-sm leading-snug">
-              La inteligencia artificial utiliza datos procesados localmente para proteger tu privacidad.
+              {t('settings.privacyNotice')}
             </p>
           </div>
         </div>
@@ -130,7 +210,7 @@ const SettingsScreen: React.FC = () => {
         {/* Language Selection Section */}
         <section className="mt-6">
           <div className="px-4 pb-3">
-            <h2 className="text-[#181411] dark:text-white text-sm font-bold uppercase tracking-wider opacity-60 mb-3">Seleccionar Idioma</h2>
+            <h2 className="text-[#181411] dark:text-white text-sm font-bold uppercase tracking-wider opacity-60 mb-3">{t('settings.selectLanguage')}</h2>
             
             {/* Search Bar */}
             <div className="relative">
@@ -138,7 +218,7 @@ const SettingsScreen: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar idioma..."
+                placeholder={t('settings.searchLanguage')}
                 className="w-full h-12 pl-12 pr-4 rounded-xl bg-white dark:bg-[#2d241c] border border-[#e6e0db] dark:border-[#3d3228] text-[#181411] dark:text-white placeholder:text-[#8a7560] dark:placeholder:text-[#a8937d] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#8a7560] dark:text-[#a8937d]">search</span>
@@ -157,37 +237,69 @@ const SettingsScreen: React.FC = () => {
           <div className="px-4 pb-4">
             {filteredLanguages.length > 0 ? (
               <div className="bg-white dark:bg-[#2d241c] rounded-xl border border-[#e6e0db] dark:border-[#3d3228] overflow-hidden shadow-sm">
-                {Object.keys(groupedLanguages).sort().map((letter) => (
-                  <div key={letter}>
-                    {Object.keys(groupedLanguages).length > 1 && (
-                      <div className="px-4 py-2 bg-gray-50 dark:bg-[#3d3228] border-b border-[#e6e0db] dark:border-[#3d3228]">
-                        <p className="text-xs font-bold text-[#8a7560] dark:text-[#a8937d] uppercase tracking-wider">{letter}</p>
+                {(() => {
+                  const keys = Object.keys(groupedLanguages);
+                  // Ordenar: primero el grupo de populares (★), luego el resto alfabéticamente
+                  const sortedKeys = keys.sort((a, b) => {
+                    if (a === '★') return -1;
+                    if (b === '★') return 1;
+                    return a.localeCompare(b);
+                  });
+                  
+                  return sortedKeys.map((letter) => (
+                    <div key={letter}>
+                      {Object.keys(groupedLanguages).length > 1 && (
+                        <div className="px-4 py-2 bg-gray-50 dark:bg-[#3d3228] border-b border-[#e6e0db] dark:border-[#3d3228]">
+                          <p className="text-xs font-bold text-[#8a7560] dark:text-[#a8937d] uppercase tracking-wider">
+                            {letter === '★' ? t('settings.popularLanguages') : letter}
+                          </p>
+                        </div>
+                      )}
+                      <div className="divide-y divide-[#e6e0db] dark:divide-[#3d3228]">
+                        {groupedLanguages[letter].map((lang) => (
+                          <LanguageOption
+                            key={lang}
+                            id={lang}
+                            name={lang}
+                            selected={language === lang}
+                            onChange={setLanguage}
+                          />
+                        ))}
                       </div>
-                    )}
-                    <div className="divide-y divide-[#e6e0db] dark:divide-[#3d3228]">
-                      {groupedLanguages[letter].map((lang) => (
-                        <LanguageOption
-                          key={lang}
-                          id={lang}
-                          name={lang}
-                          selected={language === lang}
-                          onChange={setLanguage}
-                        />
-                      ))}
                     </div>
-                  </div>
-                ))}
+                  ));
+                })()}
               </div>
             ) : (
               <div className="bg-white dark:bg-[#2d241c] rounded-xl border border-[#e6e0db] dark:border-[#3d3228] p-8 text-center">
                 <span className="material-symbols-outlined text-4xl text-[#8a7560] dark:text-[#a8937d] mb-3">search_off</span>
-                <p className="text-[#181411] dark:text-white font-medium mb-1">No se encontraron idiomas</p>
-                <p className="text-[#8a7560] dark:text-[#a8937d] text-sm">Intenta con otro término de búsqueda</p>
+                <p className="text-[#181411] dark:text-white font-medium mb-1">{t('settings.noLanguagesFound')}</p>
+                <p className="text-[#8a7560] dark:text-[#a8937d] text-sm">{t('settings.tryAnotherSearch')}</p>
               </div>
             )}
           </div>
         </section>
       </main>
+
+      {/* Fixed Save Button */}
+      <div className="fixed bottom-24 left-0 right-0 w-full px-4 z-40 md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md pt-2 pb-2">
+        <button
+          onClick={handleSaveLanguage}
+          className="w-full font-bold py-4 rounded-full shadow-lg transition-all text-lg bg-primary text-white shadow-primary/20 hover:opacity-90 active:scale-95 flex items-center justify-center gap-2"
+        >
+              {saved ? (
+                <>
+                  <span className="material-symbols-outlined">check_circle</span>
+                  <span>{t('common.saved')}</span>
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined">save</span>
+                  <span>{t('common.save')}</span>
+                </>
+              )}
+        </button>
+      </div>
     </div>
   );
 };

@@ -2,9 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGroupOrder } from '../contexts/GroupOrderContext';
 import { useCart, CartItem } from '../contexts/CartContext';
+import { useTranslation } from '../contexts/LanguageContext';
+import { useFavorites } from '../contexts/FavoritesContext';
 
 const OrderScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const {
     isGroupOrder,
     isConfirmed,
@@ -25,11 +28,14 @@ const OrderScreen: React.FC = () => {
     removeFromCart, 
     updateCartItemNotes 
   } = useCart();
+  const { saveCombination } = useFavorites();
   const [editingNotesId, setEditingNotesId] = useState<number | null>(null);
   const [editingNotesText, setEditingNotesText] = useState('');
   const [orderSpecialInstructions, setOrderSpecialInstructions] = useState('');
   const [isEditingOrderInstructions, setIsEditingOrderInstructions] = useState(false);
   const [isGroupOrderCollapsed, setIsGroupOrderCollapsed] = useState(false);
+  const [showSaveCombinationModal, setShowSaveCombinationModal] = useState(false);
+  const [combinationName, setCombinationName] = useState('');
   
   // Estado de la orden
   type OrderStatus = 
@@ -127,7 +133,7 @@ const OrderScreen: React.FC = () => {
     // Crear participante para el usuario actual
     const currentUser: typeof currentUserParticipant = {
       id: 'current-user',
-      name: 'Tú',
+      name: t('order.you'),
       email: 'usuario@email.com',
       orderItems: orderItems,
       specialInstructions: orderSpecialInstructions,
@@ -166,79 +172,79 @@ const OrderScreen: React.FC = () => {
     switch (status) {
       case 'orden_enviada':
         return {
-          label: 'Orden Enviada',
+          label: t('order.status.sent'),
           icon: 'send',
           color: 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400',
           borderColor: 'border-blue-200 dark:border-blue-800',
-          description: 'Tu orden ha sido enviada y está esperando confirmación del restaurante',
+          description: t('order.status.sentDescription'),
         };
       case 'orden_recibida':
         return {
-          label: 'Orden Recibida',
+          label: t('order.status.received'),
           icon: 'check_circle',
           color: 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400',
           borderColor: 'border-green-200 dark:border-green-800',
-          description: 'El restaurante ha aceptado tu orden y está validando disponibilidad',
+          description: t('order.status.receivedDescription'),
         };
       case 'en_preparacion':
         return {
-          label: 'En Preparación',
+          label: t('order.status.preparing'),
           icon: 'restaurant',
           color: 'bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400',
           borderColor: 'border-orange-200 dark:border-orange-800',
-          description: 'La cocina está preparando tu orden',
+          description: t('order.status.preparingDescription'),
         };
       case 'lista_para_entregar':
         return {
-          label: 'Lista para Entregar',
+          label: t('order.status.readyToDeliver'),
           icon: 'check',
           color: 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400',
           borderColor: 'border-purple-200 dark:border-purple-800',
-          description: 'Tu orden está lista y será entregada en breve',
+          description: t('order.status.readyToDeliverDescription'),
         };
       case 'en_entrega':
         return {
-          label: 'En Entrega',
+          label: t('order.status.delivering'),
           icon: 'delivery_dining',
           color: 'bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400',
           borderColor: 'border-indigo-200 dark:border-indigo-800',
-          description: 'El mesero está en camino a tu mesa',
+          description: t('order.status.deliveringDescription'),
         };
       case 'entregada':
         return {
-          label: 'Entregada',
+          label: t('order.status.delivered'),
           icon: 'done_all',
           color: 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400',
           borderColor: 'border-green-200 dark:border-green-800',
-          description: 'Tu orden ha sido entregada. ¡Disfruta tu comida!',
+          description: t('order.status.deliveredDescription'),
         };
       case 'con_incidencias':
         return {
-          label: 'Con Incidencias',
+          label: t('order.status.withIssues'),
           icon: 'warning',
           color: 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400',
           borderColor: 'border-red-200 dark:border-red-800',
-          description: 'Se ha reportado un problema con tu orden. Estamos resolviéndolo',
+          description: t('order.status.withIssuesDescription'),
         };
       case 'orden_cerrada':
         return {
-          label: 'Orden Cerrada',
+          label: t('order.status.closed'),
           icon: 'receipt_long',
           color: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400',
           borderColor: 'border-gray-200 dark:border-gray-700',
-          description: 'La orden ha sido cerrada y pagada',
+          description: t('order.status.closedDescription'),
         };
       case 'cancelada':
         return {
-          label: 'Cancelada',
+          label: t('order.status.cancelled'),
           icon: 'cancel',
           color: 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400',
           borderColor: 'border-red-200 dark:border-red-800',
-          description: 'La orden ha sido cancelada',
+          description: t('order.status.cancelledDescription'),
         };
       default:
         return {
-          label: 'Sin Estado',
+          label: t('order.status.noStatus'),
           icon: 'help',
           color: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400',
           borderColor: 'border-gray-200 dark:border-gray-700',
@@ -298,7 +304,7 @@ const OrderScreen: React.FC = () => {
               <span className="material-symbols-outlined text-[20px] text-[#8a7560] dark:text-[#d4c4a8]">chevron_left</span>
             </button>
             <h1 className="text-[#181411] dark:text-white text-lg font-semibold tracking-tight">
-              {isGroupOrder ? 'Orden Grupal' : 'Mi Orden'}
+              {isGroupOrder ? t('order.groupOrder') : t('order.title')}
             </h1>
           </div>
         </div>
@@ -317,7 +323,7 @@ const OrderScreen: React.FC = () => {
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-semibold text-sm transition-colors"
             >
               <span className="material-symbols-outlined text-base">group_add</span>
-              Orden Grupal
+              {t('order.groupOrder')}
             </button>
           )}
         </div>
@@ -332,10 +338,10 @@ const OrderScreen: React.FC = () => {
                     <span className="material-symbols-outlined text-green-600 dark:text-green-400 shrink-0">check_circle</span>
                     <div className="flex-1">
                       <p className="text-sm text-green-700 dark:text-green-300 font-medium mb-1">
-                        Orden confirmada y enviada a la cocina
+                        {t('order.confirmedAndSent')}
                       </p>
                       <p className="text-xs text-green-600 dark:text-green-400">
-                        Disfruta tu comida. El pago se realizará cuando termines.
+                        {t('order.enjoyMeal')}
                       </p>
                     </div>
                   </div>
@@ -386,22 +392,22 @@ const OrderScreen: React.FC = () => {
                     <div className="flex-1">
                       <p className="font-semibold text-[#181411] dark:text-white text-sm">{currentUserParticipant.name}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {currentUserParticipant.orderItems.length} {currentUserParticipant.orderItems.length === 1 ? 'artículo' : 'artículos'}
+                        {currentUserParticipant.orderItems.length} {currentUserParticipant.orderItems.length === 1 ? t('order.item') : t('order.items')}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       {currentUserParticipant.isReady ? (
                         <span className="px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium flex items-center gap-1">
                           <span className="material-symbols-outlined text-xs">check_circle</span>
-                          Listo
+                          {t('order.ready')}
                         </span>
                       ) : (
                         <span className="px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 text-xs font-medium">
-                          Seleccionando
+                          {t('order.selecting')}
                         </span>
                       )}
                       <span className="px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium">
-                        Tú
+                        {t('order.you')}
                       </span>
                     </div>
                   </div>
@@ -428,18 +434,18 @@ const OrderScreen: React.FC = () => {
                           )}
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {participant.orderItems.length} {participant.orderItems.length === 1 ? 'artículo' : 'artículos'}
+                          {participant.orderItems.length} {participant.orderItems.length === 1 ? t('order.item') : t('order.items')}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         {participant.isReady ? (
                           <span className="px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium flex items-center gap-1">
                             <span className="material-symbols-outlined text-xs">check_circle</span>
-                            Listo
+                            {t('order.ready')}
                           </span>
                         ) : (
                           <span className="px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 text-xs font-medium">
-                            Seleccionando
+                            {t('order.selecting')}
                           </span>
                         )}
                       </div>
@@ -465,8 +471,8 @@ const OrderScreen: React.FC = () => {
                   <span className="material-symbols-outlined text-primary text-2xl">restaurant_menu</span>
                 </div>
                 <div className="text-left">
-                  <p className="text-[#181411] dark:text-white font-bold text-base">Seguir Explorando</p>
-                  <p className="text-gray-500 dark:text-gray-400 text-xs">Agrega más productos a tu orden</p>
+                  <p className="text-[#181411] dark:text-white font-bold text-base">{t('order.continueExploring')}</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">{t('order.addMoreProducts')}</p>
                 </div>
               </div>
               <span className="material-symbols-outlined text-primary text-2xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
@@ -481,14 +487,14 @@ const OrderScreen: React.FC = () => {
               <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mx-auto mb-4">
                 <span className="material-symbols-outlined text-primary text-4xl">shopping_basket</span>
               </div>
-              <h3 className="text-[#181411] dark:text-white text-lg font-bold mb-2">Tu orden está vacía</h3>
-              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Explora nuestro menú y agrega productos deliciosos</p>
+              <h3 className="text-[#181411] dark:text-white text-lg font-bold mb-2">{t('order.empty')}</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">{t('order.addItems')}</p>
               <button
                 onClick={() => navigate('/menu')}
                 className="bg-primary text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 mx-auto hover:bg-primary-dark transition-colors"
               >
                 <span className="material-symbols-outlined">restaurant_menu</span>
-                <span>Explorar Menú</span>
+                <span>{t('order.exploreMenu')}</span>
               </button>
             </div>
           ) : (
@@ -595,14 +601,14 @@ const OrderScreen: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-[#181411] dark:text-white text-base font-bold mb-2 flex items-center gap-2">
-                    Instrucciones Especiales para la Orden
+                    {t('order.specialInstructions')}
                   </h3>
                   {isEditingOrderInstructions ? (
                     <div className="space-y-3">
                       <textarea
                         value={orderSpecialInstructions}
                         onChange={(e) => setOrderSpecialInstructions(e.target.value)}
-                        placeholder="Ej. Traer todos los platillos al mismo tiempo, servir las bebidas primero..."
+                        placeholder={t('order.specialInstructionsPlaceholder')}
                         className="w-full px-3 py-2 rounded-lg border-2 border-primary/50 bg-white dark:bg-gray-900 text-[#181411] dark:text-white text-sm placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-primary outline-none resize-none"
                         rows={3}
                         autoFocus
@@ -613,7 +619,7 @@ const OrderScreen: React.FC = () => {
                           className="flex items-center gap-1 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
                         >
                           <span className="material-symbols-outlined text-sm">check</span>
-                          Guardar
+                          {t('common.save')}
                         </button>
                         <button
                           onClick={() => {
@@ -623,7 +629,7 @@ const OrderScreen: React.FC = () => {
                           className="flex items-center gap-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                         >
                           <span className="material-symbols-outlined text-sm">close</span>
-                          Cancelar
+                          {t('common.cancel')}
                         </button>
                       </div>
                     </div>
@@ -635,7 +641,7 @@ const OrderScreen: React.FC = () => {
                         </div>
                       ) : (
                         <p className="text-gray-400 dark:text-gray-500 text-sm italic mb-2">
-                          Sin instrucciones especiales para la orden
+                          {t('order.noSpecialInstructions')}
                         </p>
                       )}
                       {!isConfirmed && (
@@ -644,7 +650,7 @@ const OrderScreen: React.FC = () => {
                           className="text-primary text-sm font-semibold hover:text-primary/80 transition-colors flex items-center gap-1"
                         >
                           <span className="material-symbols-outlined text-sm">edit</span>
-                          {orderSpecialInstructions ? 'Editar' : 'Agregar'} instrucciones
+                          {orderSpecialInstructions ? t('order.edit') : t('order.add')} {t('order.instructions')}
                         </button>
                       )}
                     </div>
@@ -659,12 +665,12 @@ const OrderScreen: React.FC = () => {
         {orderItems.length > 0 && !isConfirmed && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[#181411] dark:text-white text-lg font-bold">Sugerencias</h2>
+              <h2 className="text-[#181411] dark:text-white text-lg font-bold">{t('order.suggestions')}</h2>
               <button 
                 onClick={() => navigate('/menu')}
                 className="text-primary text-sm font-semibold flex items-center gap-1"
               >
-                Ver todo
+                {t('order.viewAll')}
                 <span className="material-symbols-outlined text-sm">chevron_right</span>
               </button>
             </div>
@@ -700,12 +706,12 @@ const OrderScreen: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <p className="text-[#181411] dark:text-white font-semibold text-sm mb-1">
-                    ¿Terminaste de seleccionar tus alimentos?
+                    {t('order.finishedSelecting')}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     {currentUserParticipant.isReady 
-                      ? 'Puedes desmarcar si necesitas hacer cambios'
-                      : 'Marca cuando hayas terminado de agregar todos tus productos'}
+                      ? t('order.canUnmark')
+                      : t('order.markWhenFinished')}
                   </p>
                 </div>
                 <button
@@ -719,12 +725,12 @@ const OrderScreen: React.FC = () => {
                   {currentUserParticipant.isReady ? (
                     <>
                       <span className="material-symbols-outlined text-sm">check_circle</span>
-                      <span>Listo</span>
+                      <span>{t('order.ready')}</span>
                     </>
                   ) : (
                     <>
                       <span className="material-symbols-outlined text-sm">radio_button_unchecked</span>
-                      <span>Marcar como listo</span>
+                      <span>{t('order.markAsReady')}</span>
                     </>
                   )}
                 </button>
@@ -739,7 +745,7 @@ const OrderScreen: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">receipt_long</span>
-                <span className="text-[#181411] dark:text-white text-base font-semibold">Total de la orden</span>
+                <span className="text-[#181411] dark:text-white text-base font-semibold">{t('order.total')}</span>
               </div>
               <span className="text-primary text-2xl font-bold">${orderTotal.toFixed(2)}</span>
             </div>
@@ -754,7 +760,7 @@ const OrderScreen: React.FC = () => {
                 onClick={() => navigate('/payments')}
                 className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
               >
-                <span>Pagar cuenta</span>
+                <span>{t('order.checkout')}</span>
                 <span className="material-symbols-outlined">payment</span>
               </button>
             ) : isGroupOrder ? (
@@ -764,14 +770,14 @@ const OrderScreen: React.FC = () => {
                     onClick={handleConfirmOrder}
                     className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
                   >
-                    <span>Confirmar y Enviar Orden</span>
+                    <span>{t('order.confirmAndSendOrder')}</span>
                     <span className="material-symbols-outlined">restaurant</span>
                   </button>
                 ) : (
                   <div className="w-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-bold py-4 rounded-xl text-lg flex items-center justify-center gap-3 cursor-not-allowed">
                     <span className="material-symbols-outlined">lock</span>
                     <span>
-                      Esperando a que todos terminen ({getPendingCount()} pendiente{getPendingCount() !== 1 ? 's' : ''})
+                      {t('order.waitingForAll')} ({getPendingCount()} {getPendingCount() !== 1 ? t('order.pending') : t('order.pendingSingular')})
                     </span>
                   </div>
                 )}
@@ -784,7 +790,7 @@ const OrderScreen: React.FC = () => {
                     className="w-full bg-primary/10 hover:bg-primary/20 text-primary font-bold py-4 rounded-xl text-lg border-2 border-primary/30 flex items-center justify-center gap-3 active:scale-95 transition-transform"
                   >
                     <span className="material-symbols-outlined">edit</span>
-                    <span>Cambiar mi orden</span>
+                    <span>{t('order.changeOrder')}</span>
                   </button>
                 ) : (
                   <button
@@ -799,7 +805,7 @@ const OrderScreen: React.FC = () => {
                     }}
                     className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
                   >
-                    <span>Confirmar y Enviar Orden</span>
+                    <span>{t('order.confirmAndSendOrder')}</span>
                     <span className="material-symbols-outlined">restaurant</span>
                   </button>
                 )}
@@ -808,6 +814,54 @@ const OrderScreen: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Modal para guardar combinación */}
+      {showSaveCombinationModal && (
+        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-bold text-[#181411] dark:text-white mb-2">
+              {t('order.saveCombinationTitle')}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              {t('order.saveCombinationDesc')}
+            </p>
+            <input
+              type="text"
+              value={combinationName}
+              onChange={(e) => setCombinationName(e.target.value)}
+              placeholder={t('order.combinationNamePlaceholder')}
+              className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent mb-4"
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowSaveCombinationModal(false);
+                  setCombinationName('');
+                }}
+                className="flex-1 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={() => {
+                  if (combinationName.trim() && orderItems.length > 0) {
+                    saveCombination(combinationName.trim(), orderItems);
+                    setShowSaveCombinationModal(false);
+                    setCombinationName('');
+                    // Mostrar feedback de éxito (opcional)
+                    alert(t('order.combinationSaved'));
+                  }
+                }}
+                disabled={!combinationName.trim()}
+                className="flex-1 py-2 px-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t('common.save')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

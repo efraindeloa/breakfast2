@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface Card {
   id: number;
@@ -23,6 +24,7 @@ interface OrderItem {
 
 const PaymentMethodsScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [includeTip, setIncludeTip] = useState(true);
   const [tipMode, setTipMode] = useState<'percentage' | 'fixed'>('percentage');
   const [tipPercentage, setTipPercentage] = useState(10);
@@ -83,20 +85,20 @@ const PaymentMethodsScreen: React.FC = () => {
         <button onClick={() => navigate(-1)} className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">
           <span className="material-symbols-outlined cursor-pointer text-[#8a7560] dark:text-[#d4c4a8]">arrow_back_ios</span>
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center">Pagar cuenta</h2>
+        <h2 className="text-lg font-bold flex-1 text-center">{t('payment.payBill')}</h2>
         <div className="w-12 flex items-center justify-end">
           <span className="material-symbols-outlined">notifications</span>
         </div>
       </header>
 
       <div className="px-4 pt-5 pb-2">
-        <h3 className="text-xl font-bold text-primary">¡Esperamos que hayas disfrutado tus alimentos!</h3>
-        <p className="text-[#6b7280] dark:text-gray-400 mt-1">Revisa tu orden y selecciona el método de pago.</p>
+        <h3 className="text-xl font-bold text-primary">{t('payment.enjoyMessage')}</h3>
+        <p className="text-[#6b7280] dark:text-gray-400 mt-1">{t('payment.reviewOrder')}</p>
       </div>
 
       {/* Resumen de la Orden */}
       <div className="px-4 py-4">
-        <h4 className="text-lg font-bold mb-4">Resumen de la Orden</h4>
+        <h4 className="text-lg font-bold mb-4">{t('payment.orderSummary')}</h4>
         <div className="bg-white dark:bg-[#2d2516] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-[#3d3321] space-y-3">
           {orderItems.map((item) => (
             <div key={item.id} className="flex justify-between items-center">
@@ -115,7 +117,7 @@ const PaymentMethodsScreen: React.FC = () => {
 
       {/* Método de Pago */}
       <div className="px-4 py-4">
-        <h4 className="text-lg font-bold mb-4">Método de Pago</h4>
+        <h4 className="text-lg font-bold mb-4">{t('payment.paymentMethod')}</h4>
         
         {/* Opción Efectivo */}
         <div className="mb-4">
@@ -144,8 +146,8 @@ const PaymentMethodsScreen: React.FC = () => {
                 <span className="material-symbols-outlined text-primary text-xl">payments</span>
               </div>
               <div>
-                <p className="font-semibold text-[#181411] dark:text-white">Pagar en Efectivo</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Paga directamente en el restaurante</p>
+                <p className="font-semibold text-[#181411] dark:text-white">{t('payment.payCash')}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('payment.payCashDescription')}</p>
               </div>
             </div>
           </label>
@@ -180,8 +182,8 @@ const PaymentMethodsScreen: React.FC = () => {
                 <span className="material-symbols-outlined text-primary text-xl">credit_card</span>
               </div>
               <div>
-                <p className="font-semibold text-[#181411] dark:text-white">Pagar con Tarjeta</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Selecciona una tarjeta guardada</p>
+                <p className="font-semibold text-[#181411] dark:text-white">{t('payment.payCard')}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('payment.payCardDescription')}</p>
               </div>
             </div>
           </label>
@@ -222,7 +224,7 @@ const PaymentMethodsScreen: React.FC = () => {
                 className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/30 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all"
               >
                 <span className="material-symbols-outlined text-primary">add</span>
-                <span className="text-sm font-semibold text-primary">Agregar nueva tarjeta</span>
+                <span className="text-sm font-semibold text-primary">{t('payment.addNewCard')}</span>
               </button>
             </div>
           )}
@@ -234,7 +236,7 @@ const PaymentMethodsScreen: React.FC = () => {
         <div className="bg-white dark:bg-[#2d2516] rounded-xl p-5 shadow-sm border border-gray-100 dark:border-[#3d3321]">
           <div className="space-y-3">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('order.subtotal')}:</span>
               <span className="text-[#181411] dark:text-white font-semibold">${subtotal.toFixed(2)}</span>
             </div>
             
@@ -252,8 +254,8 @@ const PaymentMethodsScreen: React.FC = () => {
                     <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                   <div>
-                    <span className="text-gray-600 dark:text-gray-400 text-sm font-medium">Incluir Propina</span>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs">Opcional</p>
+                    <span className="text-gray-600 dark:text-gray-400 text-sm font-medium">{t('payment.includeTip')}</span>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs">{t('payment.optional')}</p>
                   </div>
                 </div>
                 <span className={`text-sm font-semibold ${includeTip ? 'text-[#181411] dark:text-white' : 'text-gray-400'}`}>
@@ -273,7 +275,7 @@ const PaymentMethodsScreen: React.FC = () => {
                           : 'text-gray-600 dark:text-gray-400 hover:text-[#181411] dark:hover:text-white'
                       }`}
                     >
-                      Porcentaje
+                      {t('payment.percentage')}
                     </button>
                     <button
                       onClick={() => setTipMode('fixed')}
@@ -283,7 +285,7 @@ const PaymentMethodsScreen: React.FC = () => {
                           : 'text-gray-600 dark:text-gray-400 hover:text-[#181411] dark:hover:text-white'
                       }`}
                     >
-                      Cantidad Fija
+                      {t('payment.fixedAmount')}
                     </button>
                   </div>
 
@@ -316,7 +318,7 @@ const PaymentMethodsScreen: React.FC = () => {
                             setTipPercentage(Math.min(100, Math.max(0, value)));
                           }}
                           className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] text-[#181411] dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                          placeholder="Otro %"
+                          placeholder={t('payment.otherPercent')}
                         />
                         <span className="text-gray-500 dark:text-gray-400 text-sm">%</span>
                       </div>
@@ -366,7 +368,7 @@ const PaymentMethodsScreen: React.FC = () => {
             
             <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
               <div className="flex justify-between">
-                <span className="text-[#181411] dark:text-white text-lg font-bold">TOTAL:</span>
+                <span className="text-[#181411] dark:text-white text-lg font-bold">{t('order.total').toUpperCase()}:</span>
                 <span className="text-primary text-xl font-bold">${total.toFixed(2)}</span>
               </div>
             </div>
@@ -378,7 +380,7 @@ const PaymentMethodsScreen: React.FC = () => {
       <div className="px-4 py-4">
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-4">
           <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed mb-4">
-            Si tienes alguna duda o detectas alguna inconsistencia en tu orden, selecciona «Solicitar asistencia» y un asistente acudirá a tu mesa.
+            {t('payment.assistanceMessage')}
           </p>
           <button
             onClick={() => {
@@ -388,7 +390,7 @@ const PaymentMethodsScreen: React.FC = () => {
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-95"
           >
             <span className="material-symbols-outlined">support_agent</span>
-            <span>Solicitar asistencia</span>
+            <span>{t('payment.requestAssistance')}</span>
           </button>
         </div>
       </div>
@@ -408,7 +410,7 @@ const PaymentMethodsScreen: React.FC = () => {
               : ''
           }`}
         >
-          <span>Confirmar Pago</span>
+          <span>{t('payment.confirmPayment')}</span>
           <span className="material-symbols-outlined">check_circle</span>
         </button>
       </div>

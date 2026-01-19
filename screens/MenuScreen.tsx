@@ -1,28 +1,73 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
+import { useTranslation, useLanguage } from '../contexts/LanguageContext';
 
 type OriginType = 'mar' | 'tierra' | 'aire' | 'vegetariano' | 'vegano' | '';
 
 const MenuScreen: React.FC = () => {
   const navigate = useNavigate();
   const { cart, addToCart } = useCart();
+  const { t } = useTranslation();
+  const { language } = useLanguage();
   
   const getCartQuantity = (dishId: number) => {
     return cart.filter(item => item.id === dishId).reduce((sum, item) => sum + item.quantity, 0);
   };
-  const [selectedCategory, setSelectedCategory] = useState('Entradas');
+
+  // Funciones auxiliares para obtener nombres y descripciones traducidas
+  const getDishName = (dishId: number): string => {
+    try {
+      return t(`dishes.${dishId}.name`) || `dish-${dishId}`;
+    } catch {
+      return `dish-${dishId}`;
+    }
+  };
+
+  const getDishDescription = (dishId: number): string => {
+    try {
+      return t(`dishes.${dishId}.description`) || '';
+    } catch {
+      return '';
+    }
+  };
+  
+  const [selectedCategory, setSelectedCategory] = useState(t('menu.categories.appetizers'));
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedOrigin, setSelectedOrigin] = useState<OriginType>('');
 
-  const categories = ['Entradas', 'Platos Fuertes', 'Bebidas', 'Postres', 'Coctelería'];
-  const originFilters = [
-    { value: 'tierra' as OriginType, label: 'Tierra', icon: 'agriculture' },
-    { value: 'mar' as OriginType, label: 'Mar', icon: 'waves' },
-    { value: 'aire' as OriginType, label: 'Aire', icon: 'air' },
-    { value: 'vegetariano' as OriginType, label: 'Vegetariano', icon: 'local_florist' },
-    { value: 'vegano' as OriginType, label: 'Vegano', icon: 'eco' },
+  // Mapeo de categorías en español a traducciones
+  const categoryMap: Record<string, string> = {
+    'Entradas': t('menu.categories.appetizers'),
+    'Platos Fuertes': t('menu.categories.mains'),
+    'Bebidas': t('menu.categories.drinks'),
+    'Postres': t('menu.categories.desserts'),
+    'Coctelería': t('menu.categories.cocktails')
+  };
+  
+  const categories = [
+    t('menu.categories.appetizers'),
+    t('menu.categories.mains'),
+    t('menu.categories.drinks'),
+    t('menu.categories.desserts'),
+    t('menu.categories.cocktails')
+  ];
+  
+  // Función para obtener la categoría original en español desde la traducción
+  const getOriginalCategory = (translatedCategory: string): string => {
+    for (const [original, translated] of Object.entries(categoryMap)) {
+      if (translated === translatedCategory) return original;
+    }
+    return translatedCategory;
+  };
+  // Definir los filtros con estructura base (sin traducciones)
+  const originFiltersBase = [
+    { value: 'tierra' as OriginType, key: 'menu.filters.land', icon: 'agriculture' },
+    { value: 'mar' as OriginType, key: 'menu.filters.sea', icon: 'waves' },
+    { value: 'aire' as OriginType, key: 'menu.filters.air', icon: 'air' },
+    { value: 'vegetariano' as OriginType, key: 'menu.filters.vegetarian', icon: 'local_florist' },
+    { value: 'vegano' as OriginType, key: 'menu.filters.vegan', icon: 'eco' },
   ];
 
   const dishes = [
@@ -178,15 +223,18 @@ const MenuScreen: React.FC = () => {
 
   // Filtrar platos por categoría, búsqueda y origen
   const filteredDishes = useMemo(() => {
+    const originalCategory = getOriginalCategory(selectedCategory);
     return dishes.filter(dish => {
       // Filtro por categoría
-      if (dish.category !== selectedCategory) return false;
+      if (dish.category !== originalCategory) return false;
       
-      // Filtro por búsqueda
+      // Filtro por búsqueda (usando traducciones)
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
-        const matchesName = dish.name.toLowerCase().includes(query);
-        const matchesDescription = dish.description.toLowerCase().includes(query);
+        const translatedName = getDishName(dish.id).toLowerCase();
+        const translatedDescription = getDishDescription(dish.id).toLowerCase();
+        const matchesName = translatedName.includes(query);
+        const matchesDescription = translatedDescription.includes(query);
         if (!matchesName && !matchesDescription) return false;
       }
       
@@ -205,8 +253,9 @@ const MenuScreen: React.FC = () => {
     });
   }, [selectedCategory, searchQuery, selectedOrigin, dishes]);
 
-  const suggestions = chefSuggestions[selectedCategory] || [];
-  const highlights = todayHighlights[selectedCategory] || [];
+  const originalCategory = getOriginalCategory(selectedCategory);
+  const suggestions = chefSuggestions[originalCategory] || [];
+  const highlights = todayHighlights[originalCategory] || [];
 
   const hasActiveFilters = selectedOrigin !== '';
 
@@ -230,7 +279,7 @@ const MenuScreen: React.FC = () => {
             <button 
               onClick={() => setShowFilters(true)}
               className={`flex size-10 items-center justify-center rounded-full bg-white dark:bg-[#322a1a] shadow-sm border border-[#f4f3f0] dark:border-[#3d3321] relative ${hasActiveFilters ? 'text-primary' : ''}`}
-              title="Filtros"
+              title={t('common.search')}
             >
               <span className="material-symbols-outlined">filter_list</span>
               {hasActiveFilters && (
@@ -268,7 +317,7 @@ const MenuScreen: React.FC = () => {
       {suggestions.length > 0 && (
         <section className="px-4 pt-6 pb-4">
           <div className="flex justify-between items-end mb-4">
-            <h3 className="text-[#181611] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">Sugerencias del Chef</h3>
+            <h3 className="text-[#181611] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">{t('menu.chefSuggestions')}</h3>
           </div>
           
           <div className="flex overflow-x-auto hide-scrollbar pb-2 -mx-4 px-4">
@@ -289,8 +338,8 @@ const MenuScreen: React.FC = () => {
                       <div className="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">{dish.price}</div>
                     </div>
                     <div className="px-2 pb-2">
-                      <p className="text-[#181611] dark:text-white text-base font-bold leading-normal">{dish.name}</p>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">{dish.description}</p>
+                      <p className="text-[#181611] dark:text-white text-base font-bold leading-normal">{getDishName(dish.id)}</p>
+                      <p className="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">{getDishDescription(dish.id)}</p>
                     </div>
                   </div>
                 );
@@ -303,7 +352,7 @@ const MenuScreen: React.FC = () => {
       {/* Destacados de hoy */}
       {highlights.length > 0 && (
         <section className="px-4 pb-4">
-          <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-2">Destacados de hoy</h3>
+          <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-2">{t('menu.todayHighlights')}</h3>
           <div className="flex flex-col gap-3">
             {highlights.map((dishId) => {
               const dish = dishes.find(d => d.id === dishId);
@@ -319,8 +368,8 @@ const MenuScreen: React.FC = () => {
                     style={{ backgroundImage: `url("${dish.image}")` }}
                   />
                   <div className="flex-1">
-                    <p className="font-bold dark:text-white">{dish.name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{dish.description}</p>
+                    <p className="font-bold dark:text-white">{getDishName(dish.id)}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{getDishDescription(dish.id)}</p>
                   </div>
                   <span className="material-symbols-outlined text-gray-300">chevron_right</span>
                 </div>
@@ -334,12 +383,12 @@ const MenuScreen: React.FC = () => {
       <section className="px-4 pb-4">
         <div className="flex items-center gap-2 pb-3">
           <span className="material-symbols-outlined text-[#181611] dark:text-white text-xl">restaurant_menu</span>
-          <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Menú</h3>
+          <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">{t('navigation.menu')}</h3>
         </div>
         
         {/* Origin Filters Chips */}
         <div className="flex gap-2 pb-4 overflow-x-auto no-scrollbar">
-          {originFilters.map((filter) => (
+          {originFiltersBase.map((filter) => (
             <button
               key={filter.value}
               onClick={() => setSelectedOrigin(selectedOrigin === filter.value ? '' : filter.value)}
@@ -357,7 +406,7 @@ const MenuScreen: React.FC = () => {
               <span className={`text-xs font-medium ${
                 selectedOrigin === filter.value ? 'text-white' : 'text-[#181611] dark:text-stone-300'
               }`}>
-                {filter.label}
+                {t(filter.key)}
               </span>
             </button>
           ))}
@@ -365,7 +414,7 @@ const MenuScreen: React.FC = () => {
             <button
               onClick={() => setSelectedOrigin('')}
               className="flex h-9 shrink-0 items-center justify-center gap-1 rounded-full px-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              title="Limpiar filtro"
+                  title={t('menu.clearFilter')}
             >
               <span className="material-symbols-outlined text-sm">close</span>
             </button>
@@ -383,7 +432,7 @@ const MenuScreen: React.FC = () => {
             <div className="flex flex-[2_2_0px] flex-col justify-between gap-3">
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
-                  <p className="text-[#181611] dark:text-white text-base font-bold leading-tight">{dish.name}</p>
+                  <p className="text-[#181611] dark:text-white text-base font-bold leading-tight">{getDishName(dish.id)}</p>
                   {dish.badges?.includes('vegano') && (
                     <span className="material-symbols-outlined text-xs text-green-500" title="Vegano">eco</span>
                   )}
@@ -391,7 +440,7 @@ const MenuScreen: React.FC = () => {
                     <span className="material-symbols-outlined text-xs text-orange-500" title="Especialidad">star</span>
                   )}
                 </div>
-                <p className="text-[#897c61] dark:text-stone-400 text-sm font-normal leading-snug">{dish.description}</p>
+                <p className="text-[#897c61] dark:text-stone-400 text-sm font-normal leading-snug">{getDishDescription(dish.id)}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button 
@@ -409,13 +458,13 @@ const MenuScreen: React.FC = () => {
                     const price = parseFloat(dish.price.replace('$', ''));
                     addToCart({
                       id: dish.id,
-                      name: dish.name,
+                      name: getDishName(dish.id),
                       price: price,
                       notes: '',
                     });
                   }}
                   className="relative flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors active:scale-95"
-                  title="Agregar a la orden"
+                  title={t('menu.addToOrder')}
                 >
                   <span className="material-symbols-outlined text-lg">add_shopping_cart</span>
                   {getCartQuantity(dish.id) > 0 && (
@@ -439,15 +488,15 @@ const MenuScreen: React.FC = () => {
               </span>
               <p className="text-sm text-center">
                 {searchQuery || hasActiveFilters 
-                  ? 'No se encontraron platos con los filtros aplicados'
-                  : 'No hay platos disponibles en esta categoría'}
+                  ? t('menu.noDishesFound')
+                  : t('menu.noDishesInCategory')}
               </p>
               {(searchQuery || hasActiveFilters) && (
                 <button
                   onClick={clearFilters}
                   className="mt-4 px-4 py-2 bg-primary text-white rounded-xl font-semibold text-sm"
                 >
-                  Limpiar filtros
+                  {t('menu.clearFilters')}
                 </button>
               )}
             </div>
@@ -461,7 +510,7 @@ const MenuScreen: React.FC = () => {
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-end">
           <div className="w-full bg-white dark:bg-gray-800 rounded-t-3xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
-              <h3 className="text-xl font-bold text-[#181611] dark:text-white">Filtros</h3>
+              <h3 className="text-xl font-bold text-[#181611] dark:text-white">{t('menu.filters')}</h3>
               <button
                 onClick={() => setShowFilters(false)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
@@ -474,10 +523,10 @@ const MenuScreen: React.FC = () => {
               {/* Filtro por Origen */}
               <div>
                 <label className="block text-sm font-semibold text-[#181611] dark:text-white mb-3">
-                  Origen de la Proteína
+                  {t('menu.proteinOrigin')}
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {originFilters.map((filter) => (
+                  {originFiltersBase.map((filter) => (
                     <button
                       key={filter.value}
                       onClick={() => setSelectedOrigin(selectedOrigin === filter.value ? '' : filter.value as OriginType)}
@@ -500,7 +549,7 @@ const MenuScreen: React.FC = () => {
                             ? 'text-primary'
                             : 'text-[#181611] dark:text-white'
                         }`}>
-                          {filter.label}
+                          {t(filter.key)}
                         </span>
                       </div>
                     </button>
@@ -516,14 +565,14 @@ const MenuScreen: React.FC = () => {
                     <p className="text-sm text-[#181611] dark:text-white">
                       {searchQuery ? `Buscando: "${searchQuery}"` : ''}
                       {searchQuery && hasActiveFilters ? ' • ' : ''}
-                      {hasActiveFilters ? `Filtro: ${originFilters.find(f => f.value === selectedOrigin)?.label}` : ''}
+                      {hasActiveFilters ? `Filtro: ${t(originFiltersBase.find(f => f.value === selectedOrigin)?.key || '')}` : ''}
                     </p>
                   </div>
                   <button
                     onClick={clearFilters}
                     className="text-primary text-sm font-semibold hover:text-primary/80 transition-colors"
                   >
-                    Limpiar
+                    {t('menu.clear')}
                   </button>
                 </div>
               )}
@@ -534,13 +583,13 @@ const MenuScreen: React.FC = () => {
                 onClick={clearFilters}
                 className="flex-1 py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                Limpiar
+                {t('menu.clear')}
               </button>
               <button
                 onClick={() => setShowFilters(false)}
                 className="flex-1 py-3 px-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 transition-colors"
               >
-                Aplicar
+                {t('menu.apply')}
               </button>
             </div>
           </div>

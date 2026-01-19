@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../contexts/LanguageContext';
 
 const JoinTableScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [tableCode, setTableCode] = useState('');
   const [hasValidCode, setHasValidCode] = useState(false);
 
@@ -54,7 +56,7 @@ const JoinTableScreen: React.FC = () => {
           <span className="material-symbols-outlined text-[#8a7560] dark:text-[#d4c4a8]">arrow_back</span>
         </button>
         <h2 className="text-[#181411] dark:text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center">
-          Unirse a Mesa
+          {t('joinTable.title')}
         </h2>
         <button className="size-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
           <span className="material-symbols-outlined text-zinc-400">help_outline</span>
@@ -77,10 +79,10 @@ const JoinTableScreen: React.FC = () => {
         {/* HeadlineText */}
         <div className="px-4 pt-4 pb-2 text-center">
           <h2 className="text-[#181411] dark:text-white tracking-tight text-3xl font-extrabold leading-tight">
-            ¡Únete a la mesa!
+            {t('joinTable.headline')}
           </h2>
           <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">
-            Escanea el QR o ingresa el código manual
+            {t('joinTable.subtitle')}
           </p>
         </div>
 
@@ -88,13 +90,13 @@ const JoinTableScreen: React.FC = () => {
         <div className="flex flex-col gap-4 px-4 py-4">
           <div className="flex flex-col flex-1">
             <label className="text-[#181411] dark:text-zinc-200 text-sm font-semibold leading-normal pb-2 px-1">
-              Código de mesa
+              {t('joinTable.tableCode')}
             </label>
             <div className="flex w-full flex-1 items-stretch rounded-full overflow-hidden shadow-sm border border-[#e5e0dc] dark:border-zinc-700">
               <input
                 type="text"
                 className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden text-[#181411] dark:text-white focus:outline-0 focus:ring-0 border-none bg-white dark:bg-zinc-800 h-14 placeholder:text-[#887563] px-6 text-base font-medium leading-normal"
-                placeholder="Ej: A-7890"
+                placeholder={t('joinTable.tableCodePlaceholder')}
                 value={tableCode}
                 onChange={handleCodeChange}
               />
@@ -116,10 +118,10 @@ const JoinTableScreen: React.FC = () => {
         <div className="px-4 mt-2">
           <div className="flex items-center justify-between pb-2">
             <h3 className="text-[#181411] dark:text-white text-lg font-bold leading-tight tracking-tight">
-              En la mesa
+              {t('joinTable.atTable')}
             </h3>
             <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">
-              4 en la mesa
+              4 {t('joinTable.peopleAtTable')}
             </span>
           </div>
 
@@ -157,7 +159,7 @@ const JoinTableScreen: React.FC = () => {
         <div className="mx-4 mt-6 p-4 bg-amber-50 dark:bg-amber-950/20 rounded-xl border border-amber-100 dark:border-amber-900/50 flex gap-3 items-start">
           <span className="material-symbols-outlined text-primary text-[20px] mt-0.5">shield_person</span>
           <p className="text-amber-800 dark:text-amber-200 text-xs leading-relaxed font-medium">
-            <span className="font-bold">Seguridad:</span> Solo el anfitrión podrá confirmar el pago final y aplicar descuentos de grupo.
+            <span className="font-bold">Seguridad:</span> {t('joinTable.securityNotice')}
           </p>
         </div>
         )}
@@ -174,7 +176,7 @@ const JoinTableScreen: React.FC = () => {
               : 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
           }`}
         >
-          Unirme a la Orden
+          {t('joinTable.joinOrder')}
         </button>
       </div>
     </div>

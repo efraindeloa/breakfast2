@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface Card {
   id: number;
@@ -16,6 +17,7 @@ interface Card {
 
 const ProfileScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [cards, setCards] = useState<Card[]>([
     {
       id: 1,
@@ -349,7 +351,7 @@ const ProfileScreen: React.FC = () => {
         <button onClick={() => navigate(-1)} className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">
           <span className="material-symbols-outlined cursor-pointer text-[#8a7560] dark:text-[#d4c4a8]">arrow_back_ios</span>
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center">Mi Perfil</h2>
+        <h2 className="text-lg font-bold flex-1 text-center">{t('profile.title')}</h2>
         <div className="w-12 flex items-center justify-end">
           <span className="material-symbols-outlined cursor-pointer" onClick={() => navigate('/settings')}>settings</span>
         </div>
@@ -392,7 +394,7 @@ const ProfileScreen: React.FC = () => {
                   className="w-full px-2.5 py-1.5 text-left text-xs font-medium text-[#181411] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5 border-b border-gray-100 dark:border-gray-700"
                 >
                   <span className="material-symbols-outlined text-sm">photo_camera</span>
-                  <span>{profileImage === defaultImage ? 'Agregar foto' : 'Cambiar foto'}</span>
+                  <span>{profileImage === defaultImage ? t('profile.addPhoto') : t('profile.changePhoto')}</span>
                 </button>
                 
                 {/* Editar foto y Eliminar foto - solo cuando hay imagen personalizada */}
@@ -406,7 +408,7 @@ const ProfileScreen: React.FC = () => {
                       className="w-full px-2.5 py-1.5 text-left text-xs font-medium text-[#181411] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5 border-b border-gray-100 dark:border-gray-700"
                     >
                       <span className="material-symbols-outlined text-sm">crop</span>
-                      <span>Editar foto</span>
+                      <span>{t('profile.editPhoto')}</span>
                     </button>
                     <button
                       onClick={(e) => {
@@ -416,7 +418,7 @@ const ProfileScreen: React.FC = () => {
                       className="w-full px-2.5 py-1.5 text-left text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center gap-1.5"
                     >
                       <span className="material-symbols-outlined text-sm">delete</span>
-                      <span>Eliminar foto</span>
+                      <span>{t('profile.deletePhoto')}</span>
                     </button>
                   </>
                 )}
@@ -432,17 +434,17 @@ const ProfileScreen: React.FC = () => {
             />
           </div>
           <div className="flex flex-col items-center">
-            <p className="text-[24px] font-bold">¡Hola, Carlos! ☀️</p>
-            <p className="text-[#8a7560] dark:text-[#c0a890] mt-1 text-center">¡Que tengas un excelente desayuno!</p>
+            <p className="text-[24px] font-bold">{t('profile.greeting')} ☀️</p>
+            <p className="text-[#8a7560] dark:text-[#c0a890] mt-1 text-center">{t('profile.greetingMessage')}</p>
             <div className="mt-2 px-3 py-1 bg-primary/10 rounded-full">
-              <p className="text-primary text-xs font-semibold uppercase">Miembro Gold desde 2023</p>
+              <p className="text-primary text-xs font-semibold uppercase">{t('profile.memberSince')}</p>
             </div>
           </div>
         </div>
       </section>
 
       <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
-        <h3 className="text-lg font-bold py-4">Información de Cuenta</h3>
+        <h3 className="text-lg font-bold py-4">{t('profile.accountInfo')}</h3>
         <div className="py-4 space-y-4">
           {/* Nombre */}
           <div className="flex items-start gap-4">
@@ -450,7 +452,7 @@ const ProfileScreen: React.FC = () => {
               <span className="material-symbols-outlined">person</span>
             </div>
             <div className="flex-1">
-              <p className="text-[#8a7560] dark:text-[#c0a890] text-xs font-medium mb-1">Nombre</p>
+              <p className="text-[#8a7560] dark:text-[#c0a890] text-xs font-medium mb-1">{t('profile.name')}</p>
               {editingField === 'name' ? (
                 <div className="space-y-2">
                   <input
@@ -466,14 +468,14 @@ const ProfileScreen: React.FC = () => {
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors"
                     >
                       <span className="material-symbols-outlined text-sm">check</span>
-                      Guardar
+                      {t('common.save')}
                     </button>
                     <button
                       onClick={handleCancelEdit}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                     >
                       <span className="material-symbols-outlined text-sm">close</span>
-                      Cancelar
+                      {t('common.cancel')}
                     </button>
                   </div>
                 </div>
@@ -483,7 +485,7 @@ const ProfileScreen: React.FC = () => {
                   <button
                     onClick={() => handleStartEdit('name')}
                     className="text-primary hover:text-primary/80 transition-colors p-1"
-                    title="Editar nombre"
+                    title={t('profile.editName')}
                   >
                     <span className="material-symbols-outlined text-sm">edit</span>
                   </button>
@@ -498,7 +500,7 @@ const ProfileScreen: React.FC = () => {
               <span className="material-symbols-outlined">mail</span>
             </div>
             <div className="flex-1">
-              <p className="text-[#8a7560] dark:text-[#c0a890] text-xs font-medium mb-1">Correo electrónico</p>
+              <p className="text-[#8a7560] dark:text-[#c0a890] text-xs font-medium mb-1">{t('profile.email')}</p>
               {editingField === 'email' ? (
                 <div className="space-y-2">
                   <input
@@ -514,14 +516,14 @@ const ProfileScreen: React.FC = () => {
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors"
                     >
                       <span className="material-symbols-outlined text-sm">check</span>
-                      Guardar
+                      {t('common.save')}
                     </button>
                     <button
                       onClick={handleCancelEdit}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                     >
                       <span className="material-symbols-outlined text-sm">close</span>
-                      Cancelar
+                      {t('common.cancel')}
                     </button>
                   </div>
                 </div>
@@ -531,7 +533,7 @@ const ProfileScreen: React.FC = () => {
                   <button
                     onClick={() => handleStartEdit('email')}
                     className="text-primary hover:text-primary/80 transition-colors p-1"
-                    title="Editar correo"
+                    title={t('profile.editEmail')}
                   >
                     <span className="material-symbols-outlined text-sm">edit</span>
                   </button>
@@ -546,7 +548,7 @@ const ProfileScreen: React.FC = () => {
               <span className="material-symbols-outlined">phone</span>
             </div>
             <div className="flex-1">
-              <p className="text-[#8a7560] dark:text-[#c0a890] text-xs font-medium mb-1">Número de teléfono</p>
+              <p className="text-[#8a7560] dark:text-[#c0a890] text-xs font-medium mb-1">{t('profile.phone')}</p>
               {editingField === 'phone' ? (
                 <div className="space-y-2">
                   <input
@@ -562,14 +564,14 @@ const ProfileScreen: React.FC = () => {
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors"
                     >
                       <span className="material-symbols-outlined text-sm">check</span>
-                      Guardar
+                      {t('common.save')}
                     </button>
                     <button
                       onClick={handleCancelEdit}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                     >
                       <span className="material-symbols-outlined text-sm">close</span>
-                      Cancelar
+                      {t('common.cancel')}
                     </button>
                   </div>
                 </div>
@@ -579,7 +581,7 @@ const ProfileScreen: React.FC = () => {
                   <button
                     onClick={() => handleStartEdit('phone')}
                     className="text-primary hover:text-primary/80 transition-colors p-1"
-                    title="Editar teléfono"
+                    title={t('profile.editPhone')}
                   >
                     <span className="material-symbols-outlined text-sm">edit</span>
                   </button>
@@ -597,7 +599,7 @@ const ProfileScreen: React.FC = () => {
 
       {/* Tarjetas de Crédito */}
       <section className="bg-white dark:bg-[#2d2116] mb-2 px-4 py-4">
-        <h3 className="text-lg font-bold mb-4">Mis Tarjetas</h3>
+        <h3 className="text-lg font-bold mb-4">{t('profile.myCards')}</h3>
         <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-2 -mx-4 px-4">
           {cards.map((card) => (
             <CreditCard
@@ -612,14 +614,15 @@ const ProfileScreen: React.FC = () => {
       </section>
 
       <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
-        <h3 className="text-lg font-bold py-4">Mi Actividad</h3>
-        <MenuItem icon="history" title="Historial de Órdenes" subtitle="Revisa tus desayunos anteriores" onClick={() => navigate('/order-history')} />
-        <MenuItem icon="payments" title="Historial de Pagos" subtitle="Revisa tus transacciones anteriores" onClick={() => navigate('/transactions')} />
+        <h3 className="text-lg font-bold py-4">{t('profile.myActivity')}</h3>
+        <MenuItem icon="favorite" title={t('profile.favorites')} subtitle={t('profile.favoritesSubtitle')} onClick={() => navigate('/favorites')} />
+        <MenuItem icon="history" title={t('profile.orderHistory')} subtitle={t('profile.orderHistorySubtitle')} onClick={() => navigate('/order-history')} />
+        <MenuItem icon="payments" title={t('profile.transactions')} subtitle={t('profile.transactionsSubtitle')} onClick={() => navigate('/transactions')} />
       </section>
 
       <div className="px-4 mt-8">
         <button className="w-full h-14 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 font-bold rounded-xl border border-red-100 dark:border-red-900/30 active:scale-95 transition-all">
-          Cerrar Sesión
+          {t('profile.logout')}
         </button>
       </div>
 
@@ -805,17 +808,17 @@ const ProfileScreen: React.FC = () => {
               <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-3xl">warning</span>
             </div>
             <h3 className="text-xl font-bold text-center text-[#181411] dark:text-white mb-2">
-              ¿Eliminar tarjeta?
+              {t('profile.deleteCardConfirm')}
             </h3>
             <p className="text-gray-600 dark:text-gray-300 text-center text-sm mb-6">
-              Esta acción no se puede deshacer. La tarjeta será eliminada permanentemente.
+              {t('profile.deleteCardWarning')}
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(null)}
                 className="flex-1 py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                Cancelar
+                {t('common.cancel')}
               </button>
               <button
                 onClick={() => {
@@ -824,7 +827,7 @@ const ProfileScreen: React.FC = () => {
                 }}
                 className="flex-1 py-3 px-4 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors active:scale-95"
               >
-                Eliminar
+                {t('common.delete')}
               </button>
             </div>
           </div>
@@ -860,14 +863,17 @@ const CreditCard: React.FC<{
   isDisabled?: boolean;
   onDelete: () => void;
   onToggle: () => void;
-}> = ({ color, textColor, number, exp, name, brand, isMastercard, isDisabled, onDelete, onToggle }) => (
+}> = ({ color, textColor, number, exp, name, brand, isMastercard, isDisabled, onDelete, onToggle }) => {
+  const { t } = useTranslation();
+  
+  return (
   <div className={`min-w-[280px] aspect-[1.6/1] rounded-xl flex flex-col justify-between p-6 bg-gradient-to-br ${color} ${textColor} relative shadow-sm group ${isDisabled ? 'opacity-60' : ''}`}>
     {/* Overlay de deshabilitado */}
     {isDisabled && (
       <div className="absolute inset-0 bg-black/20 rounded-xl flex items-center justify-center z-20 pointer-events-none">
         <div className="bg-white/90 dark:bg-gray-800/90 rounded-lg px-3 py-1.5 flex items-center gap-2 pointer-events-auto">
           <span className="material-symbols-outlined text-sm text-gray-600 dark:text-gray-300">block</span>
-          <span className="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase">Deshabilitada</span>
+          <span className="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase">{t('profile.disabled')}</span>
         </div>
       </div>
     )}
@@ -879,14 +885,14 @@ const CreditCard: React.FC<{
         onDelete();
       }}
       className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/30 dark:bg-black/30 backdrop-blur-sm flex items-center justify-center opacity-80 hover:opacity-100 group-hover:opacity-100 transition-opacity hover:bg-white/40 dark:hover:bg-black/40 active:scale-95 z-30"
-      title="Eliminar tarjeta"
+      title={t('profile.deleteCard')}
     >
       <span className="material-symbols-outlined text-sm">delete</span>
     </button>
 
     {/* Toggle de habilitar/deshabilitar */}
     <div className="absolute bottom-3 right-3 z-30">
-      <label className="relative inline-flex items-center cursor-pointer" title={isDisabled ? 'Habilitar tarjeta' : 'Deshabilitar tarjeta'}>
+      <label className="relative inline-flex items-center cursor-pointer" title={isDisabled ? t('profile.enableCard') : t('profile.disableCard')}>
         <input
           type="checkbox"
           checked={!isDisabled}
@@ -921,31 +927,36 @@ const CreditCard: React.FC<{
       <p className="text-lg font-mono tracking-widest">{number}</p>
       <div className="flex gap-4 mt-2">
         <div>
-          <p className="text-[10px] uppercase opacity-70">Expira</p>
+          <p className="text-[10px] uppercase opacity-70">{t('profile.expires')}</p>
           <p className="text-sm font-medium">{exp}</p>
         </div>
         <div>
-          <p className="text-[10px] uppercase opacity-70">Titular</p>
+          <p className="text-[10px] uppercase opacity-70">{t('profile.cardholder')}</p>
           <p className="text-sm font-medium">{name}</p>
         </div>
       </div>
     </div>
   </div>
-);
+  );
+};
 
-const EmptyCard: React.FC<{ onClick: () => void }> = ({ onClick }) => (
-  <div
-    onClick={onClick}
-    className="min-w-[280px] aspect-[1.6/1] rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 cursor-pointer hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all active:scale-95"
-  >
-    <div className="flex flex-col items-center gap-3">
-      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-        <span className="material-symbols-outlined text-primary text-3xl">add</span>
+const EmptyCard: React.FC<{ onClick: () => void }> = ({ onClick }) => {
+  const { t } = useTranslation();
+  
+  return (
+    <div
+      onClick={onClick}
+      className="min-w-[280px] aspect-[1.6/1] rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 cursor-pointer hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all active:scale-95"
+    >
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+          <span className="material-symbols-outlined text-primary text-3xl">add</span>
+        </div>
+        <p className="text-primary font-semibold text-sm">{t('profile.addCard')}</p>
       </div>
-      <p className="text-primary font-semibold text-sm">Agregar tarjeta</p>
     </div>
-  </div>
-);
+  );
+};
 
 const PaymentHistoryItem: React.FC<{ restaurantName: string; date: string; amount: string; logo: string; cardLast4: string }> = ({ restaurantName, date, amount, logo, cardLast4 }) => (
   <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors">

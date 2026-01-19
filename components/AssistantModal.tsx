@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useGroupOrder } from '../contexts/GroupOrderContext';
+import { useTranslation, useLanguage } from '../contexts/LanguageContext';
 
 interface Message {
   id: string;
@@ -31,6 +32,8 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
   const navigate = useNavigate();
   const { cart } = useCart();
   const { isGroupOrder, participants, isConfirmed } = useGroupOrder();
+  const { t } = useTranslation();
+  const { setLanguage, language } = useLanguage();
   
   // Función para cargar el historial desde localStorage
   const loadChatHistory = (): Message[] => {
@@ -323,8 +326,45 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
     }
 
     if (message.includes('idioma') || message.includes('language')) {
+      // Detectar si el usuario quiere cambiar el idioma directamente
+      const languageMap: Record<string, 'es' | 'en' | 'pt' | 'fr'> = {
+        'español': 'es',
+        'spanish': 'es',
+        'espanol': 'es',
+        'inglés': 'en',
+        'ingles': 'en',
+        'english': 'en',
+        'portugués': 'pt',
+        'portugues': 'pt',
+        'português': 'pt',
+        'portuguese': 'pt',
+        'francés': 'fr',
+        'frances': 'fr',
+        'français': 'fr',
+        'french': 'fr',
+      };
+
+      // Buscar si el mensaje contiene un nombre de idioma
+      for (const [langName, langCode] of Object.entries(languageMap)) {
+        if (message.includes(langName.toLowerCase())) {
+          // Cambiar el idioma directamente
+          setLanguage(langCode);
+          const langNames: Record<'es' | 'en' | 'pt' | 'fr', string> = {
+            'es': 'Español',
+            'en': 'English',
+            'pt': 'Português',
+            'fr': 'Français'
+          };
+          return {
+            response: `¡Perfecto! He cambiado el idioma a ${langNames[langCode]}. La aplicación se actualizará automáticamente.`,
+            navigationRoute: null
+          };
+        }
+      }
+
+      // Si no especifica un idioma, mostrar opciones
       return {
-        response: 'Para cambiar el idioma:\n1. Ve a Configuración\n2. Selecciona el idioma que prefieras\n3. La app se actualizará automáticamente\n\nEl asistente también responderá en el idioma que selecciones.',
+        response: 'Puedo cambiar el idioma por ti. Solo dime a qué idioma quieres cambiar:\n\n• Español\n• Inglés (English)\n• Portugués (Português)\n• Francés (Français)\n\nEjemplo: "cambiar idioma a inglés" o "idioma español"',
         navigationRoute: null
       };
     }
@@ -520,7 +560,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
                   `}</style>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-[#181611] dark:text-white">Asistente</h3>
+                  <h3 className="text-lg font-bold text-[#181611] dark:text-white">{t('assistant.title')}</h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400">Powered by IA</p>
                 </div>
               </div>
@@ -528,7 +568,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
                 <button
                   onClick={handleToggleSearch}
                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                  title="Buscar en el chat"
+                  title={t('assistant.searchInChat')}
                 >
                   <span className="material-symbols-outlined text-[#181611] dark:text-white">search</span>
                 </button>
@@ -536,7 +576,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
                   <button
                     onClick={handleClearHistory}
                     className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                    title="Borrar historial"
+                    title={t('assistant.clearHistory')}
                   >
                     <span className="material-symbols-outlined text-[#181611] dark:text-white">delete</span>
                   </button>
@@ -564,7 +604,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
                       setSearchQuery(e.target.value);
                       setCurrentSearchIndex(-1);
                     }}
-                    placeholder="Buscar en el chat..."
+                    placeholder={t('assistant.searchPlaceholder')}
                     className="w-full h-12 pl-10 pr-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-[#181611] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                   {searchQuery && (
@@ -582,7 +622,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
                 <button
                   onClick={handleToggleSearch}
                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                  title="Cerrar búsqueda"
+                  title={t('assistant.closeSearch')}
                 >
                   <span className="material-symbols-outlined text-[#181611] dark:text-white">close</span>
                 </button>
@@ -591,8 +631,8 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600 dark:text-gray-400">
                     {searchMatches.length > 0 
-                      ? `${searchMatches.length} resultado${searchMatches.length !== 1 ? 's' : ''} encontrado${searchMatches.length !== 1 ? 's' : ''}`
-                      : 'No se encontraron resultados'}
+                      ? `${searchMatches.length} ${searchMatches.length !== 1 ? t('assistant.results') : t('assistant.result')} ${t('assistant.found')}`
+                      : t('assistant.noResultsFound')}
                   </span>
                   {searchMatches.length > 0 ? (
                     <div className="flex items-center gap-2">
@@ -633,7 +673,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
                 <span className="material-symbols-outlined text-gray-400 text-3xl">search_off</span>
               </div>
               <p className="text-gray-500 dark:text-gray-400 text-center">
-                No se encontraron mensajes que coincidan con "{searchQuery}"
+                {t('assistant.noMessagesFound')}: "{searchQuery}"
               </p>
             </div>
           ) : (
@@ -726,7 +766,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Escribe tu pregunta..."
+                  placeholder={t('assistant.placeholder')}
                   className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-[#181611] dark:text-white focus:outline-none focus:border-transparent transition-all relative z-10"
                   style={{
                     transition: 'all 0.3s ease',

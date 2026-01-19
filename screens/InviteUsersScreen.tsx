@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGroupOrder, GroupOrderParticipant } from '../contexts/GroupOrderContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface User {
   id: string;
@@ -13,6 +14,7 @@ interface User {
 
 const InviteUsersScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { addParticipant, participants } = useGroupOrder();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState<'all' | 'email' | 'phone' | 'favorites'>('all');
@@ -141,7 +143,7 @@ const InviteUsersScreen: React.FC = () => {
         <button onClick={() => navigate(-1)} className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">
           <span className="material-symbols-outlined cursor-pointer text-[#8a7560] dark:text-[#d4c4a8]">arrow_back_ios</span>
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center">Invitar a la Orden</h2>
+        <h2 className="text-lg font-bold flex-1 text-center">{t('invite.title')}</h2>
         <div className="w-12"></div>
       </header>
 
@@ -154,7 +156,7 @@ const InviteUsersScreen: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por nombre, email o teléfono..."
+              placeholder={t('invite.searchPlaceholder')}
               className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[#181411] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-primary outline-none"
             />
           </div>
@@ -164,10 +166,10 @@ const InviteUsersScreen: React.FC = () => {
         <div className="mb-6">
           <div className="flex gap-2 overflow-x-auto pb-2">
             {[
-              { value: 'all', label: 'Todos', icon: 'people' },
-              { value: 'favorites', label: 'Favoritos', icon: 'star' },
-              { value: 'email', label: 'Email', icon: 'email' },
-              { value: 'phone', label: 'Teléfono', icon: 'phone' },
+              { value: 'all', label: t('invite.all'), icon: 'people' },
+              { value: 'favorites', label: t('invite.favorites'), icon: 'star' },
+              { value: 'email', label: t('invite.byEmail'), icon: 'email' },
+              { value: 'phone', label: t('invite.byPhone'), icon: 'phone' },
             ].map((filter) => (
               <button
                 key={filter.value}
@@ -190,7 +192,7 @@ const InviteUsersScreen: React.FC = () => {
           <div className="mb-6">
             <h3 className="text-lg font-bold text-[#181411] dark:text-white mb-3 flex items-center gap-2">
               <span className="material-symbols-outlined text-primary">star</span>
-              Contactos Favoritos
+              {t('invite.favoriteContacts')}
             </h3>
             <div className="space-y-2">
               {favorites.map((user) => (
@@ -242,18 +244,18 @@ const InviteUsersScreen: React.FC = () => {
         {/* Resultados de búsqueda */}
         <div>
           <h3 className="text-lg font-bold text-[#181411] dark:text-white mb-3">
-            {searchQuery || searchType !== 'all' ? 'Resultados' : 'Todos los Contactos'}
+            {searchQuery || searchType !== 'all' ? t('invite.results') : t('invite.allContacts')}
           </h3>
           {filteredUsers.length === 0 ? (
             <div className="text-center py-12">
               <div className="flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 mx-auto mb-4">
                 <span className="material-symbols-outlined text-4xl text-gray-400">person_search</span>
               </div>
-              <h3 className="text-lg font-bold text-[#181411] dark:text-white mb-2">No se encontraron usuarios</h3>
+              <h3 className="text-lg font-bold text-[#181411] dark:text-white mb-2">{t('invite.noUsersFound')}</h3>
               <p className="text-gray-500 dark:text-gray-400 text-sm">
                 {searchQuery
-                  ? 'Intenta con otro término de búsqueda'
-                  : 'Todos los usuarios disponibles ya están en la orden'}
+                  ? t('invite.tryAnotherSearch')
+                  : t('invite.allUsersInOrder')}
               </p>
             </div>
           ) : (
@@ -317,7 +319,7 @@ const InviteUsersScreen: React.FC = () => {
               className="w-full py-4 px-6 rounded-xl bg-primary text-white font-bold text-lg flex items-center justify-center gap-2 shadow-lg hover:bg-primary/90 transition-colors"
             >
               <span className="material-symbols-outlined">person_add</span>
-              Invitar {selectedUsers.size} {selectedUsers.size === 1 ? 'usuario' : 'usuarios'}
+              {t('invite.invite')} {selectedUsers.size} {selectedUsers.size === 1 ? t('invite.user') : t('invite.users')}
             </button>
           </div>
         )}

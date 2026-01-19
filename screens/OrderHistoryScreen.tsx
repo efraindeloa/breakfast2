@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface OrderItem {
   id: number;
@@ -28,6 +29,7 @@ interface Filters {
 
 const OrderHistoryScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
   const orderIdParam = searchParams.get('orderId');
@@ -245,11 +247,11 @@ const OrderHistoryScreen: React.FC = () => {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'completada':
-        return 'Completada';
+        return t('orderHistory.completed');
       case 'cancelada':
-        return 'Cancelada';
+        return t('orderHistory.cancelled');
       case 'en_proceso':
-        return 'En proceso';
+        return t('orderHistory.inProgress');
       default:
         return status;
     }
@@ -279,9 +281,9 @@ const OrderHistoryScreen: React.FC = () => {
       <div className="px-4 pt-5 pb-2">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="text-2xl font-bold text-[#181411] dark:text-white">Historial de Órdenes</h3>
+            <h3 className="text-2xl font-bold text-[#181411] dark:text-white">{t('orderHistory.title')}</h3>
             <p className="text-[#6b7280] dark:text-gray-400 mt-1">
-              {filteredOrders.length} {filteredOrders.length === 1 ? 'orden' : 'órdenes'}
+              {filteredOrders.length} {filteredOrders.length === 1 ? t('orderHistory.order') : t('orderHistory.orders')}
             </p>
           </div>
           {hasActiveFilters && (
@@ -290,7 +292,7 @@ const OrderHistoryScreen: React.FC = () => {
               className="text-primary text-sm font-semibold flex items-center gap-1"
             >
               <span className="material-symbols-outlined text-sm">close</span>
-              Limpiar filtros
+              {t('orderHistory.clearFilters')}
             </button>
           )}
         </div>
@@ -312,10 +314,10 @@ const OrderHistoryScreen: React.FC = () => {
             {filters.dateRange !== 'all' && (
               <div className="flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
                 <span>
-                  {filters.dateRange === 'today' ? 'Hoy' :
-                   filters.dateRange === 'week' ? 'Esta semana' :
-                   filters.dateRange === 'month' ? 'Este mes' :
-                   filters.dateRange === '3months' ? 'Últimos 3 meses' : filters.dateRange}
+                  {filters.dateRange === 'today' ? t('orderHistory.today') :
+                   filters.dateRange === 'week' ? t('orderHistory.thisWeek') :
+                   filters.dateRange === 'month' ? t('orderHistory.thisMonth') :
+                   filters.dateRange === '3months' ? t('orderHistory.last3Months') : filters.dateRange}
                 </span>
                 <button
                   onClick={() => setFilters({ ...filters, dateRange: 'all' })}
@@ -328,9 +330,9 @@ const OrderHistoryScreen: React.FC = () => {
             {filters.status !== 'all' && (
               <div className="flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
                 <span>
-                  {filters.status === 'completada' ? 'Completada' :
-                   filters.status === 'cancelada' ? 'Cancelada' :
-                   filters.status === 'en_proceso' ? 'En proceso' : filters.status}
+                  {filters.status === 'completada' ? t('orderHistory.completed') :
+                   filters.status === 'cancelada' ? t('orderHistory.cancelled') :
+                   filters.status === 'en_proceso' ? t('orderHistory.inProgress') : filters.status}
                 </span>
                 <button
                   onClick={() => setFilters({ ...filters, status: 'all' })}
@@ -370,19 +372,19 @@ const OrderHistoryScreen: React.FC = () => {
             <span className="material-symbols-outlined text-4xl text-gray-400">receipt_long</span>
           </div>
           <h3 className="text-lg font-bold text-[#181411] dark:text-white mb-2">
-            {hasActiveFilters ? 'No se encontraron órdenes' : 'No hay órdenes'}
+            {hasActiveFilters ? t('orderHistory.noOrdersFound') : t('orderHistory.noOrders')}
           </h3>
           <p className="text-gray-500 dark:text-gray-400 text-sm text-center">
             {hasActiveFilters 
-              ? 'Intenta ajustar los filtros para ver más resultados'
-              : 'Aún no has realizado ninguna orden'}
+              ? t('orderHistory.adjustFilters')
+              : t('orderHistory.noOrdersYet')}
           </p>
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
               className="mt-4 px-4 py-2 bg-primary text-white rounded-xl font-semibold text-sm"
             >
-              Limpiar filtros
+              {t('orderHistory.clearFilters')}
             </button>
           )}
         </div>
@@ -393,7 +395,7 @@ const OrderHistoryScreen: React.FC = () => {
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-end">
           <div className="w-full bg-white dark:bg-gray-800 rounded-t-3xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
-              <h3 className="text-xl font-bold text-[#181411] dark:text-white">Filtros</h3>
+              <h3 className="text-xl font-bold text-[#181411] dark:text-white">{t('orderHistory.filters')}</h3>
               <button
                 onClick={() => setShowFilters(false)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
@@ -406,14 +408,14 @@ const OrderHistoryScreen: React.FC = () => {
               {/* Filtro por Restaurante */}
               <div>
                 <label className="block text-sm font-semibold text-[#181411] dark:text-white mb-2">
-                  Restaurante
+                  {t('orderHistory.restaurant')}
                 </label>
                 <select
                   value={filters.restaurant}
                   onChange={(e) => setFilters({ ...filters, restaurant: e.target.value })}
                   className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 >
-                  <option value="">Todos los restaurantes</option>
+                  <option value="">{t('orderHistory.allRestaurants')}</option>
                   {restaurants.map((restaurant) => (
                     <option key={restaurant} value={restaurant}>
                       {restaurant}
@@ -425,15 +427,15 @@ const OrderHistoryScreen: React.FC = () => {
               {/* Filtro por Rango de Fechas */}
               <div>
                 <label className="block text-sm font-semibold text-[#181411] dark:text-white mb-2">
-                  Período
+                  {t('orderHistory.period')}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { value: 'all', label: 'Todos' },
-                    { value: 'today', label: 'Hoy' },
-                    { value: 'week', label: 'Esta semana' },
-                    { value: 'month', label: 'Este mes' },
-                    { value: '3months', label: 'Últimos 3 meses' },
+                    { value: 'all', label: t('orderHistory.all') },
+                    { value: 'today', label: t('orderHistory.today') },
+                    { value: 'week', label: t('orderHistory.thisWeek') },
+                    { value: 'month', label: t('orderHistory.thisMonth') },
+                    { value: '3months', label: t('orderHistory.last3Months') },
                   ].map((option) => (
                     <button
                       key={option.value}
@@ -453,14 +455,14 @@ const OrderHistoryScreen: React.FC = () => {
               {/* Filtro por Estado */}
               <div>
                 <label className="block text-sm font-semibold text-[#181411] dark:text-white mb-2">
-                  Estado
+                  {t('orderHistory.status')}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { value: 'all', label: 'Todos' },
-                    { value: 'completada', label: 'Completada' },
-                    { value: 'cancelada', label: 'Cancelada' },
-                    { value: 'en_proceso', label: 'En proceso' },
+                    { value: 'all', label: t('orderHistory.all') },
+                    { value: 'completada', label: t('orderHistory.completed') },
+                    { value: 'cancelada', label: t('orderHistory.cancelled') },
+                    { value: 'en_proceso', label: t('orderHistory.inProgress') },
                   ].map((option) => (
                     <button
                       key={option.value}
@@ -483,13 +485,13 @@ const OrderHistoryScreen: React.FC = () => {
                 onClick={clearFilters}
                 className="flex-1 py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                Limpiar
+                {t('orderHistory.clear')}
               </button>
               <button
                 onClick={() => setShowFilters(false)}
                 className="flex-1 py-3 px-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 transition-colors"
               >
-                Aplicar
+                {t('orderHistory.apply')}
               </button>
             </div>
           </div>
@@ -500,6 +502,7 @@ const OrderHistoryScreen: React.FC = () => {
 };
 
 const OrderItem: React.FC<{ order: Order; statusColor: string; statusLabel: string; onNavigateToTransaction: () => void }> = ({ order, statusColor, statusLabel, onNavigateToTransaction }) => {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
   const handleToggleExpand = (e: React.MouseEvent) => {
@@ -545,7 +548,7 @@ const OrderItem: React.FC<{ order: Order; statusColor: string; statusLabel: stri
                 {order.date} • {order.time}
               </p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                {order.items.length} {order.items.length === 1 ? 'artículo' : 'artículos'}
+                {order.items.length} {order.items.length === 1 ? t('orderHistory.item') : t('orderHistory.items')}
               </p>
             </div>
           </div>
@@ -573,7 +576,7 @@ const OrderItem: React.FC<{ order: Order; statusColor: string; statusLabel: stri
             ))}
           </div>
           <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <span className="text-sm font-semibold text-[#181411] dark:text-white">Total</span>
+            <span className="text-sm font-semibold text-[#181411] dark:text-white">{t('orderHistory.total')}</span>
             <span className="text-lg font-bold text-primary">{order.total}</span>
           </div>
           <button
@@ -581,7 +584,7 @@ const OrderItem: React.FC<{ order: Order; statusColor: string; statusLabel: stri
             className="mt-3 w-full py-2 px-4 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
           >
             <span className="material-symbols-outlined text-base">receipt</span>
-            Ver pago relacionado
+            {t('orderHistory.viewRelatedPayment')}
           </button>
         </div>
       )}

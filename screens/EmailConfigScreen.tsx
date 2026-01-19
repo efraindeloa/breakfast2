@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface Email {
   id: number;
@@ -11,6 +12,7 @@ interface Email {
 
 const EmailConfigScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [autoSend, setAutoSend] = useState(true);
   const [showAddEmail, setShowAddEmail] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -80,7 +82,7 @@ const EmailConfigScreen: React.FC = () => {
           <button onClick={() => navigate(-1)} className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">
             <span className="material-symbols-outlined text-xl text-[#8a7560] dark:text-[#d4c4a8]">arrow_back_ios</span>
           </button>
-          <h2 className="text-[#181411] dark:text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">Configuración de Envío</h2>
+          <h2 className="text-[#181411] dark:text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">{t('emailConfig.title')}</h2>
         </div>
       </header>
 
@@ -92,24 +94,24 @@ const EmailConfigScreen: React.FC = () => {
             <div className="flex-1 bg-primary rounded-full"></div>
             <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
           </div>
-          <p className="text-xs font-semibold text-primary mt-3 uppercase tracking-wider">Paso 3 de 4</p>
+          <p className="text-xs font-semibold text-primary mt-3 uppercase tracking-wider">{t('emailConfig.step3of4')}</p>
         </div>
 
         <section className="px-4 pt-4">
-          <h3 className="text-[#181411] dark:text-white tracking-tight text-3xl font-extrabold leading-tight">¿A dónde enviamos tus facturas?</h3>
+          <h3 className="text-[#181411] dark:text-white tracking-tight text-3xl font-extrabold leading-tight">{t('emailConfig.whereToSend')}</h3>
           <p className="text-gray-600 dark:text-gray-400 text-base font-normal leading-relaxed pt-2">
-            Configura los correos electrónicos donde recibirás automáticamente tus archivos XML y PDF cada mañana.
+            {t('emailConfig.whereToSendDesc')}
           </p>
         </section>
 
         <div className="px-4 mt-8">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-[#181411] dark:text-white text-sm font-bold uppercase tracking-tight">Correos de recepción</h4>
+            <h4 className="text-[#181411] dark:text-white text-sm font-bold uppercase tracking-tight">{t('emailConfig.receptionEmails')}</h4>
             <span 
               className="text-xs text-primary font-bold opacity-50 cursor-default hover:opacity-100 transition-opacity"
               onClick={() => setShowAddEmail(true)}
             >
-              + Agregar otro
+              + {t('emailConfig.addAnother')}
             </span>
           </div>
           <div className="space-y-3">
@@ -118,14 +120,14 @@ const EmailConfigScreen: React.FC = () => {
                 <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mx-auto mb-4">
                   <span className="material-symbols-outlined text-primary text-4xl">mail</span>
                 </div>
-                <h3 className="text-[#181411] dark:text-white text-lg font-bold mb-2">No hay correos configurados</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Agrega un correo electrónico para recibir tus facturas</p>
+                <h3 className="text-[#181411] dark:text-white text-lg font-bold mb-2">{t('emailConfig.noEmailsConfigured')}</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">{t('emailConfig.addEmailToReceive')}</p>
                 <button
                   onClick={() => setShowAddEmail(true)}
                   className="bg-primary text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 mx-auto hover:bg-[#e07d1d] transition-colors"
                 >
                   <span className="material-symbols-outlined">add</span>
-                  <span>Agregar Correo</span>
+                  <span>{t('emailConfig.addEmail')}</span>
                 </button>
               </div>
             ) : (
@@ -140,7 +142,7 @@ const EmailConfigScreen: React.FC = () => {
                       <input
                         autoFocus
                         className="flex-1 bg-transparent border-none p-0 focus:ring-0 text-sm font-semibold text-[#181411] dark:text-white placeholder:text-gray-400 outline-none"
-                        placeholder="ejemplo@correo.com"
+                        placeholder={t('emailConfig.emailPlaceholder')}
                         type="email"
                         value={editingEmailValue}
                         onChange={(e) => setEditingEmailValue(e.target.value)}
@@ -151,13 +153,13 @@ const EmailConfigScreen: React.FC = () => {
                         onClick={handleCancelEdit}
                         className="px-3 py-1.5 text-xs font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                       >
-                        Cancelar
+                        {t('common.cancel')}
                       </button>
                       <button
                         onClick={() => handleSaveEdit(email.id)}
                         className="px-3 py-1.5 text-xs font-bold text-white bg-primary rounded-lg shadow-sm hover:bg-[#e07d1d] transition-colors"
                       >
-                        Guardar
+                        {t('common.save')}
                       </button>
                     </div>
                   </div>
@@ -188,7 +190,7 @@ const EmailConfigScreen: React.FC = () => {
                     <input
                       autoFocus
                       className="flex-1 bg-transparent border-none p-0 focus:ring-0 text-sm font-semibold text-[#181411] dark:text-white placeholder:text-gray-400 outline-none"
-                      placeholder="ejemplo@correo.com"
+                      placeholder={t('emailConfig.emailPlaceholder')}
                       type="email"
                       value={newEmail}
                       onChange={(e) => setNewEmail(e.target.value)}
@@ -202,13 +204,13 @@ const EmailConfigScreen: React.FC = () => {
                       }}
                       className="px-3 py-1.5 text-xs font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                     >
-                      Cancelar
+                      {t('common.cancel')}
                     </button>
                     <button
                       onClick={handleAddEmail}
                       className="px-3 py-1.5 text-xs font-bold text-white bg-primary rounded-lg shadow-sm hover:bg-[#e07d1d] transition-colors"
                     >
-                      Confirmar
+                      {t('common.confirm')}
                     </button>
                   </div>
                 </div>
@@ -220,9 +222,9 @@ const EmailConfigScreen: React.FC = () => {
         <div className="px-4 mt-8">
           <div className="bg-white dark:bg-gray-800/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 flex items-center justify-between">
             <div className="flex-1 pr-4">
-              <h4 className="text-sm font-bold text-[#181411] dark:text-white">Envío automático al pagar</h4>
+              <h4 className="text-sm font-bold text-[#181411] dark:text-white">{t('emailConfig.autoSendOnPayment')}</h4>
               <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">
-                Generar y enviar la factura inmediatamente después de cada consumo de desayuno.
+                {t('emailConfig.autoSendOnPaymentDesc')}
               </p>
             </div>
             <div className="relative inline-block w-12 h-6 align-middle select-none transition duration-200 ease-in">
@@ -248,7 +250,7 @@ const EmailConfigScreen: React.FC = () => {
           </div>
           <p className="text-gray-500 dark:text-gray-400 text-[12px] font-normal leading-normal pt-3 ml-1 flex items-start gap-2">
             <span className="material-symbols-outlined text-base mt-0.5">verified_user</span>
-            <span>Tus datos se manejan de forma segura bajo los protocolos del SAT.</span>
+            <span>{t('emailConfig.dataSecurity')}</span>
           </p>
         </div>
       </main>
@@ -259,7 +261,7 @@ const EmailConfigScreen: React.FC = () => {
             onClick={() => navigate('/billing-step-4')}
             className="w-full bg-primary hover:bg-[#e07d1d] text-white font-bold py-4 rounded-xl text-lg shadow-lg shadow-primary/20 active:scale-[0.98] transition-all"
           >
-            Continuar al Paso Final
+            {t('emailConfig.continueToFinalStep')}
           </button>
         </div>
       </div>
@@ -311,7 +313,7 @@ const EmailItem: React.FC<EmailItemProps> = ({ id, email, label, isPrimary, isSe
       <button
         onClick={() => onDelete(id)}
         className="text-gray-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
-        title="Eliminar correo"
+        title={t('emailConfig.deleteEmail')}
       >
         <span className="material-symbols-outlined text-xl">delete</span>
       </button>

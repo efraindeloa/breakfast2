@@ -1,8 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../contexts/LanguageContext';
 
 const HomeScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background-light dark:bg-background-dark">
@@ -15,8 +17,8 @@ const HomeScreen: React.FC = () => {
             />
           </div>
           <div className="flex-1 px-3 min-w-0">
-            <p className="text-primary/80 dark:text-primary/70 text-xs font-semibold uppercase tracking-wider truncate">Bienvenido</p>
-            <h2 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] truncate">¡Buen provecho, Alex!</h2>
+            <p className="text-primary/80 dark:text-primary/70 text-xs font-semibold uppercase tracking-wider truncate">{t('home.welcome')}</p>
+            <h2 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] truncate">{t('home.goodAppetite')}</h2>
           </div>
           <div className="flex w-10 items-center justify-end shrink-0">
             <button className="flex size-10 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700">
@@ -27,7 +29,7 @@ const HomeScreen: React.FC = () => {
       </header>
 
       <main className="flex-1 overflow-y-auto pb-32 hide-scrollbar">
-        <h3 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6">Acciones Rápidas</h3>
+        <h3 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6">{t('home.quickActions')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 max-w-4xl mx-auto">
           <div 
             onClick={() => navigate('/menu')}
@@ -36,7 +38,7 @@ const HomeScreen: React.FC = () => {
             <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 group-hover:bg-primary transition-colors">
               <span className="material-symbols-outlined text-primary group-hover:text-white">restaurant_menu</span>
             </div>
-            <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight">Ver Menú</h2>
+            <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight">{t('home.viewMenu')}</h2>
           </div>
           
           <div 
@@ -46,7 +48,7 @@ const HomeScreen: React.FC = () => {
             <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 group-hover:bg-primary transition-colors">
               <span className="material-symbols-outlined text-primary group-hover:text-white">groups</span>
             </div>
-            <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight">Unirse a la mesa</h2>
+            <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight">{t('home.joinTable')}</h2>
           </div>
           
           <div className="flex flex-col gap-3 rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white p-5 items-start shadow-lg cursor-pointer col-span-2 overflow-hidden relative">
@@ -55,8 +57,8 @@ const HomeScreen: React.FC = () => {
                 <span className="material-symbols-outlined text-white text-2xl">qr_code_scanner</span>
               </div>
               <div>
-                <h2 className="text-white text-lg font-bold leading-tight">Escanear QR</h2>
-                <p className="text-white/80 text-sm">Pide directamente desde tu mesa</p>
+                <h2 className="text-white text-lg font-bold leading-tight">{t('home.scanQR')}</h2>
+                <p className="text-white/80 text-sm">{t('home.scanQRDescription')}</p>
               </div>
             </div>
             <div className="absolute -right-4 -bottom-4 opacity-10">

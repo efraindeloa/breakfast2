@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface Transaction {
   id: number;
@@ -29,6 +30,7 @@ interface Filters {
 
 const TransactionsScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
   const orderIdParam = searchParams.get('orderId');
@@ -160,10 +162,11 @@ const TransactionsScreen: React.FC = () => {
   // Función para convertir fecha a número para comparación
   const parseDate = (dateStr: string): number => {
     const now = new Date();
-    if (dateStr.includes('Hoy')) {
+    // Usar texto en inglés para comparación ya que las fechas están hardcodeadas en inglés
+    if (dateStr.includes('Today') || dateStr.includes('Hoy')) {
       return now.getTime();
     }
-    if (dateStr.includes('Ayer')) {
+    if (dateStr.includes('Yesterday') || dateStr.includes('Ayer')) {
       return now.getTime() - 24 * 60 * 60 * 1000;
     }
     // Parsear formato "22 Oct, 10:02 AM"
@@ -320,7 +323,7 @@ const TransactionsScreen: React.FC = () => {
       <div className="px-4 pt-5 pb-2">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-2xl font-bold text-[#181411] dark:text-white">Historial de Pagos</h3>
+            <h3 className="text-2xl font-bold text-[#181411] dark:text-white">{t('transactions.paymentHistory')}</h3>
             <p className="text-[#6b7280] dark:text-gray-400 mt-1">
               {filteredTransactions.length} {filteredTransactions.length === 1 ? 'transacción' : 'transacciones'}
             </p>
@@ -331,7 +334,7 @@ const TransactionsScreen: React.FC = () => {
               className="text-primary text-sm font-semibold flex items-center gap-1"
             >
               <span className="material-symbols-outlined text-sm">close</span>
-              Limpiar filtros
+              {t('transactions.clearFilters')}
             </button>
           )}
         </div>
@@ -366,15 +369,15 @@ const TransactionsScreen: React.FC = () => {
           </h3>
           <p className="text-gray-500 dark:text-gray-400 text-sm text-center">
             {hasActiveFilters 
-              ? 'Intenta ajustar los filtros para ver más resultados'
-              : 'Aún no has realizado ninguna transacción'}
+              ? t('transactions.adjustFilters')
+              : t('transactions.noTransactionsYet')}
           </p>
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
               className="mt-4 px-4 py-2 bg-primary text-white rounded-xl font-semibold text-sm"
             >
-              Limpiar filtros
+              {t('transactions.clearFilters')}
             </button>
           )}
         </div>
@@ -398,14 +401,14 @@ const TransactionsScreen: React.FC = () => {
               {/* Filtro por Restaurante */}
               <div>
                 <label className="block text-sm font-semibold text-[#181411] dark:text-white mb-2">
-                  Restaurante
+                  {t('transactions.restaurant')}
                 </label>
                 <select
                   value={filters.restaurant}
                   onChange={(e) => setFilters({ ...filters, restaurant: e.target.value })}
                   className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 >
-                  <option value="">Todos los restaurantes</option>
+                  <option value="">{t('transactions.allRestaurants')}</option>
                   {restaurants.map((restaurant) => (
                     <option key={restaurant} value={restaurant}>
                       {restaurant}
@@ -421,11 +424,11 @@ const TransactionsScreen: React.FC = () => {
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
-                    { value: 'all', label: 'Todos' },
-                    { value: 'today', label: 'Hoy' },
-                    { value: 'week', label: 'Esta semana' },
-                    { value: 'month', label: 'Este mes' },
-                    { value: '3months', label: 'Últimos 3 meses' },
+                    { value: 'all', label: t('transactions.all') },
+                    { value: 'today', label: t('transactions.today') },
+                    { value: 'week', label: t('transactions.thisWeek') },
+                    { value: 'month', label: t('transactions.thisMonth') },
+                    { value: '3months', label: t('transactions.last3Months') },
                   ].map((option) => (
                     <button
                       key={option.value}
@@ -445,13 +448,13 @@ const TransactionsScreen: React.FC = () => {
               {/* Filtro por Monto */}
               <div>
                 <label className="block text-sm font-semibold text-[#181411] dark:text-white mb-2">
-                  Rango de Monto
+                  {t('transactions.amountRange')}
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <input
                       type="number"
-                      placeholder="Mínimo"
+                      placeholder={t('transactions.minimum')}
                       value={filters.minAmount}
                       onChange={(e) => setFilters({ ...filters, minAmount: e.target.value })}
                       className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[#181411] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
@@ -460,7 +463,7 @@ const TransactionsScreen: React.FC = () => {
                   <div>
                     <input
                       type="number"
-                      placeholder="Máximo"
+                      placeholder={t('transactions.maximum')}
                       value={filters.maxAmount}
                       onChange={(e) => setFilters({ ...filters, maxAmount: e.target.value })}
                       className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[#181411] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
@@ -472,14 +475,14 @@ const TransactionsScreen: React.FC = () => {
               {/* Filtro por Tarjeta */}
               <div>
                 <label className="block text-sm font-semibold text-[#181411] dark:text-white mb-2">
-                  Tarjeta
+                  {t('transactions.card')}
                 </label>
                 <select
                   value={filters.cardLast4}
                   onChange={(e) => setFilters({ ...filters, cardLast4: e.target.value })}
                   className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 >
-                  <option value="">Todas las tarjetas</option>
+                  <option value="">{t('transactions.allCards')}</option>
                   {cards.map((card) => (
                     <option key={card} value={card}>
                       **** **** **** {card}
@@ -494,13 +497,13 @@ const TransactionsScreen: React.FC = () => {
                 onClick={clearFilters}
                 className="flex-1 py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                Limpiar
+                {t('transactions.clear')}
               </button>
               <button
                 onClick={() => setShowFilters(false)}
                 className="flex-1 py-3 px-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 transition-colors"
               >
-                Aplicar
+                {t('transactions.apply')}
               </button>
             </div>
           </div>

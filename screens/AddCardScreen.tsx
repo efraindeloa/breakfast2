@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../contexts/LanguageContext';
 
 const AddCardScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [cardNumber, setCardNumber] = useState('');
   const [cardName, setCardName] = useState('');
   const [expiryMonth, setExpiryMonth] = useState('');
@@ -45,25 +47,25 @@ const AddCardScreen: React.FC = () => {
   const handleSubmit = () => {
     // Validación básica
     if (cardNumber.replace(/\s/g, '').length < 16) {
-      alert('Por favor ingresa un número de tarjeta válido');
+      alert(t('addCard.invalidCardNumber'));
       return;
     }
     if (!cardName.trim()) {
-      alert('Por favor ingresa el nombre del titular');
+      alert(t('addCard.invalidCardholder'));
       return;
     }
     if (expiryMonth.length !== 2 || expiryYear.length !== 2) {
-      alert('Por favor ingresa una fecha de expiración válida');
+      alert(t('addCard.invalidExpiryDate'));
       return;
     }
     if (cvv.length < 3) {
-      alert('Por favor ingresa un CVV válido');
+      alert(t('addCard.invalidCVV'));
       return;
     }
 
     // Aquí se guardaría la tarjeta en el backend
     // Por ahora solo navegamos de vuelta
-    alert('Tarjeta agregada exitosamente');
+    alert(t('addCard.cardAddedSuccess'));
     navigate('/payments');
   };
 
@@ -96,7 +98,7 @@ const AddCardScreen: React.FC = () => {
         })
         .catch((err) => {
           console.error('Error accediendo a la cámara:', err);
-          alert('No se pudo acceder a la cámara. Por favor, ingresa los datos manualmente.');
+          alert(t('addCard.cameraError'));
           setShowCamera(false);
         });
     }
@@ -152,7 +154,7 @@ const AddCardScreen: React.FC = () => {
       
       setIsScanning(false);
       stopCamera();
-      alert('Datos de la tarjeta capturados. Por favor, ingresa el CVV manualmente.');
+      alert(t('addCard.cardScanned'));
     }, 2000);
   };
 
@@ -163,14 +165,14 @@ const AddCardScreen: React.FC = () => {
           <button onClick={() => navigate(-1)} className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">
             <span className="material-symbols-outlined text-xl cursor-pointer text-[#8a7560] dark:text-[#d4c4a8]">arrow_back_ios</span>
           </button>
-          <h2 className="text-lg font-bold flex-1 text-center pr-10">Agregar Tarjeta</h2>
+          <h2 className="text-lg font-bold flex-1 text-center pr-10">{t('addCard.title')}</h2>
         </div>
       </header>
 
       <main className="flex-1 px-6 pt-6 overflow-y-auto">
         <div className="mb-6">
-          <h3 className="text-2xl font-bold text-[#181411] dark:text-white mb-2">Nueva Tarjeta</h3>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Ingresa los datos de tu tarjeta de crédito o débito</p>
+          <h3 className="text-2xl font-bold text-[#181411] dark:text-white mb-2">{t('addCard.newCard')}</h3>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">{t('addCard.description')}</p>
         </div>
 
         {/* Vista previa de la tarjeta */}
@@ -190,7 +192,7 @@ const AddCardScreen: React.FC = () => {
               ) : cardBrand ? (
                 <span className="font-bold italic text-lg">{cardBrand}</span>
               ) : (
-                <span className="font-bold italic text-lg opacity-50">Tarjeta</span>
+                <span className="font-bold italic text-lg opacity-50">{t('addCard.card')}</span>
               )}
             </div>
             <div>
@@ -199,15 +201,15 @@ const AddCardScreen: React.FC = () => {
               </p>
               <div className="flex gap-4">
                 <div>
-                  <p className="text-[10px] uppercase opacity-70">Expira</p>
+                  <p className="text-[10px] uppercase opacity-70">{t('addCard.expires')}</p>
                   <p className="text-sm font-medium">
                     {expiryMonth || 'MM'}/{expiryYear || 'YY'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase opacity-70">Titular</p>
+                  <p className="text-[10px] uppercase opacity-70">{t('addCard.cardholder')}</p>
                   <p className="text-sm font-medium">
-                    {cardName.toUpperCase() || 'NOMBRE DEL TITULAR'}
+                    {cardName.toUpperCase() || t('addCard.cardholderPlaceholder')}
                   </p>
                 </div>
               </div>
@@ -228,7 +230,7 @@ const AddCardScreen: React.FC = () => {
 
         <div className="relative flex items-center mb-6">
           <div className="flex-grow border-t border-gray-200 dark:border-white/10"></div>
-          <span className="px-4 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase">O ingresa manualmente</span>
+          <span className="px-4 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase">{t('addCard.orEnterManually')}</span>
           <div className="flex-grow border-t border-gray-200 dark:border-white/10"></div>
         </div>
 
@@ -236,7 +238,7 @@ const AddCardScreen: React.FC = () => {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-[#181411] dark:text-white mb-2">
-              Número de tarjeta
+              {t('addCard.cardNumber')}
             </label>
             <input
               type="text"
@@ -250,7 +252,7 @@ const AddCardScreen: React.FC = () => {
 
           <div>
             <label className="block text-sm font-semibold text-[#181411] dark:text-white mb-2">
-              Nombre del titular
+              {t('addCard.cardholderName')}
             </label>
             <input
               type="text"
@@ -264,7 +266,7 @@ const AddCardScreen: React.FC = () => {
           <div className="grid grid-cols-3 gap-4">
             <div className="col-span-2">
               <label className="block text-sm font-semibold text-[#181411] dark:text-white mb-2">
-                Fecha de expiración
+                {t('addCard.expiryDate')}
               </label>
               <div className="flex gap-2">
                 <input
@@ -332,7 +334,7 @@ const AddCardScreen: React.FC = () => {
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                 <div className="bg-white rounded-xl p-6 text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-gray-800 font-semibold">Procesando tarjeta...</p>
+                  <p className="text-gray-800 font-semibold">{t('addCard.processing')}</p>
                 </div>
               </div>
             )}
@@ -340,8 +342,8 @@ const AddCardScreen: React.FC = () => {
 
           <div className="p-6 bg-black/50">
             <div className="mb-4 text-center">
-              <p className="text-white text-sm mb-2">Coloca la tarjeta dentro del marco</p>
-              <p className="text-white/70 text-xs">Asegúrate de que la tarjeta esté bien iluminada y enfocada</p>
+              <p className="text-white text-sm mb-2">{t('addCard.placeCardInFrame')}</p>
+              <p className="text-white/70 text-xs">{t('addCard.ensureWellLit')}</p>
             </div>
             <button
               onClick={captureCard}
@@ -349,7 +351,7 @@ const AddCardScreen: React.FC = () => {
               className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform"
             >
               <span className="material-symbols-outlined">camera</span>
-              {isScanning ? 'Procesando...' : 'Capturar tarjeta'}
+              {isScanning ? t('addCard.processing') : t('addCard.captureCard')}
             </button>
           </div>
         </div>
@@ -362,7 +364,7 @@ const AddCardScreen: React.FC = () => {
           onClick={handleSubmit}
           className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform"
         >
-          Agregar Tarjeta
+          {t('addCard.addCard')}
           <span className="material-symbols-outlined">check_circle</span>
         </button>
       </div>

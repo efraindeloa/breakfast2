@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface Transaction {
   id: number;
@@ -21,6 +22,7 @@ interface Transaction {
 
 const TransactionDetailScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
 
   // Datos de ejemplo - En producción esto vendría de una API o contexto
@@ -135,16 +137,16 @@ const TransactionDetailScreen: React.FC = () => {
           <button onClick={() => navigate(-1)} className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">
             <span className="material-symbols-outlined cursor-pointer text-[#8a7560] dark:text-[#d4c4a8]">arrow_back_ios</span>
           </button>
-          <h2 className="text-lg font-bold flex-1 text-center">Detalle de Transacción</h2>
+          <h2 className="text-lg font-bold flex-1 text-center">{t('transactionDetail.title')}</h2>
           <div className="w-12"></div>
         </header>
         <div className="flex flex-col items-center justify-center py-16 px-4">
           <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
             <span className="material-symbols-outlined text-4xl text-gray-400">error</span>
           </div>
-          <h3 className="text-lg font-bold text-[#181411] dark:text-white mb-2">Transacción no encontrada</h3>
+          <h3 className="text-lg font-bold text-[#181411] dark:text-white mb-2">{t('transactionDetail.notFound')}</h3>
           <p className="text-gray-500 dark:text-gray-400 text-sm text-center">
-            No se pudo encontrar la transacción solicitada
+            {t('transactionDetail.notFoundMessage')}
           </p>
         </div>
       </div>
@@ -157,7 +159,7 @@ const TransactionDetailScreen: React.FC = () => {
         <button onClick={() => navigate(-1)} className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">
           <span className="material-symbols-outlined cursor-pointer text-[#8a7560] dark:text-[#d4c4a8]">arrow_back_ios</span>
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center">Detalle de Transacción</h2>
+        <h2 className="text-lg font-bold flex-1 text-center">{t('transactionDetail.title')}</h2>
         <div className="w-12"></div>
       </header>
 
@@ -188,15 +190,15 @@ const TransactionDetailScreen: React.FC = () => {
 
         {/* Resumen de Montos */}
         <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl p-4 mb-4">
-          <h4 className="font-semibold text-[#181411] dark:text-white mb-4">Resumen de Montos</h4>
+          <h4 className="font-semibold text-[#181411] dark:text-white mb-4">{t('transactionDetail.amountSummary')}</h4>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('transactionDetail.subtotal')}:</span>
               <span className="font-semibold text-[#181411] dark:text-white">{transaction.subtotal}</span>
             </div>
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <span className="text-gray-600 dark:text-gray-400">Propina:</span>
+                <span className="text-gray-600 dark:text-gray-400">{t('transactionDetail.tip')}:</span>
                 {transaction.tipPercentage && transaction.tipPercentage > 0 && (
                   <span className="text-xs text-gray-500 dark:text-gray-400">({transaction.tipPercentage}%)</span>
                 )}
@@ -204,12 +206,12 @@ const TransactionDetailScreen: React.FC = () => {
               <span className="font-semibold text-[#181411] dark:text-white">{transaction.tip}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-600 dark:text-gray-400">IVA:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('transactionDetail.tax')}:</span>
               <span className="font-semibold text-[#181411] dark:text-white">{transaction.iva}</span>
             </div>
             <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
               <div className="flex justify-between items-center">
-                <span className="font-bold text-lg text-[#181411] dark:text-white">Total:</span>
+                <span className="font-bold text-lg text-[#181411] dark:text-white">{t('transactionDetail.total')}:</span>
                 <span className="font-bold text-xl text-primary">{transaction.total}</span>
               </div>
             </div>
@@ -218,7 +220,7 @@ const TransactionDetailScreen: React.FC = () => {
 
         {/* Método de Pago */}
         <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl p-4 mb-4">
-          <h4 className="font-semibold text-[#181411] dark:text-white mb-4">Método de Pago</h4>
+          <h4 className="font-semibold text-[#181411] dark:text-white mb-4">{t('transactionDetail.paymentMethod')}</h4>
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
               <span className="material-symbols-outlined text-primary text-xl">
@@ -227,7 +229,7 @@ const TransactionDetailScreen: React.FC = () => {
             </div>
             <div className="flex-1">
               <p className="font-semibold text-[#181411] dark:text-white">
-                {transaction.paymentMethod === 'card' ? 'Tarjeta' : 'Efectivo'}
+                {transaction.paymentMethod === 'card' ? t('transactionDetail.card') : t('transactionDetail.cash')}
               </p>
               {transaction.paymentMethod === 'card' && (
                 <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">
@@ -240,27 +242,27 @@ const TransactionDetailScreen: React.FC = () => {
 
         {/* Información de Factura */}
         <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl p-4">
-          <h4 className="font-semibold text-[#181411] dark:text-white mb-4">Información de Factura</h4>
+          <h4 className="font-semibold text-[#181411] dark:text-white mb-4">{t('transactionDetail.invoiceInformation')}</h4>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Factura enviada:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('transactionDetail.invoiceSent')}:</span>
               <div className="flex items-center gap-2">
                 {transaction.invoiceSent ? (
                   <>
                     <span className="material-symbols-outlined text-green-500 text-sm">check_circle</span>
-                    <span className="font-semibold text-green-600 dark:text-green-400 text-sm">Sí</span>
+                    <span className="font-semibold text-green-600 dark:text-green-400 text-sm">{t('common.yes')}</span>
                   </>
                 ) : (
                   <>
                     <span className="material-symbols-outlined text-gray-400 text-sm">cancel</span>
-                    <span className="font-semibold text-gray-500 dark:text-gray-400 text-sm">No</span>
+                    <span className="font-semibold text-gray-500 dark:text-gray-400 text-sm">{t('common.no')}</span>
                   </>
                 )}
               </div>
             </div>
             {transaction.invoiceSent && transaction.invoiceEmail && (
               <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Correo electrónico:</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('transactionDetail.email')}:</p>
                 <p className="font-semibold text-[#181411] dark:text-white">{transaction.invoiceEmail}</p>
               </div>
             )}
@@ -273,7 +275,7 @@ const TransactionDetailScreen: React.FC = () => {
           className="mt-4 w-full py-3 px-4 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-semibold flex items-center justify-center gap-2 transition-colors"
         >
           <span className="material-symbols-outlined text-base">receipt_long</span>
-          Ver orden relacionada
+          {t('transactionDetail.viewRelatedOrder')}
         </button>
       </div>
     </div>

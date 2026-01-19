@@ -190,7 +190,6 @@ const BottomNav: React.FC = () => {
     { label: t('navigation.menu'), icon: 'restaurant_menu', path: '/menu' },
     { label: t('navigation.myOrder'), icon: 'receipt_long', path: '/orders' },
     { label: t('navigation.payments'), icon: 'account_balance_wallet', path: '/payments' },
-    { label: t('navigation.profile'), icon: 'person', path: '/profile' },
   ];
 
   return (
@@ -200,7 +199,7 @@ const BottomNav: React.FC = () => {
         const isOrdersPath = item.path === '/orders';
         const isActive = isOrdersPath 
           ? (location.pathname === '/orders' || location.pathname === '/order-detail')
-          : (location.pathname === item.path || (item.path === '/profile' && location.pathname.includes('billing')));
+          : (location.pathname === item.path);
         
         return (
           <button

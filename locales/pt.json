@@ -27,7 +27,8 @@
     "payments": "Pagamentos",
     "profile": "Perfil",
     "settings": "Configurações",
-    "assistant": "Assistente"
+    "assistant": "Assistente",
+    "favorites": "Favoritos"
   },
   "home": {
     "welcome": "Bem-vindo",
@@ -63,7 +64,7 @@
     "noDishesFound": "Nenhum prato encontrado com os filtros aplicados",
     "noDishesInCategory": "Nenhum prato disponível nesta categoria",
     "clearFilters": "Limpar filtros",
-    "filters": "Filtros",
+    "filtersLabel": "Filtros",
     "proteinOrigin": "Origem da Proteína",
     "clear": "Limpar",
     "apply": "Aplicar"
@@ -141,6 +142,7 @@
   "assistant": {
     "title": "Assistente Inteligente",
     "placeholder": "Digite sua pergunta...",
+    "needHelp": "Precisa de ajuda?",
     "greeting": "Olá! Sou seu assistente inteligente. Como posso ajudá-lo hoje? Você pode me perguntar sobre como usar o aplicativo, o cardápio, seu pedido ou qualquer outra pergunta geral.",
     "dragToUndock": "Arraste para cima para desanexar",
     "goToMenu": "Ir ao cardápio",
@@ -590,7 +592,7 @@
     "register": "Cadastrar",
     "or": "ou",
     "goodDay": "Bom dia!",
-    "subtitle": "Comece sua experiência com o melhor sabor da manhã",
+    "subtitleMessage": "Comece sua experiência com o melhor sabor da manhã",
     "emailOrPhone": "E-mail ou número de telefone",
     "emailOrPhonePlaceholder": "exemplo@email.com ou +55 000 000 0000",
     "password": "Senha",

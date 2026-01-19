@@ -1,9 +1,10 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 
 const HomeScreen: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
 
   return (
@@ -20,9 +21,24 @@ const HomeScreen: React.FC = () => {
             <p className="text-primary/80 dark:text-primary/70 text-xs font-semibold uppercase tracking-wider truncate">{t('home.welcome')}</p>
             <h2 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] truncate">{t('home.goodAppetite')}</h2>
           </div>
-          <div className="flex w-10 items-center justify-end shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <button className="flex size-10 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700">
               <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">notifications</span>
+            </button>
+            <button 
+              onClick={() => navigate('/profile')}
+              className={`flex size-10 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm border transition-colors ${
+                location.pathname === '/profile' || location.pathname.includes('billing')
+                  ? 'border-primary bg-primary/10'
+                  : 'border-gray-100 dark:border-gray-700'
+              }`}
+              title={t('navigation.profile')}
+            >
+              <span className={`material-symbols-outlined ${
+                location.pathname === '/profile' || location.pathname.includes('billing')
+                  ? 'text-primary'
+                  : 'text-gray-600 dark:text-gray-300'
+              }`}>person</span>
             </button>
           </div>
         </div>

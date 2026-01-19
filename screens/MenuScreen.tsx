@@ -1,15 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useTranslation, useLanguage } from '../contexts/LanguageContext';
+import { useFavorites } from '../contexts/FavoritesContext';
 
 type OriginType = 'mar' | 'tierra' | 'aire' | 'vegetariano' | 'vegano' | '';
 
 const MenuScreen: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { cart, addToCart } = useCart();
   const { t } = useTranslation();
   const { language } = useLanguage();
+  const { favoriteDishes } = useFavorites();
   
   const getCartQuantity = (dishId: number) => {
     return cart.filter(item => item.id === dishId).reduce((sum, item) => sum + item.quantity, 0);
@@ -61,14 +64,26 @@ const MenuScreen: React.FC = () => {
     }
     return translatedCategory;
   };
-  // Definir los filtros con estructura base (sin traducciones)
+  // Definir los filtros (solo valores e iconos, las traducciones están en los archivos de locales)
   const originFiltersBase = [
-    { value: 'tierra' as OriginType, key: 'menu.filters.land', icon: 'agriculture' },
-    { value: 'mar' as OriginType, key: 'menu.filters.sea', icon: 'waves' },
-    { value: 'aire' as OriginType, key: 'menu.filters.air', icon: 'air' },
-    { value: 'vegetariano' as OriginType, key: 'menu.filters.vegetarian', icon: 'local_florist' },
-    { value: 'vegano' as OriginType, key: 'menu.filters.vegan', icon: 'eco' },
+    { value: 'tierra' as OriginType, icon: 'agriculture' },
+    { value: 'mar' as OriginType, icon: 'waves' },
+    { value: 'aire' as OriginType, icon: 'air' },
+    { value: 'vegetariano' as OriginType, icon: 'local_florist' },
+    { value: 'vegano' as OriginType, icon: 'eco' },
   ];
+
+  // Mapeo de valores a claves de traducción
+  const getFilterTranslationKey = (value: OriginType): string => {
+    const keyMap: Record<string, string> = {
+      'tierra': 'menu.filters.land',
+      'mar': 'menu.filters.sea',
+      'aire': 'menu.filters.air',
+      'vegetariano': 'menu.filters.vegetarian',
+      'vegano': 'menu.filters.vegan',
+    };
+    return keyMap[value] || '';
+  };
 
   const dishes = [
     {
@@ -276,6 +291,20 @@ const MenuScreen: React.FC = () => {
             <h1 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Don Kamaron Restaurant</h1>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/favorites')}
+              className="relative flex size-10 items-center justify-center rounded-full bg-white dark:bg-[#322a1a] shadow-sm border border-[#f4f3f0] dark:border-[#3d3321] hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              title={t('navigation.favorites')}
+            >
+              <span className="material-symbols-outlined text-[24px] text-gray-600 dark:text-gray-300">
+                {favoriteDishes.length > 0 ? 'favorite' : 'favorite_border'}
+              </span>
+              {favoriteDishes.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
+                  {favoriteDishes.length > 9 ? '9+' : favoriteDishes.length}
+                </span>
+              )}
+            </button>
             <button 
               onClick={() => setShowFilters(true)}
               className={`flex size-10 items-center justify-center rounded-full bg-white dark:bg-[#322a1a] shadow-sm border border-[#f4f3f0] dark:border-[#3d3321] relative ${hasActiveFilters ? 'text-primary' : ''}`}
@@ -285,6 +314,21 @@ const MenuScreen: React.FC = () => {
               {hasActiveFilters && (
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full"></span>
               )}
+            </button>
+            <button 
+              onClick={() => navigate('/profile')}
+              className={`flex size-10 items-center justify-center rounded-full bg-white dark:bg-[#322a1a] shadow-sm border transition-colors ${
+                location.pathname === '/profile' || location.pathname.includes('billing')
+                  ? 'border-primary bg-primary/10'
+                  : 'border-[#f4f3f0] dark:border-[#3d3321]'
+              }`}
+              title={t('navigation.profile')}
+            >
+              <span className={`material-symbols-outlined ${
+                location.pathname === '/profile' || location.pathname.includes('billing')
+                  ? 'text-primary'
+                  : 'text-gray-600 dark:text-gray-300'
+              }`}>person</span>
             </button>
           </div>
         </div>
@@ -406,7 +450,7 @@ const MenuScreen: React.FC = () => {
               <span className={`text-xs font-medium ${
                 selectedOrigin === filter.value ? 'text-white' : 'text-[#181611] dark:text-stone-300'
               }`}>
-                {t(filter.key)}
+                {t(getFilterTranslationKey(filter.value))}
               </span>
             </button>
           ))}
@@ -466,7 +510,7 @@ const MenuScreen: React.FC = () => {
                   className="relative flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors active:scale-95"
                   title={t('menu.addToOrder')}
                 >
-                  <span className="material-symbols-outlined text-lg">add_shopping_cart</span>
+                  <span className="material-symbols-outlined text-lg">note_add</span>
                   {getCartQuantity(dish.id) > 0 && (
                     <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center shadow-sm">
                       {getCartQuantity(dish.id)}
@@ -510,7 +554,7 @@ const MenuScreen: React.FC = () => {
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-end">
           <div className="w-full bg-white dark:bg-gray-800 rounded-t-3xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
-              <h3 className="text-xl font-bold text-[#181611] dark:text-white">{t('menu.filters')}</h3>
+              <h3 className="text-xl font-bold text-[#181611] dark:text-white">{t('menu.filtersLabel')}</h3>
               <button
                 onClick={() => setShowFilters(false)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
@@ -549,7 +593,7 @@ const MenuScreen: React.FC = () => {
                             ? 'text-primary'
                             : 'text-[#181611] dark:text-white'
                         }`}>
-                          {t(filter.key)}
+                          {t(getFilterTranslationKey(filter.value))}
                         </span>
                       </div>
                     </button>
@@ -565,7 +609,7 @@ const MenuScreen: React.FC = () => {
                     <p className="text-sm text-[#181611] dark:text-white">
                       {searchQuery ? `Buscando: "${searchQuery}"` : ''}
                       {searchQuery && hasActiveFilters ? ' • ' : ''}
-                      {hasActiveFilters ? `Filtro: ${t(originFiltersBase.find(f => f.value === selectedOrigin)?.key || '')}` : ''}
+                      {hasActiveFilters ? `Filtro: ${t(getFilterTranslationKey(selectedOrigin))}` : ''}
                     </p>
                   </div>
                   <button

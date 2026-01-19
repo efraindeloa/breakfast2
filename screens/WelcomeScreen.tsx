@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from '../contexts/LanguageContext';
+import { useTranslation, useLanguage } from '../contexts/LanguageContext';
+import { languagesData } from '../content/languages';
 
 interface WelcomeScreenProps {
   onLogin: () => void;
@@ -10,9 +11,50 @@ interface WelcomeScreenProps {
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { setLanguage } = useLanguage();
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+  const languageSelectorRef = useRef<HTMLDivElement>(null);
+
+  // Idiomas disponibles (solo los que tienen traducciones completas)
+  const availableLanguages = [
+    { name: 'Español', code: 'es' as const },
+    { name: 'English', code: 'en' as const },
+    { name: 'Português', code: 'pt' as const },
+    { name: 'Français', code: 'fr' as const },
+  ];
+
+  const handleLanguageChange = (langCode: 'es' | 'en' | 'pt' | 'fr') => {
+    setLanguage(langCode);
+    // Guardar el nombre del idioma para compatibilidad con SettingsScreen
+    const languageNames: Record<'es' | 'en' | 'pt' | 'fr', string> = {
+      'es': 'Español',
+      'en': 'English',
+      'pt': 'Português',
+      'fr': 'Français'
+    };
+    localStorage.setItem('selectedLanguage', languageNames[langCode]);
+    setShowLanguageSelector(false);
+  };
+
+  // Cerrar el selector de idioma al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (languageSelectorRef.current && !languageSelectorRef.current.contains(event.target as Node)) {
+        setShowLanguageSelector(false);
+      }
+    };
+
+    if (showLanguageSelector) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLanguageSelector]);
 
   const handleLogin = () => {
     // Aquí se podría agregar validación y lógica de inicio de sesión
@@ -22,6 +64,47 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
 
   return (
     <div className="relative flex h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-background-dark">
+      {/* Selector de idioma */}
+      <div ref={languageSelectorRef} className="absolute top-4 right-4 z-20">
+        <button
+          onClick={() => setShowLanguageSelector(!showLanguageSelector)}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800 transition-colors"
+        >
+          <span className="material-symbols-outlined text-lg text-gray-600 dark:text-gray-300">
+            language
+          </span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">
+            {t('settings.selectLanguage')}
+          </span>
+        </button>
+        
+        {showLanguageSelector && (
+          <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-30">
+            {availableLanguages.map((lang) => {
+              const langInfo = languagesData[lang.name === 'English' ? 'Inglés' : lang.name === 'Português' ? 'Portugués' : lang.name === 'Français' ? 'Francés' : lang.name];
+              return (
+                <button
+                  key={lang.code}
+                  onClick={() => handleLanguageChange(lang.code)}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
+                >
+                  {langInfo?.flagUrl && (
+                    <img 
+                      src={langInfo.flagUrl} 
+                      alt={lang.name}
+                      className="w-6 h-6 rounded object-cover"
+                    />
+                  )}
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {lang.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <div className="@container w-full">
         <div className="@[480px]:px-4 @[480px]:py-3">
           <div

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useRestaurant } from '../contexts/RestaurantContext';
 
 interface Card {
   id: number;
@@ -18,6 +19,7 @@ interface Card {
 const ProfileScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { config } = useRestaurant();
   const [cards, setCards] = useState<Card[]>([
     {
       id: 1,
@@ -593,9 +595,11 @@ const ProfileScreen: React.FC = () => {
       </section>
 
       {/* Mis datos de facturación */}
-      <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
-        <MenuItem icon="receipt_long" title="Mis datos de facturación" subtitle="Gestiona tu información fiscal" onClick={() => navigate('/billing-step-1')} />
-      </section>
+      {config.allowInvoice && (
+        <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
+          <MenuItem icon="receipt_long" title="Mis datos de facturación" subtitle="Gestiona tu información fiscal" onClick={() => navigate('/billing-step-1')} />
+        </section>
+      )}
 
       {/* Tarjetas de Crédito */}
       <section className="bg-white dark:bg-[#2d2116] mb-2 px-4 py-4">

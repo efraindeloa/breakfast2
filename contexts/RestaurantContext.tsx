@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { restaurantConfig, RestaurantConfig } from '../config/restaurantConfig';
 
 interface RestaurantContextType {
   selectedRestaurant: string;
   setSelectedRestaurant: (restaurant: string) => void;
+  config: RestaurantConfig;
 }
 
 const RestaurantContext = createContext<RestaurantContextType | undefined>(undefined);
@@ -25,7 +27,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   return (
-    <RestaurantContext.Provider value={{ selectedRestaurant, setSelectedRestaurant }}>
+    <RestaurantContext.Provider value={{ selectedRestaurant, setSelectedRestaurant, config: restaurantConfig }}>
       {children}
     </RestaurantContext.Provider>
   );

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useGroupOrder } from '../contexts/GroupOrderContext';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useRestaurant } from '../contexts/RestaurantContext';
 
 type OrderStatus = 
   | 'orden_enviada' 
@@ -30,6 +31,7 @@ const OrderDetailScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { cart: orderItems } = useCart();
+  const { config } = useRestaurant();
   const { isGroupOrder, participants, currentUserParticipant, isConfirmed } = useGroupOrder();
 
   // Obtener estado actual desde localStorage
@@ -384,7 +386,7 @@ const OrderDetailScreen: React.FC = () => {
         )}
 
         {/* Botones de Acción */}
-        {orderStatusData.status === 'orden_enviada' && (
+        {orderStatusData.status === 'orden_enviada' && config.allowOrderModification && (
           <div className="space-y-3">
             <button
               onClick={() => navigate('/menu')}

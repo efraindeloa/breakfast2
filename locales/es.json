@@ -27,7 +27,8 @@
     "payments": "Pagos",
     "profile": "Perfil",
     "settings": "Configuración",
-    "assistant": "Asistente"
+    "assistant": "Asistente",
+    "favorites": "Favoritos"
   },
   "home": {
     "welcome": "Bienvenido",
@@ -63,7 +64,7 @@
     "noDishesFound": "No se encontraron platos con los filtros aplicados",
     "noDishesInCategory": "No hay platos disponibles en esta categoría",
     "clearFilters": "Limpiar filtros",
-    "filters": "Filtros",
+    "filtersLabel": "Filtros",
     "proteinOrigin": "Origen de la Proteína",
     "clear": "Limpiar",
     "apply": "Aplicar"
@@ -141,6 +142,7 @@
   "assistant": {
     "title": "Asistente Inteligente",
     "placeholder": "Escribe tu pregunta...",
+    "needHelp": "Necesitas ayuda?",
     "greeting": "¡Hola! Soy tu asistente inteligente. ¿En qué puedo ayudarte hoy? Puedes preguntarme sobre cómo usar la app, el menú, tu orden, o cualquier otra consulta general.",
     "dragToUndock": "Arrastra hacia arriba para desanclar",
     "goToMenu": "Ir al menú",

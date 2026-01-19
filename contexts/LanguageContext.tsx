@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 
 export type Language = 'es' | 'en' | 'pt' | 'fr';
 
@@ -44,20 +44,20 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
   });
 
   // Cargar traducciones dinámicamente
-  const [translations, setTranslations] = useState<Record<string, string>>({});
+  const [translations, setTranslations] = useState<Record<string, any>>({});
 
   useEffect(() => {
     // Cargar el archivo de traducción correspondiente
     const loadTranslations = async () => {
       try {
         const translationsModule = await import(`../locales/${language}.json`);
-        setTranslations(translationsModule.default);
+        setTranslations(translationsModule.default || translationsModule);
       } catch (error) {
         console.error(`Error loading translations for ${language}:`, error);
         // Fallback a español si hay error
         try {
           const fallbackModule = await import('../locales/es.json');
-          setTranslations(fallbackModule.default);
+          setTranslations(fallbackModule.default || fallbackModule);
         } catch (fallbackError) {
           console.error('Error loading fallback translations:', fallbackError);
         }
@@ -80,22 +80,30 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     localStorage.setItem('selectedLanguage', languageNames[lang]);
   };
 
-  const t = (key: string): string => {
-    // Soporte para claves anidadas con notación de punto (ej: "common.save")
-    const keys = key.split('.');
-    let value: any = translations;
-    for (const k of keys) {
-      if (value && typeof value === 'object' && k in value) {
-        value = value[k];
-      } else {
-        return key; // Retornar la clave si no se encuentra
+  const t = useMemo(() => {
+    return (key: string): string => {
+      // Soporte para claves anidadas con notación de punto (ej: "common.save")
+      const keys = key.split('.');
+      let value: any = translations;
+      for (const k of keys) {
+        if (value && typeof value === 'object' && k in value) {
+          value = value[k];
+        } else {
+          return key; // Retornar la clave si no se encuentra
+        }
       }
-    }
-    return typeof value === 'string' ? value : key;
-  };
+      return typeof value === 'string' ? value : key;
+    };
+  }, [translations]);
+
+  const contextValue = useMemo(() => ({
+    language,
+    setLanguage,
+    t
+  }), [language, t]);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={contextValue}>
       {children}
     </LanguageContext.Provider>
   );

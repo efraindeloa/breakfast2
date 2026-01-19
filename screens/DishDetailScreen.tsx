@@ -348,7 +348,7 @@ const DishDetailScreen: React.FC = () => {
                 </div>
                 {cartQuantity > 0 && (
                   <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs font-medium">
-                    <span className="material-symbols-outlined text-sm">shopping_cart</span>
+                    <span className="material-symbols-outlined text-sm">receipt_long</span>
                     {cartQuantity} {t('dishDetail.inCart')}
                   </div>
                 )}
@@ -364,12 +364,12 @@ const DishDetailScreen: React.FC = () => {
             {getDishDescription(dish.id)}
           </p>
 
-          {/* Personalización - Solo para ciertas categorías */}
-          {(dish.category === 'Platos Fuertes' || dish.category === 'Entradas') && (
-            <div className="space-y-6 mb-6">
-              {/* Selección de Proteína */}
+          {/* Personalización */}
+          <div className="space-y-6 mb-6">
+            {/* Selección de Proteína - Solo para Platos Fuertes y Entradas */}
+            {(dish.category === 'Platos Fuertes' || dish.category === 'Entradas') && (
               <div>
-                  <h3 className="text-lg font-bold text-[#181611] dark:text-white mb-3 flex items-center gap-2">
+                <h3 className="text-lg font-bold text-[#181611] dark:text-white mb-3 flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary">restaurant</span>
                   {t('dishDetail.addProtein')}
                   <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({t('dishDetail.optional')})</span>
@@ -402,23 +402,23 @@ const DishDetailScreen: React.FC = () => {
                   ))}
                 </div>
               </div>
+            )}
 
-              {/* Instrucciones Especiales */}
-              <div>
-                <h3 className="text-lg font-bold text-[#181611] dark:text-white mb-3 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">edit_note</span>
-                  {t('dishDetail.specialInstructions')}
-                </h3>
-                <textarea
-                  className="w-full bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-4 text-sm text-[#181611] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none"
-                  placeholder={t('dishDetail.specialInstructionsPlaceholder')}
-                  rows={3}
-                  value={specialInstructions}
-                  onChange={(e) => setSpecialInstructions(e.target.value)}
-                />
-              </div>
+            {/* Instrucciones Especiales - Disponible para todas las categorías */}
+            <div>
+              <h3 className="text-lg font-bold text-[#181611] dark:text-white mb-3 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">edit_note</span>
+                {t('dishDetail.specialInstructions')}
+              </h3>
+              <textarea
+                className="w-full bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-4 text-sm text-[#181611] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none"
+                placeholder={t('dishDetail.specialInstructionsPlaceholder')}
+                rows={3}
+                value={specialInstructions}
+                onChange={(e) => setSpecialInstructions(e.target.value)}
+              />
             </div>
-          )}
+          </div>
 
           {/* Aviso de Alérgenos */}
           {(dish.badges?.includes('vegano') || dish.origin === 'vegetariano') ? (
@@ -456,7 +456,7 @@ const DishDetailScreen: React.FC = () => {
               </>
             ) : (
               <>
-                <span className="material-symbols-outlined text-xl">add_shopping_cart</span>
+                <span className="material-symbols-outlined text-xl">note_add</span>
                 <span>{t('dishDetail.add')}</span>
                 <span className="text-xl font-bold">${totalPrice.toFixed(2)}</span>
                 {cartQuantity > 0 && (

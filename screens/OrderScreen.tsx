@@ -4,6 +4,7 @@ import { useGroupOrder } from '../contexts/GroupOrderContext';
 import { useCart, CartItem } from '../contexts/CartContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
+import { useRestaurant } from '../contexts/RestaurantContext';
 
 const OrderScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ const OrderScreen: React.FC = () => {
     updateCartItemNotes 
   } = useCart();
   const { saveCombination } = useFavorites();
+  const { config } = useRestaurant();
   const [editingNotesId, setEditingNotesId] = useState<number | null>(null);
   const [editingNotesText, setEditingNotesText] = useState('');
   const [orderSpecialInstructions, setOrderSpecialInstructions] = useState('');
@@ -485,7 +487,7 @@ const OrderScreen: React.FC = () => {
           {orderItems.length === 0 ? (
             <div className="text-center py-12">
               <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mx-auto mb-4">
-                <span className="material-symbols-outlined text-primary text-4xl">shopping_basket</span>
+                <span className="material-symbols-outlined text-primary text-4xl">receipt_long</span>
               </div>
               <h3 className="text-[#181411] dark:text-white text-lg font-bold mb-2">{t('order.empty')}</h3>
               <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">{t('order.addItems')}</p>
@@ -784,7 +786,7 @@ const OrderScreen: React.FC = () => {
               </>
             ) : (
               <>
-                {orderStatus === 'orden_enviada' ? (
+                {orderStatus === 'orden_enviada' && config.allowOrderModification ? (
                   <button
                     onClick={() => navigate('/menu')}
                     className="w-full bg-primary/10 hover:bg-primary/20 text-primary font-bold py-4 rounded-xl text-lg border-2 border-primary/30 flex items-center justify-center gap-3 active:scale-95 transition-transform"
@@ -792,7 +794,7 @@ const OrderScreen: React.FC = () => {
                     <span className="material-symbols-outlined">edit</span>
                     <span>{t('order.changeOrder')}</span>
                   </button>
-                ) : (
+                ) : orderStatus !== 'orden_enviada' ? (
                   <button
                     onClick={() => {
                       const newStatusData: OrderStatusWithTimestamp = {
@@ -808,7 +810,7 @@ const OrderScreen: React.FC = () => {
                     <span>{t('order.confirmAndSendOrder')}</span>
                     <span className="material-symbols-outlined">restaurant</span>
                   </button>
-                )}
+                ) : null}
               </>
             )}
           </div>

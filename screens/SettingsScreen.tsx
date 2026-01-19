@@ -1,53 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage, useTranslation } from '../contexts/LanguageContext';
-
-// Los 10 idiomas más populares al inicio
-const popularLanguages = [
-  'Español',
-  'Inglés',
-  'Portugués',
-  'Francés',
-  'Chino mandarín',
-  'Hindi',
-  'Japonés',
-  'Ruso',
-  'Italiano',
-  'Coreano'
-];
-
-// Resto de idiomas ordenados alfabéticamente
-const otherLanguages = [
-  'Albanés', 'Amárico', 'Armenio', 'Asamés', 'Azerí',
-  'Bambara', 'Bengalí', 'Birmano', 'Bosnio', 'Búlgaro',
-  'Catalán', 'Cebuano', 'Checo', 'Croata',
-  'Danés',
-  'Eslovaco', 'Esloveno', 'Estonio',
-  'Farsi (Persa)', 'Finés', 'Fula',
-  'Gallego', 'Griego', 'Guaraní', 'Gujarati',
-  'Hausa', 'Hebreo', 'Holandés (Neerlandés)', 'Húngaro',
-  'Igbo', 'Indonesio',
-  'Javanés',
-  'Kannada', 'Kazajo', 'Khmer', 'Kinyarwanda', 'Kirguís',
-  'Lao', 'Letón', 'Lingala', 'Lituano',
-  'Malayalam', 'Maratí', 'Maya yucateco', 'Min Nan',
-  'Nepalí', 'Noruego', 'Náhuatl',
-  'Oriya (Odia)',
-  'Polaco', 'Punjabi',
-  'Quechua',
-  'Rumano',
-  'Serbio', 'Sesotho', 'Setswana', 'Shona', 'Sindhi', 'Sueco', 'Suajili', 'Sundanés',
-  'Tagalo (Filipino)', 'Tailandés', 'Tamil', 'Tártaro', 'Telugu', 'Tigriña', 'Tok Pisin', 'Turco', 'Turcomano',
-  'Ucraniano', 'Urdu', 'Uzbeko',
-  'Vasco', 'Vietnamita',
-  'Wolof', 'Wu',
-  'Xhosa',
-  'Yoruba', 'Yue (Cantonés)',
-  'Zulu'
-];
-
-// Combinar: populares primero, luego el resto
-const languages = [...popularLanguages, ...otherLanguages];
+import { popularLanguages, allLanguages, languagesData } from '../content/languages';
 
 const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -62,13 +16,13 @@ const SettingsScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [saved, setSaved] = useState(false);
 
-  // Cargar idioma guardado al montar el componente
+  // Cargar idioma guardado al montar el componente y cuando cambie el idioma de la app
   useEffect(() => {
     const savedLanguage = localStorage.getItem('selectedLanguage');
-    if (savedLanguage && languages.includes(savedLanguage)) {
+    if (savedLanguage && allLanguages.includes(savedLanguage)) {
       setLanguage(savedLanguage);
     }
-  }, []);
+  }, [currentLanguage]);
 
   // Función para guardar el idioma seleccionado
   const handleSaveLanguage = () => {
@@ -95,12 +49,15 @@ const SettingsScreen: React.FC = () => {
 
   // Filtrar idiomas por búsqueda
   const filteredLanguages = useMemo(() => {
-    if (!searchQuery.trim()) return languages;
+    if (!searchQuery.trim()) return allLanguages;
     const query = searchQuery.toLowerCase();
-    return languages.filter(lang => 
-      lang.toLowerCase().includes(query) || 
-      lang.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(query)
-    );
+    return allLanguages.filter(lang => {
+      const langInfo = languagesData[lang];
+      const searchText = lang.toLowerCase() + 
+        (langInfo?.nativeCountryName ? ' ' + langInfo.nativeCountryName.toLowerCase() : '');
+      return searchText.includes(query) || 
+        searchText.normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(query);
+    });
   }, [searchQuery]);
 
   // Agrupar idiomas por letra inicial, pero mantener los populares al inicio
@@ -304,40 +261,55 @@ const SettingsScreen: React.FC = () => {
   );
 };
 
-const LanguageOption: React.FC<{ id: string; name: string; selected: boolean; onChange: (id: string) => void }> = ({ id, name, selected, onChange }) => (
-  <label 
-    onClick={() => onChange(id)} 
-    className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-[#3d3228] ${
-      selected ? 'bg-primary/5 dark:bg-primary/10' : ''
-    }`}
-  >
-    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-      selected ? 'bg-primary/10 dark:bg-primary/20' : 'bg-gray-100 dark:bg-gray-800'
-    }`}>
-      <span className={`material-symbols-outlined text-lg ${selected ? 'text-primary' : 'text-gray-400 dark:text-gray-500'}`}>
-        language
-      </span>
-    </div>
-    <div className="flex grow items-center">
-      <p className={`text-sm font-medium ${
-        selected 
-          ? 'text-primary dark:text-primary' 
-          : 'text-[#181411] dark:text-white'
+const LanguageOption: React.FC<{ id: string; name: string; selected: boolean; onChange: (id: string) => void }> = ({ id, name, selected, onChange }) => {
+  const langInfo = languagesData[name];
+  const flag = langInfo?.flagUrl || null;
+  const isPopular = langInfo?.isPopular || false;
+  const nativeName = langInfo?.nativeCountryName || name;
+  
+  return (
+    <label 
+      onClick={() => onChange(id)} 
+      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-[#3d3228] ${
+        selected ? 'bg-primary/5 dark:bg-primary/10' : ''
+      }`}
+    >
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden ${
+        selected ? 'bg-primary/10 dark:bg-primary/20' : 'bg-gray-100 dark:bg-gray-800'
       }`}>
-        {name}
-      </p>
-    </div>
-    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-      selected
-        ? 'border-primary bg-primary'
-        : 'border-[#e6e0db] dark:border-[#3d3228] bg-transparent'
-    }`}>
-      {selected && (
-        <div className="w-2 h-2 rounded-full bg-white"></div>
-      )}
-    </div>
-  </label>
-);
+        {flag ? (
+          <img 
+            src={flag} 
+            alt={`${name} flag`}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <span className={`material-symbols-outlined text-lg ${selected ? 'text-primary' : 'text-gray-400 dark:text-gray-500'}`}>
+            language
+          </span>
+        )}
+      </div>
+      <div className="flex grow items-center">
+        <p className={`text-sm font-medium ${
+          selected 
+            ? 'text-primary dark:text-primary' 
+            : 'text-[#181411] dark:text-white'
+        }`}>
+          {nativeName}
+        </p>
+      </div>
+      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+        selected
+          ? 'border-primary bg-primary'
+          : 'border-[#e6e0db] dark:border-[#3d3228] bg-transparent'
+      }`}>
+        {selected && (
+          <div className="w-2 h-2 rounded-full bg-white"></div>
+        )}
+      </div>
+    </label>
+  );
+};
 
 const Toggle: React.FC<{ checked: boolean; onChange: (val: boolean) => void }> = ({ checked, onChange }) => (
   <label className="relative inline-flex items-center cursor-pointer">

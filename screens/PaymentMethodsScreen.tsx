@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useRestaurant } from '../contexts/RestaurantContext';
 
 interface Card {
   id: number;
@@ -25,6 +26,7 @@ interface OrderItem {
 const PaymentMethodsScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { config } = useRestaurant();
   const [includeTip, setIncludeTip] = useState(true);
   const [tipMode, setTipMode] = useState<'percentage' | 'fixed'>('percentage');
   const [tipPercentage, setTipPercentage] = useState(10);
@@ -154,42 +156,43 @@ const PaymentMethodsScreen: React.FC = () => {
         </div>
 
         {/* Opción Tarjeta */}
-        <div className="mb-4">
-          <label
-            onClick={() => {
-              setSelectedPaymentMethod('card');
-              if (cards.length > 0 && !selectedCardId) {
-                setSelectedCardId(cards[0].id);
-              }
-            }}
-            className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all mb-3 ${
-              selectedPaymentMethod === 'card'
-                ? 'border-primary bg-primary/5 dark:bg-primary/10'
-                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] hover:border-gray-300 dark:hover:border-gray-600'
-            }`}
-          >
-            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-              selectedPaymentMethod === 'card'
-                ? 'border-primary bg-primary'
-                : 'border-gray-300 dark:border-gray-600'
-            }`}>
-              {selectedPaymentMethod === 'card' && (
-                <span className="material-symbols-outlined text-white text-sm">check</span>
-              )}
-            </div>
-            <div className="flex items-center gap-3 flex-1">
-              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10">
-                <span className="material-symbols-outlined text-primary text-xl">credit_card</span>
+        {config.allowCardPayment && (
+          <div className="mb-4">
+            <label
+              onClick={() => {
+                setSelectedPaymentMethod('card');
+                if (cards.length > 0 && !selectedCardId) {
+                  setSelectedCardId(cards[0].id);
+                }
+              }}
+              className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all mb-3 ${
+                selectedPaymentMethod === 'card'
+                  ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                  : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] hover:border-gray-300 dark:hover:border-gray-600'
+              }`}
+            >
+              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                selectedPaymentMethod === 'card'
+                  ? 'border-primary bg-primary'
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}>
+                {selectedPaymentMethod === 'card' && (
+                  <span className="material-symbols-outlined text-white text-sm">check</span>
+                )}
               </div>
-              <div>
-                <p className="font-semibold text-[#181411] dark:text-white">{t('payment.payCard')}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('payment.payCardDescription')}</p>
+              <div className="flex items-center gap-3 flex-1">
+                <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10">
+                  <span className="material-symbols-outlined text-primary text-xl">credit_card</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-[#181411] dark:text-white">{t('payment.payCard')}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('payment.payCardDescription')}</p>
+                </div>
               </div>
-            </div>
-          </label>
+            </label>
 
-          {/* Selección de Tarjetas */}
-          {selectedPaymentMethod === 'card' && (
+            {/* Selección de Tarjetas */}
+            {selectedPaymentMethod === 'card' && config.allowCardPayment && (
             <div className="mt-3 space-y-2">
               {cards.filter(card => !card.isDisabled).map((card) => (
                 <label
@@ -227,8 +230,9 @@ const PaymentMethodsScreen: React.FC = () => {
                 <span className="text-sm font-semibold text-primary">{t('payment.addNewCard')}</span>
               </button>
             </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Summary */}

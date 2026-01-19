@@ -27,7 +27,8 @@
     "payments": "Paiements",
     "profile": "Profil",
     "settings": "Paramètres",
-    "assistant": "Assistant"
+    "assistant": "Assistant",
+    "favorites": "Favoris"
   },
   "home": {
     "welcome": "Bienvenue",
@@ -63,7 +64,7 @@
     "noDishesFound": "Aucun plat trouvé avec les filtres appliqués",
     "noDishesInCategory": "Aucun plat disponible dans cette catégorie",
     "clearFilters": "Effacer les filtres",
-    "filters": "Filtres",
+    "filtersLabel": "Filtres",
     "proteinOrigin": "Origine de la Protéine",
     "clear": "Effacer",
     "apply": "Appliquer"
@@ -141,6 +142,7 @@
   "assistant": {
     "title": "Assistant Intelligent",
     "placeholder": "Tapez votre question...",
+    "needHelp": "Besoin d'aide?",
     "greeting": "Bonjour ! Je suis votre assistant intelligent. Comment puis-je vous aider aujourd'hui ? Vous pouvez me demander comment utiliser l'application, le menu, votre commande ou toute autre question générale.",
     "dragToUndock": "Glissez vers le haut pour détacher",
     "goToMenu": "Aller au menu",
@@ -585,12 +587,12 @@
   },
   "welcome": {
     "title": "Bienvenue",
-    "subtitle": "Connectez-vous pour continuer",
+    "subtitle": "Connectez-vous pour continuar",
     "login": "Se Connecter",
     "register": "S'inscrire",
     "or": "ou",
     "goodDay": "Bonjour !",
-    "subtitle": "Commencez votre expérience avec la meilleure saveur du matin",
+    "subtitleMessage": "Commencez votre expérience avec la meilleure saveur du matin",
     "emailOrPhone": "E-mail ou numéro de téléphone",
     "emailOrPhonePlaceholder": "exemple@email.com ou +33 000 000 0000",
     "password": "Mot de passe",

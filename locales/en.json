@@ -27,7 +27,8 @@
     "payments": "Payments",
     "profile": "Profile",
     "settings": "Settings",
-    "assistant": "Assistant"
+    "assistant": "Assistant",
+    "favorites": "Favorites"
   },
   "home": {
     "welcome": "Welcome",
@@ -63,7 +64,7 @@
     "noDishesFound": "No dishes found with the applied filters",
     "noDishesInCategory": "No dishes available in this category",
     "clearFilters": "Clear filters",
-    "filters": "Filters",
+    "filtersLabel": "Filters",
     "proteinOrigin": "Protein Origin",
     "clear": "Clear",
     "apply": "Apply"
@@ -141,6 +142,7 @@
   "assistant": {
     "title": "Smart Assistant",
     "placeholder": "Type your question...",
+    "needHelp": "Need help?",
     "greeting": "Hello! I'm your smart assistant. How can I help you today? You can ask me about how to use the app, the menu, your order, or any other general questions.",
     "dragToUndock": "Drag up to undock",
     "goToMenu": "Go to menu",
@@ -559,7 +561,7 @@
     "register": "Sign Up",
     "or": "or",
     "goodDay": "Good morning!",
-    "subtitle": "Start your experience with the best morning flavor",
+    "subtitleMessage": "Start your experience with the best morning flavor",
     "emailOrPhone": "Email or phone number",
     "emailOrPhonePlaceholder": "example@email.com or +1 000 000 0000",
     "password": "Password",

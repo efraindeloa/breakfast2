@@ -18,6 +18,7 @@ const AssistantButton: React.FC = () => {
   const [showAssistant, setShowAssistant] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
+  const [isInactive, setIsInactive] = useState(false);
   const [isDocked, setIsDocked] = useState(() => {
     const saved = localStorage.getItem(DOCKED_STATE_KEY);
     return saved === 'true';
@@ -58,6 +59,7 @@ const AssistantButton: React.FC = () => {
     // Si está siendo arrastrado, expandir inmediatamente
     if (isDragging) {
       setIsCompact(false);
+      setIsInactive(false);
       return;
     }
 
@@ -67,6 +69,45 @@ const AssistantButton: React.FC = () => {
     }, 1000);
 
     return () => clearTimeout(timer);
+  }, [isDocked, isDragging]);
+
+  // Detectar inactividad: después de 10 segundos sin actividad, expandir y mostrar mensaje
+  useEffect(() => {
+    if (isDocked) {
+      setIsInactive(false);
+      return;
+    }
+
+    let inactivityTimer: NodeJS.Timeout;
+
+    const resetInactivityTimer = () => {
+      setIsInactive(false);
+      clearTimeout(inactivityTimer);
+      
+      inactivityTimer = setTimeout(() => {
+        if (!isDocked && !isDragging) {
+          setIsInactive(true);
+          setIsCompact(false);
+        }
+      }, 10000); // 10 segundos de inactividad
+    };
+
+    // Eventos que indican actividad del usuario
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    
+    activityEvents.forEach(event => {
+      document.addEventListener(event, resetInactivityTimer, { passive: true });
+    });
+
+    // Iniciar el timer
+    resetInactivityTimer();
+
+    return () => {
+      clearTimeout(inactivityTimer);
+      activityEvents.forEach(event => {
+        document.removeEventListener(event, resetInactivityTimer);
+      });
+    };
   }, [isDocked, isDragging]);
 
   // Escuchar eventos de desanclado desde BottomNav
@@ -123,18 +164,67 @@ const AssistantButton: React.FC = () => {
     }
   }, [isDocked, position.x]);
 
+  // Ajustar posición cuando el botón se expande para que no quede oculto en los bordes
+  useEffect(() => {
+    if (isDocked || isCompact) return;
+
+    // El botón expandido tiene aproximadamente 200px de ancho y 56px de alto
+    const expandedWidth = 200;
+    const expandedHeight = 56;
+    const padding = 10; // Margen de seguridad
+
+    setPosition(prev => {
+      let newX = prev.x;
+      let newY = prev.y;
+
+      // Verificar y ajustar posición horizontal
+      if (newX + expandedWidth > window.innerWidth - padding) {
+        // Si se sale por la derecha, moverlo a la izquierda
+        newX = window.innerWidth - expandedWidth - padding;
+      }
+      if (newX < padding) {
+        // Si se sale por la izquierda, moverlo a la derecha
+        newX = padding;
+      }
+
+      // Verificar y ajustar posición vertical
+      if (newY + expandedHeight > window.innerHeight - padding) {
+        // Si se sale por abajo, moverlo hacia arriba
+        newY = window.innerHeight - expandedHeight - padding;
+      }
+      if (newY < padding) {
+        // Si se sale por arriba, moverlo hacia abajo
+        newY = padding;
+      }
+
+      // Solo actualizar si la posición cambió
+      if (newX !== prev.x || newY !== prev.y) {
+        return { x: newX, y: newY };
+      }
+
+      return prev;
+    });
+  }, [isCompact, isDocked]);
+
   // Manejar resize de ventana para mantener el botón dentro de los límites
   useEffect(() => {
     const handleResize = () => {
-      setPosition(prev => ({
-        x: Math.min(prev.x, window.innerWidth - 100),
-        y: Math.min(prev.y, window.innerHeight - 100),
-      }));
+      setPosition(prev => {
+        // Ajustar tanto para botón compacto como expandido
+        const buttonWidth = isCompact ? 56 : 200;
+        const buttonHeight = 56;
+        const padding = 10;
+
+        return {
+          x: Math.min(prev.x, Math.max(padding, window.innerWidth - buttonWidth - padding)),
+          y: Math.min(prev.y, Math.max(padding, window.innerHeight - buttonHeight - padding)),
+        };
+      });
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [isCompact]);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (dragStartRef.current) {
@@ -385,15 +475,16 @@ const AssistantButton: React.FC = () => {
             isCompact ? 'h-14 w-14 px-0' : 'h-14 gap-2 px-6'
           } ${isDragging ? 'scale-95' : 'hover:scale-105 active:scale-95'}`}
           style={{ 
-            background: 'linear-gradient(135deg, #0a1628 0%, #1a2744 25%, #2d3f5f 50%, #1e3a5f 75%, #0f1b2e 100%)',
+            background: 'linear-gradient(135deg, #FFDB6B 0%, #FFA042 15%, #FA7BA3 35%, #D78CD4 50%, #A385C9 75%, #8B7BC0 100%)',
             boxShadow: `
-              0 0 20px rgba(0, 200, 255, 0.4),
-              0 0 40px rgba(0, 200, 255, 0.2),
-              0 8px 32px rgba(0, 0, 0, 0.5),
-              inset 0 1px 0 rgba(255, 255, 255, 0.1),
-              inset 0 -1px 0 rgba(0, 0, 0, 0.3)
+              0 0 28px rgba(255, 219, 107, 0.5),
+              0 0 55px rgba(250, 123, 163, 0.42),
+              0 0 82px rgba(163, 133, 201, 0.35),
+              0 8px 32px rgba(0, 0, 0, 0.55),
+              inset 0 1px 0 rgba(255, 255, 255, 0.18),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.35)
             `,
-            border: '1px solid rgba(0, 200, 255, 0.3)',
+            border: '1px solid rgba(255, 219, 107, 0.45)',
             cursor: isDragging ? 'grabbing' : 'grab',
             userSelect: 'none',
             WebkitUserSelect: 'none',
@@ -401,20 +492,28 @@ const AssistantButton: React.FC = () => {
             position: 'relative',
           }}
         >
-          {/* Efecto de brillo metálico animado */}
+          {/* Efecto de brillo metálico animado con colores intermedios del gradiente */}
           <div 
-            className="absolute inset-0 opacity-30"
+            className="absolute inset-0 opacity-45"
             style={{
-              background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%)',
+              background: 'linear-gradient(135deg, transparent 0%, rgba(255, 219, 107, 0.35) 25%, rgba(250, 123, 163, 0.28) 50%, rgba(163, 133, 201, 0.35) 75%, transparent 100%)',
               animation: 'shimmer 3s infinite',
             }}
           />
-          {/* Overlay de glow cian */}
+          {/* Overlay de glow con colores intermedios de la imagen */}
           <div 
-            className="absolute inset-0 rounded-full opacity-50"
+            className="absolute inset-0 rounded-full opacity-55"
             style={{
-              background: 'radial-gradient(circle at center, rgba(0, 200, 255, 0.3) 0%, transparent 70%)',
-              filter: 'blur(8px)',
+              background: 'radial-gradient(circle at 30% 30%, rgba(255, 219, 107, 0.35) 0%, rgba(250, 123, 163, 0.28) 40%, rgba(163, 133, 201, 0.35) 70%, transparent 100%)',
+              filter: 'blur(10px)',
+            }}
+          />
+          {/* Efecto de brillo adicional */}
+          <div 
+            className="absolute inset-0 rounded-full opacity-38"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 219, 107, 0.42) 0%, rgba(250, 123, 163, 0.35) 50%, rgba(163, 133, 201, 0.42) 100%)',
+              filter: 'blur(6px)',
             }}
           />
           {!isCompact && (
@@ -422,8 +521,8 @@ const AssistantButton: React.FC = () => {
               <span 
                 className="material-symbols-outlined relative z-10 transition-all"
                 style={{ 
-                  color: '#F9FEFC',
-                  textShadow: '0 0 10px rgba(249, 254, 252, 0.8), 0 0 20px rgba(249, 254, 252, 0.4)',
+                  color: '#000000',
+                  textShadow: '0 0 10px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 0, 0, 0.2)',
                 }}
               >
                 auto_awesome
@@ -431,12 +530,12 @@ const AssistantButton: React.FC = () => {
               <span 
                 className="relative z-10 text-sm font-bold drop-shadow-lg transition-all"
                 style={{ 
-                  color: '#F9FEFC',
-                  textShadow: '0 0 10px rgba(249, 254, 252, 0.8), 0 0 20px rgba(249, 254, 252, 0.4)',
+                  color: '#000000',
+                  textShadow: '0 0 10px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 0, 0, 0.2)',
                   whiteSpace: 'nowrap',
                 }}
               >
-                <span style={{ textDecoration: 'underline' }}>A</span>s<span style={{ textDecoration: 'underline' }}>i</span>stente
+                {isInactive ? t('assistant.needHelp') : t('navigation.assistant')}
               </span>
             </>
           )}
@@ -444,8 +543,8 @@ const AssistantButton: React.FC = () => {
             <span 
               className="material-symbols-outlined relative z-10 transition-all"
               style={{ 
-                color: '#F9FEFC',
-                textShadow: '0 0 10px rgba(249, 254, 252, 0.8), 0 0 20px rgba(249, 254, 252, 0.4)',
+                color: '#000000',
+                textShadow: '0 0 10px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 0, 0, 0.2)',
               }}
             >
               auto_awesome

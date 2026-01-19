@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useRestaurant } from '../contexts/RestaurantContext';
 
 interface Email {
   id: number;
@@ -19,6 +20,7 @@ interface FiscalData {
 const PaymentSuccessScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { config } = useRestaurant();
   const [wantsInvoice, setWantsInvoice] = useState<boolean | null>(null);
   const [selectedEmailId, setSelectedEmailId] = useState<number | null>(null);
   const [fiscalDataConfirmed, setFiscalDataConfirmed] = useState(false);
@@ -74,7 +76,7 @@ const PaymentSuccessScreen: React.FC = () => {
         </h3>
 
         {/* Pregunta sobre factura */}
-        {wantsInvoice === null && (
+        {config.allowInvoice && wantsInvoice === null && (
           <div className="w-full max-w-md">
             <div className="bg-white dark:bg-[#2d2516] rounded-xl p-6 shadow-sm border border-gray-100 dark:border-[#3d3321]">
               <h4 className="text-lg font-bold text-[#181411] dark:text-white mb-4 text-center">

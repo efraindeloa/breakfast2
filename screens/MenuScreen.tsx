@@ -774,7 +774,9 @@ const MenuScreen: React.FC = () => {
             filteredDishes.map((dish) => (
             <div
               key={dish.id}
-              onClick={() => navigate(`/dish/${dish.id}`)}
+              onClick={() => {
+                navigate(`/dish/${dish.id}`);
+              }}
               className="group relative flex items-stretch justify-between gap-4 rounded-xl bg-white dark:bg-[#2d2516] p-4 shadow-[0_2px_15px_rgba(0,0,0,0.05)] border border-[#f4f3f0] dark:border-[#3d3321] transition-transform active:scale-[0.98] cursor-pointer"
             >
             <div className="flex flex-[2_2_0px] flex-col justify-between gap-3">
@@ -782,10 +784,10 @@ const MenuScreen: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <p className="text-[#181611] dark:text-white text-base font-bold leading-tight">{getDishName(dish.id)}</p>
                   {dish.badges?.includes('vegano') && (
-                    <span className="material-symbols-outlined text-xs text-green-500" title="Vegano">eco</span>
+                    <span className="material-symbols-outlined text-xs text-green-500" title={t('menu.badges.vegan')}>eco</span>
                   )}
                   {dish.badges?.includes('especialidad') && (
-                    <span className="material-symbols-outlined text-xs text-orange-500" title="Especialidad">star</span>
+                    <span className="material-symbols-outlined text-xs text-orange-500" title={t('menu.badges.specialty')}>star</span>
                   )}
                 </div>
                 <p className="text-[#897c61] dark:text-stone-400 text-sm font-normal leading-snug">{getDishDescription(dish.id)}</p>
@@ -800,19 +802,9 @@ const MenuScreen: React.FC = () => {
                 >
                   <span className="truncate">{dish.price}</span>
                 </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const price = parseFloat(dish.price.replace('$', ''));
-                    addToCart({
-                      id: dish.id,
-                      name: getDishName(dish.id),
-                      price: price,
-                      notes: '',
-                    });
-                  }}
-                  className="relative flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors active:scale-95"
-                  title={t('menu.addToOrder')}
+                <div
+                  className="relative flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary transition-colors cursor-default"
+                  title={getCartQuantity(dish.id) > 0 ? t('menu.inCart') : ''}
                 >
                   <span className="material-symbols-outlined text-lg">note_add</span>
                   {getCartQuantity(dish.id) > 0 && (
@@ -820,7 +812,7 @@ const MenuScreen: React.FC = () => {
                       {getCartQuantity(dish.id)}
                     </span>
                   )}
-                </button>
+                </div>
               </div>
             </div>
             <div

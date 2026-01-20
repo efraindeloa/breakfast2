@@ -18,7 +18,13 @@
     "add": "Adicionar",
     "remove": "Remover",
     "yes": "Sim",
-    "no": "Não"
+    "no": "Não",
+    "languageNames": {
+      "es": "Español",
+      "en": "English",
+      "pt": "Português",
+      "fr": "Français"
+    }
   },
   "navigation": {
     "home": "Início",
@@ -53,6 +59,10 @@
       "air": "Ar",
       "vegetarian": "Vegetariano",
       "vegan": "Vegano"
+    },
+    "badges": {
+      "vegan": "Vegano",
+      "specialty": "Especialidade"
     },
     "searchPlaceholder": "Buscar pratos...",
     "addToCart": "Adicionar ao carrinho",
@@ -139,6 +149,15 @@
     "peopleAtTable": "na mesa",
     "securityNotice": "Suas informações estão protegidas. Apenas o anfitrião pode ver seu pedido."
   },
+  "qrScanner": {
+    "title": "Escanear QR",
+    "instruction": "Aponte a câmera para o código QR",
+    "permissionDenied": "Permissão da câmera negada. Por favor, permita o acesso à câmera nas configurações do seu dispositivo.",
+    "noCamera": "Nenhuma câmera encontrada. Por favor, certifique-se de ter uma câmera disponível.",
+    "error": "Erro ao iniciar o scanner",
+    "containerError": "Erro: Não foi possível inicializar o contêiner do scanner",
+    "retry": "Tentar novamente"
+  },
   "assistant": {
     "title": "Assistente Inteligente",
     "placeholder": "Digite sua pergunta...",
@@ -184,6 +203,7 @@
   "order": {
     "title": "Meu Pedido",
     "empty": "Seu pedido está vazio",
+    "notesPlaceholder": "Ex. Sem cebola, molho à parte...",
     "addItems": "Explore nosso cardápio e adicione produtos deliciosos",
     "subtotal": "Subtotal",
     "tax": "Impostos",
@@ -262,6 +282,8 @@
     "editPhone": "Editar telefone",
     "myCards": "Meus Cartões",
     "myActivity": "Minha Atividade",
+    "billingData": "Meus dados fiscais",
+    "billingDataSubtitle": "Gerencie suas informações fiscais",
     "favorites": "Meus Favoritos",
     "favoritesSubtitle": "Pratos e combinações salvas",
     "orderHistorySubtitle": "Revise seus cafés da manhã anteriores",
@@ -357,6 +379,17 @@
     "rfc": "RFC",
     "businessName": "Razão Social",
     "taxRegime": "Regime Tributário",
+    "regimeOptions": {
+      "601": "601 - Pessoa Jurídica Regime Geral",
+      "603": "603 - Pessoa Jurídica Sem Fins Lucrativos",
+      "605": "605 - Salários e Rendimentos Assimilados a Salários"
+    },
+    "cfdiUsage": "Uso de CFDI",
+    "cfdiOptions": {
+      "G03": "G03 - Despesas gerais",
+      "G01": "G01 - Aquisição de mercadorias",
+      "G02": "G02 - Devoluções, descontos ou bonificações"
+    },
     "scanCamera": "Escanear com Câmera",
     "orUpload": "ou enviar arquivo",
     "selectPDF": "Selecione seu PDF",
@@ -418,6 +451,7 @@
     "allTransactions": "Todas as Transações",
     "paymentHistory": "Histórico de Pagamentos",
     "filters": "Filtros",
+    "filter": "Filtrar",
     "restaurant": "Restaurante",
     "allRestaurants": "Todos os restaurantes",
     "card": "Cartão",
@@ -448,6 +482,7 @@
     "orders": "pedidos",
     "item": "item",
     "items": "itens",
+    "filter": "Filtrar",
     "noOrders": "Nenhum pedido",
     "noOrdersFound": "Nenhum pedido encontrado",
     "noOrdersYet": "Você ainda não fez nenhum pedido",
@@ -590,7 +625,8 @@
     "invoiceInformation": "Informações da Fatura",
     "invoiceSent": "Fatura enviada",
     "email": "E-mail",
-    "viewRelatedOrder": "Ver pedido relacionado"
+    "viewRelatedOrder": "Ver pedido relacionado",
+    "leaveReview": "Deixar opinião"
   },
   "welcome": {
     "title": "Bem-vindo",
@@ -661,7 +697,11 @@
     "allergenWarning": "Aviso de alérgenos",
     "allergenMessage": "Este prato pode conter laticínios, glúten ou outros alérgenos. Por favor, informe-nos se você tem alguma alergia alimentar específica.",
     "add": "Adicionar",
-    "added": "Adicionado!"
+    "added": "Adicionado!",
+    "selectSize": "Selecionar tamanho",
+    "portion": "Porção/Copo",
+    "bottle": "Garrafa",
+    "leaveReview": "Deixar opinião"
   },
   "favorites": {
     "title": "Meus Favoritos",
@@ -680,5 +720,45 @@
     "orderAgain": "Pedir novamente",
     "deleteConfirm": "Excluir combinação?",
     "deleteConfirmDesc": "Esta ação não pode ser desfeita. A combinação será excluída permanentemente."
+  },
+  "review": {
+    "title": {
+      "dish": "Deixar uma Opinião",
+      "order": "Deixar uma Opinião",
+      "restaurant": "Deixar uma Opinião"
+    },
+    "question": {
+      "dish": "Como foi este prato?",
+      "order": "Como foi seu pedido?",
+      "restaurant": "Como foi seu café da manhã?"
+    },
+    "ratingLabels": {
+      "veryBad": "Muito ruim",
+      "bad": "Ruim",
+      "okay": "Regular",
+      "good": "Muito bom!",
+      "excellent": "Excelente!"
+    },
+    "whatDidYouLike": "O que você mais gostou?",
+    "tellUsYourExperience": "Conte-nos sua experiência",
+    "commentPlaceholder": "Como foi a omelete? O café estava na temperatura ideal?",
+    "uploadPhotosOrVideos": "Enviar fotos ou vídeos",
+    "selected": "selecionados",
+    "upload": "Enviar",
+    "publishReview": "Publicar Opinião",
+    "searchOrAddChip": "Buscar ou adicionar opção...",
+    "add": "Adicionar",
+    "chips": {
+      "excellentService": "Excelente serviço",
+      "deliciousFood": "Comida deliciosa",
+      "pleasantAtmosphere": "Ambiente agradável",
+      "perfectCoffee": "Café perfeito",
+      "quickService": "Atendimento rápido",
+      "perfectTemperature": "Temperatura perfeita",
+      "goodPortion": "Boa porção",
+      "wellPresented": "Bem apresentado",
+      "goodValue": "Boa relação preço-qualidade",
+      "completeOrder": "Pedido completo"
+    }
   }
 }

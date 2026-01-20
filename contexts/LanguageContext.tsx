@@ -98,13 +98,12 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     // Guardar el código del idioma para el sistema de traducción
     localStorage.setItem('appLanguage', lang);
     // También guardar el nombre del idioma para compatibilidad con SettingsScreen
-    const languageNames: Record<Language, string> = {
-      'es': 'Español',
-      'en': 'English',
-      'pt': 'Português',
-      'fr': 'Français'
-    };
-    localStorage.setItem('selectedLanguage', languageNames[lang]);
+    // Usar las traducciones estáticas del idioma seleccionado
+    const langTranslations = allStaticTranslations[lang] || allStaticTranslations.es;
+    const languageName = langTranslations?.common?.languageNames?.[lang] || 
+      allStaticTranslations.es.common.languageNames[lang] || 
+      lang.toUpperCase();
+    localStorage.setItem('selectedLanguage', languageName);
   };
 
   const t = useMemo(() => {

@@ -21,7 +21,11 @@ const SettingsScreen: React.FC = () => {
   const { t } = useTranslation();
   const [language, setLanguage] = useState(() => {
     const saved = localStorage.getItem('selectedLanguage');
-    return saved || 'Español';
+    // Si el idioma guardado es un código (es, en, pt, fr), obtener el nombre
+    if (saved && ['es', 'en', 'pt', 'fr'].includes(saved)) {
+      return t(`common.languageNames.${saved}`);
+    }
+    return saved || t('common.languageNames.es');
   });
   const [smartTranslation, setSmartTranslation] = useState(true);
   const [suggestions, setSuggestions] = useState(() => {
@@ -44,15 +48,21 @@ const SettingsScreen: React.FC = () => {
   }, [currentLanguage]);
 
   // Mapear nombre del idioma al código
-  const languageMap: Record<string, 'es' | 'en' | 'pt' | 'fr'> = {
-    'Español': 'es',
-    'English': 'en',
-    'Inglés': 'en',
-    'Português': 'pt',
-    'Portugués': 'pt',
-    'Français': 'fr',
-    'Francés': 'fr'
+  // Usar las traducciones para obtener los nombres correctos según el idioma actual
+  const getLanguageMap = (): Record<string, 'es' | 'en' | 'pt' | 'fr'> => {
+    return {
+      [t('common.languageNames.es')]: 'es',
+      [t('common.languageNames.en')]: 'en',
+      [t('common.languageNames.pt')]: 'pt',
+      [t('common.languageNames.fr')]: 'fr',
+      // También mapear códigos directamente
+      'es': 'es',
+      'en': 'en',
+      'pt': 'pt',
+      'fr': 'fr'
+    };
   };
+  const languageMap = getLanguageMap();
 
   // Obtener el código del idioma seleccionado
   const selectedLanguageCode = useMemo(() => {

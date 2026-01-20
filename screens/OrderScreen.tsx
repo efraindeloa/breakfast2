@@ -498,7 +498,7 @@ const OrderScreen: React.FC = () => {
                       <textarea
                         value={editingNotesText}
                         onChange={(e) => setEditingNotesText(e.target.value)}
-                        placeholder="Ej. Sin cebolla, salsa aparte..."
+                        placeholder={t('order.notesPlaceholder')}
                         className="w-full px-3 py-2 rounded-lg border-2 border-primary/50 bg-white dark:bg-gray-900 text-[#181411] dark:text-white text-sm placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-primary outline-none resize-none"
                         rows={2}
                         autoFocus

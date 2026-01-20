@@ -31,13 +31,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
   const handleLanguageChange = (langCode: 'es' | 'en' | 'pt' | 'fr') => {
     setLanguage(langCode);
     // Guardar el nombre del idioma para compatibilidad con SettingsScreen
-    const languageNames: Record<'es' | 'en' | 'pt' | 'fr', string> = {
-      'es': 'Español',
-      'en': 'English',
-      'pt': 'Português',
-      'fr': 'Français'
-    };
-    localStorage.setItem('selectedLanguage', languageNames[langCode]);
+    // El nombre se guardará automáticamente en LanguageContext cuando se llame setLanguage
     setShowLanguageSelector(false);
   };
 

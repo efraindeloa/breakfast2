@@ -1,14 +1,33 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 
 const JoinTableScreen: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const [tableCode, setTableCode] = useState('');
   const [hasValidCode, setHasValidCode] = useState(false);
+  const [hasProcessedScannedCode, setHasProcessedScannedCode] = useState(false);
 
-  const handleJoinOrder = () => {
+  // Recibir código escaneado desde QRScannerScreen - solo una vez
+  useEffect(() => {
+    if (!hasProcessedScannedCode && location.state && (location.state as any).scannedCode) {
+      const scannedCode = (location.state as any).scannedCode;
+      setTableCode(scannedCode);
+      setHasValidCode(true);
+      setHasProcessedScannedCode(true);
+      // Limpiar el estado de la ubicación después de procesarlo
+      setTimeout(() => {
+        window.history.replaceState({}, document.title);
+      }, 0);
+    }
+  }, [location.state, hasProcessedScannedCode]);
+
+  const handleJoinOrder = (e?: React.MouseEvent<HTMLButtonElement>) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    
     // Solo procesar si hay código ingresado
     if (!tableCode.trim()) return;
     
@@ -20,20 +39,21 @@ const JoinTableScreen: React.FC = () => {
     // Solo mostrar los elementos, no navegar
   };
 
-  const handleFinalJoin = () => {
+  const handleFinalJoin = (e?: React.MouseEvent<HTMLButtonElement>) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    
     // Este es el botón del footer que navega al menú
-    if (!tableCode.trim()) return;
+    if (!tableCode.trim() || !hasValidCode) return;
     navigate('/menu');
   };
 
-  const handleScanQR = () => {
-    // Lógica para escanear QR
-    console.log('Escanear QR');
-    // Simular código escaneado (en producción aquí iría la lógica para abrir el escáner QR)
-    // Por ahora, simulamos que se escaneó un código válido
-    const scannedCode = 'A-7890'; // Código simulado
-    setTableCode(scannedCode);
-    setHasValidCode(true);
+  const handleScanQR = (e?: React.MouseEvent<HTMLButtonElement>) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    
+    // Navegar a la pantalla de escaneo QR
+    navigate('/qr-scanner');
   };
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,7 +70,11 @@ const JoinTableScreen: React.FC = () => {
       {/* TopAppBar */}
       <div className="flex items-center bg-white/80 dark:bg-background-dark/80 backdrop-blur-md p-4 pb-2 justify-between sticky top-0 z-50 safe-top">
         <button 
-          onClick={() => navigate(-1)} 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            navigate(-1);
+          }}
           className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm"
         >
           <span className="material-symbols-outlined text-[#8a7560] dark:text-[#d4c4a8]">arrow_back</span>
@@ -99,10 +123,20 @@ const JoinTableScreen: React.FC = () => {
                 placeholder={t('joinTable.tableCodePlaceholder')}
                 value={tableCode}
                 onChange={handleCodeChange}
+                autoComplete="off"
               />
               <button
-                onClick={tableCode.trim() ? handleJoinOrder : handleScanQR}
-                className="bg-primary text-white flex items-center justify-center px-6 transition-transform active:scale-95 hover:bg-primary/90"
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (tableCode.trim()) {
+                    handleJoinOrder(e);
+                  } else {
+                    handleScanQR(e);
+                  }
+                }}
+                className="bg-primary text-white flex items-center justify-center px-6 transition-transform active:scale-95 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!tableCode.trim()}
               >
                 <span className="material-symbols-outlined">
@@ -168,7 +202,12 @@ const JoinTableScreen: React.FC = () => {
       {/* Sticky Footer Action */}
       <div className="fixed bottom-0 left-0 right-0 w-full bg-white dark:bg-background-dark border-t border-zinc-100 dark:border-zinc-800 px-4 sm:px-6 pt-4 pb-8 z-[60] md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2">
         <button
-          onClick={handleFinalJoin}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleFinalJoin(e);
+          }}
           disabled={!tableCode.trim() || !hasValidCode}
           className={`w-full font-bold py-4 rounded-full shadow-lg transition-all text-lg mb-4 ${
             tableCode.trim() && hasValidCode

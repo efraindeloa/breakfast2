@@ -597,7 +597,7 @@ const ProfileScreen: React.FC = () => {
       {/* Mis datos de facturación */}
       {config.allowInvoice && (
         <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
-          <MenuItem icon="receipt_long" title="Mis datos de facturación" subtitle="Gestiona tu información fiscal" onClick={() => navigate('/billing-step-1')} />
+          <MenuItem icon="receipt_long" title={t('profile.billingData')} subtitle={t('profile.billingDataSubtitle')} onClick={() => navigate('/billing-step-1')} />
         </section>
       )}
 

@@ -24,7 +24,9 @@ import GroupOrderManagementScreen from './screens/GroupOrderManagementScreen';
 import OrderConfirmedScreen from './screens/OrderConfirmedScreen';
 import OrderDetailScreen from './screens/OrderDetailScreen';
 import JoinTableScreen from './screens/JoinTableScreen';
+import QRScannerScreen from './screens/QRScannerScreen';
 import FavoritesScreen from './screens/FavoritesScreen';
+import ReviewScreen from './screens/ReviewScreen';
 import BottomNav from './components/BottomNav';
 import AssistantButton from './components/AssistantButton';
 import { CartProvider } from './contexts/CartContext';
@@ -67,8 +69,10 @@ const App: React.FC = () => {
           <Route path="/order-confirmed" element={isAuthenticated ? <OrderConfirmedScreen /> : <Navigate to="/" />} />
           <Route path="/order-detail" element={isAuthenticated ? <OrderDetailScreen /> : <Navigate to="/" />} />
           <Route path="/join-table" element={isAuthenticated ? <JoinTableScreen /> : <Navigate to="/" />} />
+          <Route path="/qr-scanner" element={isAuthenticated ? <QRScannerScreen /> : <Navigate to="/" />} />
           <Route path="/settings" element={<SettingsScreen />} />
           <Route path="/favorites" element={isAuthenticated ? <FavoritesScreen /> : <Navigate to="/" />} />
+          <Route path="/review" element={isAuthenticated ? <ReviewScreen /> : <Navigate to="/" />} />
         </Routes>
         
         {isAuthenticated && <BottomNav />}

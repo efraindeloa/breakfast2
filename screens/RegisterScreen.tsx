@@ -511,7 +511,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
               <input
                 ref={confirmPasswordRef}
                 className="w-full h-14 pl-12 pr-12 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Repite tu contraseña"
+                placeholder={t('register.confirmPasswordPlaceholder')}
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onFocus={(e) => {

@@ -14,6 +14,8 @@
     "android:release": "npm run build && npx cap sync && cd android && gradlew.bat assembleRelease"
   },
   "dependencies": {
+    "@capacitor/camera": "^8.0.0",
+    "html5-qrcode": "^2.3.8",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-router-dom": "^7.12.0"

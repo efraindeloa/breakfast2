@@ -18,7 +18,13 @@
     "add": "Add",
     "remove": "Remove",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "languageNames": {
+      "es": "Español",
+      "en": "English",
+      "pt": "Português",
+      "fr": "Français"
+    }
   },
   "navigation": {
     "home": "Home",
@@ -53,6 +59,10 @@
       "air": "Air",
       "vegetarian": "Vegetarian",
       "vegan": "Vegan"
+    },
+    "badges": {
+      "vegan": "Vegan",
+      "specialty": "Specialty"
     },
     "searchPlaceholder": "Search dishes...",
     "addToCart": "Add to cart",
@@ -139,6 +149,15 @@
     "peopleAtTable": "at the table",
     "securityNotice": "Your information is protected. Only the host can see your order."
   },
+  "qrScanner": {
+    "title": "Scan QR",
+    "instruction": "Point the camera at the QR code",
+    "permissionDenied": "Camera permission denied. Please allow camera access in your device settings.",
+    "noCamera": "No camera found. Please make sure you have a camera available.",
+    "error": "Error starting scanner",
+    "containerError": "Error: Could not initialize scanner container",
+    "retry": "Retry"
+  },
   "assistant": {
     "title": "Smart Assistant",
     "placeholder": "Type your question...",
@@ -184,6 +203,7 @@
   "order": {
     "title": "My Order",
     "empty": "Your order is empty",
+    "notesPlaceholder": "E.g. No onions, sauce on the side...",
     "addItems": "Explore our menu and add delicious products",
     "subtotal": "Subtotal",
     "tax": "Tax",
@@ -262,6 +282,8 @@
     "editPhone": "Edit phone",
     "myCards": "My Cards",
     "myActivity": "My Activity",
+    "billingData": "My billing data",
+    "billingDataSubtitle": "Manage your fiscal information",
     "favorites": "My Favorites",
     "favoritesSubtitle": "Saved dishes and combinations",
     "orderHistorySubtitle": "Review your previous breakfasts",
@@ -357,6 +379,16 @@
     "rfc": "RFC",
     "businessName": "Business Name",
     "taxRegime": "Tax Regime",
+    "regimeOptions": {
+      "601": "601 - General Law Legal Entities",
+      "603": "603 - Non-Profit Legal Entities",
+      "605": "605 - Wages and Salaries and Income Assimilated to Wages"
+    },
+    "cfdiOptions": {
+      "G03": "G03 - General expenses",
+      "G01": "G01 - Acquisition of goods",
+      "G02": "G02 - Returns, discounts or rebates"
+    },
     "scanCamera": "Scan with Camera",
     "orUpload": "or upload file",
     "selectPDF": "Select your PDF",
@@ -387,6 +419,7 @@
     "allTransactions": "All Transactions",
     "paymentHistory": "Payment History",
     "filters": "Filters",
+    "filter": "Filter",
     "restaurant": "Restaurant",
     "allRestaurants": "All restaurants",
     "card": "Card",
@@ -417,6 +450,7 @@
     "orders": "orders",
     "item": "item",
     "items": "items",
+    "filter": "Filter",
     "noOrders": "No orders",
     "noOrdersFound": "No orders found",
     "noOrdersYet": "You haven't made any orders yet",
@@ -559,7 +593,8 @@
     "invoiceInformation": "Invoice Information",
     "invoiceSent": "Invoice sent",
     "email": "Email",
-    "viewRelatedOrder": "View related order"
+    "viewRelatedOrder": "View related order",
+    "leaveReview": "Leave review"
   },
   "welcome": {
     "title": "Welcome",
@@ -630,7 +665,11 @@
     "allergenWarning": "Allergen warning",
     "allergenMessage": "This dish may contain dairy, gluten or other allergens. Please let us know if you have any specific food allergies.",
     "add": "Add",
-    "added": "Added!"
+    "added": "Added!",
+    "selectSize": "Select size",
+    "portion": "Portion/Glass",
+    "bottle": "Bottle",
+    "leaveReview": "Leave review"
   },
   "emailConfig": {
     "title": "Shipping Configuration",
@@ -681,5 +720,45 @@
     "orderAgain": "Order again",
     "deleteConfirm": "Delete combination?",
     "deleteConfirmDesc": "This action cannot be undone. The combination will be permanently deleted."
+  },
+  "review": {
+    "title": {
+      "dish": "Leave a Review",
+      "order": "Leave a Review",
+      "restaurant": "Leave a Review"
+    },
+    "question": {
+      "dish": "How was this dish?",
+      "order": "How was your order?",
+      "restaurant": "How was your breakfast?"
+    },
+    "ratingLabels": {
+      "veryBad": "Very bad",
+      "bad": "Bad",
+      "okay": "Okay",
+      "good": "Very good!",
+      "excellent": "Excellent!"
+    },
+    "whatDidYouLike": "What did you like most?",
+    "tellUsYourExperience": "Tell us your experience",
+    "commentPlaceholder": "How was the omelette? Was the coffee at the ideal temperature?",
+    "uploadPhotosOrVideos": "Upload photos or videos",
+    "selected": "selected",
+    "upload": "Upload",
+    "publishReview": "Publish Review",
+    "searchOrAddChip": "Search or add option...",
+    "add": "Add",
+    "chips": {
+      "excellentService": "Excellent service",
+      "deliciousFood": "Delicious food",
+      "pleasantAtmosphere": "Pleasant atmosphere",
+      "perfectCoffee": "Perfect coffee",
+      "quickService": "Quick service",
+      "perfectTemperature": "Perfect temperature",
+      "goodPortion": "Good portion",
+      "wellPresented": "Well presented",
+      "goodValue": "Good value for money",
+      "completeOrder": "Complete order"
+    }
   }
 }

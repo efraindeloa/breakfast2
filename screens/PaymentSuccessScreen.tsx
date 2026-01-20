@@ -226,13 +226,13 @@ const PaymentSuccessScreen: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Razón Social</label>
+                      <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">{t('billing.businessName')}</label>
                       <input
                         type="text"
                         value={editingFiscalData.razonSocial}
                         onChange={(e) => setEditingFiscalData({ ...editingFiscalData, razonSocial: e.target.value })}
                         className="w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/50 h-10 px-3 text-sm text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-                        placeholder="Nombre legal completo"
+                        placeholder={t('billing.businessNamePlaceholder')}
                       />
                     </div>
                     <div>
@@ -242,9 +242,9 @@ const PaymentSuccessScreen: React.FC = () => {
                         onChange={(e) => setEditingFiscalData({ ...editingFiscalData, usoCFDI: e.target.value })}
                         className="w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/50 h-10 px-3 text-sm text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                       >
-                        <option value="G03 - Gastos en general">G03 - Gastos en general</option>
-                        <option value="G01 - Adquisición de mercancías">G01 - Adquisición de mercancías</option>
-                        <option value="G02 - Devoluciones, descuentos o bonificaciones">G02 - Devoluciones, descuentos o bonificaciones</option>
+                        <option value="G03 - Gastos en general">{t('billing.cfdiOptions.G03')}</option>
+                        <option value="G01 - Adquisición de mercancías">{t('billing.cfdiOptions.G01')}</option>
+                        <option value="G02 - Devoluciones, descuentos o bonificaciones">{t('billing.cfdiOptions.G02')}</option>
                       </select>
                     </div>
                     <div>
@@ -254,9 +254,9 @@ const PaymentSuccessScreen: React.FC = () => {
                         onChange={(e) => setEditingFiscalData({ ...editingFiscalData, regimenFiscal: e.target.value })}
                         className="w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/50 h-10 px-3 text-sm text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                       >
-                        <option value="601 - General de Ley Personas Morales">601 - General de Ley Personas Morales</option>
-                        <option value="603 - Personas Morales con Fines no Lucrativos">603 - Personas Morales con Fines no Lucrativos</option>
-                        <option value="605 - Sueldos y Salarios e Ingresos Asimilados a Salarios">605 - Sueldos y Salarios e Ingresos Asimilados a Salarios</option>
+                        <option value="601 - General de Ley Personas Morales">{t('billing.regimeOptions.601')}</option>
+                        <option value="603 - Personas Morales con Fines no Lucrativos">{t('billing.regimeOptions.603')}</option>
+                        <option value="605 - Sueldos y Salarios e Ingresos Asimilados a Salarios">{t('billing.regimeOptions.605')}</option>
                       </select>
                     </div>
                     <div className="flex gap-2 pt-2">

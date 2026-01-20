@@ -303,7 +303,7 @@ const OrderHistoryScreen: React.FC = () => {
           <button
             onClick={() => setShowFilters(true)}
             className={`relative ${hasActiveFilters ? 'text-primary' : ''}`}
-            title="Filtrar"
+            title={t('orderHistory.filter')}
           >
             <span className="material-symbols-outlined cursor-pointer">filter_list</span>
             {hasActiveFilters && (
@@ -614,13 +614,25 @@ const OrderItem: React.FC<{ order: Order; statusColor: string; statusLabel: stri
             <span className="text-sm font-semibold text-[#181411] dark:text-white">{t('orderHistory.total')}</span>
             <span className="text-lg font-bold text-primary">{order.total}</span>
           </div>
-          <button
-            onClick={handleViewPayment}
-            className="mt-3 w-full py-2 px-4 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
-          >
-            <span className="material-symbols-outlined text-base">receipt</span>
-            {t('orderHistory.viewRelatedPayment')}
-          </button>
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate('/review', { state: { reviewType: 'order', orderId: order.id } });
+              }}
+              className="flex-1 py-2 px-4 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+            >
+              <span className="material-symbols-outlined text-base">rate_review</span>
+              {t('orderHistory.leaveReview')}
+            </button>
+            <button
+              onClick={handleViewPayment}
+              className="flex-1 py-2 px-4 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+            >
+              <span className="material-symbols-outlined text-base">receipt</span>
+              {t('orderHistory.viewRelatedPayment')}
+            </button>
+          </div>
         </div>
       )}
     </div>

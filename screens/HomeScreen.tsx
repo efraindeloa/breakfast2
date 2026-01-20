@@ -58,7 +58,10 @@ const HomeScreen: React.FC = () => {
       <main className="flex-1 overflow-y-auto pb-32 hide-scrollbar">
         <h3 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6">{t('home.quickActions')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 max-w-4xl mx-auto">
-          <div className="flex flex-col gap-3 rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white p-5 items-start shadow-lg cursor-pointer col-span-2 overflow-hidden relative">
+          <div 
+            onClick={() => navigate('/qr-scanner')}
+            className="flex flex-col gap-3 rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white p-5 items-start shadow-lg cursor-pointer col-span-2 overflow-hidden relative"
+          >
             <div className="z-10 flex items-center gap-3">
               <div className="flex items-center justify-center size-12 rounded-xl bg-white/20 backdrop-blur-md">
                 <span className="material-symbols-outlined text-white text-2xl">qr_code_scanner</span>

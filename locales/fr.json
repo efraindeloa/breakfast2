@@ -18,7 +18,13 @@
     "add": "Ajouter",
     "remove": "Retirer",
     "yes": "Oui",
-    "no": "Non"
+    "no": "Non",
+    "languageNames": {
+      "es": "Español",
+      "en": "English",
+      "pt": "Português",
+      "fr": "Français"
+    }
   },
   "navigation": {
     "home": "Accueil",
@@ -53,6 +59,10 @@
       "air": "Air",
       "vegetarian": "Végétarien",
       "vegan": "Végétalien"
+    },
+    "badges": {
+      "vegan": "Végétalien",
+      "specialty": "Spécialité"
     },
     "searchPlaceholder": "Rechercher des plats...",
     "addToCart": "Ajouter au panier",
@@ -139,6 +149,15 @@
     "peopleAtTable": "à la table",
     "securityNotice": "Vos informations sont protégées. Seul l'hôte peut voir votre commande."
   },
+  "qrScanner": {
+    "title": "Scanner QR",
+    "instruction": "Pointez la caméra vers le code QR",
+    "permissionDenied": "Permission de la caméra refusée. Veuillez autoriser l'accès à la caméra dans les paramètres de votre appareil.",
+    "noCamera": "Aucune caméra trouvée. Veuillez vous assurer d'avoir une caméra disponible.",
+    "error": "Erreur lors du démarrage du scanner",
+    "containerError": "Erreur: Impossible d'initialiser le conteneur du scanner",
+    "retry": "Réessayer"
+  },
   "assistant": {
     "title": "Assistant Intelligent",
     "placeholder": "Tapez votre question...",
@@ -184,6 +203,7 @@
   "order": {
     "title": "Ma Commande",
     "empty": "Votre commande est vide",
+    "notesPlaceholder": "Ex. Sans oignon, sauce à part...",
     "addItems": "Explorez notre menu et ajoutez des produits délicieux",
     "subtotal": "Sous-total",
     "tax": "Taxes",
@@ -262,6 +282,8 @@
     "editPhone": "Modifier le téléphone",
     "myCards": "Mes Cartes",
     "myActivity": "Mon Activité",
+    "billingData": "Mes données fiscales",
+    "billingDataSubtitle": "Gérez vos informations fiscales",
     "favorites": "Mes Favoris",
     "favoritesSubtitle": "Plats et combinaisons enregistrés",
     "orderHistorySubtitle": "Consultez vos petits-déjeuners précédents",
@@ -357,6 +379,17 @@
     "rfc": "RFC",
     "businessName": "Raison Sociale",
     "taxRegime": "Régime Fiscal",
+    "regimeOptions": {
+      "601": "601 - Personnes Morales Générales",
+      "603": "603 - Personnes Morales à but non lucratif",
+      "605": "605 - Salaires et revenus assimilés aux salaires"
+    },
+    "cfdiUsage": "Usage CFDI",
+    "cfdiOptions": {
+      "G03": "G03 - Dépenses générales",
+      "G01": "G01 - Acquisition de marchandises",
+      "G02": "G02 - Retours, remises ou bonifications"
+    },
     "scanCamera": "Scanner avec l'Appareil Photo",
     "orUpload": "ou télécharger un fichier",
     "selectPDF": "Sélectionnez votre PDF",
@@ -418,6 +451,7 @@
     "allTransactions": "Toutes les Transactions",
     "paymentHistory": "Historique des Paiements",
     "filters": "Filtres",
+    "filter": "Filtrer",
     "restaurant": "Restaurant",
     "allRestaurants": "Tous les restaurants",
     "card": "Carte",
@@ -448,6 +482,7 @@
     "orders": "commandes",
     "item": "article",
     "items": "articles",
+    "filter": "Filtrer",
     "noOrders": "Aucune commande",
     "noOrdersFound": "Aucune commande trouvée",
     "noOrdersYet": "Vous n'avez pas encore passé de commande",
@@ -590,7 +625,8 @@
     "invoiceInformation": "Informations de la Facture",
     "invoiceSent": "Facture envoyée",
     "email": "E-mail",
-    "viewRelatedOrder": "Voir la commande associée"
+    "viewRelatedOrder": "Voir la commande associée",
+    "leaveReview": "Laisser un avis"
   },
   "welcome": {
     "title": "Bienvenue",
@@ -661,7 +697,11 @@
     "allergenWarning": "Avertissement allergène",
     "allergenMessage": "Ce plat peut contenir des produits laitiers, du gluten ou d'autres allergènes. Veuillez nous informer si vous avez des allergies alimentaires spécifiques.",
     "add": "Ajouter",
-    "added": "Ajouté !"
+    "added": "Ajouté !",
+    "selectSize": "Sélectionner la taille",
+    "portion": "Portion/Verre",
+    "bottle": "Bouteille",
+    "leaveReview": "Laisser un avis"
   },
   "favorites": {
     "title": "Mes Favoris",
@@ -680,5 +720,45 @@
     "orderAgain": "Commander à nouveau",
     "deleteConfirm": "Supprimer la combinaison?",
     "deleteConfirmDesc": "Cette action ne peut pas être annulée. La combinaison sera supprimée définitivement."
+  },
+  "review": {
+    "title": {
+      "dish": "Laisser un Avis",
+      "order": "Laisser un Avis",
+      "restaurant": "Laisser un Avis"
+    },
+    "question": {
+      "dish": "Comment était ce plat?",
+      "order": "Comment était votre commande?",
+      "restaurant": "Comment était votre petit-déjeuner?"
+    },
+    "ratingLabels": {
+      "veryBad": "Très mauvais",
+      "bad": "Mauvais",
+      "okay": "Correct",
+      "good": "Très bien!",
+      "excellent": "Excellent!"
+    },
+    "whatDidYouLike": "Qu'est-ce que vous avez le plus aimé?",
+    "tellUsYourExperience": "Parlez-nous de votre expérience",
+    "commentPlaceholder": "Comment était l'omelette? Le café était-il à la température idéale?",
+    "uploadPhotosOrVideos": "Télécharger des photos ou vidéos",
+    "selected": "sélectionnés",
+    "upload": "Télécharger",
+    "publishReview": "Publier l'Avis",
+    "searchOrAddChip": "Rechercher ou ajouter une option...",
+    "add": "Ajouter",
+    "chips": {
+      "excellentService": "Excellent service",
+      "deliciousFood": "Nourriture délicieuse",
+      "pleasantAtmosphere": "Atmosphère agréable",
+      "perfectCoffee": "Café parfait",
+      "quickService": "Service rapide",
+      "perfectTemperature": "Température parfaite",
+      "goodPortion": "Bonne portion",
+      "wellPresented": "Bien présenté",
+      "goodValue": "Bon rapport qualité-prix",
+      "completeOrder": "Commande complète"
+    }
   }
 }

@@ -310,7 +310,7 @@ const TransactionsScreen: React.FC = () => {
           <button
             onClick={() => setShowFilters(true)}
             className={`relative ${hasActiveFilters ? 'text-primary' : ''}`}
-            title="Filtrar"
+            title={t('transactions.filter')}
           >
             <span className="material-symbols-outlined cursor-pointer">filter_list</span>
             {hasActiveFilters && (

@@ -5,6 +5,7 @@ import { useCart, CartItem } from '../contexts/CartContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
+import { Order, OrderStatus, ORDERS_STORAGE_KEY } from '../types/order';
 
 const OrderScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -27,7 +28,8 @@ const OrderScreen: React.FC = () => {
     cart: orderItems, 
     updateCartItemQuantity, 
     removeFromCart, 
-    updateCartItemNotes 
+    updateCartItemNotes,
+    clearCart
   } = useCart();
   const { saveCombination } = useFavorites();
   const { config } = useRestaurant();
@@ -39,71 +41,43 @@ const OrderScreen: React.FC = () => {
   const [showSaveCombinationModal, setShowSaveCombinationModal] = useState(false);
   const [combinationName, setCombinationName] = useState('');
   
-  // Estado de la orden
-  type OrderStatus = 
-    | 'orden_enviada' 
-    | 'orden_recibida' 
-    | 'en_preparacion' 
-    | 'lista_para_entregar' 
-    | 'en_entrega' 
-    | 'entregada' 
-    | 'con_incidencias' 
-    | 'orden_cerrada' 
-    | 'cancelada';
-  
-  // Estado de la orden con timestamps
-  interface OrderStatusWithTimestamp {
-    status: OrderStatus;
-    timestamp: string;
-  }
+  // Función para obtener el nombre traducido del platillo
+  const getDishName = (dishId: number): string => {
+    try {
+      return t(`dishes.${dishId}.name`) || `dish-${dishId}`;
+    } catch {
+      return `dish-${dishId}`;
+    }
+  };
 
-  const [orderStatusData, setOrderStatusData] = useState<OrderStatusWithTimestamp | null>(() => {
-    // Si la orden está confirmada, establecer estado inicial
-    if (isConfirmed) {
-      return {
-        status: 'orden_enviada',
-        timestamp: new Date().toISOString(),
-      };
-    }
-    // Intentar cargar desde localStorage
-    const savedData = localStorage.getItem('orderStatusData');
-    if (savedData) {
-      try {
+  // Cargar órdenes desde localStorage
+  const [orders, setOrders] = useState<Order[]>(() => {
+    try {
+      const savedData = localStorage.getItem(ORDERS_STORAGE_KEY);
+      if (savedData) {
         return JSON.parse(savedData);
-      } catch {
-        return null;
       }
+    } catch {
+      return [];
     }
-    return null;
+    return [];
   });
 
-  const orderStatus = orderStatusData?.status || null;
+  // Verificar si hay alguna orden enviada
+  const hasSentOrder = orders.length > 0 && orders.some(order => 
+    ['orden_enviada', 'orden_recibida', 'en_preparacion', 'lista_para_entregar', 'en_entrega', 'entregada', 'con_incidencias'].includes(order.status)
+  );
 
-  // Sincronizar con isConfirmed
-  useEffect(() => {
-    if (isConfirmed && !orderStatusData) {
-      const newStatusData: OrderStatusWithTimestamp = {
-        status: 'orden_enviada',
-        timestamp: new Date().toISOString(),
-      };
-      setOrderStatusData(newStatusData);
-      localStorage.setItem('orderStatusData', JSON.stringify(newStatusData));
-    }
-    // Si la orden no está confirmada y no hay items, limpiar estado
-    if (!isConfirmed && orderItems.length === 0 && orderStatusData) {
-      setOrderStatusData(null);
-      localStorage.removeItem('orderStatusData');
-    }
-  }, [isConfirmed, orderStatusData, orderItems.length]);
+  // Obtener el número de la próxima orden complementaria
+  const getNextOrderNumber = (): number => {
+    if (orders.length === 0) return 1;
+    return Math.max(...orders.map(o => o.orderNumber)) + 1;
+  };
 
-  // Guardar estado en localStorage cuando cambie
+  // Guardar órdenes en localStorage cuando cambien
   useEffect(() => {
-    if (orderStatusData) {
-      localStorage.setItem('orderStatusData', JSON.stringify(orderStatusData));
-    } else {
-      localStorage.removeItem('orderStatusData');
-    }
-  }, [orderStatusData]);
+    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+  }, [orders]);
 
   // Sincronizar orden del usuario actual con el contexto de orden grupal
   const prevOrderItemsRef = useRef<CartItem[]>([]);
@@ -156,13 +130,24 @@ const OrderScreen: React.FC = () => {
   const handleConfirmOrder = () => {
     if (canConfirmOrder()) {
       confirmGroupOrder();
-      // Establecer estado inicial cuando se confirma la orden
-      const newStatusData: OrderStatusWithTimestamp = {
+      // Crear nueva orden con el carrito actual
+      const orderNumber = getNextOrderNumber();
+      const newOrder: Order = {
+        orderId: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        orderNumber,
+        items: orderItems.map(item => ({
+          id: item.id,
+          name: getDishName(item.id),
+          price: item.price,
+          notes: item.notes,
+          quantity: item.quantity,
+        })),
         status: 'orden_enviada',
         timestamp: new Date().toISOString(),
       };
-      setOrderStatusData(newStatusData);
-      localStorage.setItem('orderStatusData', JSON.stringify(newStatusData));
+      setOrders(prev => [...prev, newOrder]);
+      // Limpiar carrito después de enviar la orden
+      clearCart();
       // La orden se envía a la cocina, no se paga todavía
       // El pago será después de que los comensales terminen de comer
       navigate('/order-confirmed');
@@ -786,23 +771,53 @@ const OrderScreen: React.FC = () => {
               </>
             ) : (
               <>
-                {orderStatus === 'orden_enviada' && config.allowOrderModification ? (
-                  <button
-                    onClick={() => navigate('/menu')}
-                    className="w-full bg-primary/10 hover:bg-primary/20 text-primary font-bold py-4 rounded-xl text-lg border-2 border-primary/30 flex items-center justify-center gap-3 active:scale-95 transition-transform"
-                  >
-                    <span className="material-symbols-outlined">edit</span>
-                    <span>{t('order.changeOrder')}</span>
-                  </button>
-                ) : orderStatus !== 'orden_enviada' ? (
+                {hasSentOrder && orderItems.length > 0 ? (
                   <button
                     onClick={() => {
-                      const newStatusData: OrderStatusWithTimestamp = {
+                      // Crear nueva orden complementaria
+                      const orderNumber = getNextOrderNumber();
+                      const newOrder: Order = {
+                        orderId: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                        orderNumber,
+                        items: orderItems.map(item => ({
+                          id: item.id,
+                          name: getDishName(item.id),
+                          price: item.price,
+                          notes: item.notes,
+                          quantity: item.quantity,
+                        })),
                         status: 'orden_enviada',
                         timestamp: new Date().toISOString(),
                       };
-                      setOrderStatusData(newStatusData);
-                      localStorage.setItem('orderStatusData', JSON.stringify(newStatusData));
+                      setOrders(prev => [...prev, newOrder]);
+                      clearCart();
+                      navigate('/order-confirmed');
+                    }}
+                    className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
+                  >
+                    <span>{t('order.confirmAndSendOrder')}</span>
+                    <span className="material-symbols-outlined">restaurant</span>
+                  </button>
+                ) : !hasSentOrder && orderItems.length > 0 ? (
+                  <button
+                    onClick={() => {
+                      // Crear primera orden
+                      const orderNumber = getNextOrderNumber();
+                      const newOrder: Order = {
+                        orderId: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                        orderNumber,
+                        items: orderItems.map(item => ({
+                          id: item.id,
+                          name: getDishName(item.id),
+                          price: item.price,
+                          notes: item.notes,
+                          quantity: item.quantity,
+                        })),
+                        status: 'orden_enviada',
+                        timestamp: new Date().toISOString(),
+                      };
+                      setOrders(prev => [...prev, newOrder]);
+                      clearCart();
                       navigate('/order-confirmed');
                     }}
                     className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"

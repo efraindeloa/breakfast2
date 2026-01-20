@@ -169,7 +169,10 @@
       "smartTranslation": "Traduction Intelligente",
       "smartTranslationDesc": "Traduit automatiquement les menus et avis en temps réel",
       "suggestions": "Suggestions Gastronomiques",
-      "suggestionsDesc": "Basé sur vos préférences précédentes"
+      "suggestionsDesc": "Basé sur vos préférences précédentes",
+      "showSuggestions": "Afficher les Suggestions Gastronomiques",
+      "showHighlights": "Afficher les Plats en Vedette",
+      "highlightsDesc": "Plats recommandés du jour"
     },
     "privacyNotice": "L'intelligence artificielle utilise des données traitées localement pour protéger votre vie privée.",
     "selectLanguage": "Sélectionner la Langue",
@@ -301,7 +304,11 @@
     "otherPercent": "Autre %",
     "assistanceMessage": "Si vous avez des questions ou remarquez une incohérence dans votre commande, sélectionnez « Demander de l'aide » et un assistant viendra à votre table.",
     "requestAssistance": "Demander de l'aide",
-    "confirmPayment": "Confirmer le Paiement"
+    "confirmPayment": "Confirmer le Paiement",
+    "orderNotSent": "Commande non envoyée",
+    "orderNotSentMessage": "Vous devez envoyer la commande à la cuisine avant de pouvoir effectuer le paiement. Veuillez confirmer votre commande dans la section 'Ma Commande'.",
+    "orderNotSentAlert": "⚠️ Vous devez envoyer la commande avant de pouvoir payer.\n\nVeuillez aller à 'Ma Commande' et confirmer votre commande d'abord.",
+    "goToOrder": "Aller à Ma Commande"
   },
   "paymentSuccess": {
     "title": "Paiement réussi !",
@@ -598,7 +605,9 @@
     "password": "Mot de passe",
     "passwordPlaceholder": "Entrez votre mot de passe",
     "forgotPassword": "J'ai oublié mon mot de passe",
-    "noAccount": "Vous n'avez pas encore de compte ?"
+    "noAccount": "Vous n'avez pas encore de compte ?",
+    "otherLanguage": "Autre langue",
+    "selectLanguage": "Sélectionner la langue"
   },
   "register": {
     "title": "Bonjour !",

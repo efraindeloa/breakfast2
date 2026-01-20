@@ -2,6 +2,18 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage, useTranslation } from '../contexts/LanguageContext';
 import { popularLanguages, allLanguages, languagesData } from '../content/languages';
+// Importaciones estáticas para obtener traducciones del idioma seleccionado
+import * as esTranslations from '../locales/es.json';
+import * as enTranslations from '../locales/en.json';
+import * as ptTranslations from '../locales/pt.json';
+import * as frTranslations from '../locales/fr.json';
+
+const allStaticTranslations: Record<string, Record<string, any>> = {
+  es: esTranslations as any,
+  en: enTranslations as any,
+  pt: ptTranslations as any,
+  fr: frTranslations as any,
+};
 
 const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -12,7 +24,14 @@ const SettingsScreen: React.FC = () => {
     return saved || 'Español';
   });
   const [smartTranslation, setSmartTranslation] = useState(true);
-  const [suggestions, setSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState(() => {
+    const saved = localStorage.getItem('showSuggestions');
+    return saved === 'true';
+  });
+  const [highlights, setHighlights] = useState(() => {
+    const saved = localStorage.getItem('showHighlights');
+    return saved === 'true';
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [saved, setSaved] = useState(false);
 
@@ -24,20 +43,44 @@ const SettingsScreen: React.FC = () => {
     }
   }, [currentLanguage]);
 
+  // Mapear nombre del idioma al código
+  const languageMap: Record<string, 'es' | 'en' | 'pt' | 'fr'> = {
+    'Español': 'es',
+    'English': 'en',
+    'Inglés': 'en',
+    'Português': 'pt',
+    'Portugués': 'pt',
+    'Français': 'fr',
+    'Francés': 'fr'
+  };
+
+  // Obtener el código del idioma seleccionado
+  const selectedLanguageCode = useMemo(() => {
+    return languageMap[language] || 'es';
+  }, [language]);
+
+  // Obtener las traducciones del idioma seleccionado para el botón
+  const selectedLanguageTranslations = useMemo(() => {
+    return allStaticTranslations[selectedLanguageCode] || allStaticTranslations.es;
+  }, [selectedLanguageCode]);
+
+  // Función auxiliar para obtener traducciones del idioma seleccionado
+  const getTranslation = (key: string): string => {
+    const keys = key.split('.');
+    let value: any = selectedLanguageTranslations;
+    for (const k of keys) {
+      if (value && typeof value === 'object' && k in value) {
+        value = value[k];
+      } else {
+        return key; // Retornar la clave si no se encuentra
+      }
+    }
+    return typeof value === 'string' ? value : key;
+  };
+
   // Función para guardar el idioma seleccionado
   const handleSaveLanguage = () => {
-    // Mapear nombre del idioma al código
-    const languageMap: Record<string, 'es' | 'en' | 'pt' | 'fr'> = {
-      'Español': 'es',
-      'English': 'en',
-      'Inglés': 'en',
-      'Português': 'pt',
-      'Portugués': 'pt',
-      'Français': 'fr',
-      'Francés': 'fr'
-    };
-    
-    const langCode = languageMap[language] || 'es';
+    const langCode = selectedLanguageCode;
     setAppLanguage(langCode);
     
     // Guardar en localStorage
@@ -141,15 +184,37 @@ const SettingsScreen: React.FC = () => {
             {/* Analysis Toggle */}
             <div className="flex items-center gap-4 px-4 py-5 justify-between">
               <div className="flex items-center gap-4">
-                <div className="text-[#8a7560] dark:text-[#a8937d] flex items-center justify-center rounded-lg bg-gray-100 dark:bg-[#3d3228] shrink-0 size-12">
+                <div className="text-[#8a7560] dark:text-[#a8937d] flex items-center justify-center rounded-lg bg-gray-100 dark:bg-[#3d3328] shrink-0 size-12">
                   <span className="material-symbols-outlined text-[26px]">restaurant</span>
                 </div>
                 <div className="flex flex-col justify-center max-w-[200px]">
-                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('settings.ai.suggestions')}</p>
+                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('settings.ai.showSuggestions')}</p>
                   <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">{t('settings.ai.suggestionsDesc')}</p>
                 </div>
               </div>
-              <Toggle checked={suggestions} onChange={setSuggestions} />
+              <Toggle checked={suggestions} onChange={(checked) => {
+                setSuggestions(checked);
+                localStorage.setItem('showSuggestions', checked.toString());
+              }} />
+            </div>
+
+            <div className="h-[1px] bg-[#e6e0db] dark:bg-[#3d3228] mx-4"></div>
+
+            {/* Highlights Toggle */}
+            <div className="flex items-center gap-4 px-4 py-5 justify-between">
+              <div className="flex items-center gap-4">
+                <div className="text-[#8a7560] dark:text-[#a8937d] flex items-center justify-center rounded-lg bg-gray-100 dark:bg-[#3d3328] shrink-0 size-12">
+                  <span className="material-symbols-outlined text-[26px]">star</span>
+                </div>
+                <div className="flex flex-col justify-center max-w-[200px]">
+                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('settings.ai.showHighlights')}</p>
+                  <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">{t('settings.ai.highlightsDesc')}</p>
+                </div>
+              </div>
+              <Toggle checked={highlights} onChange={(checked) => {
+                setHighlights(checked);
+                localStorage.setItem('showHighlights', checked.toString());
+              }} />
             </div>
           </div>
         </section>
@@ -247,12 +312,12 @@ const SettingsScreen: React.FC = () => {
               {saved ? (
                 <>
                   <span className="material-symbols-outlined">check_circle</span>
-                  <span>{t('common.saved')}</span>
+                  <span>{getTranslation('common.saved')}</span>
                 </>
               ) : (
                 <>
                   <span className="material-symbols-outlined">save</span>
-                  <span>{t('common.save')}</span>
+                  <span>{getTranslation('common.save')}</span>
                 </>
               )}
         </button>

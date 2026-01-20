@@ -10,7 +10,7 @@ interface RestaurantContextType {
 const RestaurantContext = createContext<RestaurantContextType | undefined>(undefined);
 
 export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [selectedRestaurant, setSelectedRestaurantState] = useState<string>('Don Kamaron Restaurant');
+  const [selectedRestaurant, setSelectedRestaurantState] = useState<string>('DONK RESTAURANT');
 
   // Cargar restaurante desde localStorage al iniciar
   useEffect(() => {

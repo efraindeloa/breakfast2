@@ -52,13 +52,30 @@
       "sea": "Mar",
       "air": "Aire",
       "vegetarian": "Vegetariano",
-      "vegan": "Vegano"
+      "vegan": "Vegano",
+      "cafe": "Café",
+      "digestivos": "Digestivos",
+      "refrescos": "Refrescos",
+      "aguaMineralizada": "Agua mineralizada",
+      "aguasFrescas": "Aguas frescas",
+      "electrolit": "Electrolit",
+      "energizantes": "Energizantes",
+      "pastel": "Pastel",
+      "payDeQueso": "Pay de Queso",
+      "flan": "Flan",
+      "nieve": "Nieve",
+      "fruta": "Fruta",
+      "rum": "Ron",
+      "vodka": "Vodka",
+      "tequila": "Tequila",
+      "gin": "Gin"
     },
     "searchPlaceholder": "Buscar platillos...",
     "addToCart": "Agregar al carrito",
     "inCart": "En carrito",
     "chefSuggestions": "Sugerencias del Chef",
     "todayHighlights": "Destacados de hoy",
+    "highlights": "Destacados",
     "clearFilter": "Limpiar filtro",
     "addToOrder": "Agregar a la orden",
     "noDishesFound": "No se encontraron platos con los filtros aplicados",
@@ -125,6 +142,86 @@
     "14": {
       "name": "Margarita Premium",
       "description": "Tequila reposado, triple sec y jugo de lima"
+    },
+    "15": {
+      "name": "Americano",
+      "description": "180 ml - NESPRESSO"
+    },
+    "16": {
+      "name": "Espresso",
+      "description": "60 ml - NESPRESSO"
+    },
+    "17": {
+      "name": "Capuchino",
+      "description": "180 ml - NESPRESSO. Opciones: Napolitano, baileys, vainilla"
+    },
+    "18": {
+      "name": "Frapuccino",
+      "description": "180 ml - NESPRESSO"
+    },
+    "19": {
+      "name": "Té",
+      "description": "Opciones: Hierbabuena / Manzanilla"
+    },
+    "20": {
+      "name": "Carajillo",
+      "description": "Café con licor 43"
+    },
+    "21": {
+      "name": "Coketillo",
+      "description": "Carajillo con paleta de chocomilk"
+    },
+    "22": {
+      "name": "Carajilla",
+      "description": "Café con Baileys"
+    },
+    "23": {
+      "name": "Licor 43",
+      "description": "700 ml - Porción: $140.00 / Botella: $1,400.00"
+    },
+    "24": {
+      "name": "Baileys",
+      "description": "700 ml - Porción: $120.00 / Botella: $1,200.00"
+    },
+    "25": {
+      "name": "Frangelico",
+      "description": "700 ml - Porción: $120.00 / Botella: $1,200.00"
+    },
+    "26": {
+      "name": "Sambuca",
+      "description": "700 ml - Porción: $100.00 / Botella: $1,000.00"
+    },
+    "27": {
+      "name": "Chinchón Seco",
+      "description": "1000 ml - Porción: $95.00 / Botella: $950.00"
+    },
+    "28": {
+      "name": "Chinchón Dulce",
+      "description": "1000 ml - Porción: $95.00 / Botella: $950.00"
+    },
+    "29": {
+      "name": "Volcán",
+      "description": "Con una textura única, firme por fuera, suave por dentro, acompañado de helado. Opciones: Dulce de leche o chocolate"
+    },
+    "30": {
+      "name": "Cheesecake Vasco",
+      "description": "Cremoso pay de natilla montado sobre cama de galleta horneada y bañado con mermelada de frutos rojos. (200 g.)"
+    },
+    "31": {
+      "name": "Pan de Elote",
+      "description": "Recién horneado, sobre una cama de mermelada, frutos rojos, helado de vainilla, bañado con dulce de cajeta y nuez. (200 g.)"
+    },
+    "32": {
+      "name": "Cheesecake Lotus",
+      "description": "Pay de queso con la autentica galleta \"Lotus Biscoff\", bañado con mezcla de leches, acompañado de frutos rojos."
+    },
+    "33": {
+      "name": "Pastel 3 Leches",
+      "description": "Delicioso pan de vainilla, con trozos de durazno, bañado con mezcla de 3 leches, con frutos rojos y nuez."
+    },
+    "34": {
+      "name": "Red Velvet",
+      "description": "Pan de red velvet con sabor a chocolate oscuro y betún de queso crema. Coronado con fresa natural."
     }
   },
   "joinTable": {
@@ -169,7 +266,10 @@
       "smartTranslation": "Traducción Inteligente",
       "smartTranslationDesc": "Traduce automáticamente menús y reseñas en tiempo real",
       "suggestions": "Sugerencias Gastronómicas",
-      "suggestionsDesc": "Basado en tus preferencias anteriores"
+      "suggestionsDesc": "Basado en tus preferencias anteriores",
+      "showSuggestions": "Mostrar Sugerencias Gastronómicas",
+      "showHighlights": "Mostrar Destacados",
+      "highlightsDesc": "Platillos recomendados del día"
     },
     "privacyNotice": "La inteligencia artificial utiliza datos procesados localmente para proteger tu privacidad.",
     "selectLanguage": "Seleccionar Idioma",
@@ -306,7 +406,21 @@
     "otherPercent": "Otro %",
     "assistanceMessage": "Si tienes alguna duda o detectas alguna inconsistencia en tu orden, selecciona «Solicitar asistencia» y un asistente acudirá a tu mesa.",
     "requestAssistance": "Solicitar asistencia",
-    "confirmPayment": "Confirmar Pago"
+    "confirmPayment": "Confirmar Pago",
+    "orderNotSent": "Orden no enviada",
+    "orderNotSentMessage": "Debes enviar la orden a la cocina antes de poder realizar el pago. Por favor, confirma tu orden en la sección 'Mi Orden'.",
+    "orderNotSentAlert": "⚠️ Debes enviar la orden antes de poder pagar.\n\nPor favor, ve a 'Mi Orden' y confirma tu orden primero.",
+    "goToOrder": "Ir a Mi Orden"
+  },
+  "paymentSuccess": {
+    "title": "¡Pago Exitoso!",
+    "wantInvoice": "¿Deseas recibir factura?",
+    "verifyFiscalData": "Verificar Datos Fiscales",
+    "confirmFiscalData": "Confirmo que mis datos fiscales son correctos",
+    "updateFromProfile": "Puedes actualizar tus datos fiscales desde tu perfil en cualquier momento.",
+    "selectEmail": "Selecciona el correo electrónico para enviar la factura",
+    "addAnotherEmail": "Agregar otro correo",
+    "finish": "Finalizar"
   },
   "billing": {
     "step1": "Datos Fiscales",
@@ -477,7 +591,18 @@
     "users": "usuarios"
   },
   "orderDetail": {
-    "title": "Detalles de la Orden",
+    "title": "Mi Orden",
+    "detailTitle": "Detalles de la Orden",
+    "noOrders": "No hay órdenes",
+    "noOrdersMessage": "Aún no has realizado ninguna orden. ¡Explora nuestro menú y comienza a pedir!",
+    "mainOrder": "Orden Principal",
+    "complementaryOrder": "Orden Complementaria",
+    "items": "Items",
+    "orderTotal": "Total de la Orden",
+    "currentCart": "Carrito Actual",
+    "pendingComplementaryOrder": "Orden Complementaria",
+    "addMoreItems": "Agregar más items",
+    "addComplementaryOrder": "Agregar Orden Complementaria",
     "noActiveOrder": "No hay orden activa",
     "currentStatus": "Estado actual de tu orden",
     "orderSent": "Orden Enviada",
@@ -565,7 +690,9 @@
     "password": "Contraseña",
     "passwordPlaceholder": "Ingresa tu contraseña",
     "forgotPassword": "Olvidé mi contraseña",
-    "noAccount": "¿Aún no tienes una cuenta?"
+    "noAccount": "¿Aún no tienes una cuenta?",
+    "otherLanguage": "Otro idioma",
+    "selectLanguage": "Seleccionar Idioma"
   },
   "register": {
     "title": "¡Buen día!",

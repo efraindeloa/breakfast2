@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 
+// Importaciones estáticas para carga inicial síncrona
+import * as esTranslations from '../locales/es.json';
+import * as enTranslations from '../locales/en.json';
+import * as ptTranslations from '../locales/pt.json';
+import * as frTranslations from '../locales/fr.json';
+
 export type Language = 'es' | 'en' | 'pt' | 'fr';
 
 interface LanguageContextType {
@@ -9,6 +15,13 @@ interface LanguageContextType {
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+
+const allStaticTranslations: Record<Language, Record<string, any>> = {
+  es: esTranslations.default || esTranslations,
+  en: enTranslations.default || enTranslations,
+  pt: ptTranslations.default || ptTranslations,
+  fr: frTranslations.default || frTranslations,
+};
 
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
@@ -43,27 +56,41 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     return 'es';
   });
 
-  // Cargar traducciones dinámicamente
-  const [translations, setTranslations] = useState<Record<string, any>>({});
+  // Inicializar traducciones de forma síncrona
+  const [translations, setTranslations] = useState<Record<string, any>>(() => {
+    // Obtener el idioma inicial directamente del localStorage para evitar dependencia de 'language'
+    const savedCode = localStorage.getItem('appLanguage');
+    const initialLang: Language = (savedCode === 'en' || savedCode === 'pt' || savedCode === 'fr') 
+      ? savedCode as Language
+      : (() => {
+          const savedName = localStorage.getItem('selectedLanguage');
+          if (savedName === 'English' || savedName === 'Inglés') return 'en';
+          if (savedName === 'Português' || savedName === 'Portugués') return 'pt';
+          if (savedName === 'Français' || savedName === 'Francés') return 'fr';
+          return 'es';
+        })();
+    return allStaticTranslations[initialLang] || allStaticTranslations.es;
+  });
 
   useEffect(() => {
-    // Cargar el archivo de traducción correspondiente
-    const loadTranslations = async () => {
-      try {
-        const translationsModule = await import(`../locales/${language}.json`);
-        setTranslations(translationsModule.default || translationsModule);
-      } catch (error) {
-        console.error(`Error loading translations for ${language}:`, error);
-        // Fallback a español si hay error
+    // Actualizar traducciones cuando cambia el idioma
+    // Primero intentar usar traducciones estáticas (más rápido)
+    if (allStaticTranslations[language]) {
+      setTranslations(allStaticTranslations[language]);
+    } else {
+      // Fallback a carga dinámica si no está en las estáticas
+      const loadTranslations = async () => {
         try {
-          const fallbackModule = await import('../locales/es.json');
-          setTranslations(fallbackModule.default || fallbackModule);
-        } catch (fallbackError) {
-          console.error('Error loading fallback translations:', fallbackError);
+          const translationsModule = await import(`../locales/${language}.json`);
+          setTranslations(translationsModule.default || translationsModule);
+        } catch (error) {
+          console.error(`Error loading translations for ${language}:`, error);
+          // Fallback a español si hay error
+          setTranslations(allStaticTranslations.es);
         }
-      }
-    };
-    loadTranslations();
+      };
+      loadTranslations();
+    }
   }, [language]);
 
   const setLanguage = (lang: Language) => {

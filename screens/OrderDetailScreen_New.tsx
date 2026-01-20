@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useGroupOrder } from '../contexts/GroupOrderContext';
@@ -15,13 +15,12 @@ interface StatusHistory {
 const OrderDetailScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { cart: currentCartItems, clearCart } = useCart();
+  const { cart: currentCartItems } = useCart();
   const { config } = useRestaurant();
   const { isGroupOrder, participants, currentUserParticipant, isConfirmed } = useGroupOrder();
-  const [complementaryOrderInstructions, setComplementaryOrderInstructions] = useState('');
 
   // Cargar todas las órdenes desde localStorage
-  const [orders, setOrders] = useState<Order[]>(() => {
+  const orders: Order[] = useMemo(() => {
     try {
       const savedData = localStorage.getItem(ORDERS_STORAGE_KEY);
       if (savedData) {
@@ -31,67 +30,7 @@ const OrderDetailScreen: React.FC = () => {
       return [];
     }
     return [];
-  });
-
-  // Sincronizar órdenes con localStorage cuando cambien
-  useEffect(() => {
-    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
-  }, [orders]);
-
-  // Escuchar cambios en localStorage para actualizar las órdenes cuando se paguen
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === ORDERS_STORAGE_KEY) {
-        if (e.newValue) {
-          try {
-            setOrders(JSON.parse(e.newValue));
-          } catch {
-            setOrders([]);
-          }
-        } else {
-          setOrders([]);
-        }
-      }
-    };
-
-    // También verificar periódicamente para cambios en la misma ventana
-    const checkStorage = () => {
-      try {
-        const savedData = localStorage.getItem(ORDERS_STORAGE_KEY);
-        if (savedData) {
-          const parsed = JSON.parse(savedData);
-          setOrders(parsed);
-        } else {
-          setOrders([]);
-        }
-      } catch {
-        setOrders([]);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    // Verificar cada 500ms si las órdenes cambiaron (para cambios en la misma ventana)
-    const interval = setInterval(checkStorage, 500);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
   }, []);
-
-  // Función para obtener el nombre traducido del platillo
-  const getDishName = (dishId: number): string => {
-    try {
-      return t(`dishes.${dishId}.name`) || `dish-${dishId}`;
-    } catch {
-      return `dish-${dishId}`;
-    }
-  };
-
-  // Calcular total de la orden complementaria (carrito actual)
-  const complementaryOrderTotal = useMemo(() => {
-    return currentCartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  }, [currentCartItems]);
 
   // Calcular total de todas las órdenes
   const orderTotal = useMemo(() => {
@@ -100,60 +39,9 @@ const OrderDetailScreen: React.FC = () => {
       return sum + orderSum;
     }, 0);
     // También incluir items del carrito actual si hay
-    return ordersTotal + complementaryOrderTotal;
-  }, [orders, complementaryOrderTotal]);
-
-  // Función para obtener el número de la próxima orden complementaria
-  const getNextOrderNumber = (): number => {
-    if (orders.length === 0) return 1;
-    return Math.max(...orders.map(o => o.orderNumber)) + 1;
-  };
-
-  // Función para enviar la orden complementaria
-  const handleSendComplementaryOrder = () => {
-    if (currentCartItems.length === 0) return;
-
-    const orderNumber = getNextOrderNumber();
-    
-    // Mapear items del carrito a items de la orden
-    const orderItems = currentCartItems.map(item => ({
-      id: item.id,
-      name: getDishName(item.id),
-      price: item.price,
-      notes: item.notes || '', // Mantener las notas individuales del item
-      quantity: item.quantity,
-    }));
-
-    // Si hay instrucciones especiales, agregarlas al primer item que no tenga notas
-    // o al primer item en general
-    if (complementaryOrderInstructions.trim() && orderItems.length > 0) {
-      // Buscar el primer item sin notas, o usar el primero
-      const itemToAddInstructions = orderItems.find(item => !item.notes) || orderItems[0];
-      if (itemToAddInstructions) {
-        itemToAddInstructions.notes = itemToAddInstructions.notes 
-          ? `${itemToAddInstructions.notes}. ${complementaryOrderInstructions}` 
-          : complementaryOrderInstructions;
-      }
-    }
-
-    const newOrder: Order = {
-      orderId: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      orderNumber,
-      items: orderItems,
-      status: 'orden_enviada',
-      timestamp: new Date().toISOString(),
-    };
-
-    // Actualizar el estado de órdenes (el useEffect se encargará de guardar en localStorage)
-    setOrders(prev => [...prev, newOrder]);
-
-    // Limpiar el carrito y las instrucciones
-    clearCart();
-    setComplementaryOrderInstructions('');
-
-    // Navegar a la página de confirmación
-    navigate('/order-confirmed');
-  };
+    const currentCartTotal = currentCartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    return ordersTotal + currentCartTotal;
+  }, [orders, currentCartItems]);
 
   const getStatusInfo = (status: OrderStatus) => {
     switch (status) {
@@ -360,13 +248,13 @@ const OrderDetailScreen: React.FC = () => {
           );
         })}
 
-        {/* Items del Carrito Actual (si hay) - Mostrar como Orden Complementaria */}
+        {/* Items del Carrito Actual (si hay) */}
         {currentCartItems.length > 0 && (
           <div className="mb-6 bg-white dark:bg-[#2d2516] rounded-xl p-4 shadow-sm border-2 border-primary/30 border-dashed">
             <div className="flex items-center gap-2 mb-4">
-              <span className="material-symbols-outlined text-primary">receipt_long</span>
+              <span className="material-symbols-outlined text-primary">shopping_cart</span>
               <h3 className="text-lg font-bold text-[#181411] dark:text-white">
-                {orders.length > 0 ? `${t('orderDetail.complementaryOrder')} #${orders.length + 1}` : t('orderDetail.complementaryOrder')}
+                {t('orderDetail.currentCart')}
               </h3>
             </div>
             <div className="space-y-2 mb-4">
@@ -391,49 +279,13 @@ const OrderDetailScreen: React.FC = () => {
                 </div>
               ))}
             </div>
-
-            {/* Total de la Orden Complementaria */}
-            <div className="flex justify-between items-center pt-3 mb-4 border-t border-gray-200 dark:border-gray-700">
-              <span className="text-base font-semibold text-[#181411] dark:text-white">
-                {t('orderDetail.orderTotal')}:
-              </span>
-              <span className="text-xl font-bold text-primary">
-                ${complementaryOrderTotal.toFixed(2)}
-              </span>
-            </div>
-
-            {/* Instrucciones Especiales */}
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-[#181411] dark:text-white mb-2 flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-lg">edit_note</span>
-                {t('order.specialInstructions')}
-              </h4>
-              <textarea
-                className="w-full bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-[#181411] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none"
-                placeholder={t('order.specialInstructionsPlaceholder')}
-                rows={3}
-                value={complementaryOrderInstructions}
-                onChange={(e) => setComplementaryOrderInstructions(e.target.value)}
-              />
-            </div>
-
-            {/* Botones de Acción */}
-            <div className="space-y-2">
-              <button
-                onClick={handleSendComplementaryOrder}
-                className="w-full bg-primary text-white font-bold py-3 rounded-xl text-base shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-primary/90"
-              >
-                <span className="material-symbols-outlined">restaurant</span>
-                <span>{t('order.confirmAndSendOrder')}</span>
-              </button>
-              <button
-                onClick={() => navigate('/menu')}
-                className="w-full bg-primary/10 hover:bg-primary/20 text-primary font-semibold py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
-              >
-                <span className="material-symbols-outlined text-lg">add</span>
-                <span>{t('orderDetail.addMoreItems')}</span>
-              </button>
-            </div>
+            <button
+              onClick={() => navigate('/menu')}
+              className="w-full bg-primary/10 hover:bg-primary/20 text-primary font-semibold py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
+            >
+              <span className="material-symbols-outlined text-lg">add</span>
+              <span>{t('orderDetail.addMoreItems')}</span>
+            </button>
           </div>
         )}
 

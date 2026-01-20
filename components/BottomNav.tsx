@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -157,19 +157,38 @@ const BottomNav: React.FC = () => {
   const { t } = useTranslation();
   const cartCount = getCartItemCount();
 
+  // Cargar todas las órdenes para mostrar el contador
+  const ordersCount = useMemo(() => {
+    try {
+      const savedData = localStorage.getItem('orders_list');
+      if (savedData) {
+        const orders = JSON.parse(savedData);
+        return Array.isArray(orders) ? orders.length : 0;
+      }
+    } catch {
+      return 0;
+    }
+    return 0;
+  }, []);
+
   // Verificar si hay una orden enviada
   const hasSentOrder = () => {
     try {
-      const savedData = localStorage.getItem('orderStatusData');
+      const savedData = localStorage.getItem('orders_list');
       if (savedData) {
-        const orderStatusData = JSON.parse(savedData);
-        return orderStatusData?.status === 'orden_enviada' || 
-               orderStatusData?.status === 'orden_recibida' ||
-               orderStatusData?.status === 'en_preparacion' ||
-               orderStatusData?.status === 'lista_para_entregar' ||
-               orderStatusData?.status === 'en_entrega' ||
-               orderStatusData?.status === 'entregada' ||
-               orderStatusData?.status === 'con_incidencias';
+        const orders = JSON.parse(savedData);
+        if (Array.isArray(orders) && orders.length > 0) {
+          const validStatuses = [
+            'orden_enviada',
+            'orden_recibida',
+            'en_preparacion',
+            'lista_para_entregar',
+            'en_entrega',
+            'entregada',
+            'con_incidencias'
+          ];
+          return orders.some((order: any) => validStatuses.includes(order?.status));
+        }
       }
     } catch {
       return false;
@@ -194,7 +213,7 @@ const BottomNav: React.FC = () => {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 w-full bg-white/80 dark:bg-background-dark/80 backdrop-blur-lg border-t border-gray-100 dark:border-white/10 px-4 sm:px-6 py-3 flex justify-between items-center pb-8 z-50 md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2">
+      <nav className="fixed bottom-0 left-0 right-0 w-full bg-white/80 dark:bg-background-dark/80 backdrop-blur-lg border-t border-gray-100 dark:border-white/10 px-4 sm:px-6 py-2 flex justify-between items-center z-50 md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2" style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
         {navItems.map((item) => {
         const isOrdersPath = item.path === '/orders';
         const isActive = isOrdersPath 
@@ -211,7 +230,7 @@ const BottomNav: React.FC = () => {
                 navigate(item.path);
               }
             }}
-            className={`flex flex-col items-center gap-1 transition-colors ${
+            className={`flex flex-col items-center gap-0.5 transition-colors ${
               isActive ? 'text-primary' : 'text-gray-400 dark:text-gray-500'
             }`}
           >
@@ -222,7 +241,8 @@ const BottomNav: React.FC = () => {
               >
                 {item.icon}
               </span>
-              {isOrdersPath && cartCount > 0 && !hasSentOrder() && (
+              {/* Solo mostrar badge si hay items pendientes en el carrito (orden complementaria pendiente) */}
+              {isOrdersPath && cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
                   {cartCount > 9 ? '9+' : cartCount}
                 </span>
@@ -245,7 +265,7 @@ const BottomNav: React.FC = () => {
               setShowAssistant(true);
             }
           }}
-          className={`flex flex-col items-center gap-1 transition-all relative ${
+          className={`flex flex-col items-center gap-0.5 transition-all relative ${
             isDragging ? 'opacity-70 scale-95' : 'hover:scale-105'
           }`}
           style={{ 

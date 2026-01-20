@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
+import { ORDERS_STORAGE_KEY, ORDER_HISTORY_STORAGE_KEY, HistoricalOrder } from '../types/order';
 
 interface Email {
   id: number;
@@ -20,7 +21,7 @@ interface FiscalData {
 const PaymentSuccessScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { config } = useRestaurant();
+  const { config, selectedRestaurant } = useRestaurant();
   const [wantsInvoice, setWantsInvoice] = useState<boolean | null>(null);
   const [selectedEmailId, setSelectedEmailId] = useState<number | null>(null);
   const [fiscalDataConfirmed, setFiscalDataConfirmed] = useState(false);
@@ -51,7 +52,90 @@ const PaymentSuccessScreen: React.FC = () => {
     setIsEditingFiscalData(false);
   };
 
+  // Cargar órdenes actuales
+  const currentOrders = useMemo(() => {
+    try {
+      const savedData = localStorage.getItem(ORDERS_STORAGE_KEY);
+      if (savedData) {
+        return JSON.parse(savedData);
+      }
+    } catch {
+      return [];
+    }
+    return [];
+  }, []);
+
   const handleFinish = () => {
+    // Combinar todas las órdenes en una sola orden histórica
+    if (currentOrders.length > 0) {
+      // Combinar todos los items de todas las órdenes
+      const allItems: Array<{ id: number; name: string; price: number; notes: string; quantity: number }> = [];
+      let totalAmount = 0;
+
+      currentOrders.forEach((order: any) => {
+        order.items.forEach((item: any) => {
+          // Buscar si ya existe un item con el mismo id y notas
+          const existingItemIndex = allItems.findIndex(
+            existingItem => existingItem.id === item.id && existingItem.notes === item.notes
+          );
+
+          if (existingItemIndex >= 0) {
+            // Si existe, sumar la cantidad
+            allItems[existingItemIndex].quantity += item.quantity;
+          } else {
+            // Si no existe, agregarlo
+            allItems.push({ ...item });
+          }
+          totalAmount += item.price * item.quantity;
+        });
+      });
+
+      // Crear la orden histórica combinada
+      const paymentDate = new Date();
+      const historicalOrder: HistoricalOrder = {
+        id: `historical-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        restaurantName: selectedRestaurant || 'DONK RESTAURANT',
+        date: paymentDate.toLocaleDateString('es-MX', { 
+          day: 'numeric', 
+          month: 'long', 
+          year: 'numeric' 
+        }),
+        time: paymentDate.toLocaleTimeString('es-MX', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }),
+        total: totalAmount,
+        status: 'completada',
+        items: allItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: `$${item.price.toFixed(2)}`,
+          notes: item.notes,
+          quantity: item.quantity,
+        })),
+        logo: '/logo-donk-restaurant.png',
+        timestamp: paymentDate.toISOString(),
+      };
+
+      // Cargar historial existente y agregar la nueva orden
+      let orderHistory: HistoricalOrder[] = [];
+      try {
+        const historyData = localStorage.getItem(ORDER_HISTORY_STORAGE_KEY);
+        if (historyData) {
+          orderHistory = JSON.parse(historyData);
+        }
+      } catch {
+        orderHistory = [];
+      }
+
+      // Agregar la nueva orden al inicio del historial
+      orderHistory.unshift(historicalOrder);
+      localStorage.setItem(ORDER_HISTORY_STORAGE_KEY, JSON.stringify(orderHistory));
+
+      // Limpiar las órdenes actuales
+      localStorage.removeItem(ORDERS_STORAGE_KEY);
+    }
+
     // Aquí se podría enviar la factura al correo seleccionado si wantsInvoice es true
     navigate('/home');
   };
@@ -95,8 +179,11 @@ const PaymentSuccessScreen: React.FC = () => {
                   {t('common.yes')}
                 </button>
                 <button
-                  onClick={() => setWantsInvoice(false)}
-                  className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:scale-95"
+                  onClick={() => {
+                    setWantsInvoice(false);
+                    handleFinish();
+                  }}
+                  className="flex-1 bg-primary text-white font-semibold py-3 rounded-lg hover:bg-primary/90 transition-colors active:scale-95"
                 >
                   {t('common.no')}
                 </button>
@@ -216,7 +303,7 @@ const PaymentSuccessScreen: React.FC = () => {
                       />
                       <div>
                         <p className="text-sm font-semibold text-[#181411] dark:text-white">
-                          Confirmo que mis datos fiscales son correctos
+                          {t('paymentSuccess.confirmFiscalData')}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           {t('paymentSuccess.updateFromProfile')}
@@ -232,7 +319,7 @@ const PaymentSuccessScreen: React.FC = () => {
             <div className="w-full max-w-md mt-6">
               <div className="bg-white dark:bg-[#2d2516] rounded-xl p-6 shadow-sm border border-gray-100 dark:border-[#3d3321]">
                 <h4 className="text-lg font-bold text-[#181411] dark:text-white mb-4">
-                  Selecciona el correo electrónico para enviar la factura
+                  {t('paymentSuccess.selectEmail')}
                 </h4>
                 <div className="space-y-2 mb-4">
                   {emails.map((email) => (
@@ -272,25 +359,18 @@ const PaymentSuccessScreen: React.FC = () => {
           </>
         )}
 
-        {/* Botón Finalizar */}
-        <div className="w-full max-w-md mt-6">
-          <button
-            onClick={handleFinish}
-            disabled={
-              wantsInvoice === null ||
-              (wantsInvoice === true && (!selectedEmailId || !fiscalDataConfirmed))
-            }
-            className={`w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform ${
-              wantsInvoice === null ||
-              (wantsInvoice === true && (!selectedEmailId || !fiscalDataConfirmed))
-                ? 'opacity-50 cursor-not-allowed'
-                : ''
-            }`}
-          >
-            <span>{t('paymentSuccess.finish')}</span>
-            <span className="material-symbols-outlined">check_circle</span>
-          </button>
-        </div>
+        {/* Botón Finalizar - Solo se muestra si quiere factura y ha completado los datos */}
+        {wantsInvoice === true && selectedEmailId && fiscalDataConfirmed && (
+          <div className="w-full max-w-md mt-6">
+            <button
+              onClick={handleFinish}
+              className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
+            >
+              <span>{t('paymentSuccess.finish')}</span>
+              <span className="material-symbols-outlined">check_circle</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

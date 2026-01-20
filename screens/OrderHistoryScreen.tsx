@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
+import { ORDER_HISTORY_STORAGE_KEY, HistoricalOrder } from '../types/order';
 
 interface OrderItem {
   id: number;
@@ -57,16 +58,49 @@ const OrderHistoryScreen: React.FC = () => {
     status: 'all',
   });
 
-  // Lista de órdenes históricas
-  const orders: Order[] = [
+  // Cargar órdenes históricas desde localStorage
+  const historicalOrders: HistoricalOrder[] = useMemo(() => {
+    try {
+      const savedData = localStorage.getItem(ORDER_HISTORY_STORAGE_KEY);
+      if (savedData) {
+        return JSON.parse(savedData);
+      }
+    } catch {
+      return [];
+    }
+    return [];
+  }, []);
+
+  // Convertir órdenes históricas al formato Order para compatibilidad con el componente existente
+  const orders: Order[] = useMemo(() => {
+    if (historicalOrders.length > 0) {
+      return historicalOrders.map((histOrder, index) => ({
+        id: index + 1,
+        restaurantName: histOrder.restaurantName,
+        date: histOrder.date,
+        time: histOrder.time,
+        total: `$${histOrder.total.toFixed(2)}`,
+        status: histOrder.status as 'completada' | 'cancelada' | 'en_proceso',
+        items: histOrder.items.map(item => ({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price, // Ya es string
+        })),
+        logo: histOrder.logo,
+        transactionId: histOrder.transactionId,
+      }));
+    }
+    // Fallback: órdenes de ejemplo si no hay datos en localStorage (solo para desarrollo)
+    return [
     {
       id: 1,
-      restaurantName: 'Don Kamaron Restaurant',
+      restaurantName: 'DONK RESTAURANT',
       date: 'Hoy',
       time: '8:45 AM',
       total: '$97.65',
       status: 'completada',
-      logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBc2H-XYiq7VOCFCpx2cuCePgbQE7ZDrkxgLFu-itmo_MSFUGuJ4MEK9gfv4p-Lur7DUSWI21FL7WjRrLtfWx6nu7z0mjAn2bhClTodzDi-pzY6r3wzdPoDRYMS1cM7ZBlUns8GzyAI7djeA6qN2gngbm8XYIbP5M6fXO48cdOauM5hZYsfaZ6Mxl204e6c5lXbMZh9Shgmz6nScvzItmVrWwCvhFVLdRbJtmqHe_EdQndGNhwA5EeplOu2NO9sXkEhh-WocuJ1KcoU',
+      logo: '/logo-donk-restaurant.png',
       items: [
         { id: 1, name: 'Tacos de Atún Marinado', quantity: 2, price: '$18.00' },
         { id: 2, name: 'Ceviche de Maracuyá', quantity: 1, price: '$22.00' },
@@ -76,12 +110,12 @@ const OrderHistoryScreen: React.FC = () => {
     },
     {
       id: 2,
-      restaurantName: 'Don Kamaron Restaurant',
+      restaurantName: 'DONK RESTAURANT',
       date: 'Ayer',
       time: '7:30 PM',
       total: '$58.95',
       status: 'completada',
-      logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBc2H-XYiq7VOCFCpx2cuCePgbQE7ZDrkxgLFu-itmo_MSFUGuJ4MEK9gfv4p-Lur7DUSWI21FL7WjRrLtfWx6nu7z0mjAn2bhClTodzDi-pzY6r3wzdPoDRYMS1cM7ZBlUns8GzyAI7djeA6qN2gngbm8XYIbP5M6fXO48cdOauM5hZYsfaZ6Mxl204e6c5lXbMZh9Shgmz6nScvzItmVrWwCvhFVLdRbJtmqHe_EdQndGNhwA5EeplOu2NO9sXkEhh-WocuJ1KcoU',
+      logo: '/logo-donk-restaurant.png',
       items: [
         { id: 4, name: 'Rib Eye a la Leña', quantity: 1, price: '$45.00' },
       ],
@@ -94,7 +128,7 @@ const OrderHistoryScreen: React.FC = () => {
       time: '10:02 AM',
       total: '$41.92',
       status: 'completada',
-      logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBc2H-XYiq7VOCFCpx2cuCePgbQE7ZDrkxgLFu-itmo_MSFUGuJ4MEK9gfv4p-Lur7DUSWI21FL7WjRrLtfWx6nu7z0mjAn2bhClTodzDi-pzY6r3wzdPoDRYMS1cM7ZBlUns8GzyAI7djeA6qN2gngbm8XYIbP5M6fXO48cdOauM5hZYsfaZ6Mxl204e6c5lXbMZh9Shgmz6nScvzItmVrWwCvhFVLdRbJtmqHe_EdQndGNhwA5EeplOu2NO9sXkEhh-WocuJ1KcoU',
+      logo: '/logo-donk-restaurant.png',
       items: [
         { id: 5, name: 'Café Americano', quantity: 2, price: '$8.00' },
         { id: 6, name: 'Croissant', quantity: 2, price: '$12.00' },
@@ -103,12 +137,12 @@ const OrderHistoryScreen: React.FC = () => {
     },
     {
       id: 4,
-      restaurantName: 'Don Kamaron Restaurant',
+      restaurantName: 'DONK RESTAURANT',
       date: '20 Oct',
       time: '6:45 PM',
       total: '$28.88',
       status: 'cancelada',
-      logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBc2H-XYiq7VOCFCpx2cuCePgbQE7ZDrkxgLFu-itmo_MSFUGuJ4MEK9gfv4p-Lur7DUSWI21FL7WjRrLtfWx6nu7z0mjAn2bhClTodzDi-pzY6r3wzdPoDRYMS1cM7ZBlUns8GzyAI7djeA6qN2gngbm8XYIbP5M6fXO48cdOauM5hZYsfaZ6Mxl204e6c5lXbMZh9Shgmz6nScvzItmVrWwCvhFVLdRbJtmqHe_EdQndGNhwA5EeplOu2NO9sXkEhh-WocuJ1KcoU',
+      logo: '/logo-donk-restaurant.png',
       items: [
         { id: 7, name: 'Pasta al Pomodoro', quantity: 1, price: '$20.00' },
         { id: 8, name: 'Refresco', quantity: 1, price: '$4.90' },
@@ -142,7 +176,8 @@ const OrderHistoryScreen: React.FC = () => {
       ],
       transactionId: 6,
     },
-  ];
+    ];
+  }, [historicalOrders]);
 
   // Obtener lista única de restaurantes para el filtro
   const restaurants = useMemo(() => {

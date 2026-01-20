@@ -169,7 +169,10 @@
       "smartTranslation": "Smart Translation",
       "smartTranslationDesc": "Automatically translates menus and reviews in real time",
       "suggestions": "Gastronomic Suggestions",
-      "suggestionsDesc": "Based on your previous preferences"
+      "suggestionsDesc": "Based on your previous preferences",
+      "showSuggestions": "Show Gastronomic Suggestions",
+      "showHighlights": "Show Highlights",
+      "highlightsDesc": "Recommended dishes of the day"
     },
     "privacyNotice": "Artificial intelligence uses locally processed data to protect your privacy.",
     "selectLanguage": "Select Language",
@@ -301,7 +304,11 @@
     "otherPercent": "Other %",
     "assistanceMessage": "If you have any questions or notice any inconsistency in your order, select «Request assistance» and an assistant will come to your table.",
     "requestAssistance": "Request assistance",
-    "confirmPayment": "Confirm Payment"
+    "confirmPayment": "Confirm Payment",
+    "orderNotSent": "Order not sent",
+    "orderNotSentMessage": "You must send the order to the kitchen before you can make a payment. Please confirm your order in the 'My Order' section.",
+    "orderNotSentAlert": "⚠️ You must send the order before you can pay.\n\nPlease go to 'My Order' and confirm your order first.",
+    "goToOrder": "Go to My Order"
   },
   "paymentSuccess": {
     "title": "Payment successful!",
@@ -567,7 +574,9 @@
     "password": "Password",
     "passwordPlaceholder": "Enter your password",
     "forgotPassword": "Forgot password",
-    "noAccount": "Don't have an account yet?"
+    "noAccount": "Don't have an account yet?",
+    "otherLanguage": "Other language",
+    "selectLanguage": "Select Language"
   },
   "register": {
     "title": "Good morning!",

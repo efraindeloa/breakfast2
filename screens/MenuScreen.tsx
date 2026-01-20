@@ -1,10 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useTranslation, useLanguage } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 
-type OriginType = 'mar' | 'tierra' | 'aire' | 'vegetariano' | 'vegano' | '';
+type OriginType = 'mar' | 'tierra' | 'aire' | 'vegetariano' | 'vegano' | 
+  // Filtros para Bebidas
+  'cafe' | 'digestivos' | 'refrescos' | 'agua_mineralizada' | 'aguas_frescas' | 'electrolit' | 'energizantes' |
+  // Filtros para Postres
+  'pastel' | 'pay_de_queso' | 'flan' | 'nieve' | 'fruta' |
+  // Filtros para Coctelería
+  'rum' | 'vodka' | 'tequila' | 'gin' | '';
 
 const MenuScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -39,6 +45,54 @@ const MenuScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedOrigin, setSelectedOrigin] = useState<OriginType>('');
+  const [showSuggestions, setShowSuggestions] = useState(() => {
+    const saved = localStorage.getItem('showSuggestions');
+    return saved === 'true';
+  });
+  const [showHighlights, setShowHighlights] = useState(() => {
+    const saved = localStorage.getItem('showHighlights');
+    return saved === 'true';
+  });
+
+  // Escuchar cambios en localStorage para actualizar el estado cuando se cambia el toggle en Settings
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'showSuggestions') {
+        setShowSuggestions(e.newValue === 'true');
+      }
+      if (e.key === 'showHighlights') {
+        setShowHighlights(e.newValue === 'true');
+      }
+    };
+
+    // Escuchar eventos de storage de otras pestañas/ventanas
+    window.addEventListener('storage', handleStorageChange);
+
+    // También verificar periódicamente (para cambios en la misma pestaña)
+    const interval = setInterval(() => {
+      const savedSuggestions = localStorage.getItem('showSuggestions');
+      const savedHighlights = localStorage.getItem('showHighlights');
+      
+      if (savedSuggestions !== null) {
+        const newValue = savedSuggestions === 'true';
+        if (newValue !== showSuggestions) {
+          setShowSuggestions(newValue);
+        }
+      }
+      
+      if (savedHighlights !== null) {
+        const newValue = savedHighlights === 'true';
+        if (newValue !== showHighlights) {
+          setShowHighlights(newValue);
+        }
+      }
+    }, 500);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [showSuggestions, showHighlights]);
 
   // Mapeo de categorías en español a traducciones
   const categoryMap: Record<string, string> = {
@@ -64,23 +118,99 @@ const MenuScreen: React.FC = () => {
     }
     return translatedCategory;
   };
-  // Definir los filtros (solo valores e iconos, las traducciones están en los archivos de locales)
-  const originFiltersBase = [
-    { value: 'tierra' as OriginType, icon: 'agriculture' },
-    { value: 'mar' as OriginType, icon: 'waves' },
-    { value: 'aire' as OriginType, icon: 'air' },
-    { value: 'vegetariano' as OriginType, icon: 'local_florist' },
-    { value: 'vegano' as OriginType, icon: 'eco' },
-  ];
+
+  // Función para obtener los filtros según la categoría seleccionada
+  const getFiltersForCategory = (category: string): Array<{ value: OriginType; icon: string }> => {
+    const originalCategory = getOriginalCategory(category);
+    
+    // Filtros para Entradas y Platos Fuertes (categorías por defecto)
+    if (originalCategory === 'Entradas' || originalCategory === 'Platos Fuertes') {
+      return [
+        { value: 'tierra' as OriginType, icon: 'agriculture' },
+        { value: 'mar' as OriginType, icon: 'waves' },
+        { value: 'aire' as OriginType, icon: 'air' },
+        { value: 'vegetariano' as OriginType, icon: 'local_florist' },
+        { value: 'vegano' as OriginType, icon: 'eco' },
+      ];
+    }
+    
+    // Filtros para Bebidas
+    if (originalCategory === 'Bebidas') {
+      return [
+        { value: 'cafe' as OriginType, icon: 'local_cafe' },
+        { value: 'refrescos' as OriginType, icon: 'sports_bar' },
+        { value: 'agua_mineralizada' as OriginType, icon: 'water_drop' },
+        { value: 'aguas_frescas' as OriginType, icon: 'local_drink' },
+        { value: 'electrolit' as OriginType, icon: 'fitness_center' },
+        { value: 'energizantes' as OriginType, icon: 'bolt' },
+      ];
+    }
+    
+    // Filtros para Postres
+    if (originalCategory === 'Postres') {
+      return [
+        { value: 'pastel' as OriginType, icon: 'cake' },
+        { value: 'pay_de_queso' as OriginType, icon: 'pie_chart' },
+        { value: 'flan' as OriginType, icon: 'egg' },
+        { value: 'nieve' as OriginType, icon: 'icecream' },
+        { value: 'fruta' as OriginType, icon: 'apple' },
+      ];
+    }
+    
+    // Filtros para Coctelería
+    if (originalCategory === 'Coctelería') {
+      return [
+        { value: 'digestivos' as OriginType, icon: 'liquor' },
+        { value: 'alcoholic' as OriginType, icon: 'wine_bar' },
+        { value: 'non-alcoholic' as OriginType, icon: 'water_drop' },
+        { value: 'rum' as OriginType, icon: 'local_bar' },
+        { value: 'vodka' as OriginType, icon: 'local_bar' },
+        { value: 'tequila' as OriginType, icon: 'local_bar' },
+        { value: 'gin' as OriginType, icon: 'local_bar' },
+      ];
+    }
+    
+    // Por defecto, retornar los filtros de origen
+    return [
+      { value: 'tierra' as OriginType, icon: 'agriculture' },
+      { value: 'mar' as OriginType, icon: 'waves' },
+      { value: 'aire' as OriginType, icon: 'air' },
+      { value: 'vegetariano' as OriginType, icon: 'local_florist' },
+      { value: 'vegano' as OriginType, icon: 'eco' },
+    ];
+  };
+
+  // Obtener los filtros para la categoría actual
+  const originFiltersBase = getFiltersForCategory(selectedCategory);
 
   // Mapeo de valores a claves de traducción
   const getFilterTranslationKey = (value: OriginType): string => {
     const keyMap: Record<string, string> = {
+      // Filtros originales
       'tierra': 'menu.filters.land',
       'mar': 'menu.filters.sea',
       'aire': 'menu.filters.air',
       'vegetariano': 'menu.filters.vegetarian',
       'vegano': 'menu.filters.vegan',
+      // Filtros para Bebidas
+      'cafe': 'menu.filters.cafe',
+      'refrescos': 'menu.filters.refrescos',
+      'agua_mineralizada': 'menu.filters.aguaMineralizada',
+      'aguas_frescas': 'menu.filters.aguasFrescas',
+      'electrolit': 'menu.filters.electrolit',
+      'energizantes': 'menu.filters.energizantes',
+      // Filtros para Postres
+      'pastel': 'menu.filters.pastel',
+      'pay_de_queso': 'menu.filters.payDeQueso',
+      'flan': 'menu.filters.flan',
+      'nieve': 'menu.filters.nieve',
+      'fruta': 'menu.filters.fruta',
+      // Filtros para Coctelería
+      'digestivos': 'menu.filters.digestivos',
+      'rum': 'menu.filters.rum',
+      'vodka': 'menu.filters.vodka',
+      'tequila': 'menu.filters.tequila',
+      'gin': 'menu.filters.gin',
     };
     return keyMap[value] || '';
   };
@@ -198,23 +328,189 @@ const MenuScreen: React.FC = () => {
       category: 'Postres',
       origin: '' as OriginType,
     },
+    // CAFÉ - Bebidas
     {
-      id: 13,
-      name: 'Mojito Clásico',
-      description: 'Ron, menta fresca, lima y soda',
-      price: '$12.00',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBl3ebO1ujNI2cOt7UgQdU8SBRtMR8VhdFwNdN59-vspiJ1f8ivS0OfXv2Knxc2MkrIH6MAlxm-M00xznZUf4LoCcfkvT61ReVoXM1vgtDq-uakVsGbq6l0XnwrJZrDmhska0ppqrM7n_0eeMy2kVPZlncMY-dH96vspvzCNxvVq4fMjkhdc6YHH2KSOGs30HzAg7BKUN_yH9zNsShcYolnKYWwDl58zPH7e3p5WNDRev80tNxWjaFcb85bqInoEDqBvgWW_4SM6vQ0',
-      category: 'Coctelería',
-      origin: '' as OriginType,
+      id: 15,
+      name: 'Americano',
+      description: '180 ml - NESPRESSO',
+      price: '$48.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBc2H-XYiq7VOCFCpx2cuCePgbQE7ZDrkxgLFu-itmo_MSFUGuJ4MEK9gfv4p-Lur7DUSWI21FL7WjRrLtfWx6nu7z0mjAn2bhClTodzDi-pzY6r3wzdPoDRYMS1cM7ZBlUns8GzyAI7djeA6qN2gngbm8XYIbP5M6fXO48cdOauM5hZYsfaZ6Mxl204e6c5lXbMZh9Shgmz6nScvzItmVrWwCvhFVLdRbJtmqHe_EdQndGNhwA5EeplOu2NO9sXkEhh-WocuJ1KcoU',
+      category: 'Bebidas',
+      origin: 'cafe' as OriginType,
     },
     {
-      id: 14,
-      name: 'Margarita Premium',
-      description: 'Tequila reposado, triple sec y jugo de lima',
-      price: '$14.00',
+      id: 16,
+      name: 'Espresso',
+      description: '60 ml - NESPRESSO',
+      price: '$48.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBc2H-XYiq7VOCFCpx2cuCePgbQE7ZDrkxgLFu-itmo_MSFUGuJ4MEK9gfv4p-Lur7DUSWI21FL7WjRrLtfWx6nu7z0mjAn2bhClTodzDi-pzY6r3wzdPoDRYMS1cM7ZBlUns8GzyAI7djeA6qN2gngbm8XYIbP5M6fXO48cdOauM5hZYsfaZ6Mxl204e6c5lXbMZh9Shgmz6nScvzItmVrWwCvhFVLdRbJtmqHe_EdQndGNhwA5EeplOu2NO9sXkEhh-WocuJ1KcoU',
+      category: 'Bebidas',
+      origin: 'cafe' as OriginType,
+    },
+    {
+      id: 17,
+      name: 'Capuchino',
+      description: '180 ml - NESPRESSO. Opciones: Napolitano, baileys, vainilla',
+      price: '$60.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBc2H-XYiq7VOCFCpx2cuCePgbQE7ZDrkxgLFu-itmo_MSFUGuJ4MEK9gfv4p-Lur7DUSWI21FL7WjRrLtfWx6nu7z0mjAn2bhClTodzDi-pzY6r3wzdPoDRYMS1cM7ZBlUns8GzyAI7djeA6qN2gngbm8XYIbP5M6fXO48cdOauM5hZYsfaZ6Mxl204e6c5lXbMZh9Shgmz6nScvzItmVrWwCvhFVLdRbJtmqHe_EdQndGNhwA5EeplOu2NO9sXkEhh-WocuJ1KcoU',
+      category: 'Bebidas',
+      origin: 'cafe' as OriginType,
+    },
+    {
+      id: 18,
+      name: 'Frapuccino',
+      description: '180 ml - NESPRESSO',
+      price: '$70.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBc2H-XYiq7VOCFCpx2cuCePgbQE7ZDrkxgLFu-itmo_MSFUGuJ4MEK9gfv4p-Lur7DUSWI21FL7WjRrLtfWx6nu7z0mjAn2bhClTodzDi-pzY6r3wzdPoDRYMS1cM7ZBlUns8GzyAI7djeA6qN2gngbm8XYIbP5M6fXO48cdOauM5hZYsfaZ6Mxl204e6c5lXbMZh9Shgmz6nScvzItmVrWwCvhFVLdRbJtmqHe_EdQndGNhwA5EeplOu2NO9sXkEhh-WocuJ1KcoU',
+      category: 'Bebidas',
+      origin: 'cafe' as OriginType,
+    },
+    {
+      id: 19,
+      name: 'Té',
+      description: 'Opciones: Hierbabuena / Manzanilla',
+      price: '$35.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDNanplizQsqu_AWgfvOvcfFVNxOTL41X1kCPX1xvEMEsYo9o0WTi5Zp4q-4XKvx8ixXcz9vsSZrCafyWPVQjOxr0skT0HWuaKy2QIBpPU9lHutFSJgkLDlcksL-7CNVKdtkKJaxm4-_Qf-9Zs8CHDtVEK_nLT9Lvx2F1w3rR5aJ0_sVNdNhSKOeqx2atLUGjzVCZnSpfVYviNGCLiGQ8ScYzXfPiY-fLU0OJrfN2_RXnrYGklyPMwO4hkStBj8oI_4Dc0breu5o4hK',
+      category: 'Bebidas',
+      origin: 'cafe' as OriginType,
+    },
+    // DIGESTIVOS - Coctelería
+    {
+      id: 20,
+      name: 'Carajillo',
+      description: 'Café con licor 43',
+      price: '$145.00',
       image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
       category: 'Coctelería',
-      origin: '' as OriginType,
+      origin: 'digestivos' as OriginType,
+    },
+    {
+      id: 21,
+      name: 'Coketillo',
+      description: 'Carajillo con paleta de chocomilk',
+      price: '$160.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+      category: 'Coctelería',
+      origin: 'digestivos' as OriginType,
+    },
+    {
+      id: 22,
+      name: 'Carajilla',
+      description: 'Café con Baileys',
+      price: '$145.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+      category: 'Coctelería',
+      origin: 'digestivos' as OriginType,
+    },
+    {
+      id: 23,
+      name: 'Licor 43',
+      description: '700 ml - Porción: $140.00 / Botella: $1,400.00',
+      price: '$140.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+      category: 'Coctelería',
+      origin: 'digestivos' as OriginType,
+    },
+    {
+      id: 24,
+      name: 'Baileys',
+      description: '700 ml - Porción: $120.00 / Botella: $1,200.00',
+      price: '$120.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+      category: 'Coctelería',
+      origin: 'digestivos' as OriginType,
+    },
+    {
+      id: 25,
+      name: 'Frangelico',
+      description: '700 ml - Porción: $120.00 / Botella: $1,200.00',
+      price: '$120.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+      category: 'Coctelería',
+      origin: 'digestivos' as OriginType,
+    },
+    {
+      id: 26,
+      name: 'Sambuca',
+      description: '700 ml - Porción: $100.00 / Botella: $1,000.00',
+      price: '$100.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+      category: 'Coctelería',
+      origin: 'digestivos' as OriginType,
+    },
+    {
+      id: 27,
+      name: 'Chinchón Seco',
+      description: '1000 ml - Porción: $95.00 / Botella: $950.00',
+      price: '$95.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+      category: 'Coctelería',
+      origin: 'digestivos' as OriginType,
+    },
+    {
+      id: 28,
+      name: 'Chinchón Dulce',
+      description: '1000 ml - Porción: $95.00 / Botella: $950.00',
+      price: '$95.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+      category: 'Coctelería',
+      origin: 'digestivos' as OriginType,
+    },
+    // POSTRES
+    {
+      id: 29,
+      name: 'Volcán',
+      description: 'Con una textura única, firme por fuera, suave por dentro, acompañado de helado. Opciones: Dulce de leche o chocolate',
+      price: '$140.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUigKouglXyIq_ACMY9WY_F0yVW9Vym8tjU4zH4OTK3YugWcVhKXt3EPX6ap2ho7wC858pu7p4ytDeEeR2IoD6-hliBXF1DXiVtqywF6FjOlQI2uW_C0pUb3JwKjGpiwt5Qs1TKsZL-Do7VzTSY_GCy0ZR2bVawIf6NK_-x4mNOCxmOjCmKTlgFDiStnfBcCRQws0BgRl1y3YIOqH4G5QwQiKFnv9SjvF_W-wCWTfIC2CWGgUMLkskr3CuJXPdT3sWS1C8Ulg2pfEz',
+      badges: ['favorito'],
+      category: 'Postres',
+      origin: 'pastel' as OriginType,
+    },
+    {
+      id: 30,
+      name: 'Cheesecake Vasco',
+      description: 'Cremoso pay de natilla montado sobre cama de galleta horneada y bañado con mermelada de frutos rojos. (200 g.)',
+      price: '$190.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUigKouglXyIq_ACMY9WY_F0yVW9Vym8tjU4zH4OTK3YugWcVhKXt3EPX6ap2ho7wC858pu7p4ytDeEeR2IoD6-hliBXF1DXiVtqywF6FjOlQI2uW_C0pUb3JwKjGpiwt5Qs1TKsZL-Do7VzTSY_GCy0ZR2bVawIf6NK_-x4mNOCxmOjCmKTlgFDiStnfBcCRQws0BgRl1y3YIOqH4G5QwQiKFnv9SjvF_W-wCWTfIC2CWGgUMLkskr3CuJXPdT3sWS1C8Ulg2pfEz',
+      category: 'Postres',
+      origin: 'pay_de_queso' as OriginType,
+    },
+    {
+      id: 31,
+      name: 'Pan de Elote',
+      description: 'Recién horneado, sobre una cama de mermelada, frutos rojos, helado de vainilla, bañado con dulce de cajeta y nuez. (200 g.)',
+      price: '$140.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUigKouglXyIq_ACMY9WY_F0yVW9Vym8tjU4zH4OTK3YugWcVhKXt3EPX6ap2ho7wC858pu7p4ytDeEeR2IoD6-hliBXF1DXiVtqywF6FjOlQI2uW_C0pUb3JwKjGpiwt5Qs1TKsZL-Do7VzTSY_GCy0ZR2bVawIf6NK_-x4mNOCxmOjCmKTlgFDiStnfBcCRQws0BgRl1y3YIOqH4G5QwQiKFnv9SjvF_W-wCWTfIC2CWGgUMLkskr3CuJXPdT3sWS1C8Ulg2pfEz',
+      category: 'Postres',
+      origin: 'pastel' as OriginType,
+    },
+    {
+      id: 32,
+      name: 'Cheesecake Lotus',
+      description: 'Pay de queso con la autentica galleta "Lotus Biscoff", bañado con mezcla de leches, acompañado de frutos rojos.',
+      price: '$140.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUigKouglXyIq_ACMY9WY_F0yVW9Vym8tjU4zH4OTK3YugWcVhKXt3EPX6ap2ho7wC858pu7p4ytDeEeR2IoD6-hliBXF1DXiVtqywF6FjOlQI2uW_C0pUb3JwKjGpiwt5Qs1TKsZL-Do7VzTSY_GCy0ZR2bVawIf6NK_-x4mNOCxmOjCmKTlgFDiStnfBcCRQws0BgRl1y3YIOqH4G5QwQiKFnv9SjvF_W-wCWTfIC2CWGgUMLkskr3CuJXPdT3sWS1C8Ulg2pfEz',
+      category: 'Postres',
+      origin: 'pay_de_queso' as OriginType,
+    },
+    {
+      id: 33,
+      name: 'Pastel 3 Leches',
+      description: 'Delicioso pan de vainilla, con trozos de durazno, bañado con mezcla de 3 leches, con frutos rojos y nuez.',
+      price: '$140.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUigKouglXyIq_ACMY9WY_F0yVW9Vym8tjU4zH4OTK3YugWcVhKXt3EPX6ap2ho7wC858pu7p4ytDeEeR2IoD6-hliBXF1DXiVtqywF6FjOlQI2uW_C0pUb3JwKjGpiwt5Qs1TKsZL-Do7VzTSY_GCy0ZR2bVawIf6NK_-x4mNOCxmOjCmKTlgFDiStnfBcCRQws0BgRl1y3YIOqH4G5QwQiKFnv9SjvF_W-wCWTfIC2CWGgUMLkskr3CuJXPdT3sWS1C8Ulg2pfEz',
+      category: 'Postres',
+      origin: 'pastel' as OriginType,
+    },
+    {
+      id: 34,
+      name: 'Red Velvet',
+      description: 'Pan de red velvet con sabor a chocolate oscuro y betún de queso crema. Coronado con fresa natural.',
+      price: '$140.00',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUigKouglXyIq_ACMY9WY_F0yVW9Vym8tjU4zH4OTK3YugWcVhKXt3EPX6ap2ho7wC858pu7p4ytDeEeR2IoD6-hliBXF1DXiVtqywF6FjOlQI2uW_C0pUb3JwKjGpiwt5Qs1TKsZL-Do7VzTSY_GCy0ZR2bVawIf6NK_-x4mNOCxmOjCmKTlgFDiStnfBcCRQws0BgRl1y3YIOqH4G5QwQiKFnv9SjvF_W-wCWTfIC2CWGgUMLkskr3CuJXPdT3sWS1C8Ulg2pfEz',
+      category: 'Postres',
+      origin: 'pastel' as OriginType,
     },
   ];
 
@@ -222,18 +518,18 @@ const MenuScreen: React.FC = () => {
   const chefSuggestions: Record<string, number[]> = {
     'Entradas': [1, 2, 5, 4],
     'Platos Fuertes': [3, 6, 7, 8],
-    'Bebidas': [9, 10],
-    'Postres': [11, 12],
-    'Coctelería': [13, 14],
+    'Bebidas': [15, 16, 17, 18, 19],
+    'Postres': [29, 30, 31, 32, 33, 34],
+    'Coctelería': [20, 21, 22, 23, 24],
   };
 
   // Destacados de hoy por categoría
   const todayHighlights: Record<string, number[]> = {
     'Entradas': [1, 2],
     'Platos Fuertes': [3, 7],
-    'Bebidas': [9],
-    'Postres': [11],
-    'Coctelería': [13],
+    'Bebidas': [15],
+    'Postres': [29],
+    'Coctelería': [20],
   };
 
   // Filtrar platos por categoría, búsqueda y origen
@@ -285,10 +581,24 @@ const MenuScreen: React.FC = () => {
       <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md safe-top">
         <div className="flex items-center p-4 pb-2 justify-between">
           <div className="flex items-center gap-2">
-            <div className="text-primary flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-              <span className="material-symbols-outlined">restaurant_menu</span>
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-full overflow-hidden bg-white p-1">
+              <img 
+                src="/logo-donk-restaurant.png" 
+                alt="DONK RESTAURANT"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  if (target.parentElement) {
+                    const fallback = document.createElement('div');
+                    fallback.className = 'text-primary flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10';
+                    fallback.innerHTML = '<span class="material-symbols-outlined">restaurant_menu</span>';
+                    target.parentElement.appendChild(fallback);
+                  }
+                }}
+              />
             </div>
-            <h1 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Don Kamaron Restaurant</h1>
+            <h1 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">DONK RESTAURANT</h1>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -303,16 +613,6 @@ const MenuScreen: React.FC = () => {
                 <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
                   {favoriteDishes.length > 9 ? '9+' : favoriteDishes.length}
                 </span>
-              )}
-            </button>
-            <button 
-              onClick={() => setShowFilters(true)}
-              className={`flex size-10 items-center justify-center rounded-full bg-white dark:bg-[#322a1a] shadow-sm border border-[#f4f3f0] dark:border-[#3d3321] relative ${hasActiveFilters ? 'text-primary' : ''}`}
-              title={t('common.search')}
-            >
-              <span className="material-symbols-outlined">filter_list</span>
-              {hasActiveFilters && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full"></span>
               )}
             </button>
             <button 
@@ -338,7 +638,11 @@ const MenuScreen: React.FC = () => {
           {categories.map((category) => (
             <button
               key={category}
-              onClick={() => setSelectedCategory(category)}
+              onClick={() => {
+                setSelectedCategory(category);
+                // Limpiar el filtro cuando se cambia de categoría
+                setSelectedOrigin('');
+              }}
               className={`flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full px-5 ${
                 selectedCategory === category
                   ? 'bg-primary shadow-md shadow-primary/20'
@@ -358,14 +662,14 @@ const MenuScreen: React.FC = () => {
       </header>
 
       {/* Sugerencias del Chef */}
-      {suggestions.length > 0 && (
+      {showSuggestions && suggestions.length > 0 && (
         <section className="px-4 pt-6 pb-4">
           <div className="flex justify-between items-end mb-4">
             <h3 className="text-[#181611] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">{t('menu.chefSuggestions')}</h3>
           </div>
           
           <div className="flex overflow-x-auto hide-scrollbar pb-2 -mx-4 px-4">
-            <div className="flex items-stretch gap-4">
+            <div className="flex gap-4">
               {suggestions.map((dishId) => {
                 const dish = dishes.find(d => d.id === dishId);
                 if (!dish) return null;
@@ -373,7 +677,7 @@ const MenuScreen: React.FC = () => {
                   <div 
                     key={dish.id}
                     onClick={() => navigate(`/dish/${dish.id}`)}
-                    className="flex h-full flex-1 flex-col gap-3 rounded-xl w-full sm:min-w-[200px] sm:max-w-[280px] bg-white dark:bg-gray-900 p-2 shadow-sm border border-gray-100 dark:border-gray-800 shrink-0 cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
+                    className="flex flex-col gap-3 rounded-xl min-w-[200px] max-w-[280px] w-[200px] bg-white dark:bg-gray-900 p-2 shadow-sm border border-gray-100 dark:border-gray-800 shrink-0 cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
                   >
                     <div 
                       className="w-full bg-center bg-no-repeat aspect-[16/10] bg-cover rounded-lg flex flex-col relative" 
@@ -381,9 +685,9 @@ const MenuScreen: React.FC = () => {
                     >
                       <div className="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">{dish.price}</div>
                     </div>
-                    <div className="px-2 pb-2">
-                      <p className="text-[#181611] dark:text-white text-base font-bold leading-normal">{getDishName(dish.id)}</p>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">{getDishDescription(dish.id)}</p>
+                    <div className="px-2 pb-2 flex-1 flex flex-col">
+                      <p className="text-[#181611] dark:text-white text-base font-bold leading-tight mb-1 line-clamp-2">{getDishName(dish.id)}</p>
+                      <p className="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal line-clamp-2">{getDishDescription(dish.id)}</p>
                     </div>
                   </div>
                 );
@@ -393,10 +697,10 @@ const MenuScreen: React.FC = () => {
         </section>
       )}
 
-      {/* Destacados de hoy */}
-      {highlights.length > 0 && (
+      {/* Destacados */}
+      {showHighlights && highlights.length > 0 && (
         <section className="px-4 pb-4">
-          <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-2">{t('menu.todayHighlights')}</h3>
+          <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-2">{t('menu.highlights')}</h3>
           <div className="flex flex-col gap-3">
             {highlights.map((dishId) => {
               const dish = dishes.find(d => d.id === dishId);
@@ -432,7 +736,7 @@ const MenuScreen: React.FC = () => {
         
         {/* Origin Filters Chips */}
         <div className="flex gap-2 pb-4 overflow-x-auto no-scrollbar">
-          {originFiltersBase.map((filter) => (
+          {getFiltersForCategory(selectedCategory).map((filter) => (
             <button
               key={filter.value}
               onClick={() => setSelectedOrigin(selectedOrigin === filter.value ? '' : filter.value)}
@@ -570,7 +874,7 @@ const MenuScreen: React.FC = () => {
                   {t('menu.proteinOrigin')}
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {originFiltersBase.map((filter) => (
+                  {getFiltersForCategory(selectedCategory).map((filter) => (
                     <button
                       key={filter.value}
                       onClick={() => setSelectedOrigin(selectedOrigin === filter.value ? '' : filter.value as OriginType)}

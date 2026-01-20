@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation, useLanguage } from '../contexts/LanguageContext';
-import { languagesData } from '../content/languages';
+import { languagesData, allLanguages, popularLanguages } from '../content/languages';
 
 interface WelcomeScreenProps {
   onLogin: () => void;
@@ -16,6 +16,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+  const [showAllLanguagesModal, setShowAllLanguagesModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const languageSelectorRef = useRef<HTMLDivElement>(null);
 
   // Idiomas disponibles (solo los que tienen traducciones completas)
@@ -38,6 +40,77 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
     localStorage.setItem('selectedLanguage', languageNames[langCode]);
     setShowLanguageSelector(false);
   };
+
+  // Función para cambiar idioma desde el modal (solo para los 4 idiomas con traducciones completas)
+  const handleLanguageChangeFromModal = (languageName: string) => {
+    const languageMap: Record<string, 'es' | 'en' | 'pt' | 'fr'> = {
+      'Español': 'es',
+      'English': 'en',
+      'Inglés': 'en',
+      'Português': 'pt',
+      'Portugués': 'pt',
+      'Français': 'fr',
+      'Francés': 'fr'
+    };
+    
+    const langCode = languageMap[languageName];
+    if (langCode) {
+      setLanguage(langCode);
+      localStorage.setItem('selectedLanguage', languageName === 'English' ? 'Inglés' : languageName === 'Português' ? 'Portugués' : languageName === 'Français' ? 'Francés' : languageName);
+      setShowAllLanguagesModal(false);
+      setShowLanguageSelector(false);
+    }
+  };
+
+  // Filtrar idiomas por búsqueda
+  const filteredLanguages = useMemo(() => {
+    if (!searchQuery.trim()) return allLanguages;
+    const query = searchQuery.toLowerCase();
+    return allLanguages.filter(lang => {
+      const langInfo = languagesData[lang];
+      const searchText = lang.toLowerCase() + 
+        (langInfo?.nativeCountryName ? ' ' + langInfo.nativeCountryName.toLowerCase() : '');
+      return searchText.includes(query) || 
+        searchText.normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(query);
+    });
+  }, [searchQuery]);
+
+  // Agrupar idiomas por letra inicial, pero mantener los populares al inicio
+  const groupedLanguages = useMemo(() => {
+    // Si hay búsqueda, agrupar normalmente
+    if (searchQuery.trim()) {
+      const groups: Record<string, string[]> = {};
+      filteredLanguages.forEach(lang => {
+        const firstLetter = lang.charAt(0).toUpperCase();
+        if (!groups[firstLetter]) {
+          groups[firstLetter] = [];
+        }
+        groups[firstLetter].push(lang);
+      });
+      return groups;
+    }
+    
+    // Si no hay búsqueda, crear grupos especiales: populares primero
+    const groups: Record<string, string[]> = {};
+    
+    // Grupo especial para idiomas populares
+    const popularInFiltered = filteredLanguages.filter(lang => popularLanguages.includes(lang));
+    if (popularInFiltered.length > 0) {
+      groups['★'] = popularInFiltered; // Usar estrella como marcador especial
+    }
+    
+    // Resto de idiomas agrupados por letra inicial
+    const otherInFiltered = filteredLanguages.filter(lang => !popularLanguages.includes(lang));
+    otherInFiltered.forEach(lang => {
+      const firstLetter = lang.charAt(0).toUpperCase();
+      if (!groups[firstLetter]) {
+        groups[firstLetter] = [];
+      }
+      groups[firstLetter].push(lang);
+    });
+    
+    return groups;
+  }, [filteredLanguages, searchQuery]);
 
   // Cerrar el selector de idioma al hacer clic fuera
   useEffect(() => {
@@ -65,7 +138,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
   return (
     <div className="relative flex h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-background-dark">
       {/* Selector de idioma */}
-      <div ref={languageSelectorRef} className="absolute top-4 right-4 z-20">
+      <div ref={languageSelectorRef} className="absolute right-4 z-20 safe-top" style={{ top: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
         <button
           onClick={() => setShowLanguageSelector(!showLanguageSelector)}
           className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800 transition-colors"
@@ -101,6 +174,18 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
                 </button>
               );
             })}
+            <button
+              onClick={() => {
+                setShowLanguageSelector(false);
+                setShowAllLanguagesModal(true);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left border-t border-gray-200 dark:border-gray-700"
+            >
+              <span className="material-symbols-outlined text-gray-600 dark:text-gray-400 text-xl">more_horiz</span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('welcome.otherLanguage')}
+              </span>
+            </button>
           </div>
         )}
       </div>
@@ -203,6 +288,107 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
       </div>
 
       <div className="h-6 bg-background-light dark:bg-background-dark"></div>
+
+      {/* Modal de todos los idiomas */}
+      {showAllLanguagesModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => {
+          setShowAllLanguagesModal(false);
+          setSearchQuery('');
+        }}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            {/* Header del modal */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-[#181411] dark:text-white">{t('welcome.selectLanguage')}</h2>
+              <button
+                onClick={() => {
+                  setShowAllLanguagesModal(false);
+                  setSearchQuery('');
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+              >
+                <span className="material-symbols-outlined text-gray-600 dark:text-gray-400">close</span>
+              </button>
+            </div>
+
+            {/* Búsqueda */}
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder={t('settings.searchLanguage')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-12 pl-12 pr-4 rounded-xl bg-white dark:bg-[#2d241c] border border-[#e6e0db] dark:border-[#3d3228] text-[#181411] dark:text-white placeholder:text-[#8a7560] dark:placeholder:text-[#a8937d] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#8a7560] dark:text-[#a8937d]">search</span>
+              </div>
+            </div>
+
+            {/* Lista de idiomas */}
+            <div className="flex-1 overflow-y-auto">
+              {Object.keys(groupedLanguages).map((letter) => (
+                <div key={letter}>
+                  {!searchQuery && letter === '★' && (
+                    <div className="px-4 py-2 bg-gray-50 dark:bg-[#3d3228] border-b border-[#e6e0db] dark:border-[#3d3228]">
+                      <p className="text-xs font-bold text-[#8a7560] dark:text-[#a8937d] uppercase tracking-wider">{t('settings.popularLanguages')}</p>
+                    </div>
+                  )}
+                  {!searchQuery && letter !== '★' && (
+                    <div className="px-4 py-2 bg-gray-50 dark:bg-[#3d3228] border-b border-[#e6e0db] dark:border-[#3d3228]">
+                      <p className="text-xs font-bold text-[#8a7560] dark:text-[#a8937d] uppercase tracking-wider">{letter}</p>
+                    </div>
+                  )}
+                  {groupedLanguages[letter].map((lang) => {
+                    const langInfo = languagesData[lang];
+                    const flag = langInfo?.flagUrl || null;
+                    const isPopular = langInfo?.isPopular || false;
+                    const nativeName = langInfo?.nativeCountryName || lang;
+                    const isAvailable = ['Español', 'Inglés', 'Portugués', 'Francés'].includes(lang);
+                    
+                    return (
+                      <button
+                        key={lang}
+                        onClick={() => {
+                          if (isAvailable) {
+                            handleLanguageChangeFromModal(lang);
+                          }
+                        }}
+                        disabled={!isAvailable}
+                        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#3d3228] transition-colors text-left ${
+                          !isAvailable ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden ${
+                          isPopular ? 'ring-2 ring-primary/20' : 'bg-gray-100 dark:bg-gray-800'
+                        }`}>
+                          {flag ? (
+                            <img 
+                              src={flag} 
+                              alt={`${lang} flag`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="material-symbols-outlined text-lg text-gray-400 dark:text-gray-500">language</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[#181411] dark:text-white truncate">{lang}</p>
+                          {isPopular && nativeName !== lang && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{nativeName}</p>
+                          )}
+                        </div>
+                        {isAvailable && (
+                          <span className="material-symbols-outlined text-sm text-primary">check_circle</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

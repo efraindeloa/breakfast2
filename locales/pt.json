@@ -169,7 +169,10 @@
       "smartTranslation": "Tradução Inteligente",
       "smartTranslationDesc": "Traduz automaticamente cardápios e avaliações em tempo real",
       "suggestions": "Sugestões Gastronômicas",
-      "suggestionsDesc": "Com base em suas preferências anteriores"
+      "suggestionsDesc": "Com base em suas preferências anteriores",
+      "showSuggestions": "Mostrar Sugestões Gastronômicas",
+      "showHighlights": "Mostrar Destaques",
+      "highlightsDesc": "Pratos recomendados do dia"
     },
     "privacyNotice": "A inteligência artificial usa dados processados localmente para proteger sua privacidade.",
     "selectLanguage": "Selecionar Idioma",
@@ -301,7 +304,11 @@
     "otherPercent": "Outro %",
     "assistanceMessage": "Se você tiver alguma dúvida ou notar alguma inconsistência em seu pedido, selecione «Solicitar assistência» e um assistente virá à sua mesa.",
     "requestAssistance": "Solicitar assistência",
-    "confirmPayment": "Confirmar Pagamento"
+    "confirmPayment": "Confirmar Pagamento",
+    "orderNotSent": "Pedido não enviado",
+    "orderNotSentMessage": "Você deve enviar o pedido para a cozinha antes de poder fazer o pagamento. Por favor, confirme seu pedido na seção 'Minha Ordem'.",
+    "orderNotSentAlert": "⚠️ Você deve enviar o pedido antes de poder pagar.\n\nPor favor, vá para 'Minha Ordem' e confirme seu pedido primeiro.",
+    "goToOrder": "Ir para Minha Ordem"
   },
   "paymentSuccess": {
     "title": "Pagamento realizado com sucesso!",
@@ -598,7 +605,9 @@
     "password": "Senha",
     "passwordPlaceholder": "Digite sua senha",
     "forgotPassword": "Esqueci minha senha",
-    "noAccount": "Ainda não tem uma conta?"
+    "noAccount": "Ainda não tem uma conta?",
+    "otherLanguage": "Outro idioma",
+    "selectLanguage": "Selecionar Idioma"
   },
   "register": {
     "title": "Bom dia!",

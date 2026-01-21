@@ -644,11 +644,17 @@
 | US-029 | Media | ✅ Completo | Opiniones Verificadas |
 | US-030 | Media | ✅ Completo | Opiniones |
 | US-031 | Media | ✅ Completo | Pagos |
+| US-032 | Alta | ✅ Completo | Lista de Espera |
+| US-033 | Alta | ✅ Completo | Lista de Espera |
+| US-034 | Media | ✅ Completo | Lista de Espera |
+| US-035 | Media | ✅ Completo | Lista de Espera |
+| US-036 | Alta | ✅ Completo | Edición de Órdenes |
+| US-037 | Alta | ✅ Completo | Edición de Órdenes |
 
 ---
 
-**Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.1  
+**Última actualización**: Enero 2025  
+**Versión del documento**: 1.3  
 **Responsable**: Equipo de desarrollo
 
 ### EPIC 11: Opiniones Verificadas
@@ -724,7 +730,145 @@
 
 ---
 
+### EPIC 12: Lista de Espera (Waitlist)
+
+#### US-032: Como comensal quiero escanear un QR para agregarme a la lista de espera
+**Prioridad**: Alta  
+**Criterios de aceptación**:
+- Puedo escanear un código QR desde la pantalla de inicio
+- Se abre automáticamente la pantalla de lista de espera
+- Puedo seleccionar la zona donde quiero la mesa
+- Puedo indicar cuántas personas somos
+- Veo información sobre la lista de espera en esa zona
+- Puedo confirmar mi solicitud
+
+**Caso normal**:
+1. Usuario hace click en "Escanear QR para Lista de Espera" en home
+2. Escanea el código QR del restaurante
+3. Se abre pantalla de lista de espera
+4. Selecciona zona (interior, terraza, etc.)
+5. Selecciona número de personas
+6. Ve información de posición y tiempo estimado
+7. Confirma solicitud
+8. Se agrega a la lista de espera
+
+**Caso alterno**: Zona deshabilitada
+1. Usuario intenta seleccionar zona deshabilitada
+2. Ve aviso explicando que la zona no está disponible
+3. Debe seleccionar otra zona
+
+---
+
+#### US-033: Como comensal quiero ver mi progreso en la lista de espera en tiempo real
+**Prioridad**: Alta  
+**Criterios de aceptación**:
+- Veo mi posición en la lista de espera
+- Veo tiempo estimado de espera
+- Veo cuántas mesas están por delante
+- La información se actualiza automáticamente
+- Veo un diseño progresivo después de confirmar
+
+**Caso normal**:
+1. Usuario confirma solicitud de lista de espera
+2. Ve diseño inicial con información básica por 10 segundos
+3. Después de 10 segundos, ve diseño de progreso más detallado
+4. Ve barra de progreso con porcentaje avanzado
+5. Ve actualización automática de posición y tiempo
+
+---
+
+#### US-034: Como comensal quiero cambiar de zona si cambio de opinión
+**Prioridad**: Media  
+**Criterios de aceptación**:
+- Puedo cambiar de zona después de confirmar
+- Se me advierte que perderé mi lugar actual
+- Se me indica que seré agregado al final de la nueva lista
+- El timestamp se actualiza al cambiar de zona
+- Debo confirmar el cambio
+
+**Caso normal**:
+1. Usuario está en lista de espera
+2. Hace click en "Cambiar de Zona"
+3. Ve modal de advertencia
+4. Selecciona nueva zona
+5. Confirma el cambio
+6. Perde su lugar en zona anterior
+7. Se agrega al final de nueva zona
+
+---
+
+#### US-035: Como comensal quiero cancelar mi solicitud de lista de espera
+**Prioridad**: Media  
+**Criterios de aceptación**:
+- Puedo cancelar mi solicitud en cualquier momento
+- Se me advierte que perderé mi lugar
+- Debo confirmar la cancelación
+- Se remueve de la lista de espera
+
+**Caso normal**:
+1. Usuario está en lista de espera
+2. Hace click en "Cancelar Espera"
+3. Ve modal de confirmación
+4. Confirma cancelación
+5. Se remueve de la lista de espera
+
+---
+
+### EPIC 13: Edición de Órdenes
+
+#### US-036: Como comensal quiero modificar mi orden después de enviarla pero antes de que la cocina la acepte
+**Prioridad**: Alta  
+**Criterios de aceptación**:
+- Puedo ver el botón "Modificar mi orden" si la orden está en estado enviada o recibida
+- Puedo cambiar las cantidades de los items
+- Puedo eliminar items de la orden
+- Puedo agregar notas de último minuto
+- Veo el total actualizado automáticamente
+- Los cambios se guardan y actualizan la orden
+
+**Caso normal**:
+1. Usuario envía una orden
+2. Va a "Mi Orden"
+3. Ve el botón "Modificar mi orden"
+4. Hace click en el botón
+5. Se abre pantalla de edición con todos los items
+6. Modifica cantidades o elimina items
+7. Agrega notas de último minuto
+8. Ve total actualizado
+9. Guarda cambios
+10. La orden se actualiza
+
+**Caso alterno**: Orden ya en preparación
+1. Usuario intenta modificar orden
+2. Orden ya está en estado "en_preparacion"
+3. No ve el botón de modificar
+4. No puede editar la orden
+
+---
+
+#### US-037: Como comensal quiero ver las cantidades exactas de mi orden original al editarla
+**Prioridad**: Alta  
+**Criterios de aceptación**:
+- Al abrir la pantalla de edición, veo las cantidades exactas de mi orden
+- Los items se agrupan correctamente por ID y notas
+- Puedo modificar las cantidades desde ese punto
+- El total inicial coincide con el total de la orden original
+
+**Caso normal**:
+1. Usuario tiene orden con 14 unidades de un item
+2. Abre pantalla de edición
+3. Ve cantidad 14 mostrada correctamente
+4. Puede modificar esa cantidad
+
+---
+
+---
+
 ### Cambios Recientes (Diciembre 2024)
+- ✅ Agregado EPIC 12: Lista de Espera (Waitlist)
+- ✅ Agregadas User Stories US-032 a US-035
+- ✅ Agregado EPIC 13: Edición de Órdenes
+- ✅ Agregadas User Stories US-036 a US-037
 - ✅ Agregado EPIC 10: Solicitud de Asistencia
 - ✅ Agregadas User Stories US-025 a US-028
 - ✅ Agregado EPIC 11: Opiniones Verificadas

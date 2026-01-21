@@ -35,6 +35,10 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 - ✅ Visualización de detalles de producto
 - ✅ Personalización de productos (proteínas, tamaños, notas)
 - ✅ Sugerencias del chef y destacados
+- ✅ Preservación de categoría seleccionada al regresar del detalle
+- ✅ Preservación de posición de scroll al regresar del detalle
+- ✅ Scroll automático al inicio al abrir detalle de producto
+- ✅ Carga correcta de imágenes de productos (archivos locales)
 
 #### Carrito
 - ✅ Agregar items al carrito
@@ -48,6 +52,12 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 - ✅ Confirmación de orden
 - ✅ Validación antes de confirmar
 - ✅ Limpieza de carrito tras confirmar
+- ✅ Edición de órdenes enviadas
+- ✅ Modificación de cantidades en órdenes
+- ✅ Eliminación de items en órdenes
+- ✅ Agregar más items a órdenes en edición
+- ✅ Carga correcta de imágenes en pantalla de edición
+- ✅ Actualización automática de total al modificar orden
 - ✅ Historial de órdenes
 - ✅ Filtros de historial
 - ✅ Detalle de orden
@@ -433,9 +443,15 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 
 ---
 
-**Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.1  
+**Última actualización**: Enero 2025  
+**Versión del documento**: 1.2  
 **Responsable**: QA Team
+
+### Cambios Recientes (Enero 2025)
+- ✅ Agregadas pruebas para preservación de estado de navegación
+- ✅ Agregadas pruebas para funcionalidad de agregar más items en edición
+- ✅ Agregadas pruebas para scroll automático en detalle de producto
+- ✅ Agregadas pruebas para carga correcta de imágenes
 
 ### Cambios Recientes (Diciembre 2024)
 - ✅ Agregadas pruebas de Solicitud de Asistencia en áreas de prueba

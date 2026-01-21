@@ -125,7 +125,34 @@ breakfast2/
 │   ├── TransactionDetailScreen.tsx
 │   ├── TransactionsScreen.tsx
 │   ├── UploadConstanciaScreen.tsx
+│   ├── WaitlistScreen.tsx
+│   ├── EditOrderScreen.tsx
 │   └── WelcomeScreen.tsx
+├── public/                  # Archivos estáticos (imágenes de productos)
+│   ├── baileys.webp
+│   ├── cafe-americano-nespresso.webp
+│   ├── cafe-expresso-nespresso.webp
+│   ├── capuchino-nespresso.webp
+│   ├── carajilla.jpg
+│   ├── carajillo solo.webp
+│   ├── carajillo.jpeg
+│   ├── cheesecake-lotus.png
+│   ├── cheesecake-vasco.jpg
+│   ├── chincho-seco.avif
+│   ├── chinchon-dulce.jpg
+│   ├── coketillo_donk.jpg
+│   ├── flan-vainilla.jpg
+│   ├── frangelico.webp
+│   ├── frappuccino.jpg
+│   ├── jugo-naranja.avif
+│   ├── licor43.webp
+│   ├── pan-elote.jpeg
+│   ├── pastel-3leches.jpg
+│   ├── red-velvet.jpg
+│   ├── sambuca.webp
+│   ├── tarta-chocolate.jpg
+│   ├── te.webp
+│   └── volcan.jpg
 ├── types/                   # Definiciones de tipos TypeScript
 │   └── order.ts
 ├── App.tsx                  # Componente raíz
@@ -175,14 +202,19 @@ interface CartContextType {
   cart: CartItem[];
   addToCart: (item: Omit<CartItem, 'quantity'>) => void;
   removeFromCart: (itemId: number) => void;
-  updateCartItemQuantity: (itemId: number, quantity: number) => void;
+  updateCartItemQuantity: (itemId: number, quantity: number, notes?: string) => void;
   updateCartItemNotes: (itemId: number, notes: string) => void;
   clearCart: () => void;
   getCartItemCount: () => number;
+  setCartItems: (items: CartItem[]) => void;
 }
 ```
 
 **Almacenamiento**: Estado en memoria (durante sesión)
+
+**Mejoras**:
+- `updateCartItemQuantity` ahora acepta un parámetro opcional `notes` para manejar items con el mismo ID pero notas diferentes
+- `setCartItems` permite establecer directamente los items del carrito (útil para cargar órdenes para edición)
 
 #### RestaurantContext
 ```typescript
@@ -262,6 +294,8 @@ interface FavoritesContextType {
 /transaction-detail/:id     → TransactionDetailScreen
 /order-history              → OrderHistoryScreen
 /order-detail               → OrderDetailScreen
+/edit-order                 → EditOrderScreen (autenticado)
+/waitlist                   → WaitlistScreen (autenticado)
 /invite-users               → InviteUsersScreen (autenticado)
 /group-order-management     → GroupOrderManagementScreen (autenticado)
 /order-confirmed            → OrderConfirmedScreen (autenticado)
@@ -517,6 +551,7 @@ interface Review {
    - `order_history`: Historial de órdenes completadas
    - `transactions`: Historial de transacciones
    - `assistance_history`: Historial de solicitudes de asistencia (se limpia al pagar)
+  - `waitlist_entries`: Lista de espera activa (se limpia al cancelar o ser atendido)
 
 ### Estructura de Datos
 
@@ -700,6 +735,71 @@ npm run android:build
 2. Sincroniza con Capacitor (`npx cap sync`)
 3. Compila APK de debug en `android/app/build/outputs/apk/debug/`
 
+---
+
+## Gestión de Recursos Estáticos
+
+### Imágenes de Productos
+
+#### Ubicación
+- **Carpeta**: `/public`
+- **Acceso**: Las imágenes se referencian con rutas absolutas desde la raíz (ej: `/imagen.jpg`)
+- **Build**: Vite copia automáticamente los archivos de `public/` al directorio de salida durante el build
+
+#### Formato de Rutas
+Las imágenes de productos se referencian con rutas absolutas que comienzan con `/`:
+```typescript
+{
+  id: 20,
+  name: 'Carajillo',
+  image: '/carajillo solo.webp',  // Ruta desde public/
+  // ...
+}
+```
+
+#### Categorías de Imágenes
+
+**Coctelería**:
+- `/carajillo solo.webp` - Carajillo
+- `/coketillo_donk.jpg` - Coketillo
+- `/carajilla.jpg` - Carajilla
+- `/licor43.webp` - Licor 43
+- `/baileys.webp` - Baileys
+- `/frangelico.webp` - Frangelico
+- `/sambuca.webp` - Sambuca
+- `/chincho-seco.avif` - Chinchón Seco
+- `/chinchon-dulce.jpg` - Chinchón Dulce
+
+**Postres**:
+- `/volcan.jpg` - Volcán
+- `/cheesecake-vasco.jpg` - Cheesecake Vasco
+- `/pan-elote.jpeg` - Pan de Elote
+- `/cheesecake-lotus.png` - Cheesecake Lotus
+- `/pastel-3leches.jpg` - Pastel 3 Leches
+- `/red-velvet.jpg` - Red Velvet
+- `/tarta-chocolate.jpg` - Tarta de Chocolate
+- `/flan-vainilla.jpg` - Flan de Vainilla
+
+**Bebidas**:
+- `/cafe-americano-nespresso.webp` - Americano
+- `/cafe-expresso-nespresso.webp` - Espresso
+- `/capuchino-nespresso.webp` - Capuchino
+- `/frappuccino.jpg` - Frapuccino
+- `/te.webp` - Té
+- `/jugo-naranja.avif` - Jugo de Naranja Natural
+
+#### Ventajas de Usar Archivos Locales
+- **Rendimiento**: Carga más rápida al no depender de URLs externas
+- **Confiabilidad**: No hay dependencia de servicios externos
+- **Control**: Gestión completa de los recursos
+- **Optimización**: Posibilidad de optimizar imágenes antes del build
+
+#### Formatos Soportados
+- `.webp` - Formato moderno con buena compresión
+- `.jpg` / `.jpeg` - Formato tradicional
+- `.png` - Para imágenes con transparencia
+- `.avif` - Formato moderno con excelente compresión
+
 #### Build Android Release
 ```bash
 npm run android:release
@@ -736,6 +836,126 @@ npm run android:release
 
 ---
 
-**Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.0  
+---
+
+## Edición de Órdenes
+
+### Implementación
+
+#### Pantalla (`EditOrderScreen.tsx`)
+- **Ruta**: `/edit-order?orderId={id}`
+- **Funcionalidades**:
+  - Carga items de la orden en el carrito con cantidades exactas
+  - Modificación de cantidades de items
+  - Eliminación de items
+  - Agregar notas de último minuto
+  - Actualización automática del total
+  - Guardar cambios y actualizar la orden
+
+#### Flujo de Datos
+```
+Usuario hace click en "Modificar mi orden"
+  ↓
+Navega a /edit-order?orderId={orderId}
+  ↓
+EditOrderScreen carga la orden desde localStorage
+  ↓
+Agrupa items por ID y notas, suma cantidades
+  ↓
+Usa setCartItems() para cargar items en el carrito
+  ↓
+Usuario puede:
+  - Modificar cantidades o eliminar items
+  - Agregar más items (navega a /menu)
+  - Agregar notas de último minuto
+  ↓
+Total se actualiza automáticamente
+  ↓
+Usuario hace click en "Guardar Cambios"
+  ↓
+Actualiza la orden en localStorage (incluye items nuevos si se agregaron)
+  ↓
+Actualiza timestamp de la orden
+  ↓
+Navega de vuelta a /order-detail
+```
+
+#### Funcionalidades Adicionales
+- **Agregar más items**: Botón que navega a `/menu` permitiendo agregar productos adicionales
+- **Carga de imágenes**: Usa `allDishes` exportado de `DishDetailScreen.tsx` para obtener imágenes correctas
+- **Estado vacío**: Muestra mensaje y botón para agregar items si la orden está vacía
+
+#### Almacenamiento
+- **Fuente**: `localStorage` con clave `orders_list`
+- **Actualización**: La orden se actualiza directamente en el array de órdenes
+- **Validación**: Solo se puede editar si `status === 'orden_enviada' || status === 'orden_recibida'`
+
+---
+
+## Lista de Espera (Waitlist)
+
+### Implementación
+
+#### Pantalla (`WaitlistScreen.tsx`)
+- **Ruta**: `/waitlist`
+- **Funcionalidades**:
+  - Escaneo QR para agregarse a lista de espera
+  - Selección de zona (interior, terraza, jardín, patio, rooftop)
+  - Selección de número de personas
+  - Visualización de posición en la fila
+  - Tiempo estimado de espera
+  - Opción para cambiar de zona
+  - Opción para cancelar solicitud
+  - Dos diseños: inicial (10 segundos) y progreso (después)
+
+#### Flujo de Datos
+```
+Usuario escanea QR desde /home
+  ↓
+Navega a /waitlist
+  ↓
+Selecciona zona y número de personas
+  ↓
+Muestra información de la lista (cantidad en espera, posición)
+  ↓
+Usuario confirma solicitud
+  ↓
+Se agrega entrada a waitlist_entries en localStorage
+  ↓
+Se actualiza estado a isConfirmed = true
+  ↓
+Muestra diseño inicial por 10 segundos
+  ↓
+Después de 10 segundos, muestra diseño de progreso
+  ↓
+Intervalo actualiza posiciones y tiempos estimados
+```
+
+#### Almacenamiento
+- **Clave localStorage**: `waitlist_entries`
+- **Estructura**: Array de `WaitlistEntry`
+- **Persistencia**: Durante la sesión hasta cancelar o ser atendido
+
+#### Simulación en Tiempo Real
+- Intervalo que actualiza automáticamente las posiciones
+- Simula avance de la lista de espera
+- Calcula tiempos estimados dinámicamente
+
+---
+
+### Cambios Recientes (Diciembre 2024)
+- ✅ Agregada sección de gestión de recursos estáticos (imágenes de productos)
+- ✅ Documentación de carpeta `/public` y su uso en el proyecto
+- ✅ Migración de imágenes de productos de URLs externas a archivos locales
+- ✅ Documentación de formatos de imágenes soportados (.webp, .jpg, .png, .avif)
+- ✅ Actualización de estructura del proyecto para incluir carpeta `/public`
+- ✅ Implementación de preservación de estado de navegación (categoría y scroll)
+- ✅ Mejora en experiencia de usuario al navegar entre menú y detalle de productos
+- ✅ Funcionalidad para agregar más items en pantalla de edición de órdenes
+- ✅ Corrección de carga de imágenes en pantalla de edición de órdenes
+
+---
+
+**Última actualización**: Enero 2025  
+**Versión del documento**: 1.3  
 **Responsable**: Equipo de desarrollo

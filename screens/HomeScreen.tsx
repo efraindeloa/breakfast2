@@ -84,6 +84,7 @@ const HomeScreen: React.FC = () => {
               <span className="material-symbols-outlined text-primary group-hover:text-white">restaurant_menu</span>
             </div>
             <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight">{t('home.viewMenu')}</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('home.viewMenuDescription')}</p>
           </div>
           
           <div 
@@ -94,6 +95,7 @@ const HomeScreen: React.FC = () => {
               <span className="material-symbols-outlined text-primary group-hover:text-white">groups</span>
             </div>
             <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight">{t('home.joinTable')}</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('home.joinTableDescription')}</p>
           </div>
           
           <div 
@@ -104,6 +106,29 @@ const HomeScreen: React.FC = () => {
               <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 group-hover:text-white">person</span>
             </div>
             <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight">{t('payment.requestAssistance')}</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('home.requestAssistanceDescription')}</p>
+          </div>
+          
+          <div 
+            onClick={() => navigate('/invite-users')}
+            className="flex flex-col gap-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 items-start shadow-sm hover:border-primary transition-colors cursor-pointer group min-h-[120px] w-full"
+          >
+            <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 group-hover:bg-primary transition-colors">
+              <span className="material-symbols-outlined text-primary group-hover:text-white">person_add</span>
+            </div>
+            <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight">{t('invite.title')}</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('home.inviteDescription')}</p>
+          </div>
+          
+          <div 
+            onClick={() => navigate('/waitlist')}
+            className="flex flex-col gap-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 items-start shadow-sm hover:border-primary transition-colors cursor-pointer group min-h-[120px] w-full"
+          >
+            <div className="flex items-center justify-center size-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 group-hover:bg-orange-600 transition-colors">
+              <span className="material-symbols-outlined text-orange-600 dark:text-orange-400 group-hover:text-white">schedule</span>
+            </div>
+            <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight">{t('waitlist.scanQR')}</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('waitlist.scanQRDescription')}</p>
           </div>
         </div>
       </main>

@@ -35,7 +35,10 @@ npm run build
 ```
 - Genera archivos estáticos en `dist/`
 - Optimiza y minifica código
+- Copia archivos de `/public` al directorio de salida
 - Listo para deployment en servidor web
+
+**Nota**: Los archivos de imágenes en `/public` se copian automáticamente durante el build. Asegúrate de que todas las imágenes de productos estén en esta carpeta.
 
 #### Preview de Build
 ```bash
@@ -470,6 +473,6 @@ jobs:
 
 ---
 
-**Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.0  
+**Última actualización**: Enero 2025  
+**Versión del documento**: 1.1  
 **Responsable**: Equipo de DevOps

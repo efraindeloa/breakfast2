@@ -447,6 +447,6 @@ shadow-[0_2px_15px_rgba(0,0,0,0.05)]
 
 ---
 
-**Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.0  
+**Última actualización**: Enero 2025  
+**Versión del documento**: 1.1  
 **Responsable**: Equipo de diseño

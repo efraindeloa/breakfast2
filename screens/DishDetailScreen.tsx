@@ -34,7 +34,7 @@ interface Dish {
 }
 
 // Datos de ejemplo - en producción vendrían de una API o contexto
-const allDishes: Dish[] = [
+export const allDishes: Dish[] = [
   {
     id: 1,
     name: 'Tacos de Atún Marinado',
@@ -116,7 +116,7 @@ const allDishes: Dish[] = [
     name: 'Café Espresso',
     description: 'Café italiano intenso y aromático',
     price: '$4.50',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBc2H-XYiq7VOCFCpx2cuCePgbQE7ZDrkxgLFu-itmo_MSFUGuJ4MEK9gfv4p-Lur7DUSWI21FL7WjRrLtfWx6nu7z0mjAn2bhClTodzDi-pzY6r3wzdPoDRYMS1cM7ZBlUns8GzyAI7djeA6qN2gngbm8XYIbP5M6fXO48cdOauM5hZYsfaZ6Mxl204e6c5lXbMZh9Shgmz6nScvzItmVrWwCvhFVLdRbJtmqHe_EdQndGNhwA5EeplOu2NO9sXkEhh-WocuJ1KcoU',
+    image: '/cafe-expresso-nespresso.webp',
     category: 'Bebidas',
     origin: '' as OriginType,
   },
@@ -125,7 +125,7 @@ const allDishes: Dish[] = [
     name: 'Jugo de Naranja Natural',
     description: 'Recién exprimido, rico en vitamina C',
     price: '$6.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDNanplizQsqu_AWgfvOvcfFVNxOTL41X1kCPX1xvEMEsYo9o0WTi5Zp4q-4XKvx8ixXcz9vsSZrCafyWPVQjOxr0skT0HWuaKy2QIBpPU9lHutFSJgkLDlcksL-7CNVKdtkKJaxm4-_Qf-9Zs8CHDtVEK_nLT9Lvx2F1w3rR5aJ0_sVNdNhSKOeqx2atLUGjzVCZnSpfVYviNGCLiGQ8ScYzXfPiY-fLU0OJrfN2_RXnrYGklyPMwO4hkStBj8oI_4Dc0breu5o4hK',
+    image: '/jugo-naranja.avif',
     category: 'Bebidas',
     origin: '' as OriginType,
   },
@@ -134,7 +134,7 @@ const allDishes: Dish[] = [
     name: 'Tarta de Chocolate',
     description: 'Deliciosa tarta con cobertura de chocolate belga',
     price: '$8.50',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUigKouglXyIq_ACMY9WY_F0yVW9Vym8tjU4zH4OTK3YugWcVhKXt3EPX6ap2ho7wC858pu7p4ytDeEeR2IoD6-hliBXF1DXiVtqywF6FjOlQI2uW_C0pUb3JwKjGpiwt5Qs1TKsZL-Do7VzTSY_GCy0ZR2bVawIf6NK_-x4mNOCxmOjCmKTlgFDiStnfBcCRQws0BgRl1y3YIOqH4G5QwQiKFnv9SjvF_W-wCWTfIC2CWGgUMLkskr3CuJXPdT3sWS1C8Ulg2pfEz',
+    image: '/tarta-chocolate.jpg',
     category: 'Postres',
     origin: '' as OriginType,
   },
@@ -143,7 +143,7 @@ const allDishes: Dish[] = [
     name: 'Flan de Vainilla',
     description: 'Tradicional flan casero con caramelo',
     price: '$7.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAgxagxlshYO2auuogSyw7OhNdc7J8dbVtovgy1mx2QnTHrkMM2grGKiD5FOKoTvHJCxaf3o2IELhRAX9KuZmf3PSo_hZMFmXbeQpucwaZ41LUFYyamXCfCpGD8b3ysaoiUZmN_hQx3AB0zC0PVC5YeERx23oMBXNH-Bix9Tpdb9CNzdIliDef0s4xZn5I_BDf46Q_4zQliQOmvnxglHcpo1lGW6PGIGHletH7NmXDLi-rmVLzUYaOOr3OZJFOHTy4bsX4Sb8uyCMTC',
+    image: '/flan-vainilla.jpg',
     category: 'Postres',
     origin: '' as OriginType,
   },
@@ -171,7 +171,7 @@ const allDishes: Dish[] = [
     name: 'Americano',
     description: '180 ml - NESPRESSO',
     price: '$48.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBc2H-XYiq7VOCFCpx2cuCePgbQE7ZDrkxgLFu-itmo_MSFUGuJ4MEK9gfv4p-Lur7DUSWI21FL7WjRrLtfWx6nu7z0mjAn2bhClTodzDi-pzY6r3wzdPoDRYMS1cM7ZBlUns8GzyAI7djeA6qN2gngbm8XYIbP5M6fXO48cdOauM5hZYsfaZ6Mxl204e6c5lXbMZh9Shgmz6nScvzItmVrWwCvhFVLdRbJtmqHe_EdQndGNhwA5EeplOu2NO9sXkEhh-WocuJ1KcoU',
+    image: '/cafe-americano-nespresso.webp',
     category: 'Bebidas',
     origin: 'cafe' as OriginType,
   },
@@ -180,7 +180,7 @@ const allDishes: Dish[] = [
     name: 'Espresso',
     description: '60 ml - NESPRESSO',
     price: '$48.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBc2H-XYiq7VOCFCpx2cuCePgbQE7ZDrkxgLFu-itmo_MSFUGuJ4MEK9gfv4p-Lur7DUSWI21FL7WjRrLtfWx6nu7z0mjAn2bhClTodzDi-pzY6r3wzdPoDRYMS1cM7ZBlUns8GzyAI7djeA6qN2gngbm8XYIbP5M6fXO48cdOauM5hZYsfaZ6Mxl204e6c5lXbMZh9Shgmz6nScvzItmVrWwCvhFVLdRbJtmqHe_EdQndGNhwA5EeplOu2NO9sXkEhh-WocuJ1KcoU',
+    image: '/cafe-expresso-nespresso.webp',
     category: 'Bebidas',
     origin: 'cafe' as OriginType,
   },
@@ -189,7 +189,7 @@ const allDishes: Dish[] = [
     name: 'Capuchino',
     description: '180 ml - NESPRESSO. Opciones: Napolitano, baileys, vainilla',
     price: '$60.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBc2H-XYiq7VOCFCpx2cuCePgbQE7ZDrkxgLFu-itmo_MSFUGuJ4MEK9gfv4p-Lur7DUSWI21FL7WjRrLtfWx6nu7z0mjAn2bhClTodzDi-pzY6r3wzdPoDRYMS1cM7ZBlUns8GzyAI7djeA6qN2gngbm8XYIbP5M6fXO48cdOauM5hZYsfaZ6Mxl204e6c5lXbMZh9Shgmz6nScvzItmVrWwCvhFVLdRbJtmqHe_EdQndGNhwA5EeplOu2NO9sXkEhh-WocuJ1KcoU',
+    image: '/capuchino-nespresso.webp',
     category: 'Bebidas',
     origin: 'cafe' as OriginType,
   },
@@ -198,7 +198,7 @@ const allDishes: Dish[] = [
     name: 'Frapuccino',
     description: '180 ml - NESPRESSO',
     price: '$70.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBc2H-XYiq7VOCFCpx2cuCePgbQE7ZDrkxgLFu-itmo_MSFUGuJ4MEK9gfv4p-Lur7DUSWI21FL7WjRrLtfWx6nu7z0mjAn2bhClTodzDi-pzY6r3wzdPoDRYMS1cM7ZBlUns8GzyAI7djeA6qN2gngbm8XYIbP5M6fXO48cdOauM5hZYsfaZ6Mxl204e6c5lXbMZh9Shgmz6nScvzItmVrWwCvhFVLdRbJtmqHe_EdQndGNhwA5EeplOu2NO9sXkEhh-WocuJ1KcoU',
+    image: '/frappuccino.jpg',
     category: 'Bebidas',
     origin: 'cafe' as OriginType,
   },
@@ -207,7 +207,7 @@ const allDishes: Dish[] = [
     name: 'Té',
     description: 'Opciones: Hierbabuena / Manzanilla',
     price: '$35.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDNanplizQsqu_AWgfvOvcfFVNxOTL41X1kCPX1xvEMEsYo9o0WTi5Zp4q-4XKvx8ixXcz9vsSZrCafyWPVQjOxr0skT0HWuaKy2QIBpPU9lHutFSJgkLDlcksL-7CNVKdtkKJaxm4-_Qf-9Zs8CHDtVEK_nLT9Lvx2F1w3rR5aJ0_sVNdNhSKOeqx2atLUGjzVCZnSpfVYviNGCLiGQ8ScYzXfPiY-fLU0OJrfN2_RXnrYGklyPMwO4hkStBj8oI_4Dc0breu5o4hK',
+    image: '/te.webp',
     category: 'Bebidas',
     origin: 'cafe' as OriginType,
   },
@@ -217,7 +217,7 @@ const allDishes: Dish[] = [
     name: 'Carajillo',
     description: 'Café con licor 43',
     price: '$145.00',
-    image: '/carajillo.jpeg',
+    image: '/carajillo solo.webp',
     category: 'Coctelería',
     origin: 'digestivos' as OriginType,
   },
@@ -262,7 +262,7 @@ const allDishes: Dish[] = [
     name: 'Frangelico',
     description: '700 ml - Porción: $120.00 / Botella: $1,200.00',
     price: '$120.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+    image: '/frangelico.webp',
     category: 'Coctelería',
     origin: 'digestivos' as OriginType,
   },
@@ -271,7 +271,7 @@ const allDishes: Dish[] = [
     name: 'Sambuca',
     description: '700 ml - Porción: $100.00 / Botella: $1,000.00',
     price: '$100.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+    image: '/sambuca.webp',
     category: 'Coctelería',
     origin: 'digestivos' as OriginType,
   },
@@ -280,7 +280,7 @@ const allDishes: Dish[] = [
     name: 'Chinchón Seco',
     description: '1000 ml - Porción: $95.00 / Botella: $950.00',
     price: '$95.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+    image: '/chincho-seco.avif',
     category: 'Coctelería',
     origin: 'digestivos' as OriginType,
   },
@@ -289,7 +289,7 @@ const allDishes: Dish[] = [
     name: 'Chinchón Dulce',
     description: '1000 ml - Porción: $95.00 / Botella: $950.00',
     price: '$95.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+    image: '/chinchon-dulce.jpg',
     category: 'Coctelería',
     origin: 'digestivos' as OriginType,
   },
@@ -299,7 +299,7 @@ const allDishes: Dish[] = [
     name: 'Volcán',
     description: 'Con una textura única, firme por fuera, suave por dentro, acompañado de helado. Opciones: Dulce de leche o chocolate',
     price: '$140.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUigKouglXyIq_ACMY9WY_F0yVW9Vym8tjU4zH4OTK3YugWcVhKXt3EPX6ap2ho7wC858pu7p4ytDeEeR2IoD6-hliBXF1DXiVtqywF6FjOlQI2uW_C0pUb3JwKjGpiwt5Qs1TKsZL-Do7VzTSY_GCy0ZR2bVawIf6NK_-x4mNOCxmOjCmKTlgFDiStnfBcCRQws0BgRl1y3YIOqH4G5QwQiKFnv9SjvF_W-wCWTfIC2CWGgUMLkskr3CuJXPdT3sWS1C8Ulg2pfEz',
+    image: '/volcan.jpg',
     badges: ['favorito'],
     category: 'Postres',
     origin: 'pastel' as OriginType,
@@ -309,7 +309,7 @@ const allDishes: Dish[] = [
     name: 'Cheesecake Vasco',
     description: 'Cremoso pay de natilla montado sobre cama de galleta horneada y bañado con mermelada de frutos rojos. (200 g.)',
     price: '$190.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUigKouglXyIq_ACMY9WY_F0yVW9Vym8tjU4zH4OTK3YugWcVhKXt3EPX6ap2ho7wC858pu7p4ytDeEeR2IoD6-hliBXF1DXiVtqywF6FjOlQI2uW_C0pUb3JwKjGpiwt5Qs1TKsZL-Do7VzTSY_GCy0ZR2bVawIf6NK_-x4mNOCxmOjCmKTlgFDiStnfBcCRQws0BgRl1y3YIOqH4G5QwQiKFnv9SjvF_W-wCWTfIC2CWGgUMLkskr3CuJXPdT3sWS1C8Ulg2pfEz',
+    image: '/cheesecake-vasco.jpg',
     category: 'Postres',
     origin: 'pay_de_queso' as OriginType,
   },
@@ -318,7 +318,7 @@ const allDishes: Dish[] = [
     name: 'Pan de Elote',
     description: 'Recién horneado, sobre una cama de mermelada, frutos rojos, helado de vainilla, bañado con dulce de cajeta y nuez. (200 g.)',
     price: '$140.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUigKouglXyIq_ACMY9WY_F0yVW9Vym8tjU4zH4OTK3YugWcVhKXt3EPX6ap2ho7wC858pu7p4ytDeEeR2IoD6-hliBXF1DXiVtqywF6FjOlQI2uW_C0pUb3JwKjGpiwt5Qs1TKsZL-Do7VzTSY_GCy0ZR2bVawIf6NK_-x4mNOCxmOjCmKTlgFDiStnfBcCRQws0BgRl1y3YIOqH4G5QwQiKFnv9SjvF_W-wCWTfIC2CWGgUMLkskr3CuJXPdT3sWS1C8Ulg2pfEz',
+    image: '/pan-elote.jpeg',
     category: 'Postres',
     origin: 'pastel' as OriginType,
   },
@@ -327,7 +327,7 @@ const allDishes: Dish[] = [
     name: 'Cheesecake Lotus',
     description: 'Pay de queso con la autentica galleta "Lotus Biscoff", bañado con mezcla de leches, acompañado de frutos rojos.',
     price: '$140.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUigKouglXyIq_ACMY9WY_F0yVW9Vym8tjU4zH4OTK3YugWcVhKXt3EPX6ap2ho7wC858pu7p4ytDeEeR2IoD6-hliBXF1DXiVtqywF6FjOlQI2uW_C0pUb3JwKjGpiwt5Qs1TKsZL-Do7VzTSY_GCy0ZR2bVawIf6NK_-x4mNOCxmOjCmKTlgFDiStnfBcCRQws0BgRl1y3YIOqH4G5QwQiKFnv9SjvF_W-wCWTfIC2CWGgUMLkskr3CuJXPdT3sWS1C8Ulg2pfEz',
+    image: '/cheesecake-lotus.png',
     category: 'Postres',
     origin: 'pay_de_queso' as OriginType,
   },
@@ -336,7 +336,7 @@ const allDishes: Dish[] = [
     name: 'Pastel 3 Leches',
     description: 'Delicioso pan de vainilla, con trozos de durazno, bañado con mezcla de 3 leches, con frutos rojos y nuez.',
     price: '$140.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUigKouglXyIq_ACMY9WY_F0yVW9Vym8tjU4zH4OTK3YugWcVhKXt3EPX6ap2ho7wC858pu7p4ytDeEeR2IoD6-hliBXF1DXiVtqywF6FjOlQI2uW_C0pUb3JwKjGpiwt5Qs1TKsZL-Do7VzTSY_GCy0ZR2bVawIf6NK_-x4mNOCxmOjCmKTlgFDiStnfBcCRQws0BgRl1y3YIOqH4G5QwQiKFnv9SjvF_W-wCWTfIC2CWGgUMLkskr3CuJXPdT3sWS1C8Ulg2pfEz',
+    image: '/pastel-3leches.jpg',
     category: 'Postres',
     origin: 'pastel' as OriginType,
   },
@@ -345,7 +345,7 @@ const allDishes: Dish[] = [
     name: 'Red Velvet',
     description: 'Pan de red velvet con sabor a chocolate oscuro y betún de queso crema. Coronado con fresa natural.',
     price: '$140.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUigKouglXyIq_ACMY9WY_F0yVW9Vym8tjU4zH4OTK3YugWcVhKXt3EPX6ap2ho7wC858pu7p4ytDeEeR2IoD6-hliBXF1DXiVtqywF6FjOlQI2uW_C0pUb3JwKjGpiwt5Qs1TKsZL-Do7VzTSY_GCy0ZR2bVawIf6NK_-x4mNOCxmOjCmKTlgFDiStnfBcCRQws0BgRl1y3YIOqH4G5QwQiKFnv9SjvF_W-wCWTfIC2CWGgUMLkskr3CuJXPdT3sWS1C8Ulg2pfEz',
+    image: '/red-velvet.jpg',
     category: 'Postres',
     origin: 'pastel' as OriginType,
   },
@@ -353,6 +353,7 @@ const allDishes: Dish[] = [
 
 const DishDetailScreen: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const { cart, addToCart } = useCart();
   const { t } = useTranslation();
@@ -438,12 +439,29 @@ const DishDetailScreen: React.FC = () => {
     return null;
   }, [dish]);
 
+  // Scroll al inicio cuando se carga la página
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
+
+  // Función helper para regresar al menú preservando el estado
+  const navigateBackToMenu = () => {
+    const savedState = location.state || {
+      selectedCategory: sessionStorage.getItem('menuSelectedCategory'),
+      scrollPosition: sessionStorage.getItem('menuScrollPosition')
+    };
+    
+    navigate('/menu', {
+      state: savedState
+    });
+  };
+
   // Si no se encuentra el plato, redirigir al menú (usando useEffect para evitar warning)
   useEffect(() => {
     if (!dish) {
-      navigate('/menu');
+      navigateBackToMenu();
     }
-  }, [dish, navigate]);
+  }, [dish]);
 
   // Si no hay platillo, retornar null
   if (!dish) {
@@ -531,8 +549,8 @@ const DishDetailScreen: React.FC = () => {
       });
     }
     
-    // Regresar al menú después de agregar
-    navigate('/menu');
+    // Regresar al menú después de agregar preservando el estado
+    navigateBackToMenu();
   };
 
   const cartQuantity = cart.filter(item => item.id === dish.id).reduce((sum, item) => sum + item.quantity, 0);
@@ -562,7 +580,7 @@ const DishDetailScreen: React.FC = () => {
         {/* Top Bar */}
         <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigateBackToMenu()}
             className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition-colors"
           >
             <span className="material-symbols-outlined">arrow_back</span>

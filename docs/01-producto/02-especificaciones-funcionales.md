@@ -139,6 +139,8 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 - Las sugerencias y destacados aparecen al inicio
 - El carrito persiste en `CartContext`
 - Los filtros se pueden combinar (categoría + tipo)
+- **Preservación de estado**: Al navegar al detalle de un producto, se guarda la categoría seleccionada y la posición de scroll
+- **Restauración de estado**: Al regresar del detalle, se restaura automáticamente la categoría y posición de scroll anteriores
 
 ### 4.2 Detalle de Producto (`DishDetailScreen`)
 **Ruta**: `/dish/:id`
@@ -184,6 +186,8 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 - Si no se selecciona tamaño (cuando aplica), se usa el precio base o porción
 - Los items en el carrito se agrupan si tienen las mismas notas
 - Las proteínas seleccionadas se incluyen en las notas
+- **Scroll automático**: Al cargar la página, se desplaza automáticamente al inicio
+- **Navegación preservada**: Al regresar al menú, se mantiene la categoría y posición de scroll anteriores
 
 ---
 
@@ -417,6 +421,68 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 - Items ordenados
 - Total pagado
 - Tiempo estimado de entrega
+- Botón "Modificar mi orden" (si la orden está en estado `orden_enviada` o `orden_recibida`)
+- Botón "Agregar Orden Complementaria" (si hay una orden enviada activa)
+
+#### Reglas de negocio
+- Solo se puede modificar una orden si está en estado `orden_enviada` o `orden_recibida`
+- Solo aparece si `config.allowOrderModification` está habilitado
+- Se pueden agregar órdenes complementarias mientras hay una orden activa
+
+### 9.4 Editar Orden (`EditOrderScreen`)
+**Ruta**: `/edit-order?orderId={id}`
+
+#### Funcionalidades
+
+##### Carga de orden
+- Carga los items de la orden en el carrito
+- Muestra las cantidades exactas de la orden original
+- Agrupa items por ID y notas para visualización correcta
+
+##### Banner informativo
+- Indica que se puede editar hasta que la cocina acepte la orden
+- Advertencia sobre variaciones de precio según modificaciones
+
+##### Lista de items
+- Muestra todos los items de la orden con:
+  - Imagen del producto (usando imágenes locales actualizadas)
+  - Nombre del producto
+  - Precio unitario
+  - Notas especiales (si tiene)
+  - Controles de cantidad (+/-)
+  - Botón de eliminar
+- **Estado vacío**: Si no hay items, muestra mensaje y botón para agregar items
+- **Botón "Agregar más items"**: Permite navegar al menú para agregar productos adicionales a la orden
+
+##### Modificación de items
+- **Incrementar cantidad**: Botón "+" incrementa la cantidad
+- **Decrementar cantidad**: Botón "-" decrementa la cantidad
+- **Eliminar item**: Botón de eliminación remueve completamente el item
+- **Editar notas**: Las notas de último minuto se pueden agregar
+
+##### Notas de último minuto
+- Campo de texto para agregar notas adicionales
+- Se aplican a toda la orden
+- Placeholder con ejemplos
+
+##### Total actualizado
+- Calcula el total en tiempo real según las modificaciones
+- Muestra "+ Impuestos incluidos"
+- Se actualiza automáticamente al modificar items
+
+##### Guardar cambios
+- Botón "Guardar Cambios" actualiza la orden
+- Actualiza el timestamp de la orden
+- Navega de vuelta a `/order-detail`
+
+#### Reglas de negocio
+- Solo se puede editar si la orden está en estado `orden_enviada` o `orden_recibida`
+- El timestamp se actualiza al guardar cambios
+- Las cantidades deben coincidir exactamente con las de la orden original al cargar
+- El total se calcula dinámicamente según las modificaciones
+- Se puede eliminar completamente un item de la orden
+- **Agregar items**: Los items agregados desde el menú se incluyen en la orden al guardar
+- **Imágenes**: Las imágenes de los productos se obtienen de la lista completa de platillos (`allDishes`)
 
 ---
 
@@ -771,39 +837,123 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 
 ---
 
-## 16. Restricciones y Validaciones
+## 16. Lista de Espera (Waitlist)
 
-### 15.1 Autenticación
+### 16.1 Pantalla de Lista de Espera (`WaitlistScreen`)
+**Ruta**: `/waitlist`
+
+#### Funcionalidades
+
+##### Acceso a Lista de Espera
+- Se accede mediante escaneo de código QR desde `/home`
+- También se puede navegar directamente a `/waitlist`
+
+##### Selección de Zona
+- **Zonas disponibles**:
+  - Interior
+  - Terraza
+  - Jardín
+  - Patio
+  - Rooftop
+- Algunas zonas pueden estar deshabilitadas por el restaurante
+- Zonas deshabilitadas muestran aviso explicativo
+
+##### Selección de Número de Personas
+- Selector numérico para elegir cantidad de personas
+- Rango: 1 a máximo configurado
+
+##### Información de la Lista
+- Muestra cantidad de mesas en lista de espera por zona
+- Indica la posición en la lista donde se colocará al usuario
+- Muestra timestamp del momento del escaneo (hasta confirmar)
+- Formato de hora: 12 horas (AM/PM)
+
+##### Confirmación de Solicitud
+- Botón "Confirmar solicitud"
+- Al confirmar, se agrega a la lista de espera
+- Se actualiza el estado a "confirmado"
+
+##### Estado Inicial (Primeros 10 segundos)
+- Diseño simple con información básica
+- Muestra saludo personalizado
+- Muestra turno y posición
+- Tarjeta grande con número de turno
+- Estadísticas de espera (tiempo estimado, mesas por delante)
+- Botones para cambiar zona y cancelar
+
+##### Estado de Progreso (Después de 10 segundos)
+- Diseño más elaborado con:
+  - Header con badge "Ingreso por QR"
+  - Banner animado indicando que la mesa casi está lista
+  - Barra de progreso con porcentaje avanzado
+  - Estadísticas detalladas (mesas antes, tiempo estimado)
+  - Botón destacado "Ver Menú y Armar Pedido"
+  - Botones para cambiar zona y cancelar espera
+  - Imagen del restaurante con información de ubicación
+
+##### Cambio de Zona
+- Opción para cambiar de zona
+- Muestra advertencia sobre perder el lugar actual
+- Indica que se agregará al final de la nueva lista
+- Actualiza el timestamp al cambiar de zona
+- Muestra modal de confirmación
+
+##### Cancelación de Solicitud
+- Opción para cancelar la solicitud
+- Muestra advertencia sobre perder el lugar
+- Requiere confirmación
+- Al cancelar, se remueve de la lista de espera
+
+##### Actualización en Tiempo Real
+- La lista se actualiza automáticamente cada intervalo de tiempo
+- Simula avance de la lista de espera
+- Actualiza posiciones y tiempos estimados
+
+#### Reglas de negocio
+- Solo se puede editar la solicitud antes de confirmar
+- Una vez confirmada, se muestra el progreso
+- El nuevo diseño aparece después de 10 segundos de confirmación
+- Las zonas deshabilitadas no se pueden seleccionar
+- Al cambiar de zona, se pierde el lugar en la zona actual
+- La posición en la lista se calcula según la zona seleccionada
+- El timestamp se muestra solo hasta confirmar la solicitud
+- El timestamp se actualiza al cambiar de zona
+
+---
+
+## 17. Restricciones y Validaciones
+
+### 17.1 Autenticación
 - Todas las pantallas principales requieren autenticación
 - Si no está autenticado, redirige a `/`
 - Las pantallas de facturación no requieren autenticación (flujo independiente)
 
-### 15.2 Carrito
+### 17.2 Carrito
 - Mínimo 1 item para confirmar orden
 - Máximo 99 unidades por item (o según restricción)
 - El carrito se limpia después de confirmar orden
 
-### 15.3 Pagos
+### 17.3 Pagos
 - Requiere método de pago válido
 - Validación de datos de tarjeta antes de procesar
 - Transacciones se guardan en historial
 
-### 15.4 Opiniones
+### 17.4 Opiniones
 - Calificación es obligatoria
 - Comentario es opcional
 - Máximo 5 archivos multimedia
 - Tamaño máximo por archivo: 10MB
 
-### 15.5 Datos Fiscales
+### 17.5 Datos Fiscales
 - RFC debe tener formato válido
 - Email debe tener formato válido
 - Todos los campos son obligatorios
 
 ---
 
-## 16. Estados de Órdenes
+## 18. Estados de Órdenes
 
-### 16.1 Estados Disponibles
+### 18.1 Estados Disponibles
 1. **`orden_enviada`**: Orden enviada a cocina
 2. **`orden_recibida`**: Orden recibida por cocina
 3. **`en_preparacion`**: En proceso de preparación
@@ -814,19 +964,29 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 8. **`orden_cerrada`**: Orden cerrada y pagada
 9. **`cancelada`**: Orden cancelada
 
-### 16.2 Transiciones de Estado
+### 18.2 Transiciones de Estado
 - Solo ciertas transiciones son válidas
 - Las transiciones las gestiona el backend (futuro)
 - El frontend muestra el estado actual
 
 ---
 
-**Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.1  
+**Última actualización**: Enero 2025  
+**Versión del documento**: 1.3  
 **Responsable**: Equipo de desarrollo
 
+### Cambios Recientes (Enero 2025)
+- ✅ Agregada funcionalidad para agregar más items en pantalla de edición de órdenes
+- ✅ Mejora en preservación de categoría y scroll al navegar entre menú y detalle
+- ✅ Scroll automático al inicio al abrir detalle de producto
+- ✅ Corrección de carga de imágenes en pantalla de edición de órdenes
+- ✅ Mejora en experiencia de navegación del menú
+
 ### Cambios Recientes (Diciembre 2024)
-- ✅ Agregada sección completa de Solicitud de Asistencia (15)
+- ✅ Agregada sección completa de Edición de Órdenes (9.4)
+- ✅ Agregada sección completa de Lista de Espera (16)
+- ✅ Actualizada sección de Detalle de Orden (9.3) con nuevas funcionalidades
+- ✅ Agregada sección de Solicitud de Asistencia (15)
 - ✅ Documentadas todas las funcionalidades de búsqueda inteligente
 - ✅ Documentadas solicitudes predefinidas y personalizadas
 - ✅ Documentado historial de solicitudes y su limpieza automática

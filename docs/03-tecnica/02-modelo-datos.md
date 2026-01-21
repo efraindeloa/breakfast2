@@ -88,6 +88,29 @@ export interface CartItem {
 }
 ```
 
+#### Contexto de Carrito (`CartContext`)
+```typescript
+interface CartContextType {
+  cart: CartItem[];
+  addToCart: (item: Omit<CartItem, 'quantity'>) => void;
+  removeFromCart: (itemId: number) => void;
+  updateCartItemQuantity: (itemId: number, quantity: number, notes?: string) => void;
+  updateCartItemNotes: (itemId: number, notes: string) => void;
+  clearCart: () => void;
+  getCartItemCount: () => number;
+  setCartItems: (items: CartItem[]) => void; // Nueva función para establecer items directamente
+}
+```
+
+#### Funciones Principales
+- **`addToCart`**: Agrega item al carrito. Si el item ya existe con el mismo ID y notas, incrementa la cantidad.
+- **`removeFromCart`**: Elimina todos los items con el ID especificado.
+- **`updateCartItemQuantity`**: Actualiza la cantidad de un item. Si se especifica `notes`, solo actualiza el item con esas notas específicas.
+- **`updateCartItemNotes`**: Actualiza las notas de un item.
+- **`clearCart`**: Limpia todos los items del carrito.
+- **`getCartItemCount`**: Retorna el total de items (sumando cantidades).
+- **`setCartItems`**: Establece directamente los items del carrito (útil para cargar órdenes).
+
 #### Almacenamiento
 - **Tipo**: Estado en memoria (React Context)
 - **Duración**: Durante la sesión
@@ -210,12 +233,18 @@ interface Dish {
   "name": "Omelette con Jamón",
   "description": "Omelette esponjoso con jamón, queso y hierbas frescas",
   "price": 180,
-  "image": "https://example.com/omelette.jpg",
+  "image": "/omelette.jpg",
   "category": "main_courses",
   "proteins": ["chicken", "beef"],
   "badge": "specialty"
 }
 ```
+
+#### Nota sobre Imágenes
+- Las imágenes se almacenan en la carpeta `/public` del proyecto
+- Se referencian con rutas absolutas que comienzan con `/` (ej: `/imagen.jpg`)
+- Durante el build, Vite copia automáticamente los archivos de `public/` al directorio de salida
+- Las imágenes de productos de coctelería, postres y bebidas han sido migradas a archivos locales
 
 ---
 
@@ -389,6 +418,56 @@ interface AssistanceHistoryItem {
 
 ---
 
+## Lista de Espera (Waitlist)
+
+### Definición
+```typescript
+interface WaitlistEntry {
+  id: string;
+  zone: string; // 'interior', 'terrace', 'garden', 'patio', 'rooftop'
+  timestamp: string; // ISO string
+  confirmed: boolean;
+  position: number;
+  estimatedWaitMinutes: number;
+  numberOfPeople: number;
+}
+```
+
+### Zonas Disponibles
+- `interior`: Interior
+- `terrace`: Terraza
+- `garden`: Jardín
+- `patio`: Patio
+- `rooftop`: Rooftop
+
+### Almacenamiento
+- **Clave localStorage**: `waitlist_entries`
+- **Tipo**: Array de `WaitlistEntry`
+- **Persistencia**: Durante la sesión hasta cancelar o ser atendido
+
+### Reglas
+- Cada entrada tiene un ID único generado con timestamp y random
+- La posición se calcula según la zona y orden de confirmación
+- El tiempo estimado se calcula dinámicamente según la posición
+- Solo las entradas confirmadas cuentan para el cálculo de posiciones
+
+### Ejemplo
+```json
+[
+  {
+    "id": "waitlist-1703123456789-abc123",
+    "zone": "interior",
+    "timestamp": "2024-12-20T10:30:00.000Z",
+    "confirmed": true,
+    "position": 3,
+    "estimatedWaitMinutes": 15,
+    "numberOfPeople": 4
+  }
+]
+```
+
+---
+
 ## Claves de localStorage
 
 | Clave | Tipo | Descripción |
@@ -401,6 +480,7 @@ interface AssistanceHistoryItem {
 | `transactions` | Transaction[] | Historial de transacciones |
 | `group_order` | GroupOrder \| null | Orden grupal activa |
 | `assistance_history` | AssistanceHistoryItem[] | Historial de solicitudes de asistencia |
+| `waitlist_entries` | WaitlistEntry[] | Lista de espera activa |
 
 ---
 
@@ -499,8 +579,8 @@ GroupOrder
 
 ---
 
-**Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.1  
+**Última actualización**: Enero 2025  
+**Versión del documento**: 1.3  
 **Responsable**: Equipo de desarrollo
 
 ### Opinión de Usuario (Review)
@@ -587,3 +667,8 @@ interface Review {
 - ✅ Agregado modelo de datos para opiniones de usuarios (`Review`)
 - ✅ Agregada clave `user_reviews` en localStorage
 - ✅ Documentación de estructura de opiniones y tipos soportados
+- ✅ Migración de imágenes de productos a archivos locales en `/public`
+- ✅ Actualización de rutas de imágenes para usar rutas absolutas desde `/public`
+- ✅ Documentación de gestión de recursos estáticos (imágenes de productos)
+- ✅ Implementación de preservación de estado de navegación usando `sessionStorage`
+- ✅ Claves de sessionStorage: `menuSelectedCategory`, `menuScrollPosition`

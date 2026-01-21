@@ -448,6 +448,24 @@ const OrderDetailScreen: React.FC = () => {
         {/* Botones de Acción */}
         {hasSentOrder && config.allowOrderModification && currentCartItems.length === 0 && (
           <div className="space-y-3">
+            {orders.length > 0 && orders.some(order => 
+              ['orden_enviada', 'orden_recibida'].includes(order.status)
+            ) && (
+              <button
+                onClick={() => {
+                  const editableOrder = orders.find(order => 
+                    ['orden_enviada', 'orden_recibida'].includes(order.status)
+                  );
+                  if (editableOrder) {
+                    navigate(`/edit-order?orderId=${editableOrder.orderId}`);
+                  }
+                }}
+                className="w-full py-3 px-4 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-semibold flex items-center justify-center gap-2 transition-colors border-2 border-primary/30"
+              >
+                <span className="material-symbols-outlined">edit</span>
+                {t('orderDetail.changeOrder')}
+              </button>
+            )}
             <button
               onClick={() => navigate('/menu')}
               className="w-full py-3 px-4 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-semibold flex items-center justify-center gap-2 transition-colors border-2 border-primary/30"

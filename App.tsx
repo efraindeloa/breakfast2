@@ -29,6 +29,8 @@ import FavoritesScreen from './screens/FavoritesScreen';
 import ReviewScreen from './screens/ReviewScreen';
 import RequestAssistanceScreen from './screens/RequestAssistanceScreen';
 import ProductReviewsScreen from './screens/ProductReviewsScreen';
+import WaitlistScreen from './screens/WaitlistScreen';
+import EditOrderScreen from './screens/EditOrderScreen';
 import BottomNav from './components/BottomNav';
 import AssistantButton from './components/AssistantButton';
 import { CartProvider } from './contexts/CartContext';
@@ -77,6 +79,8 @@ const App: React.FC = () => {
           <Route path="/review" element={isAuthenticated ? <ReviewScreen /> : <Navigate to="/" />} />
           <Route path="/request-assistance" element={isAuthenticated ? <RequestAssistanceScreen /> : <Navigate to="/" />} />
           <Route path="/product-reviews/:dishId" element={isAuthenticated ? <ProductReviewsScreen /> : <Navigate to="/" />} />
+          <Route path="/waitlist" element={isAuthenticated ? <WaitlistScreen /> : <Navigate to="/" />} />
+          <Route path="/edit-order" element={isAuthenticated ? <EditOrderScreen /> : <Navigate to="/" />} />
         </Routes>
         
         {isAuthenticated && <BottomNav />}

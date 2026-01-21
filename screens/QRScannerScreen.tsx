@@ -174,8 +174,14 @@ const QRScannerScreen: React.FC<QRScannerScreenProps> = ({ onScanSuccess, onClos
     if (onScanSuccess) {
       onScanSuccess(decodedText);
     } else {
-      // Si no hay callback, navegar a join-table con el código
-      navigate('/join-table', { state: { scannedCode: decodedText } });
+      // Verificar si el QR es de lista de espera
+      const lowerText = decodedText.toLowerCase();
+      if (lowerText.includes('waitlist') || lowerText.includes('lista-espera') || lowerText.includes('lista de espera')) {
+        navigate('/waitlist');
+      } else {
+        // Si no hay callback, navegar a join-table con el código
+        navigate('/join-table', { state: { scannedCode: decodedText } });
+      }
     }
   };
 

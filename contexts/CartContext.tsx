@@ -12,10 +12,11 @@ interface CartContextType {
   cart: CartItem[];
   addToCart: (item: Omit<CartItem, 'quantity'>) => void;
   removeFromCart: (itemId: number) => void;
-  updateCartItemQuantity: (itemId: number, quantity: number) => void;
+  updateCartItemQuantity: (itemId: number, quantity: number, notes?: string) => void;
   updateCartItemNotes: (itemId: number, notes: string) => void;
   clearCart: () => void;
   getCartItemCount: () => number;
+  setCartItems: (items: CartItem[]) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -47,15 +48,31 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setCart(prev => prev.filter(item => item.id !== itemId));
   };
 
-  const updateCartItemQuantity = (itemId: number, quantity: number) => {
+  const updateCartItemQuantity = (itemId: number, quantity: number, notes?: string) => {
     if (quantity <= 0) {
-      removeFromCart(itemId);
+      if (notes !== undefined) {
+        // Remover solo el item con este ID y estas notas específicas
+        setCart(prev => prev.filter(item => 
+          !(item.id === itemId && item.notes === notes)
+        ));
+      } else {
+        // Remover todos los items con este ID (comportamiento original)
+        removeFromCart(itemId);
+      }
       return;
     }
     setCart(prev =>
-      prev.map(item =>
-        item.id === itemId ? { ...item, quantity } : item
-      )
+      prev.map(item => {
+        if (notes !== undefined) {
+          // Si se especifican notas, solo actualizar el item con esas notas
+          return (item.id === itemId && item.notes === notes) 
+            ? { ...item, quantity } 
+            : item;
+        } else {
+          // Comportamiento original: actualizar todos los items con este ID
+          return item.id === itemId ? { ...item, quantity } : item;
+        }
+      })
     );
   };
 
@@ -75,6 +92,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return cart.reduce((sum, item) => sum + item.quantity, 0);
   };
 
+  const setCartItems = (items: CartItem[]) => {
+    setCart(items);
+  };
+
   return (
     <CartContext.Provider value={{ 
       cart, 
@@ -83,7 +104,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       updateCartItemQuantity,
       updateCartItemNotes,
       clearCart, 
-      getCartItemCount 
+      getCartItemCount,
+      setCartItems
     }}>
       {children}
     </CartContext.Provider>

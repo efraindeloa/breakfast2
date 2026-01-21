@@ -79,6 +79,13 @@ Cada platillo muestra:
 - 💰 Precio (o rango de precios)
 - 🔖 Indicador si está en tu carrito
 
+### Navegación Inteligente
+
+La aplicación recuerda tu posición en el menú:
+- **Preservación de categoría**: Si estás viendo "Bebidas" y entras al detalle de un producto, al regresar seguirás viendo "Bebidas"
+- **Preservación de scroll**: La aplicación recuerda dónde estabas en la lista y te regresa a esa posición
+- **Scroll automático**: Al abrir el detalle de un producto, la página se desplaza automáticamente al inicio para que veas toda la información
+
 ---
 
 ## 🛒 Agregar Platillos a tu Orden
@@ -529,7 +536,20 @@ Si escribes algo que no aparece en las opciones predefinidas:
 
 ### ¿Cómo puedo modificar mi orden después de confirmarla?
 
-Actualmente, las órdenes confirmadas no se pueden modificar. Asegúrate de revisar bien antes de confirmar. Esta funcionalidad estará disponible en futuras actualizaciones.
+¡Ahora sí puedes modificar tu orden! Si tu orden está en estado "Enviada" o "Recibida" (antes de que la cocina empiece a prepararla), puedes editarla:
+
+1. Ve a **"Mi Orden"** en la barra inferior
+2. Verás tus órdenes activas
+3. Si hay una orden que puedes modificar, verás el botón **"Modificar mi orden"**
+4. Haz click en el botón
+5. En la pantalla de edición podrás:
+   - Cambiar las cantidades de los items (+/-)
+   - Eliminar items completamente
+   - Agregar notas de último minuto
+6. Verás el total actualizado automáticamente
+7. Haz click en **"Guardar Cambios"** para confirmar las modificaciones
+
+**Nota**: Solo puedes modificar órdenes antes de que la cocina las acepte. Una vez que la cocina empieza a preparar tu orden, ya no se puede modificar.
 
 ### ¿Puedo pedir para llevar?
 
@@ -576,10 +596,20 @@ Sí, la app está diseñada para funcionar en teléfonos y tablets, con diseño 
 
 ---
 
-**Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.1
+**Última actualización**: Enero 2025  
+**Versión del documento**: 1.3
+
+### Cambios Recientes (Enero 2025)
+- ✅ Agregada información sobre funcionalidad de agregar más items en edición de órdenes
+- ✅ Agregada información sobre navegación inteligente del menú
+- ✅ Actualizada sección de modificación de órdenes con nuevas funcionalidades
 
 ### Cambios Recientes (Diciembre 2024)
+- ✅ Agregada sección completa de Lista de Espera (Waitlist)
+- ✅ Agregada sección completa de Editar Órdenes
+- ✅ Instrucciones paso a paso para agregarse a lista de espera
+- ✅ Instrucciones para cambiar de zona y cancelar solicitud
+- ✅ Instrucciones para editar órdenes enviadas
 - ✅ Agregada sección completa de Solicitar Asistencia
 - ✅ Instrucciones para usar búsqueda de solicitudes
 - ✅ Instrucciones para crear solicitudes personalizadas

@@ -116,9 +116,14 @@
 
 ---
 
-**Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.1  
+**Última actualización**: Enero 2025  
+**Versión del documento**: 1.2  
 **Responsable**: Equipo de desarrollo
+
+### Cambios Recientes (Enero 2025)
+- ✅ Mejoras en navegación del menú con preservación de estado
+- ✅ Mejoras en experiencia de usuario al navegar entre menú y detalle
+- ✅ Funcionalidad mejorada de edición de órdenes
 
 ### Cambios Recientes (Diciembre 2024)
 - ✅ Agregada funcionalidad de Solicitud de Asistencia a características principales

@@ -262,6 +262,29 @@ Este proyecto es propietario. Todos los derechos reservados.
 
 ### Cambios Recientes (Diciembre 2024)
 
+#### Nueva Funcionalidad: Edición de Órdenes
+- ✅ Pantalla de edición de órdenes (`/edit-order`)
+- ✅ Permite modificar órdenes enviadas antes de que la cocina las acepte
+- ✅ Modificar cantidades de items
+- ✅ Eliminar items de la orden
+- ✅ Agregar notas de último minuto
+- ✅ Actualizar total automáticamente
+- ✅ Diseño moderno con visualización de items
+- ✅ Traducciones completas en 4 idiomas
+
+#### Nueva Funcionalidad: Lista de Espera (Waitlist)
+- ✅ Pantalla de lista de espera (`/waitlist`)
+- ✅ Escaneo QR para agregarse a lista de espera
+- ✅ Selección de zona (interior, terraza, jardín, patio, rooftop)
+- ✅ Selección de número de personas
+- ✅ Visualización de posición en la fila
+- ✅ Tiempo estimado de espera
+- ✅ Opción para cambiar de zona
+- ✅ Opción para cancelar solicitud
+- ✅ Diseño progresivo con dos estados (confirmación inicial y progreso)
+- ✅ Actualización en tiempo real de la lista
+- ✅ Traducciones completas en 4 idiomas
+
 #### Nueva Funcionalidad: Solicitud de Asistencia
 - ✅ Pantalla de solicitud de asistencia (`/request-assistance`)
 - ✅ Campo de búsqueda con **búsqueda fuzzy (difusa)** mejorada
@@ -297,3 +320,18 @@ Este proyecto es propietario. Todos los derechos reservados.
 - ✅ Todas las traducciones de la página de agregar tarjeta
 - ✅ Mensajes de error y éxito en todos los idiomas
 - ✅ Traducciones para OCR y escaneo de tarjetas
+
+#### Mejoras: Gestión de Imágenes de Productos
+- ✅ Actualización de imágenes de productos para usar archivos locales
+- ✅ Imágenes de coctelería migradas a archivos locales (`/public`)
+- ✅ Imágenes de postres migradas a archivos locales (`/public`)
+- ✅ Imágenes de bebidas migradas a archivos locales (`/public`)
+- ✅ Mejora en rendimiento al usar recursos locales en lugar de URLs externas
+- ✅ Corrección de imágenes en pantalla de edición de órdenes
+
+#### Mejoras: Navegación y Experiencia de Usuario
+- ✅ Preservación de categoría seleccionada al regresar del detalle de producto
+- ✅ Preservación de posición de scroll al regresar del detalle de producto
+- ✅ Scroll automático al inicio al abrir detalle de producto
+- ✅ Botón para agregar más items en pantalla de edición de órdenes
+- ✅ Mejora en la experiencia de navegación entre menú y detalle de productos

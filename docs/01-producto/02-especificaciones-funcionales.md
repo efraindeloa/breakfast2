@@ -452,44 +452,128 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 
 #### Funcionalidades
 
+##### Selección de Tipo de Opinión
+- **Experiencia General**: Opinión general sobre el restaurante/orden
+- **Producto Específico**: Opinión sobre un producto individual de la orden
+- Selector horizontal con cards scrollables
+- Indicador visual de selección (check_circle)
+- Badge "Revisado" para productos ya calificados
+- Badge "Personalizado" para productos con modificaciones
+- Badge "Tradicional" para productos sin modificaciones
+
 ##### Calificación por estrellas
-- 5 estrellas interactivas
+- 5 estrellas interactivas (tamaño grande: text-5xl)
 - Hover para previsualizar
 - Click para seleccionar
-- Etiqueta descriptiva según calificación
+- Etiqueta descriptiva centrada debajo de las estrellas
+- Texto de calificación (ej: "4.0 - ¡Muy bueno!")
 
 ##### Chips de selección rápida
-- Opciones predefinidas (Excelente servicio, Comida deliciosa, etc.)
+- Opciones predefinidas según tipo de opinión:
+  - **Experiencia**: Excelente servicio, Comida deliciosa, Ambiente agradable, Café perfecto, Rápida atención
+  - **Producto**: Excelente servicio, Comida deliciosa, Temperatura perfecta, Buena porción, Bien presentado
 - Búsqueda/autocompletado para encontrar opciones
 - Agregar opciones personalizadas
-- Selección múltiple
+- Selección múltiple con estilo rounded-full
+- Chips seleccionados con fondo `#fef3e2` y borde primario
 
 ##### Campo de comentarios
-- Textarea libre
+- Textarea libre con estilo rounded-2xl
 - Placeholder con sugerencias
 - Máximo de caracteres: 1000
 
 ##### Subida de fotos/videos
 - Hasta 5 archivos
+- Grid de 4 columnas, aspect-square
+- Las fotos se muestran en el lugar del botón de agregar
+- El siguiente espacio disponible muestra el botón de agregar
 - Preview de imágenes
-- Indicador de cantidad seleccionada
+- Indicador de cantidad seleccionada (X / 5)
+- Toggle para vincular fotos a un producto específico (solo para opiniones de productos)
 
 ##### Publicar opinión
 - Botón para publicar
 - Validación: Requiere al menos calificación
+- Permite editar opiniones existentes
+
+##### Edición de Opiniones
+- Botón "Editar Opiniones" en historial de órdenes
+- Carga datos existentes en el formulario
+- Actualiza la opinión existente en lugar de crear nueva
+- Muestra timestamp original y fecha de actualización
 
 #### Reglas de negocio
+- Solo se pueden calificar productos que se ordenaron y pagaron
 - La calificación es obligatoria (1-5 estrellas)
 - Los chips son opcionales
 - El comentario es opcional
 - Máximo 5 archivos multimedia
 - Tipos permitidos: image/*, video/*
 - Tamaño máximo por archivo: 10MB
+- Cada producto puede tener su propia calificación independiente
+- Al cambiar de producto seleccionado, se limpian todos los campos
+- Si un producto ya tiene calificación, se cargan los datos al seleccionarlo
+- Las opiniones se guardan en `localStorage` con la clave `user_reviews`
+- Cada opinión incluye: id, orderId, type, itemId, itemName, rating, chips, comment, media, timestamp, updatedAt
 
 #### Contextos de uso
-- **Producto individual**: Se puede acceder desde detalle de producto
-- **Orden completa**: Se puede acceder desde historial de órdenes
+- **Producto individual**: Se puede acceder desde detalle de producto (botón removido, solo ver opiniones)
+- **Orden completa**: Se puede acceder desde historial de órdenes después del pago
 - **Restaurante**: Se puede acceder desde perfil (próximamente)
+
+### 11.2 Pantalla de Opiniones Verificadas (`ProductReviewsScreen`)
+**Ruta**: `/product-reviews/:dishId`
+
+#### Funcionalidades
+
+##### Estadísticas del Producto
+- **Calificación Promedio**: Número grande (ej: 4.8) con formato decimal
+- **Total de Reseñas**: Contador de reseñas (ej: "1,245 reseñas")
+- **Distribución por Estrellas**: Barras de progreso mostrando porcentaje de cada calificación (5, 4, 3)
+- Fondo especial: `#fffcf5` con borde primario
+
+##### Filtros
+- **Más Recientes**: Ordena por fecha más reciente (por defecto)
+- **Con Foto**: Solo muestra reseñas que incluyen fotos/videos
+- **Modificados**: Solo muestra reseñas que fueron editadas
+- Botones horizontales scrollables
+- Indicador visual del filtro activo (fondo primario)
+
+##### Lista de Opiniones
+- **Información del Usuario**:
+  - Avatar (imagen o gradiente por defecto)
+  - Nombre del usuario (actualmente muestra ID corto del review)
+  - Badge "Verificado" (azul) con icono verified
+  - Fecha relativa (Hoy, Ayer, Hace X días) o fecha completa
+  - Indicador "Modificado" si fue editada
+- **Calificación**: Estrellas llenas según rating
+- **Comentario**: Texto completo de la opinión
+- **Chips**: Chips de características destacadas (si aplica)
+- **Media**: Grid horizontal de fotos/videos (si aplica)
+- **Footer**:
+  - Botones de likes y comentarios (contadores)
+  - Indicador "Traducido por IA" cuando aplica
+
+#### Reglas de negocio
+- Solo muestra opiniones verificadas del producto específico
+- Filtra por `itemId` que coincida con el `dishId` de la URL
+- Ordena según el filtro activo
+- Si no hay opiniones, muestra mensaje informativo
+- Accesible desde `DishDetailScreen` mediante botón o clic en número de reseñas
+
+### 11.3 Calificación en Detalle de Producto (`DishDetailScreen`)
+
+#### Funcionalidades
+- **Calificación Promedio**: Estrellas llenas según promedio redondeado
+- **Promedio Numérico**: Número con 1 decimal (ej: 4.8)
+- **Número de Reseñas**: Texto clickeable con formato "(X reseña/reseñas)"
+- Ubicado debajo del nombre del producto
+
+#### Reglas de negocio
+- Calcula el promedio de todas las reviews del producto
+- Solo se muestra si el producto tiene al menos una review
+- El número de reseñas es un botón que navega a `/product-reviews/:id`
+- Actualización en tiempo real al guardar nuevas reviews
 
 ---
 
@@ -571,7 +655,123 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 
 ---
 
-## 15. Restricciones y Validaciones
+## 15. Solicitud de Asistencia
+
+### 15.1 Pantalla de Solicitud de Asistencia (`RequestAssistanceScreen`)
+**Ruta**: `/request-assistance`
+
+#### Funcionalidades
+
+##### Historial de Solicitudes
+- Muestra todas las solicitudes realizadas durante la sesión
+- Información mostrada:
+  - Icono de la solicitud
+  - Nombre/descripción de la solicitud
+  - Hora de envío (formato HH:MM)
+  - Badge "Personalizada" si es una solicitud creada dinámicamente
+  - Estado "Enviada" con check verde
+- Contador de solicitudes en el header
+- Scroll automático si hay muchas solicitudes (máximo 48 de altura)
+
+##### Botón "Solicitar Asistencia Personalizada"
+- Botón destacado con fondo primario y texto blanco
+- Ubicado después del historial y antes del campo de búsqueda
+- Permite solicitar que se acerque un mesero personalmente
+- Se deshabilita temporalmente después de hacer clic (3 segundos)
+- Icono: `person`
+
+##### Campo de Búsqueda
+- Campo de texto para buscar solicitudes
+- Filtrado en tiempo real mientras se escribe
+- Busca en:
+  - El nombre del botón
+  - Las palabras clave asociadas a cada solicitud
+- Botón para limpiar la búsqueda
+
+##### Grid de Botones de Solicitudes
+- Grid de 2 columnas con botones de solicitudes disponibles
+- Botones predefinidos:
+  - **Cubiertos y Vasos**: `restaurant`
+  - **Servilletas**: `inventory`
+  - **Limpiar Derrame (Mesa)**: `cleaning_services`
+  - **Limpiar Derrame (Piso)**: `cleaning_services`
+  - **Tortillas**: `lunch_dining`
+  - **Bolillo**: `bakery_dining`
+  - **Picante**: `local_fire_department`
+
+##### Filtrado Fuzzy (Búsqueda Difusa)
+- Al escribir en el campo de búsqueda, se filtran los botones usando búsqueda difusa
+- **Funcionalidades de búsqueda fuzzy**:
+  - **Normalización**: Elimina acentos y convierte a minúsculas
+  - **Coincidencia exacta**: Encuentra coincidencias exactas del texto
+  - **Coincidencia de subcadena**: Encuentra coincidencias parciales
+  - **Coincidencia por palabras**: Todas las palabras del query deben aparecer en algún lugar
+  - **Coincidencia parcial de caracteres**: Permite errores menores de tipeo (≥70% de caracteres coinciden en orden)
+  - **Coincidencia de caracteres consecutivos**: Busca secuencias de caracteres en orden
+- **Ordenamiento por relevancia**: Los resultados se ordenan por score de relevancia (mayor score primero)
+- **Score de relevancia**:
+  - Coincidencia exacta en label: 100 puntos
+  - Coincidencia al inicio del label: 80 puntos
+  - Coincidencia en label: 50 puntos
+  - Coincidencia exacta en keyword: 60 puntos
+  - Coincidencia en keyword: 30 puntos
+- Ejemplos:
+  - Escribir "Derrame" muestra solo "Limpiar Derrame (Mesa)" y "Limpiar Derrame (Piso)"
+  - Escribir "deram" (error de tipeo) también encuentra "Derrame"
+  - Escribir "Vaso" muestra "Cubiertos y Vasos"
+  - Escribir "Servilleta" muestra "Servilletas"
+  - Escribir "cubier" encuentra "Cubiertos y Vasos"
+
+##### Creación de Solicitudes Personalizadas
+- Si no hay coincidencias en la búsqueda, aparece un botón para crear solicitud personalizada
+- El botón muestra:
+  - Icono genérico `priority_high` (!)
+  - El texto que el comensal escribió como título
+- Al hacer clic, se crea y envía la solicitud personalizada
+- El botón se marca temporalmente como "Solicitado" por 3 segundos
+
+##### Estados Visuales
+- **Normal**: Botón blanco/gris con borde, hover muestra borde primario
+- **Solicitado**: Fondo primario claro, borde primario, icono en fondo primario sólido con texto blanco, badge "Solicitado" con check
+- **Deshabilitado**: Opacidad reducida, cursor no permitido
+
+#### Reglas de negocio
+- Las solicitudes se guardan en `localStorage` con la clave `assistance_history`
+- El historial persiste durante la sesión del comensal
+- El historial se limpia automáticamente cuando se completa el pago
+- Los botones se deshabilitan temporalmente (3 segundos) después de hacer clic para evitar solicitudes duplicadas
+- El campo de búsqueda se limpia después de crear una solicitud personalizada (después de 3 segundos)
+- Las solicitudes personalizadas se identifican con el badge "Personalizada" en el historial
+
+#### Palabras Clave para Búsqueda
+
+##### Cubiertos y Vasos
+- `cubiertos`, `vasos`, `cuchara`, `tenedor`, `cuchillo`, `vidrio`, `utensilios`, `cutlery`, `glasses`, `utensils`
+
+##### Servilletas
+- `servilletas`, `servilleta`, `napkins`, `napkin`, `papel`
+
+##### Derrame (Mesa)
+- `derrame`, `mesa`, `table`, `spill`, `limpiar`, `clean`, `líquido`, `derramado`, `accidente`
+
+##### Derrame (Piso)
+- `derrame`, `piso`, `floor`, `suelo`, `spill`, `limpiar`, `clean`, `líquido`, `derramado`, `accidente`
+
+##### Tortillas
+- `tortillas`, `tortilla`
+
+##### Bolillo
+- `bolillo`, `pan`, `bread`, `roll`, `bollo`
+
+##### Picante
+- `picante`, `salsa`, `sauce`, `spicy`, `chile`, `chili`, `condimento`
+
+##### Llamar Mesero
+- `mesero`, `camarero`, `waiter`, `servidor`, `servicio`, `atención`, `ayuda`, `help`, `asistencia`
+
+---
+
+## 16. Restricciones y Validaciones
 
 ### 15.1 Autenticación
 - Todas las pantallas principales requieren autenticación
@@ -622,5 +822,11 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 ---
 
 **Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.0  
+**Versión del documento**: 1.1  
 **Responsable**: Equipo de desarrollo
+
+### Cambios Recientes (Diciembre 2024)
+- ✅ Agregada sección completa de Solicitud de Asistencia (15)
+- ✅ Documentadas todas las funcionalidades de búsqueda inteligente
+- ✅ Documentadas solicitudes predefinidas y personalizadas
+- ✅ Documentado historial de solicitudes y su limpieza automática

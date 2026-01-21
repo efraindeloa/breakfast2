@@ -3,6 +3,22 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { ORDER_HISTORY_STORAGE_KEY, HistoricalOrder } from '../types/order';
 
+const REVIEWS_STORAGE_KEY = 'user_reviews';
+
+interface Review {
+  id: string;
+  orderId: string;
+  type: 'experience' | 'dish';
+  itemId?: number;
+  itemName?: string;
+  rating: number;
+  chips: string[];
+  comment: string;
+  media: string[];
+  timestamp: string;
+  updatedAt?: string;
+}
+
 interface OrderItem {
   id: number;
   name: string;
@@ -70,6 +86,33 @@ const OrderHistoryScreen: React.FC = () => {
     }
     return [];
   }, []);
+
+  // Cargar opiniones existentes
+  const allReviews = useMemo<Review[]>(() => {
+    try {
+      const reviewsData = localStorage.getItem(REVIEWS_STORAGE_KEY);
+      if (reviewsData) {
+        return JSON.parse(reviewsData);
+      }
+    } catch {
+      return [];
+    }
+    return [];
+  }, []);
+
+  // Función helper para obtener el historicalOrderId de una Order
+  const getHistoricalOrderId = (orderIndex: number): string | null => {
+    if (historicalOrders.length > 0 && orderIndex >= 0 && orderIndex < historicalOrders.length) {
+      return historicalOrders[orderIndex].id;
+    }
+    return null;
+  };
+
+  // Función helper para verificar si hay opiniones para una orden
+  const hasReviewsForOrder = (historicalOrderId: string | null): boolean => {
+    if (!historicalOrderId) return false;
+    return allReviews.some(review => review.orderId === historicalOrderId);
+  };
 
   // Convertir órdenes históricas al formato Order para compatibilidad con el componente existente
   const orders: Order[] = useMemo(() => {
@@ -395,6 +438,8 @@ const OrderHistoryScreen: React.FC = () => {
                 statusColor={getStatusColor(order.status)}
                 statusLabel={getStatusLabel(order.status)}
                 onNavigateToTransaction={() => navigate(`/transactions?transactionId=${order.transactionId}`)}
+                historicalOrderId={getHistoricalOrderId(order.id - 1)}
+                hasReviews={hasReviewsForOrder(getHistoricalOrderId(order.id - 1))}
               />
             </div>
           ))}
@@ -536,7 +581,8 @@ const OrderHistoryScreen: React.FC = () => {
   );
 };
 
-const OrderItem: React.FC<{ order: Order; statusColor: string; statusLabel: string; onNavigateToTransaction: () => void }> = ({ order, statusColor, statusLabel, onNavigateToTransaction }) => {
+const OrderItem: React.FC<{ order: Order; statusColor: string; statusLabel: string; onNavigateToTransaction: () => void; historicalOrderId: string | null; hasReviews: boolean }> = ({ order, statusColor, statusLabel, onNavigateToTransaction, historicalOrderId, hasReviews }) => {
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
@@ -548,6 +594,13 @@ const OrderItem: React.FC<{ order: Order; statusColor: string; statusLabel: stri
   const handleViewPayment = (e: React.MouseEvent) => {
     e.stopPropagation();
     onNavigateToTransaction();
+  };
+
+  const handleReviewClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (historicalOrderId) {
+      navigate('/review', { state: { orderId: historicalOrderId } });
+    }
   };
 
   return (
@@ -616,14 +669,11 @@ const OrderItem: React.FC<{ order: Order; statusColor: string; statusLabel: stri
           </div>
           <div className="flex gap-2 mt-3">
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate('/review', { state: { reviewType: 'order', orderId: order.id } });
-              }}
+              onClick={handleReviewClick}
               className="flex-1 py-2 px-4 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
             >
-              <span className="material-symbols-outlined text-base">rate_review</span>
-              {t('orderHistory.leaveReview')}
+              <span className="material-symbols-outlined text-base">{hasReviews ? 'edit' : 'rate_review'}</span>
+              {hasReviews ? (t('orderHistory.editReviews') || 'Editar Opiniones') : t('orderHistory.leaveReview')}
             </button>
             <button
               onClick={handleViewPayment}

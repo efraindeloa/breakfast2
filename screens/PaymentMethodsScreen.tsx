@@ -518,10 +518,7 @@ const PaymentMethodsScreen: React.FC = () => {
             {t('payment.assistanceMessage')}
           </p>
           <button
-            onClick={() => {
-              // Aquí se podría implementar la lógica para solicitar asistencia
-              alert('Asistencia solicitada. Un asistente acudirá a tu mesa pronto.');
-            }}
+            onClick={() => navigate('/request-assistance')}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-95"
           >
             <span className="material-symbols-outlined">support_agent</span>

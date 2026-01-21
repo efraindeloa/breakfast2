@@ -18,7 +18,8 @@
     "html5-qrcode": "^2.3.8",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react-router-dom": "^7.12.0"
+    "react-router-dom": "^7.12.0",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@capacitor/android": "^8.0.1",

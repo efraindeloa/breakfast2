@@ -502,6 +502,89 @@
 
 ---
 
+### EPIC 10: Solicitud de Asistencia
+
+#### US-025: Como comensal quiero solicitar asistencia del restaurante desde la aplicación
+**Prioridad**: Alta  
+**Criterios de aceptación**:
+- Puedo acceder a una pantalla de solicitud de asistencia
+- Puedo ver opciones predefinidas de solicitudes comunes
+- Puedo seleccionar una opción y enviarla
+- Recibo confirmación visual de que la solicitud fue enviada
+
+**Caso normal**:
+1. Usuario hace click en "Solicitar asistencia" en la pantalla de inicio o métodos de pago
+2. Navega a la pantalla de solicitud de asistencia
+3. Ve opciones predefinidas (cubiertos, servilletas, limpiar derrame, etc.)
+4. Hace click en una opción (ej: "Cubiertos y Vasos")
+5. El botón se marca como "Solicitado"
+6. La solicitud aparece en el historial
+
+**Caso alterno**: Solicitar asistencia personalizada
+1. Usuario hace click en "Solicitar asistencia personalizada"
+2. Se marca como "Solicitado"
+3. Aparece en el historial como "Llamar Mesero"
+
+---
+
+#### US-026: Como comensal quiero buscar solicitudes rápidamente escribiendo lo que necesito
+**Prioridad**: Media  
+**Criterios de aceptación**:
+- Puedo escribir en un campo de búsqueda
+- Los botones se filtran en tiempo real según lo que escribo
+- Si no hay coincidencias, puedo crear una solicitud personalizada
+
+**Caso normal**:
+1. Usuario escribe "Derrame" en el campo de búsqueda
+2. Solo aparecen los botones "Limpiar Derrame (Mesa)" y "Limpiar Derrame (Piso)"
+3. Usuario hace click en el botón deseado
+4. Se envía la solicitud
+
+**Caso alterno**: Búsqueda sin resultados
+1. Usuario escribe "Agua" en el campo de búsqueda
+2. No aparecen coincidencias
+3. Aparece un botón con icono "!" y el texto "Agua"
+4. Usuario hace click en el botón
+5. Se crea y envía una solicitud personalizada "Agua"
+
+---
+
+#### US-027: Como comensal quiero ver el historial de mis solicitudes para confirmar que fueron enviadas
+**Prioridad**: Media  
+**Criterios de aceptación**:
+- Puedo ver todas mis solicitudes realizadas durante la sesión
+- Veo la hora de cada solicitud
+- Puedo distinguir entre solicitudes predefinidas y personalizadas
+- Veo el estado "Enviada" con confirmación visual
+
+**Caso normal**:
+1. Usuario ha hecho varias solicitudes durante su visita
+2. Abre la pantalla de solicitud de asistencia
+3. Ve el historial al inicio de la pantalla
+4. Cada solicitud muestra:
+   - Icono
+   - Nombre
+   - Hora de envío
+   - Badge "Personalizada" si aplica
+   - Estado "Enviada" con check verde
+
+---
+
+#### US-028: Como comensal quiero que el historial de solicitudes se limpie al pagar
+**Prioridad**: Baja  
+**Criterios de aceptación**:
+- El historial se mantiene durante toda mi visita
+- El historial se limpia automáticamente cuando completo el pago
+- Al iniciar una nueva visita, el historial está vacío
+
+**Caso normal**:
+1. Usuario hace varias solicitudes durante su visita
+2. Completa el pago de su orden
+3. El historial de solicitudes se limpia automáticamente
+4. En su próxima visita, el historial está vacío
+
+---
+
 ## Casos de Uso del Restaurante (Futuros)
 
 ### EPIC 11: Gestión de Órdenes (Backend/Futuro)
@@ -552,11 +635,98 @@
 | US-020 | Media | ✅ Completo | Opiniones |
 | US-021 | Media | ✅ Completo | Opiniones |
 | US-022 | Media | ✅ Completo | Datos Fiscales |
+| US-025 | Alta | ✅ Completo | Solicitud Asistencia |
+| US-026 | Media | ✅ Completo | Solicitud Asistencia |
+| US-027 | Media | ✅ Completo | Solicitud Asistencia |
+| US-028 | Baja | ✅ Completo | Solicitud Asistencia |
 | US-023 | Alta | 🔄 Pendiente | Gestión Restaurante |
 | US-024 | Media | 🔄 Pendiente | Gestión Restaurante |
+| US-029 | Media | ✅ Completo | Opiniones Verificadas |
+| US-030 | Media | ✅ Completo | Opiniones |
+| US-031 | Media | ✅ Completo | Pagos |
 
 ---
 
 **Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.0  
+**Versión del documento**: 1.1  
 **Responsable**: Equipo de desarrollo
+
+### EPIC 11: Opiniones Verificadas
+
+#### US-029: Como comensal quiero ver las opiniones verificadas de un producto antes de ordenarlo
+**Prioridad**: Media  
+**Criterios de aceptación**:
+- Puedo ver la calificación promedio del producto en su página de detalle
+- Puedo hacer click en el número de reseñas para ver todas las opiniones
+- Ve estadísticas del producto (promedio, distribución por estrellas)
+- Puedo filtrar opiniones (Más Recientes, Con Foto, Modificados)
+- Ve información detallada de cada opinión (usuario, fecha, calificación, comentarios, fotos)
+
+**Caso normal**:
+1. Usuario abre detalle de producto
+2. Ve calificación promedio con estrellas y número de reseñas
+3. Hace click en número de reseñas
+4. Navega a página de opiniones verificadas
+5. Ve estadísticas y lista de opiniones
+6. Puede filtrar por tipo de opinión
+
+**Caso alterno**: Producto sin opiniones
+1. Usuario abre detalle de producto sin opiniones
+2. No ve calificación ni número de reseñas
+3. Al hacer click en botón de opiniones, ve mensaje de "No hay opiniones disponibles"
+
+---
+
+#### US-030: Como comensal quiero editar mis opiniones después de publicarlas
+**Prioridad**: Media  
+**Criterios de aceptación**:
+- Puedo acceder a editar una opinión desde el historial de órdenes
+- Ve el botón "Editar Opiniones" en lugar de "Dejar Opinión" si ya dejé una
+- Puedo cambiar calificación, chips, comentarios y fotos
+- Se guarda la fecha original y se agrega fecha de actualización
+- La opinión actualizada se muestra con indicador "Modificado"
+
+**Caso normal**:
+1. Usuario tiene una orden completada con opinión publicada
+2. Hace click en "Editar Opiniones" en el historial
+3. Se cargan los datos existentes en el formulario
+4. Usuario modifica calificación o comentario
+5. Publica cambios
+6. La opinión se actualiza y muestra fecha de modificación
+
+---
+
+#### US-031: Como comensal quiero escanear mi tarjeta bancaria con la cámara para agregarla más rápido
+**Prioridad**: Media  
+**Criterios de aceptación**:
+- Puedo escanear mi tarjeta usando la cámara del dispositivo
+- La aplicación extrae automáticamente número de tarjeta, nombre y fecha de vencimiento
+- Los campos se llenan automáticamente
+- Puedo revisar y editar los datos extraídos si hay errores
+- Si el reconocimiento falla, puedo ingresar los datos manualmente
+- El CVV siempre se ingresa manualmente por seguridad
+
+**Caso normal**:
+1. Usuario hace click en "Agregar Tarjeta"
+2. Hace click en "Escanear tarjeta con cámara"
+3. Permite acceso a la cámara
+4. Coloca tarjeta dentro del marco con buena iluminación
+5. Hace click en "Capturar Tarjeta"
+6. La aplicación procesa la imagen y extrae datos
+7. Los campos se llenan automáticamente
+8. Usuario ingresa CVV manualmente
+9. Hace click en "Agregar Tarjeta"
+
+**Caso alterno**: Reconocimiento fallido
+1. Usuario escanea tarjeta pero el reconocimiento falla
+2. Sistema muestra mensaje: "No se pudieron extraer datos"
+3. Usuario puede intentar nuevamente o ingresar datos manualmente
+
+---
+
+### Cambios Recientes (Diciembre 2024)
+- ✅ Agregado EPIC 10: Solicitud de Asistencia
+- ✅ Agregadas User Stories US-025 a US-028
+- ✅ Agregado EPIC 11: Opiniones Verificadas
+- ✅ Agregadas User Stories US-029 a US-031
+- ✅ Actualizada matriz de prioridades con nuevas user stories

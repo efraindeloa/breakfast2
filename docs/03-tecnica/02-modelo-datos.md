@@ -327,6 +327,68 @@ export const restaurantConfig: RestaurantConfig = {
 
 ---
 
+## Solicitud de Asistencia (Assistance)
+
+### Definición
+```typescript
+interface AssistanceRequest {
+  id: string;
+  icon: string;
+  label: string;
+  translationKey: string;
+  searchKeywords?: string[];
+}
+
+interface AssistanceHistoryItem {
+  id: string;
+  label: string;
+  icon: string;
+  timestamp: string; // ISO string
+  isCustom: boolean;
+}
+```
+
+### Almacenamiento
+- **Clave localStorage**: `assistance_history`
+- **Tipo**: Array de `AssistanceHistoryItem`
+- **Persistencia**: Durante la sesión hasta completar el pago
+
+### Tipos de Solicitudes Predefinidas
+- `cutlery`: Cubiertos y Vasos
+- `napkins`: Servilletas
+- `spillTable`: Limpiar Derrame (Mesa)
+- `spillFloor`: Limpiar Derrame (Piso)
+- `tortillas`: Tortillas
+- `bolillo`: Bolillo
+- `spicy`: Picante
+- `waiter`: Solicitar Asistencia Personalizada (Llamar Mesero)
+
+### Ejemplo
+```json
+[
+  {
+    "id": "history-1703123456789-abc123",
+    "label": "Cubiertos y Vasos",
+    "icon": "restaurant",
+    "timestamp": "2024-12-20T10:30:00.000Z",
+    "isCustom": false
+  },
+  {
+    "id": "history-1703123457890-def456",
+    "label": "Agua",
+    "icon": "priority_high",
+    "timestamp": "2024-12-20T10:35:00.000Z",
+    "isCustom": true
+  }
+]
+```
+
+### Limpieza
+- El historial se limpia automáticamente cuando se completa el pago en `PaymentSuccessScreen.handleFinish()`
+- Se elimina con `localStorage.removeItem('assistance_history')`
+
+---
+
 ## Claves de localStorage
 
 | Clave | Tipo | Descripción |
@@ -338,6 +400,7 @@ export const restaurantConfig: RestaurantConfig = {
 | `order_history` | HistoricalOrder[] | Historial de órdenes completadas |
 | `transactions` | Transaction[] | Historial de transacciones |
 | `group_order` | GroupOrder \| null | Orden grupal activa |
+| `assistance_history` | AssistanceHistoryItem[] | Historial de solicitudes de asistencia |
 
 ---
 
@@ -437,5 +500,90 @@ GroupOrder
 ---
 
 **Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.0  
+**Versión del documento**: 1.1  
 **Responsable**: Equipo de desarrollo
+
+### Opinión de Usuario (Review)
+
+#### Definición
+```typescript
+interface Review {
+  id: string;
+  orderId: string;
+  type: 'experience' | 'dish';
+  itemId?: number;
+  itemName?: string;
+  rating: number;
+  chips: string[];
+  comment: string;
+  media: string[]; // URLs de archivos (en producción)
+  timestamp: string;
+  updatedAt?: string;
+}
+```
+
+#### Campos
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | `string` | Identificador único de la opinión |
+| `orderId` | `string` | ID de la orden relacionada |
+| `type` | `'experience' \| 'dish'` | Tipo de opinión: experiencia general o producto específico |
+| `itemId` | `number?` | ID del producto (solo si type === 'dish') |
+| `itemName` | `string?` | Nombre del producto (solo si type === 'dish') |
+| `rating` | `number` | Calificación de 1 a 5 estrellas |
+| `chips` | `string[]` | Array de características destacadas |
+| `comment` | `string` | Comentario libre del usuario |
+| `media` | `string[]` | Array de URLs de fotos/videos |
+| `timestamp` | `string` | Fecha de creación (ISO 8601) |
+| `updatedAt` | `string?` | Fecha de última actualización (ISO 8601, solo si fue editada) |
+
+#### Almacenamiento
+- **Clave localStorage**: `user_reviews`
+- **Tipo**: Array de objetos `Review`
+- **Persistencia**: Las opiniones persisten entre sesiones
+
+#### Ejemplo
+```json
+[
+  {
+    "id": "review-1703123456789-abc123",
+    "orderId": "ORD-2024-001",
+    "type": "dish",
+    "itemId": 1,
+    "itemName": "Omelette con Jamón",
+    "rating": 5,
+    "chips": ["Excelente servicio", "Comida deliciosa"],
+    "comment": "Excelente platillo, muy recomendado",
+    "media": [],
+    "timestamp": "2024-12-20T10:30:00Z",
+    "updatedAt": "2024-12-20T11:00:00Z"
+  },
+  {
+    "id": "review-1703123456790-def456",
+    "orderId": "ORD-2024-001",
+    "type": "experience",
+    "rating": 4,
+    "chips": ["Ambiente agradable", "Rápida atención"],
+    "comment": "Buena experiencia en general",
+    "media": [],
+    "timestamp": "2024-12-20T10:35:00Z"
+  }
+]
+```
+
+#### Reglas de negocio
+- Solo se pueden calificar productos que se ordenaron y pagaron
+- Cada producto puede tener su propia calificación independiente
+- Las opiniones se pueden editar después de publicarlas
+- Al editar una opinión, se actualiza el campo `updatedAt`
+
+---
+
+### Cambios Recientes (Diciembre 2024)
+- ✅ Agregado modelo de datos para solicitudes de asistencia (`AssistanceHistoryItem`)
+- ✅ Agregada clave `assistance_history` en localStorage
+- ✅ Documentación de tipos de solicitudes predefinidas
+- ✅ Agregado modelo de datos para opiniones de usuarios (`Review`)
+- ✅ Agregada clave `user_reviews` en localStorage
+- ✅ Documentación de estructura de opiniones y tipos soportados

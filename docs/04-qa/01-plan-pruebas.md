@@ -55,10 +55,16 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 #### Pagos
 - ✅ Métodos de pago disponibles
 - ✅ Agregar nueva tarjeta
+- ✅ **Escaneo de tarjeta con OCR real** usando Tesseract.js
+- ✅ Extracción automática de datos de tarjeta (número, nombre, fecha)
+- ✅ Ingreso manual de datos de tarjeta
 - ✅ Validación de datos de tarjeta
 - ✅ Procesamiento de pago (simulado)
 - ✅ Confirmación de pago
 - ✅ Historial de transacciones
+- ✅ Manejo de errores en OCR
+- ✅ Validación de formato de número de tarjeta (16 dígitos)
+- ✅ Formateo automático de número de tarjeta con espacios
 
 #### Pedidos en Grupo
 - ✅ Escaneo de QR
@@ -73,14 +79,34 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 - ✅ Búsqueda/autocompletado de chips
 - ✅ Agregar chips personalizados
 - ✅ Comentarios
-- ✅ Subida de fotos/videos
+- ✅ Subida de fotos/videos (hasta 5 archivos)
+- ✅ Vincular fotos a producto específico
 - ✅ Publicación de opinión
+- ✅ Edición de opiniones existentes
+- ✅ Calificación independiente por producto
+- ✅ Limpieza automática de campos al cambiar de producto
+- ✅ Carga automática de datos al seleccionar producto ya calificado
+- ✅ Solo se pueden calificar productos ordenados y pagados
+- ✅ Ver opiniones verificadas de productos
+- ✅ Filtros en opiniones (Más Recientes, Con Foto, Modificados)
+- ✅ Estadísticas de productos (promedio, distribución)
+- ✅ Calificación promedio visible en detalle de producto
 
 #### Favoritos
 - ✅ Agregar a favoritos
 - ✅ Eliminar de favoritos
 - ✅ Lista de favoritos
 - ✅ Persistencia de favoritos
+
+#### Solicitud de Asistencia
+- ✅ Acceso a pantalla de solicitud de asistencia
+- ✅ Historial de solicitudes
+- ✅ **Búsqueda fuzzy (difusa)** que tolera errores de tipeo
+- ✅ Solicitudes predefinidas
+- ✅ Creación de solicitudes personalizadas
+- ✅ Confirmación visual de solicitudes
+- ✅ Limpieza de historial al pagar
+- ✅ Ordenamiento por relevancia en búsqueda
 
 #### Configuración
 - ✅ Cambio de idioma
@@ -242,8 +268,11 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 1. **Pedidos en grupo**
 2. **Sistema de opiniones**
 3. **Favoritos**
-4. **Cambio de idioma**
-5. **Modo oscuro/claro**
+4. **Búsqueda de solicitudes de asistencia**
+5. **Creación de solicitudes personalizadas**
+6. **Historial de solicitudes**
+7. **Cambio de idioma**
+8. **Modo oscuro/claro**
 
 ### Prioridad Baja (P2)
 1. **Configuración de IA**
@@ -405,5 +434,10 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 ---
 
 **Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.0  
+**Versión del documento**: 1.1  
 **Responsable**: QA Team
+
+### Cambios Recientes (Diciembre 2024)
+- ✅ Agregadas pruebas de Solicitud de Asistencia en áreas de prueba
+- ✅ Agregadas a casos de prueba prioritarios (P0 y P1)
+- ✅ Documentadas pruebas de búsqueda inteligente y solicitudes personalizadas

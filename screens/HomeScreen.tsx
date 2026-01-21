@@ -78,7 +78,7 @@ const HomeScreen: React.FC = () => {
           
           <div 
             onClick={() => navigate('/menu')}
-            className="flex flex-col gap-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 items-start shadow-sm hover:border-primary transition-colors cursor-pointer group"
+            className="flex flex-col gap-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 items-start shadow-sm hover:border-primary transition-colors cursor-pointer group min-h-[120px] w-full"
           >
             <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 group-hover:bg-primary transition-colors">
               <span className="material-symbols-outlined text-primary group-hover:text-white">restaurant_menu</span>
@@ -88,7 +88,7 @@ const HomeScreen: React.FC = () => {
           
           <div 
             onClick={() => navigate('/join-table')}
-            className="flex flex-col gap-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 items-start shadow-sm hover:border-primary transition-colors cursor-pointer group"
+            className="flex flex-col gap-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 items-start shadow-sm hover:border-primary transition-colors cursor-pointer group min-h-[120px] w-full"
           >
             <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 group-hover:bg-primary transition-colors">
               <span className="material-symbols-outlined text-primary group-hover:text-white">groups</span>
@@ -97,11 +97,8 @@ const HomeScreen: React.FC = () => {
           </div>
           
           <div 
-            onClick={() => {
-              // Aquí se podría implementar la lógica para solicitar asistencia
-              alert(t('payment.assistanceMessage').replace('«Solicitar asistencia»', '').trim() + ' ' + t('payment.requestAssistance') + '.');
-            }}
-            className="flex flex-col gap-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 items-start shadow-sm hover:border-primary transition-colors cursor-pointer group"
+            onClick={() => navigate('/request-assistance')}
+            className="flex flex-col gap-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 items-start shadow-sm hover:border-primary transition-colors cursor-pointer group min-h-[120px] w-full"
           >
             <div className="flex items-center justify-center size-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 group-hover:bg-blue-600 transition-colors">
               <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 group-hover:text-white">person</span>

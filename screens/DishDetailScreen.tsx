@@ -1,8 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
+
+const REVIEWS_STORAGE_KEY = 'user_reviews';
+
+interface Review {
+  id: string;
+  orderId: string;
+  type: 'experience' | 'dish';
+  itemId?: number;
+  itemName?: string;
+  rating: number;
+  chips: string[];
+  comment: string;
+  media: string[];
+  timestamp: string;
+  updatedAt?: string;
+}
 
 type OriginType = 'mar' | 'tierra' | 'aire' | 'vegetariano' | 'vegano' | '';
 
@@ -201,7 +217,7 @@ const allDishes: Dish[] = [
     name: 'Carajillo',
     description: 'Café con licor 43',
     price: '$145.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+    image: '/carajillo.jpeg',
     category: 'Coctelería',
     origin: 'digestivos' as OriginType,
   },
@@ -210,7 +226,7 @@ const allDishes: Dish[] = [
     name: 'Coketillo',
     description: 'Carajillo con paleta de chocomilk',
     price: '$160.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+    image: '/coketillo_donk.jpg',
     category: 'Coctelería',
     origin: 'digestivos' as OriginType,
   },
@@ -219,7 +235,7 @@ const allDishes: Dish[] = [
     name: 'Carajilla',
     description: 'Café con Baileys',
     price: '$145.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+    image: '/carajilla.jpg',
     category: 'Coctelería',
     origin: 'digestivos' as OriginType,
   },
@@ -228,7 +244,7 @@ const allDishes: Dish[] = [
     name: 'Licor 43',
     description: '700 ml - Porción: $140.00 / Botella: $1,400.00',
     price: '$140.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+    image: '/licor43.webp',
     category: 'Coctelería',
     origin: 'digestivos' as OriginType,
   },
@@ -237,7 +253,7 @@ const allDishes: Dish[] = [
     name: 'Baileys',
     description: '700 ml - Porción: $120.00 / Botella: $1,200.00',
     price: '$120.00',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+    image: '/baileys.webp',
     category: 'Coctelería',
     origin: 'digestivos' as OriginType,
   },
@@ -395,6 +411,32 @@ const DishDetailScreen: React.FC = () => {
   // Obtener opciones de tamaño si existen
   const dishDescription = dish ? (getDishDescription(dish.id) || dish.description) : '';
   const sizeOptions = parseSizeOptions(dishDescription);
+
+  // Cargar reviews del producto y calcular promedio
+  const productRating = useMemo(() => {
+    if (!dish) return null;
+
+    try {
+      const reviewsData = localStorage.getItem(REVIEWS_STORAGE_KEY);
+      if (reviewsData) {
+        const allReviews: Review[] = JSON.parse(reviewsData);
+        const productReviews = allReviews.filter(r => r.type === 'dish' && r.itemId === dish.id);
+        
+        if (productReviews.length === 0) return null;
+
+        const total = productReviews.reduce((sum, r) => sum + r.rating, 0);
+        const average = total / productReviews.length;
+        
+        return {
+          average: Math.round(average * 10) / 10, // Redondear a 1 decimal
+          count: productReviews.length
+        };
+      }
+    } catch (error) {
+      console.error('Error loading reviews:', error);
+    }
+    return null;
+  }, [dish]);
 
   // Si no se encuentra el plato, redirigir al menú (usando useEffect para evitar warning)
   useEffect(() => {
@@ -559,12 +601,12 @@ const DishDetailScreen: React.FC = () => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                navigate('/review', { state: { reviewType: 'dish', itemId: dish?.id } });
+                navigate(`/product-reviews/${dish?.id}`, { state: { productId: dish?.id, productName: dish?.name } });
               }}
               className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition-colors"
-              title={t('dishDetail.leaveReview')}
+              title={t('dishDetail.viewReviews') || 'Ver opiniones'}
             >
-              <span className="material-symbols-outlined">rate_review</span>
+              <span className="material-symbols-outlined">reviews</span>
             </button>
           </div>
         </div>
@@ -596,6 +638,33 @@ const DishDetailScreen: React.FC = () => {
               <h1 className="text-2xl font-bold text-[#181611] dark:text-white leading-tight mb-2">
                 {getDishName(dish.id)}
               </h1>
+              {/* Calificación con estrellas */}
+              {productRating && (
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="flex gap-0.5 text-primary">
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <span
+                        key={value}
+                        className={`material-symbols-outlined text-sm ${
+                          value <= Math.round(productRating.average) ? 'fill-icon' : ''
+                        }`}
+                        style={{ fontVariationSettings: value <= Math.round(productRating.average) ? "'FILL' 1" : "'FILL' 0" }}
+                      >
+                        star
+                      </span>
+                    ))}
+                  </div>
+                  <span className="text-sm font-semibold text-[#181611] dark:text-white">
+                    {productRating.average.toFixed(1)}
+                  </span>
+                  <button
+                    onClick={() => navigate(`/product-reviews/${dish.id}`, { state: { productId: dish.id, productName: dish.name } })}
+                    className="text-xs text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors underline"
+                  >
+                    ({productRating.count} {productRating.count === 1 ? t('productReviews.review') || 'reseña' : t('productReviews.reviews') || 'reseñas'})
+                  </button>
+                </div>
+              )}
               <div className="flex items-center gap-2 flex-wrap">
                 {dish.origin && getOriginIcon(dish.origin) && (
                   <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs font-medium">

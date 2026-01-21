@@ -65,7 +65,14 @@ const PaymentSuccessScreen: React.FC = () => {
     return [];
   }, []);
 
-  const handleFinish = () => {
+  const saveOrder = (): string | null => {
+    // Limpiar historial de solicitudes de asistencia
+    try {
+      localStorage.removeItem('assistance_history');
+    } catch (error) {
+      console.error('Error clearing assistance history:', error);
+    }
+
     // Combinar todas las órdenes en una sola orden histórica
     if (currentOrders.length > 0) {
       // Combinar todos los items de todas las órdenes
@@ -134,10 +141,24 @@ const PaymentSuccessScreen: React.FC = () => {
 
       // Limpiar las órdenes actuales
       localStorage.removeItem(ORDERS_STORAGE_KEY);
+
+      // Retornar el ID de la orden para usarlo en ReviewScreen
+      return historicalOrder.id;
     }
 
-    // Aquí se podría enviar la factura al correo seleccionado si wantsInvoice es true
-    navigate('/home');
+    return null;
+  };
+
+  const handleFinish = (navigateToReview: boolean = false) => {
+    const orderId = saveOrder();
+    
+    if (navigateToReview && orderId) {
+      // Navegar a review después de guardar la orden
+      navigate('/review', { state: { orderId, fromPayment: true } });
+    } else {
+      // Aquí se podría enviar la factura al correo seleccionado si wantsInvoice es true
+      navigate('/home');
+    }
   };
 
   return (
@@ -181,7 +202,7 @@ const PaymentSuccessScreen: React.FC = () => {
                 <button
                   onClick={() => {
                     setWantsInvoice(false);
-                    handleFinish();
+                    handleFinish(true); // Pasar true para navegar a review
                   }}
                   className="flex-1 bg-primary text-white font-semibold py-3 rounded-lg hover:bg-primary/90 transition-colors active:scale-95"
                 >
@@ -363,7 +384,7 @@ const PaymentSuccessScreen: React.FC = () => {
         {wantsInvoice === true && selectedEmailId && fiscalDataConfirmed && (
           <div className="w-full max-w-md mt-6">
             <button
-              onClick={handleFinish}
+              onClick={() => handleFinish(false)}
               className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
             >
               <span>{t('paymentSuccess.finish')}</span>

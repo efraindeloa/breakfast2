@@ -170,14 +170,43 @@ Verás:
 3. Haz click en **"Pagar"**
 
 #### Agregar Nueva Tarjeta
+
+##### Opción 1: Escanear Tarjeta con Cámara (Recomendado)
+
 1. Haz click en **"Agregar Tarjeta"**
-2. Ingresa:
+2. Haz click en **"Escanear tarjeta con cámara"**
+3. Permite el acceso a la cámara cuando se solicite
+4. **Coloca tu tarjeta dentro del marco** en la pantalla
+5. **Asegúrate de que haya buena iluminación** y que la tarjeta esté enfocada
+6. Haz click en **"Capturar Tarjeta"**
+7. La aplicación procesará la imagen y extraerá automáticamente:
    - Número de tarjeta
-   - Nombre en la tarjeta
-   - Fecha de expiración (MM/AA)
-   - CVV (3 o 4 dígitos)
-3. Haz click en **"Guardar"**
-4. La tarjeta quedará guardada para futuros pagos
+   - Nombre del titular
+   - Fecha de vencimiento
+8. Los campos se llenarán automáticamente
+9. Revisa que los datos sean correctos
+10. Si falta algún dato o hay un error, puedes editarlo manualmente
+11. Ingresa el **CVV** manualmente (3 o 4 dígitos) - esto no se escanea por seguridad
+12. Haz click en **"Agregar Tarjeta"**
+13. La tarjeta quedará guardada para futuros pagos
+
+**Consejos para mejor reconocimiento**:
+- Usa buena iluminación (evita sombras)
+- Mantén la tarjeta plana y dentro del marco
+- Asegúrate de que el texto sea visible y legible
+- Si el reconocimiento falla, puedes ingresar los datos manualmente
+
+##### Opción 2: Ingresar Datos Manualmente
+
+1. Haz click en **"Agregar Tarjeta"**
+2. Haz click en **"O ingresa manualmente"** (si estás usando el escáner) o simplemente llena los campos
+3. Ingresa:
+   - **Número de tarjeta**: 16 dígitos (se formatean automáticamente con espacios)
+   - **Nombre en la tarjeta**: Nombre tal como aparece en la tarjeta (se convierte a mayúsculas automáticamente)
+   - **Fecha de expiración**: Mes (MM) y Año (AA) en campos separados
+   - **CVV**: 3 o 4 dígitos (ubicado en la parte trasera de la tarjeta)
+4. Haz click en **"Agregar Tarjeta"**
+5. La tarjeta quedará guardada para futuros pagos
 
 ### Confirmación de Pago
 
@@ -218,7 +247,51 @@ Al momento de pagar:
 
 ---
 
-## ⭐ Opiniones
+## ⭐ Opiniones y Reseñas
+
+### Dejar una Opinión
+
+#### Sobre tu Orden Completa
+
+1. Después de completar el pago, puedes dejar una opinión general
+2. Si rechazas recibir factura, se te abrirá automáticamente la página de opiniones
+3. También puedes acceder desde el historial de órdenes haciendo click en "Dejar Opinión"
+
+#### Sobre un Producto Específico
+
+1. Solo puedes calificar productos que **ordenaste y pagaste**
+2. Accede desde el historial de órdenes completadas
+3. Haz click en "Dejar Opinión" o "Editar Opiniones" en la orden
+4. Selecciona el producto que quieres calificar
+5. Completa el formulario:
+   - **Calificación**: Selecciona de 1 a 5 estrellas
+   - **Características**: Selecciona chips que describan tu experiencia
+   - **Comentarios**: Escribe tus comentarios adicionales (opcional)
+   - **Fotos/Videos**: Sube hasta 5 fotos o videos (opcional)
+   - **Vincular foto**: Puedes vincular fotos a un producto específico
+
+#### Editar una Opinión
+
+1. Si ya dejaste una opinión, verás el botón "Editar Opiniones"
+2. Haz click para editar
+3. Puedes cambiar calificación, chips, comentarios y fotos
+4. Se guardará la fecha original y se agregará fecha de actualización
+
+### Ver Opiniones Verificadas de un Producto
+
+1. Abre cualquier producto desde el menú
+2. En la página de detalle verás:
+   - **Calificación promedio** con estrellas
+   - **Promedio numérico** (ej: 4.8)
+   - **Número de reseñas** (ej: "(5 reseñas)")
+3. Haz click en el **número de reseñas** para ver todas las opiniones verificadas
+4. En la página de opiniones puedes:
+   - Ver estadísticas del producto (promedio, distribución por estrellas)
+   - Filtrar opiniones (Más Recientes, Con Foto, Modificados)
+   - Leer opiniones detalladas de otros comensales
+   - Ver fotos y comentarios de otros usuarios
+
+## ⭐ Opiniones (Sección Antigua - Actualizada Arriba)
 
 ### Dejar Opinión sobre un Platillo
 
@@ -385,6 +458,73 @@ Dentro de cada categoría, puedes filtrar por:
 
 ---
 
+## 🆘 Solicitar Asistencia
+
+### Acceder a la Pantalla de Asistencia
+
+Puedes solicitar asistencia del restaurante desde:
+- La pantalla de inicio: Haz click en **"Solicitar asistencia"**
+- Métodos de pago: Haz click en **"Solicitar asistencia"**
+
+### Ver tu Historial de Solicitudes
+
+1. Al abrir la pantalla de solicitud de asistencia
+2. Verás el historial de todas tus solicitudes en la parte superior
+3. Cada solicitud muestra:
+   - Icono de la solicitud
+   - Nombre de la solicitud
+   - Hora de envío
+   - Badge "Personalizada" si fue creada dinámicamente
+   - Estado "Enviada" con check verde
+
+### Solicitar Asistencia Personalizada
+
+1. Haz click en el botón **"Solicitar asistencia personalizada"**
+2. El botón se marcará como "Solicitado"
+3. Un mesero acudirá a tu mesa pronto
+
+### Usar la Búsqueda de Solicitudes
+
+La búsqueda es **inteligente y tolera errores de tipeo**:
+
+1. Escribe en el campo de búsqueda lo que necesitas
+2. Los botones se filtrarán automáticamente usando búsqueda difusa
+3. La búsqueda encuentra coincidencias incluso con errores menores
+4. Ejemplos:
+   - Escribe **"Derrame"** o **"deram"** para ver opciones de limpiar derrames
+   - Escribe **"Vaso"** o **"vas"** para ver "Cubiertos y Vasos"
+   - Escribe **"Servilleta"** o **"serville"** para ver "Servilletas"
+   - Escribe **"cubier"** para encontrar "Cubiertos y Vasos"
+
+### Solicitudes Predefinidas Disponibles
+
+- **Cubiertos y Vasos**: Para solicitar cubiertos o vasos adicionales
+- **Servilletas**: Para solicitar más servilletas
+- **Limpiar Derrame (Mesa)**: Para solicitar que limpien un derrame en la mesa
+- **Limpiar Derrame (Piso)**: Para solicitar que limpien un derrame en el piso
+- **Tortillas**: Para solicitar tortillas
+- **Bolillo**: Para solicitar bolillo/pan
+- **Picante**: Para solicitar salsa picante o condimentos
+
+### Crear Solicitudes Personalizadas
+
+Si escribes algo que no aparece en las opciones predefinidas:
+
+1. Escribe lo que necesitas en el campo de búsqueda
+2. Aparecerá un botón con icono "!" y tu texto
+3. Haz click en el botón
+4. Se creará y enviará tu solicitud personalizada
+5. Aparecerá en el historial con badge "Personalizada"
+
+### Confirmación de Solicitudes
+
+- Después de hacer click en cualquier botón de solicitud
+- El botón se marca como **"Solicitado"** por 3 segundos
+- La solicitud aparece inmediatamente en tu historial
+- El historial se limpia automáticamente cuando completas el pago
+
+---
+
 ## ❓ Preguntas Frecuentes (FAQ)
 
 ### ¿Cómo puedo modificar mi orden después de confirmarla?
@@ -437,4 +577,10 @@ Sí, la app está diseñada para funcionar en teléfonos y tablets, con diseño 
 ---
 
 **Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.0
+**Versión del documento**: 1.1
+
+### Cambios Recientes (Diciembre 2024)
+- ✅ Agregada sección completa de Solicitar Asistencia
+- ✅ Instrucciones para usar búsqueda de solicitudes
+- ✅ Instrucciones para crear solicitudes personalizadas
+- ✅ Explicación del historial de solicitudes

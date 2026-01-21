@@ -74,13 +74,15 @@
       "rum": "Ron",
       "vodka": "Vodka",
       "tequila": "Tequila",
-      "gin": "Gin"
+      "gin": "Gin",
+      "alcoholic": "Alcohólico",
+      "nonAlcoholic": "Sin alcohol"
     },
     "badges": {
       "vegan": "Vegano",
       "specialty": "Especialidad"
     },
-    "searchPlaceholder": "Buscar platillos...",
+    "searchPlaceholder": "Busco...",
     "addToCart": "Agregar al carrito",
     "inCart": "En carrito",
     "chefSuggestions": "Sugerencias del Chef",
@@ -578,7 +580,9 @@
     "apply": "Aplicar",
     "total": "Total",
     "viewRelatedPayment": "Ver pago relacionado",
-    "viewDetails": "Ver detalles"
+    "viewDetails": "Ver detalles",
+    "leaveReview": "Dejar opinión",
+    "editReviews": "Editar Opiniones"
   },
   "groupOrder": {
     "title": "Orden Grupal",
@@ -785,7 +789,8 @@
     "selectSize": "Selecciona el tamaño",
     "portion": "Porción/Copa",
     "bottle": "Botella",
-    "leaveReview": "Dejar opinión"
+    "leaveReview": "Dejar opinión",
+    "viewReviews": "Ver opiniones"
   },
   "favorites": {
     "title": "Mis Favoritos",
@@ -809,13 +814,28 @@
     "title": {
       "dish": "Dejar una Opinión",
       "order": "Dejar una Opinión",
-      "restaurant": "Dejar una Opinión"
+      "restaurant": "Dejar una Opinión",
+      "experience": "Opinión General",
+      "editTitle": "Editar Opinión"
     },
     "question": {
       "dish": "¿Cómo estuvo este platillo?",
       "order": "¿Cómo estuvo tu orden?",
-      "restaurant": "¿Cómo estuvo tu desayuno?"
+      "restaurant": "¿Cómo estuvo tu desayuno?",
+      "experience": "¿Cómo estuvo tu experiencia general?"
     },
+    "selectWhatToReview": "Selecciona sobre qué dejar opinión",
+    "experienceGeneral": "Experiencia General",
+    "experienceGeneralDesc": "Deja una opinión sobre tu experiencia general",
+    "selectProduct": "Selecciona un producto:",
+    "reviewed": "Revisado",
+    "customized": "Personalizado",
+    "traditional": "Tradicional",
+    "leaveAnotherReview": "Dejar otra opinión",
+    "updateReview": "Actualizar Opinión",
+    "yourReviews": "Tus Opiniones",
+    "edited": "Editado",
+    "product": "Producto",
     "ratingLabels": {
       "veryBad": "Muy malo",
       "bad": "Malo",
@@ -823,10 +843,15 @@
       "good": "¡Muy bueno!",
       "excellent": "¡Excelente!"
     },
-    "whatDidYouLike": "¿Qué te gustó más?",
+    "whatDidYouLike": "¿Qué destacarías de este plato?",
     "tellUsYourExperience": "Cuéntanos tu experiencia",
-    "commentPlaceholder": "¿Qué tal estuvo el omelette? ¿El café estaba a la temperatura ideal?",
+    "commentPlaceholder": "¿Cómo fue tu experiencia general con este plato?",
+    "commentsTitle": "Comentarios adicionales",
     "uploadPhotosOrVideos": "Sube fotos o videos",
+    "evidenceTitle": "Evidencia de tu consumo",
+    "evidenceSubtitle": "Víncula fotos reales del platillo",
+    "linkPhotoToDish": "Vincular esta foto a \"{dishName}\"",
+    "basedOnOrder": "Basado en tu orden de {date} a las {time}",
     "selected": "seleccionados",
     "upload": "Subir",
     "publishReview": "Publicar Opinión",
@@ -844,5 +869,75 @@
       "goodValue": "Buena relación precio-calidad",
       "completeOrder": "Orden completa"
     }
+  },
+  "assistance": {
+    "title": "Solicitar Asistencia",
+    "description": "Escribe lo que necesitas o selecciona de las opciones disponibles.",
+    "cutlery": "Cubiertos y Vasos",
+    "napkins": "Servilletas",
+    "spillTable": "Limpiar Derrame (Mesa)",
+    "spillFloor": "Limpiar Derrame (Piso)",
+    "tortillas": "Tortillas",
+    "bolillo": "Bolillo",
+    "spicy": "Picante",
+    "callWaiter": "Llamar Mesero",
+    "callPersonalAssistant": "Solicitar asistencia personalizada",
+    "requested": "Solicitado",
+    "requestSent": "Solicitud enviada. Nuestro equipo está en camino.",
+    "infoMessage": "Todas tus solicitudes son atendidas con prioridad. Si necesitas algo más, puedes seleccionar otra opción después de 3 segundos.",
+    "searchPlaceholder": "Escribe lo que necesitas...",
+    "createCustomRequest": "Crear Solicitud Personalizada",
+    "customRequestHint": "Haz clic para solicitar esto",
+    "noResults": "No se encontraron opciones. Escribe algo diferente o crea una solicitud personalizada.",
+    "historyTitle": "Historial de Solicitudes",
+    "request": "solicitud",
+    "requests": "solicitudes",
+    "custom": "Personalizada",
+    "sent": "Enviada"
+  },
+  "productReviews": {
+    "title": "Opiniones Verificadas",
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "daysAgo": "Hace {days} días",
+    "review": "reseña",
+    "reviews": "reseñas",
+    "verified": "Verificado",
+    "reviewer": "Comensal",
+    "modified": "Modificado",
+    "mostRecent": "Más Recientes",
+    "withPhoto": "Con Foto",
+    "noReviews": "No hay opiniones disponibles para este producto.",
+    "translatedByAI": "Traducido por IA"
+  },
+  "addCard": {
+    "title": "Agregar Tarjeta",
+    "newCard": "Nueva Tarjeta",
+    "description": "Ingresa los datos de tu tarjeta para realizar pagos de forma rápida y segura",
+    "card": "TARJETA",
+    "expires": "Vence",
+    "cardholder": "Titular",
+    "cardholderPlaceholder": "NOMBRE DEL TITULAR",
+    "orEnterManually": "O ingresa manualmente",
+    "cardNumber": "Número de Tarjeta",
+    "cardholderName": "Nombre del Titular",
+    "expiryDate": "Fecha de Vencimiento",
+    "addCard": "Agregar Tarjeta",
+    "scanCard": "Escanear tarjeta con cámara",
+    "scanCardTitle": "Escanea tu tarjeta",
+    "securityMessage": "Tus datos están protegidos con encriptación de extremo a extremo. No almacenamos tu CVV.",
+    "invalidCardNumber": "Por favor ingresa un número de tarjeta válido (16 dígitos)",
+    "invalidCardholder": "Por favor ingresa el nombre del titular de la tarjeta",
+    "invalidExpiryDate": "Por favor ingresa una fecha de vencimiento válida",
+    "invalidCVV": "Por favor ingresa un CVV válido (3 o 4 dígitos)",
+    "cardAddedSuccess": "Tarjeta agregada exitosamente",
+    "cameraError": "Error al acceder a la cámara. Por favor intenta nuevamente o ingresa los datos manualmente.",
+    "cardScanned": "Tarjeta escaneada exitosamente",
+    "processing": "Procesando...",
+    "placeCardInFrame": "Coloca tu tarjeta dentro del marco",
+    "ensureWellLit": "Asegúrate de que haya buena iluminación",
+    "captureCard": "Capturar Tarjeta",
+    "scanFailed": "No se pudieron extraer datos de la tarjeta. Por favor, ingresa los datos manualmente.",
+    "scanError": "Error al procesar la tarjeta. Por favor, intenta nuevamente o ingresa los datos manualmente."
   }
 }

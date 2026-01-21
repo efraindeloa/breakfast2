@@ -10,8 +10,14 @@
 - **Escaneo QR** para unirse a mesas y ordenar directamente
 - **Pedidos en grupo** para compartir órdenes entre múltiples usuarios
 - **Sistema de pagos** con tarjetas y métodos alternativos
+- **Escaneo de tarjetas con OCR real** usando Tesseract.js para agregar tarjetas rápidamente
 - **Perfil de usuario** con historial de órdenes y transacciones
-- **Sistema de opiniones** con calificaciones por estrellas
+- **Sistema de opiniones** con calificaciones por estrellas, chips, comentarios y fotos
+- **Opiniones verificadas** de productos con estadísticas y filtros
+- **Edición de opiniones** después de publicarlas
+- **Calificación visible en detalle de producto** con promedio y número de reseñas
+- **Solicitud de asistencia** con **búsqueda fuzzy (difusa)** que tolera errores de tipeo
+- **Historial de solicitudes** para confirmar que las solicitudes fueron enviadas
 - **Asistente IA** para recomendaciones y soporte
 - **Soporte multiidioma** (Español, Inglés, Portugués, Francés)
 - **Modo oscuro/claro** para mejor experiencia visual
@@ -111,5 +117,15 @@
 ---
 
 **Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.0  
+**Versión del documento**: 1.1  
 **Responsable**: Equipo de desarrollo
+
+### Cambios Recientes (Diciembre 2024)
+- ✅ Agregada funcionalidad de Solicitud de Asistencia a características principales
+- ✅ Implementada búsqueda fuzzy (difusa) en solicitudes de asistencia que tolera errores de tipeo
+- ✅ Agregada página de Opiniones Verificadas de productos con estadísticas y filtros
+- ✅ Implementado sistema de edición de opiniones después de publicarlas
+- ✅ Agregada calificación visible en detalle de producto con promedio y número de reseñas
+- ✅ Implementado OCR real con Tesseract.js para escaneo de tarjetas bancarias
+- ✅ Mejorado sistema de opiniones: solo se pueden calificar productos ordenados y pagados
+- ✅ Agregado ordenamiento por relevancia en búsqueda de solicitudes

@@ -34,6 +34,8 @@
   - Carrito de compras
   - Favoritos
   - Historial de órdenes
+  - Opiniones de usuarios (`user_reviews`)
+  - Historial de solicitudes de asistencia (`assistance_history`)
 
 ### Backend
 
@@ -60,6 +62,7 @@
 
 #### Bibliotecas Externas
 - **html5-qrcode 2.3.8**: Escaneo de códigos QR
+- **tesseract.js**: OCR (Optical Character Recognition) para escaneo de tarjetas bancarias
 
 ---
 
@@ -98,6 +101,7 @@ breakfast2/
 ├── screens/                 # Pantallas principales
 │   ├── AddCardScreen.tsx
 │   ├── BillingDataScreen.tsx
+│   ├── ProductReviewsScreen.tsx
 │   ├── ConfirmationScreen.tsx
 │   ├── DishDetailScreen.tsx
 │   ├── EmailConfigScreen.tsx
@@ -250,6 +254,8 @@ interface FavoritesContextType {
 /join-table                 → JoinTableScreen (autenticado)
 /qr-scanner                 → QRScannerScreen (autenticado)
 /review                     → ReviewScreen (autenticado)
+/product-reviews/:dishId    → ProductReviewsScreen (autenticado)
+/request-assistance         → RequestAssistanceScreen (autenticado)
 /payments                   → PaymentMethodsScreen
 /add-card                   → AddCardScreen
 /transactions               → TransactionsScreen
@@ -320,6 +326,47 @@ const MyComponent = () => {
 
 ---
 
+## Solicitud de Asistencia
+
+### Implementación
+
+#### Pantalla (`RequestAssistanceScreen.tsx`)
+- **Ruta**: `/request-assistance`
+- **Funcionalidades**:
+  - Historial de solicitudes realizadas
+  - Campo de búsqueda con filtrado en tiempo real
+  - Grid de botones de solicitudes predefinidas
+  - Creación dinámica de solicitudes personalizadas
+  - Botón destacado para solicitar asistencia personalizada
+
+#### Almacenamiento
+- **Clave localStorage**: `assistance_history`
+- **Estructura**: Array de `AssistanceHistoryItem`
+- **Persistencia**: Durante la sesión hasta completar el pago
+- **Limpieza**: Automática al completar el pago en `PaymentSuccessScreen`
+
+#### Búsqueda Fuzzy (Difusa)
+- **Algoritmo de búsqueda difusa** implementado con múltiples estrategias:
+  - **Normalización**: Elimina acentos y convierte a minúsculas
+  - **Coincidencia exacta**: Busca texto exacto
+  - **Coincidencia de subcadena**: Busca coincidencias parciales
+  - **Coincidencia por palabras**: Todas las palabras del query deben aparecer
+  - **Coincidencia parcial de caracteres**: Permite errores menores (≥70% de caracteres)
+  - **Coincidencia de caracteres consecutivos**: Busca secuencias de caracteres
+- **Ordenamiento por relevancia**: Los resultados se ordenan por score de relevancia
+- **Score de relevancia**:
+  - Coincidencia exacta en label: 100 puntos
+  - Coincidencia al inicio del label: 80 puntos
+  - Coincidencia en label: 50 puntos
+  - Coincidencia exacta en keyword: 60 puntos
+  - Coincidencia en keyword: 30 puntos
+- Filtrado en tiempo real basado en:
+  - Nombre del botón
+  - Palabras clave asociadas a cada solicitud
+- Cada solicitud tiene un array de `searchKeywords` para búsqueda optimizada
+
+---
+
 ## Integraciones Externas
 
 ### Escáner QR
@@ -346,6 +393,100 @@ await qrCode.start(
 <!-- AndroidManifest.xml -->
 <uses-permission android:name="android.permission.CAMERA" />
 ```
+
+### Escaneo de Tarjetas con OCR
+
+#### Biblioteca
+- **tesseract.js**: Biblioteca de OCR (Optical Character Recognition) basada en JavaScript que funciona en el navegador
+
+#### Implementación
+```typescript
+// AddCardScreen.tsx
+import { createWorker } from 'tesseract.js';
+
+const worker = await createWorker('eng', 1);
+await worker.setParameters({
+  tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ /',
+  tessedit_pageseg_mode: '6'
+});
+
+const { data: { text } } = await worker.recognize(imageData);
+await worker.terminate();
+```
+
+#### Funcionalidad
+- Captura imagen de la tarjeta bancaria usando la cámara del dispositivo
+- Procesa la imagen con OCR usando Tesseract.js
+- Extrae datos de la tarjeta:
+  - Número de tarjeta (16 dígitos)
+  - Nombre del titular (texto en mayúsculas)
+  - Fecha de vencimiento (MM/YY)
+- Llena automáticamente los campos del formulario
+- Maneja errores y muestra mensajes apropiados si no se pueden extraer datos
+
+#### Reglas
+- Solo reconoce caracteres alfanuméricos y espacios
+- Funciona mejor con buena iluminación y tarjeta enfocada
+- Si el OCR falla, el usuario puede ingresar los datos manualmente
+
+---
+
+## Sistema de Opiniones
+
+### Implementación
+
+#### Pantalla de Opiniones (`ReviewScreen.tsx`)
+- **Ruta**: `/review`
+- **Funcionalidades**:
+  - Selección de tipo de opinión (Experiencia General o Producto Específico)
+  - Calificación por estrellas (1-5)
+  - Chips de selección rápida
+  - Campo de comentarios
+  - Subida de fotos/videos (hasta 5)
+  - Toggle para vincular fotos a producto específico
+  - Edición de opiniones existentes
+
+#### Pantalla de Opiniones Verificadas (`ProductReviewsScreen.tsx`)
+- **Ruta**: `/product-reviews/:dishId`
+- **Funcionalidades**:
+  - Estadísticas del producto (promedio, total de reseñas, distribución)
+  - Filtros (Más Recientes, Con Foto, Modificados)
+  - Lista de opiniones verificadas
+  - Información detallada de cada opinión
+
+#### Calificación en Detalle de Producto (`DishDetailScreen.tsx`)
+- Muestra calificación promedio con estrellas
+- Muestra promedio numérico y número de reseñas
+- Número de reseñas es clickeable y navega a `/product-reviews/:id`
+
+#### Almacenamiento
+- **Clave localStorage**: `user_reviews`
+- **Estructura**: Array de objetos `Review`
+- **Persistencia**: Las opiniones persisten entre sesiones
+
+#### Estructura de Datos Review
+```typescript
+interface Review {
+  id: string;
+  orderId: string;
+  type: 'experience' | 'dish';
+  itemId?: number;
+  itemName?: string;
+  rating: number;
+  chips: string[];
+  comment: string;
+  media: string[]; // URLs de archivos
+  timestamp: string;
+  updatedAt?: string;
+}
+```
+
+#### Reglas
+- Solo se pueden calificar productos que se ordenaron y pagaron
+- Cada producto puede tener su propia calificación independiente
+- Las opiniones se pueden editar después de publicarlas
+- Al cambiar de producto seleccionado, se limpian todos los campos
+- Si un producto ya tiene calificación, se cargan los datos al seleccionarlo
 
 ### Cámara (Capacitor)
 
@@ -375,6 +516,7 @@ await qrCode.start(
    - `orders_list`: Órdenes activas
    - `order_history`: Historial de órdenes completadas
    - `transactions`: Historial de transacciones
+   - `assistance_history`: Historial de solicitudes de asistencia (se limpia al pagar)
 
 ### Estructura de Datos
 
@@ -467,6 +609,32 @@ Guarda en localStorage (orders_list)
 CartContext.clearCart()
   ↓
 Navega a OrderConfirmedScreen
+```
+
+### Solicitar Asistencia
+
+```
+Usuario hace click en "Solicitar asistencia"
+  ↓
+Navega a RequestAssistanceScreen
+  ↓
+Usuario escribe en campo de búsqueda (opcional)
+  ↓
+Botones se filtran en tiempo real
+  ↓
+Usuario hace click en botón de solicitud
+  ↓
+handleRequest() procesa la solicitud
+  ↓
+Se crea AssistanceHistoryItem
+  ↓
+Se guarda en localStorage (assistance_history)
+  ↓
+Se actualiza historial en pantalla
+  ↓
+Botón se marca como "Solicitado" (3 segundos)
+  ↓
+Al completar pago, historial se limpia
 ```
 
 ### Escanear QR

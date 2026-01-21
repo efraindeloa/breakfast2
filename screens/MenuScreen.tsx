@@ -161,8 +161,6 @@ const MenuScreen: React.FC = () => {
     if (originalCategory === 'Coctelería') {
       return [
         { value: 'digestivos' as OriginType, icon: 'liquor' },
-        { value: 'alcoholic' as OriginType, icon: 'wine_bar' },
-        { value: 'non-alcoholic' as OriginType, icon: 'water_drop' },
         { value: 'rum' as OriginType, icon: 'local_bar' },
         { value: 'vodka' as OriginType, icon: 'local_bar' },
         { value: 'tequila' as OriginType, icon: 'local_bar' },
@@ -207,6 +205,8 @@ const MenuScreen: React.FC = () => {
       'fruta': 'menu.filters.fruta',
       // Filtros para Coctelería
       'digestivos': 'menu.filters.digestivos',
+      'alcoholic': 'menu.filters.alcoholic',
+      'non-alcoholic': 'menu.filters.nonAlcoholic',
       'rum': 'menu.filters.rum',
       'vodka': 'menu.filters.vodka',
       'tequila': 'menu.filters.tequila',
@@ -380,7 +380,7 @@ const MenuScreen: React.FC = () => {
       name: 'Carajillo',
       description: 'Café con licor 43',
       price: '$145.00',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+      image: '/carajillo.jpeg',
       category: 'Coctelería',
       origin: 'digestivos' as OriginType,
     },
@@ -389,7 +389,7 @@ const MenuScreen: React.FC = () => {
       name: 'Coketillo',
       description: 'Carajillo con paleta de chocomilk',
       price: '$160.00',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+      image: '/coketillo_donk.jpg',
       category: 'Coctelería',
       origin: 'digestivos' as OriginType,
     },
@@ -398,7 +398,7 @@ const MenuScreen: React.FC = () => {
       name: 'Carajilla',
       description: 'Café con Baileys',
       price: '$145.00',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+      image: '/carajilla.jpg',
       category: 'Coctelería',
       origin: 'digestivos' as OriginType,
     },
@@ -407,7 +407,7 @@ const MenuScreen: React.FC = () => {
       name: 'Licor 43',
       description: '700 ml - Porción: $140.00 / Botella: $1,400.00',
       price: '$140.00',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+      image: '/licor43.webp',
       category: 'Coctelería',
       origin: 'digestivos' as OriginType,
     },
@@ -416,7 +416,7 @@ const MenuScreen: React.FC = () => {
       name: 'Baileys',
       description: '700 ml - Porción: $120.00 / Botella: $1,200.00',
       price: '$120.00',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWnQaozBCDFMuLKN0rR3j7FcCFRss_DwkvNlFGFSK_IgZiDHMNdhF2FeIYkQ-UrhgHO19I56PLGdIQyK06gaN3RF_PwwSd4H_eOkoloKHfIATMn1ydzlSxmwXWRUTNWYQKWPWmvcwo5co6c1mE9RlFTzFSp2ItqmEHHbIHHnaJI0wINTn8aajX_E1CIYDwOo_K0e1AQbFpXKmqeOGGK2xOGpVWpZVYB9Ac5aKaPujYO73FMNCojATPJD9YTeFs7NeZexnDGCWdrB8D',
+      image: '/baileys.webp',
       category: 'Coctelería',
       origin: 'digestivos' as OriginType,
     },
@@ -532,20 +532,97 @@ const MenuScreen: React.FC = () => {
     'Coctelería': [20],
   };
 
+  // Función de búsqueda fuzzy
+  const fuzzyMatch = (text: string, query: string): boolean => {
+    const normalize = (str: string) => {
+      return str
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+        .trim();
+    };
+
+    const normalizedText = normalize(text);
+    const normalizedQuery = normalize(query);
+
+    // Coincidencia exacta
+    if (normalizedText === normalizedQuery) return true;
+
+    // Coincidencia de subcadena
+    if (normalizedText.includes(normalizedQuery)) return true;
+
+    // Buscar palabras individuales del query en el texto
+    const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length > 0);
+    if (queryWords.length > 0) {
+      const allWordsMatch = queryWords.every(word => normalizedText.includes(word));
+      if (allWordsMatch) return true;
+    }
+
+    // Buscar coincidencias parciales de caracteres (permite errores de tipeo menores)
+    if (query.length >= 3) {
+      let textIndex = 0;
+      let queryIndex = 0;
+      let matches = 0;
+
+      while (textIndex < normalizedText.length && queryIndex < normalizedQuery.length) {
+        if (normalizedText[textIndex] === normalizedQuery[queryIndex]) {
+          matches++;
+          queryIndex++;
+        }
+        textIndex++;
+      }
+
+      // Si al menos el 70% de los caracteres del query coinciden en orden
+      const matchRatio = matches / normalizedQuery.length;
+      if (matchRatio >= 0.7) return true;
+    }
+
+    // Buscar caracteres del query en cualquier orden (pero juntos)
+    if (query.length >= 3) {
+      const textChars = normalizedText.split('');
+      const queryChars = normalizedQuery.split('');
+      let consecutiveMatches = 0;
+      let maxConsecutive = 0;
+
+      for (let i = 0; i < textChars.length; i++) {
+        let queryIdx = 0;
+        for (let j = i; j < textChars.length && queryIdx < queryChars.length; j++) {
+          if (textChars[j] === queryChars[queryIdx]) {
+            consecutiveMatches++;
+            queryIdx++;
+          } else {
+            consecutiveMatches = 0;
+          }
+        }
+        maxConsecutive = Math.max(maxConsecutive, consecutiveMatches);
+      }
+
+      // Si hay una secuencia de caracteres que coincide
+      if (maxConsecutive >= Math.min(3, normalizedQuery.length)) return true;
+    }
+
+    return false;
+  };
+
   // Filtrar platos por categoría, búsqueda y origen
   const filteredDishes = useMemo(() => {
     const originalCategory = getOriginalCategory(selectedCategory);
+    const hasSearchQuery = searchQuery.trim();
+    
     return dishes.filter(dish => {
-      // Filtro por categoría
-      if (dish.category !== originalCategory) return false;
+      // Si hay búsqueda, ignorar el filtro de categoría (buscar en todas las categorías)
+      if (!hasSearchQuery) {
+        // Filtro por categoría solo si NO hay búsqueda
+        if (dish.category !== originalCategory) return false;
+      }
       
-      // Filtro por búsqueda (usando traducciones)
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const translatedName = getDishName(dish.id).toLowerCase();
-        const translatedDescription = getDishDescription(dish.id).toLowerCase();
-        const matchesName = translatedName.includes(query);
-        const matchesDescription = translatedDescription.includes(query);
+      // Filtro por búsqueda fuzzy (usando traducciones)
+      if (hasSearchQuery) {
+        const query = searchQuery.trim();
+        const translatedName = getDishName(dish.id);
+        const translatedDescription = getDishDescription(dish.id);
+        const matchesName = fuzzyMatch(translatedName, query);
+        const matchesDescription = fuzzyMatch(translatedDescription, query);
         if (!matchesName && !matchesDescription) return false;
       }
       
@@ -644,13 +721,13 @@ const MenuScreen: React.FC = () => {
                 setSelectedOrigin('');
               }}
               className={`flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full px-5 ${
-                selectedCategory === category
+                !searchQuery.trim() && selectedCategory === category
                   ? 'bg-primary shadow-md shadow-primary/20'
                   : 'bg-white dark:bg-[#322a1a] border border-[#f4f3f0] dark:border-[#3d3321]'
               }`}
             >
-              <p className={`text-sm font-${selectedCategory === category ? 'semibold' : 'medium'} ${
-                selectedCategory === category
+              <p className={`text-sm font-${!searchQuery.trim() && selectedCategory === category ? 'semibold' : 'medium'} ${
+                !searchQuery.trim() && selectedCategory === category
                   ? 'text-white'
                   : 'text-[#181611] dark:text-stone-300'
               }`}>
@@ -661,8 +738,32 @@ const MenuScreen: React.FC = () => {
         </div>
       </header>
 
+      {/* Search Input */}
+      <div className="px-4 pt-4 pb-2">
+        <div className="relative">
+          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-xl">
+            search
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('menu.searchPlaceholder') || 'Buscar productos...'}
+            className="w-full h-12 pl-12 pr-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#322a1a] focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500 text-[#181511] dark:text-white"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              <span className="material-symbols-outlined text-xl">close</span>
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Sugerencias del Chef */}
-      {showSuggestions && suggestions.length > 0 && (
+      {!searchQuery.trim() && showSuggestions && suggestions.length > 0 && (
         <section className="px-4 pt-6 pb-4">
           <div className="flex justify-between items-end mb-4">
             <h3 className="text-[#181611] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">{t('menu.chefSuggestions')}</h3>
@@ -698,7 +799,7 @@ const MenuScreen: React.FC = () => {
       )}
 
       {/* Destacados */}
-      {showHighlights && highlights.length > 0 && (
+      {!searchQuery.trim() && showHighlights && highlights.length > 0 && (
         <section className="px-4 pb-4">
           <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-2">{t('menu.highlights')}</h3>
           <div className="flex flex-col gap-3">

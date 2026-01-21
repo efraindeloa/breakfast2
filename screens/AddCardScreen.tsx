@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
+import { createWorker } from 'tesseract.js';
 
 const AddCardScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -121,7 +122,48 @@ const AddCardScreen: React.FC = () => {
     setIsScanning(false);
   };
 
-  const captureCard = () => {
+  const extractCardData = (text: string) => {
+    const cardData: {
+      number?: string;
+      name?: string;
+      expiryMonth?: string;
+      expiryYear?: string;
+    } = {};
+
+    // Extraer número de tarjeta (16 dígitos, con o sin espacios)
+    const cardNumberMatch = text.match(/\b(\d{4}\s?\d{4}\s?\d{4}\s?\d{4})\b/);
+    if (cardNumberMatch) {
+      cardData.number = cardNumberMatch[1].replace(/\s/g, '');
+    }
+
+    // Extraer fecha de vencimiento (MM/YY o MM/YYYY)
+    const expiryMatch = text.match(/\b(0[1-9]|1[0-2])\s?\/\s?(\d{2,4})\b/);
+    if (expiryMatch) {
+      cardData.expiryMonth = expiryMatch[1];
+      const year = expiryMatch[2];
+      // Si es 4 dígitos, tomar los últimos 2; si es 2 dígitos, usar directamente
+      cardData.expiryYear = year.length === 4 ? year.slice(-2) : year;
+    }
+
+    // Extraer nombre del titular (líneas con solo letras mayúsculas, usualmente después del número de tarjeta)
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    
+    // Buscar líneas que parecen nombres (solo letras, mayúsculas, longitud razonable)
+    for (const line of lines) {
+      // Si la línea tiene solo letras mayúsculas, espacios, y tiene entre 5 y 50 caracteres
+      if (/^[A-Z\s]{5,50}$/.test(line) && line.length > 3) {
+        // Excluir palabras comunes que no son nombres
+        if (!/^(VALID|THRU|EXP|MONTH|YEAR|FROM|TO|GOOD)$/.test(line.toUpperCase())) {
+          cardData.name = line.toUpperCase();
+          break;
+        }
+      }
+    }
+
+    return cardData;
+  };
+
+  const captureCard = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
     const video = videoRef.current;
@@ -136,26 +178,67 @@ const AddCardScreen: React.FC = () => {
 
     setIsScanning(true);
 
-    // Simular procesamiento OCR (en producción usarías una biblioteca real como Tesseract.js o un servicio de API)
-    setTimeout(() => {
-      // Simulación de datos extraídos de la tarjeta
-      // En producción, aquí procesarías la imagen con OCR
-      const simulatedCardData = {
-        number: '4242 4242 4242 4242',
-        name: 'ALEX GONZALEZ',
-        expiryMonth: '12',
-        expiryYear: '26'
-      };
+    try {
+      // Crear worker de Tesseract
+      const worker = await createWorker('eng', 1, {
+        logger: (m) => {
+          // Opcional: mostrar progreso en consola
+          if (m.status === 'recognizing text') {
+            // console.log(`Progress: ${Math.round(m.progress * 100)}%`);
+          }
+        }
+      });
 
-      setCardNumber(formatCardNumber(simulatedCardData.number));
-      setCardName(simulatedCardData.name);
-      setExpiryMonth(simulatedCardData.expiryMonth);
-      setExpiryYear(simulatedCardData.expiryYear);
+      // Configurar parámetros para mejor reconocimiento de tarjetas
+      await worker.setParameters({
+        tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ /',
+        tessedit_pageseg_mode: '6' // Asumir un bloque uniforme de texto
+      });
+
+      // Obtener imagen del canvas
+      const imageData = canvas.toDataURL('image/png');
       
+      // Realizar OCR
+      const { data: { text } } = await worker.recognize(imageData);
+      
+      // Terminar worker
+      await worker.terminate();
+
+      // Extraer datos de la tarjeta del texto reconocido
+      const cardData = extractCardData(text);
+
+      // Actualizar los campos con los datos extraídos
+      if (cardData.number) {
+        setCardNumber(formatCardNumber(cardData.number));
+      }
+      
+      if (cardData.name) {
+        setCardName(cardData.name);
+      }
+      
+      if (cardData.expiryMonth) {
+        setExpiryMonth(cardData.expiryMonth);
+      }
+      
+      if (cardData.expiryYear) {
+        setExpiryYear(cardData.expiryYear);
+      }
+
       setIsScanning(false);
       stopCamera();
-      alert(t('addCard.cardScanned'));
-    }, 2000);
+      
+      // Mostrar mensaje de éxito
+      if (cardData.number || cardData.name || cardData.expiryMonth) {
+        alert(t('addCard.cardScanned'));
+      } else {
+        alert(t('addCard.scanFailed') || 'No se pudieron extraer datos de la tarjeta. Por favor, ingresa los datos manualmente.');
+      }
+    } catch (error) {
+      console.error('Error procesando tarjeta:', error);
+      setIsScanning(false);
+      stopCamera();
+      alert(t('addCard.scanError') || 'Error al procesar la tarjeta. Por favor, intenta nuevamente o ingresa los datos manualmente.');
+    }
   };
 
   return (
@@ -224,7 +307,7 @@ const AddCardScreen: React.FC = () => {
             className="w-full flex items-center justify-center gap-3 py-4 px-6 rounded-xl border-2 border-dashed border-primary/50 bg-primary/5 dark:bg-primary/10 text-primary font-semibold hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors active:scale-95"
           >
             <span className="material-symbols-outlined text-2xl">camera</span>
-            <span>Escanear tarjeta con cámara</span>
+            <span>{t('addCard.scanCard')}</span>
           </button>
         </div>
 
@@ -294,7 +377,7 @@ const AddCardScreen: React.FC = () => {
         <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex gap-3">
           <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">lock</span>
           <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-            Tus datos están protegidos con encriptación de extremo a extremo. No almacenamos tu CVV.
+            {t('addCard.securityMessage')}
           </p>
         </div>
       </main>
@@ -309,7 +392,7 @@ const AddCardScreen: React.FC = () => {
             >
               <span className="material-symbols-outlined text-2xl">close</span>
             </button>
-            <h3 className="text-white text-lg font-bold">Escanea tu tarjeta</h3>
+            <h3 className="text-white text-lg font-bold">{t('addCard.scanCardTitle')}</h3>
             <div className="w-10"></div>
           </div>
 

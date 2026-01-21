@@ -27,6 +27,8 @@ import JoinTableScreen from './screens/JoinTableScreen';
 import QRScannerScreen from './screens/QRScannerScreen';
 import FavoritesScreen from './screens/FavoritesScreen';
 import ReviewScreen from './screens/ReviewScreen';
+import RequestAssistanceScreen from './screens/RequestAssistanceScreen';
+import ProductReviewsScreen from './screens/ProductReviewsScreen';
 import BottomNav from './components/BottomNav';
 import AssistantButton from './components/AssistantButton';
 import { CartProvider } from './contexts/CartContext';
@@ -73,6 +75,8 @@ const App: React.FC = () => {
           <Route path="/settings" element={<SettingsScreen />} />
           <Route path="/favorites" element={isAuthenticated ? <FavoritesScreen /> : <Navigate to="/" />} />
           <Route path="/review" element={isAuthenticated ? <ReviewScreen /> : <Navigate to="/" />} />
+          <Route path="/request-assistance" element={isAuthenticated ? <RequestAssistanceScreen /> : <Navigate to="/" />} />
+          <Route path="/product-reviews/:dishId" element={isAuthenticated ? <ProductReviewsScreen /> : <Navigate to="/" />} />
         </Routes>
         
         {isAuthenticated && <BottomNav />}

@@ -130,6 +130,17 @@ const HomeScreen: React.FC = () => {
             <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight">{t('waitlist.scanQR')}</h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">{t('waitlist.scanQRDescription')}</p>
           </div>
+          
+          <div 
+            onClick={() => navigate('/discover')}
+            className="flex flex-col gap-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 items-start shadow-sm hover:border-primary transition-colors cursor-pointer group min-h-[120px] w-full"
+          >
+            <div className="flex items-center justify-center size-10 rounded-lg bg-green-100 dark:bg-green-900/30 group-hover:bg-green-600 transition-colors">
+              <span className="material-symbols-outlined text-green-600 dark:text-green-400 group-hover:text-white">explore</span>
+            </div>
+            <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight">{t('discover.title')}</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('discover.description')}</p>
+          </div>
         </div>
       </main>
     </div>

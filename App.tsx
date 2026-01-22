@@ -31,13 +31,21 @@ import RequestAssistanceScreen from './screens/RequestAssistanceScreen';
 import ProductReviewsScreen from './screens/ProductReviewsScreen';
 import WaitlistScreen from './screens/WaitlistScreen';
 import EditOrderScreen from './screens/EditOrderScreen';
+import LoyaltyScreen from './screens/LoyaltyScreen';
+import CouponsScreen from './screens/CouponsScreen';
+import CouponDetailScreen from './screens/CouponDetailScreen';
+import DiscoverRestaurantsScreen from './screens/DiscoverRestaurantsScreen';
+import MeetUpScreen from './screens/MeetUpScreen';
+import ContactsScreen from './screens/ContactsScreen';
 import BottomNav from './components/BottomNav';
 import AssistantButton from './components/AssistantButton';
+import AndroidBackButton from './components/AndroidBackButton';
 import { CartProvider } from './contexts/CartContext';
 import { RestaurantProvider } from './contexts/RestaurantContext';
 import { GroupOrderProvider } from './contexts/GroupOrderContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { FavoritesProvider } from './contexts/FavoritesContext';
+import { LoyaltyProvider } from './contexts/LoyaltyContext';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -47,8 +55,10 @@ const App: React.FC = () => {
       <RestaurantProvider>
         <CartProvider>
           <FavoritesProvider>
+            <LoyaltyProvider>
             <GroupOrderProvider>
             <HashRouter>
+      <AndroidBackButton />
       <div className="w-full max-w-full min-h-screen bg-white dark:bg-background-dark relative overflow-hidden flex flex-col md:max-w-2xl md:mx-auto md:shadow-2xl">
         <Routes>
           <Route path="/" element={<WelcomeScreen onLogin={() => setIsAuthenticated(true)} />} />
@@ -81,6 +91,12 @@ const App: React.FC = () => {
           <Route path="/product-reviews/:dishId" element={isAuthenticated ? <ProductReviewsScreen /> : <Navigate to="/" />} />
           <Route path="/waitlist" element={isAuthenticated ? <WaitlistScreen /> : <Navigate to="/" />} />
           <Route path="/edit-order" element={isAuthenticated ? <EditOrderScreen /> : <Navigate to="/" />} />
+          <Route path="/loyalty" element={isAuthenticated ? <LoyaltyScreen /> : <Navigate to="/" />} />
+          <Route path="/coupons" element={isAuthenticated ? <CouponsScreen /> : <Navigate to="/" />} />
+          <Route path="/coupon-detail/:id" element={isAuthenticated ? <CouponDetailScreen /> : <Navigate to="/" />} />
+          <Route path="/discover" element={isAuthenticated ? <DiscoverRestaurantsScreen /> : <Navigate to="/" />} />
+          <Route path="/meetup" element={isAuthenticated ? <MeetUpScreen /> : <Navigate to="/" />} />
+          <Route path="/contacts" element={isAuthenticated ? <ContactsScreen /> : <Navigate to="/" />} />
         </Routes>
         
         {isAuthenticated && <BottomNav />}
@@ -88,6 +104,7 @@ const App: React.FC = () => {
       </div>
             </HashRouter>
           </GroupOrderProvider>
+            </LoyaltyProvider>
           </FavoritesProvider>
         </CartProvider>
       </RestaurantProvider>

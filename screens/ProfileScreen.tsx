@@ -601,6 +601,32 @@ const ProfileScreen: React.FC = () => {
         </section>
       )}
 
+      {/* Programa de Lealtad */}
+      <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
+        <MenuItem 
+          icon="stars" 
+          title={t('loyalty.title')} 
+          subtitle={t('loyalty.myLevelBenefits')} 
+          onClick={() => navigate('/loyalty')} 
+        />
+        <MenuItem 
+          icon="confirmation_number" 
+          title={t('coupons.title')} 
+          subtitle={t('coupons.yourCoupons')} 
+          onClick={() => navigate('/coupons')} 
+        />
+      </section>
+
+      {/* Contactos */}
+      <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
+        <MenuItem 
+          icon="contacts" 
+          title={t('contacts.title')} 
+          subtitle={t('contacts.manageContacts')} 
+          onClick={() => navigate('/contacts')} 
+        />
+      </section>
+
       {/* Tarjetas de Crédito */}
       <section className="bg-white dark:bg-[#2d2116] mb-2 px-4 py-4">
         <h3 className="text-lg font-bold mb-4">{t('profile.myCards')}</h3>

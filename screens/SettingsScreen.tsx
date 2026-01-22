@@ -19,13 +19,31 @@ const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
   const { language: currentLanguage, setLanguage: setAppLanguage } = useLanguage();
   const { t } = useTranslation();
+  // Función auxiliar para obtener el nombre del idioma desde el código usando traducciones estáticas
+  const getLanguageNameFromCode = (code: 'es' | 'en' | 'pt' | 'fr', useCurrentLang = true): string => {
+    // Si useCurrentLang es true, usar el idioma actual para las traducciones
+    // Si es false, usar español (para la inicialización)
+    const translations = useCurrentLang ? allStaticTranslations[currentLanguage] : allStaticTranslations.es;
+    const langNames = translations?.common?.languageNames || allStaticTranslations.es.common.languageNames;
+    return langNames[code] || code.toUpperCase();
+  };
+
   const [language, setLanguage] = useState(() => {
-    const saved = localStorage.getItem('selectedLanguage');
-    // Si el idioma guardado es un código (es, en, pt, fr), obtener el nombre
-    if (saved && ['es', 'en', 'pt', 'fr'].includes(saved)) {
-      return t(`common.languageNames.${saved}`);
+    // Primero intentar obtener desde appLanguage (el código)
+    const savedCode = localStorage.getItem('appLanguage') as 'es' | 'en' | 'pt' | 'fr' | null;
+    if (savedCode && ['es', 'en', 'pt', 'fr'].includes(savedCode)) {
+      return getLanguageNameFromCode(savedCode, false);
     }
-    return saved || t('common.languageNames.es');
+    // Fallback al nombre guardado
+    const saved = localStorage.getItem('selectedLanguage');
+    if (saved && allLanguages.includes(saved)) {
+      return saved;
+    }
+    // Si el idioma guardado es un código, convertirlo
+    if (saved && ['es', 'en', 'pt', 'fr'].includes(saved)) {
+      return getLanguageNameFromCode(saved as 'es' | 'en' | 'pt' | 'fr', false);
+    }
+    return getLanguageNameFromCode(currentLanguage, false);
   });
   const [smartTranslation, setSmartTranslation] = useState(true);
   const [suggestions, setSuggestions] = useState(() => {
@@ -39,35 +57,86 @@ const SettingsScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [saved, setSaved] = useState(false);
 
-  // Cargar idioma guardado al montar el componente y cuando cambie el idioma de la app
+  // Sincronizar el estado del idioma cuando cambie el idioma de la app
   useEffect(() => {
-    const savedLanguage = localStorage.getItem('selectedLanguage');
-    if (savedLanguage && allLanguages.includes(savedLanguage)) {
-      setLanguage(savedLanguage);
-    }
+    // Cuando cambia currentLanguage, actualizar el nombre del idioma mostrado
+    const languageName = getLanguageNameFromCode(currentLanguage, true);
+    setLanguage(languageName);
   }, [currentLanguage]);
 
   // Mapear nombre del idioma al código
-  // Usar las traducciones para obtener los nombres correctos según el idioma actual
+  // Necesitamos mapear todos los nombres posibles en todos los idiomas
   const getLanguageMap = (): Record<string, 'es' | 'en' | 'pt' | 'fr'> => {
-    return {
-      [t('common.languageNames.es')]: 'es',
-      [t('common.languageNames.en')]: 'en',
-      [t('common.languageNames.pt')]: 'pt',
-      [t('common.languageNames.fr')]: 'fr',
-      // También mapear códigos directamente
+    const map: Record<string, 'es' | 'en' | 'pt' | 'fr'> = {
+      // Códigos directamente
       'es': 'es',
       'en': 'en',
       'pt': 'pt',
-      'fr': 'fr'
+      'fr': 'fr',
     };
+
+    // Agregar nombres en todos los idiomas posibles
+    // Español
+    map['Español'] = 'es';
+    map['Spanish'] = 'es';
+    map['Espagnol'] = 'es';
+    map['Espanhol'] = 'es';
+    
+    // Inglés
+    map['Inglés'] = 'en';
+    map['English'] = 'en';
+    map['Anglais'] = 'en';
+    map['Inglês'] = 'en';
+    
+    // Portugués
+    map['Portugués'] = 'pt';
+    map['Português'] = 'pt';
+    map['Portuguese'] = 'pt';
+    map['Portugais'] = 'pt';
+    
+    // Francés
+    map['Francés'] = 'fr';
+    map['Français'] = 'fr';
+    map['French'] = 'fr';
+    map['Francês'] = 'fr';
+
+    // También agregar los nombres traducidos actuales
+    map[t('common.languageNames.es')] = 'es';
+    map[t('common.languageNames.en')] = 'en';
+    map[t('common.languageNames.pt')] = 'pt';
+    map[t('common.languageNames.fr')] = 'fr';
+
+    return map;
   };
   const languageMap = getLanguageMap();
 
   // Obtener el código del idioma seleccionado
   const selectedLanguageCode = useMemo(() => {
-    return languageMap[language] || 'es';
-  }, [language]);
+    // Primero intentar con el valor directo
+    let code = languageMap[language];
+    
+    if (!code) {
+      // Si no se encuentra, intentar con el nombre exacto de la lista de idiomas
+      // Los nombres en allLanguages son: 'Español', 'Inglés', 'Portugués', 'Francés'
+      const supportedLanguageNames = ['Español', 'Inglés', 'Portugués', 'Francés'];
+      if (supportedLanguageNames.includes(language)) {
+        // Mapeo directo de nombres de la lista a códigos
+        const directMap: Record<string, 'es' | 'en' | 'pt' | 'fr'> = {
+          'Español': 'es',
+          'Inglés': 'en',
+          'Portugués': 'pt',
+          'Francés': 'fr'
+        };
+        code = directMap[language];
+      }
+    }
+    
+    if (!code) {
+      return currentLanguage;
+    }
+    
+    return code;
+  }, [language, languageMap, currentLanguage]);
 
   // Obtener las traducciones del idioma seleccionado para el botón
   const selectedLanguageTranslations = useMemo(() => {
@@ -91,10 +160,22 @@ const SettingsScreen: React.FC = () => {
   // Función para guardar el idioma seleccionado
   const handleSaveLanguage = () => {
     const langCode = selectedLanguageCode;
-    setAppLanguage(langCode);
     
-    // Guardar en localStorage
-    localStorage.setItem('selectedLanguage', language);
+    // Validar que el código del idioma sea uno de los soportados
+    if (!['es', 'en', 'pt', 'fr'].includes(langCode)) {
+      alert(`El idioma "${language}" no está disponible. Por favor, selecciona uno de los idiomas soportados.`);
+      return;
+    }
+    
+    // Solo cambiar si es diferente al idioma actual
+    if (langCode === currentLanguage) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      return;
+    }
+    
+    // setAppLanguage ya guarda en localStorage tanto appLanguage como selectedLanguage
+    setAppLanguage(langCode);
     setSaved(true);
     // Ocultar el mensaje después de 2 segundos
     setTimeout(() => setSaved(false), 2000);

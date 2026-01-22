@@ -19,6 +19,7 @@ interface AssistanceHistoryItem {
   icon: string;
   timestamp: string;
   isCustom: boolean;
+  status?: 'sent' | 'cancelled'; // Estado de la solicitud
 }
 
 const ASSISTANCE_HISTORY_KEY = 'assistance_history';
@@ -26,10 +27,11 @@ const ASSISTANCE_HISTORY_KEY = 'assistance_history';
 const RequestAssistanceScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [requested, setRequested] = useState<string[]>([]);
+  const [selectedRequests, setSelectedRequests] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [history, setHistory] = useState<AssistanceHistoryItem[]>([]);
   const [customRequestId, setCustomRequestId] = useState<string | null>(null);
+  const [customRequestLabel, setCustomRequestLabel] = useState<string>('');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const assistanceRequests: AssistanceRequest[] = [
@@ -88,6 +90,27 @@ const RequestAssistanceScreen: React.FC = () => {
       label: t('assistance.callWaiter'), 
       translationKey: 'callWaiter',
       searchKeywords: ['mesero', 'camarero', 'waiter', 'servidor', 'servicio', 'atención', 'ayuda', 'help', 'asistencia']
+    },
+    { 
+      id: 'coffeeRefill', 
+      icon: 'local_cafe', 
+      label: t('assistance.coffeeRefill'), 
+      translationKey: 'coffeeRefill',
+      searchKeywords: ['café', 'refill', 'recarga', 'más café', 'mas cafe', 'coffee', 'taza', 'cup', 'recargar', 'rellenar']
+    },
+    { 
+      id: 'sugar', 
+      icon: 'coffee', 
+      label: t('assistance.sugar'), 
+      translationKey: 'sugar',
+      searchKeywords: ['azúcar', 'azucar', 'sugar', 'endulzante', 'sweetener', 'dulce']
+    },
+    { 
+      id: 'salt', 
+      icon: 'restaurant_menu', 
+      label: t('assistance.salt'), 
+      translationKey: 'salt',
+      searchKeywords: ['sal', 'salt', 'condimento', 'seasoning', 'salero']
     },
   ];
 
@@ -291,70 +314,107 @@ const RequestAssistanceScreen: React.FC = () => {
     return filteredRequests.length === 0;
   }, [searchQuery, filteredRequests, customRequestId]);
 
-  const handleRequest = (id: string, customLabel?: string) => {
-    const requestId = id || `custom-${Date.now()}`;
-    if (!requested.includes(requestId)) {
-      setRequested([...requested, requestId]);
-      
+  // Toggle selección de solicitud
+  const handleToggleRequest = (id: string) => {
+    if (selectedRequests.includes(id)) {
+      setSelectedRequests(selectedRequests.filter(reqId => reqId !== id));
+    } else {
+      setSelectedRequests([...selectedRequests, id]);
+    }
+  };
+
+  // Toggle selección de solicitud personalizada
+  const handleToggleCustomRequest = () => {
+    if (searchQuery.trim()) {
+      if (customRequestId && selectedRequests.includes(customRequestId)) {
+        setSelectedRequests(selectedRequests.filter(reqId => reqId !== customRequestId));
+        setCustomRequestId(null);
+        setCustomRequestLabel('');
+      } else if (!customRequestId) {
+        const requestId = `custom-${Date.now()}`;
+        setCustomRequestId(requestId);
+        setCustomRequestLabel(searchQuery.trim());
+        setSelectedRequests([...selectedRequests, requestId]);
+      }
+    }
+  };
+
+  // Enviar todas las solicitudes seleccionadas
+  const handleSendRequests = () => {
+    if (selectedRequests.length === 0) return;
+
+    const newHistoryItems: AssistanceHistoryItem[] = [];
+
+    selectedRequests.forEach(requestId => {
       // Obtener información de la solicitud
-      let requestLabel = customLabel || '';
+      let requestLabel = '';
       let requestIcon = 'help';
       let isCustom = false;
 
-      if (id && !customLabel) {
+      if (requestId.startsWith('custom-')) {
+        // Es una solicitud personalizada
+        requestLabel = customRequestLabel || searchQuery.trim();
+        requestIcon = 'priority_high';
+        isCustom = true;
+      } else {
         // Es una solicitud predefinida
-        const request = assistanceRequests.find(r => r.id === id);
+        const request = assistanceRequests.find(r => r.id === requestId);
         if (request) {
           requestLabel = request.label;
           requestIcon = request.icon;
         }
-      } else if (customLabel) {
-        // Es una solicitud personalizada
-        requestLabel = customLabel;
-        requestIcon = 'priority_high';
-        isCustom = true;
       }
 
-      // Guardar en historial
-      const historyItem: AssistanceHistoryItem = {
-        id: `history-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        label: requestLabel,
-        icon: requestIcon,
-        timestamp: new Date().toISOString(),
-        isCustom: isCustom,
-      };
-
-      const updatedHistory = [historyItem, ...history];
-      setHistory(updatedHistory);
-      
-      // Guardar en localStorage
-      try {
-        localStorage.setItem(ASSISTANCE_HISTORY_KEY, JSON.stringify(updatedHistory));
-      } catch (error) {
-        console.error('Error saving assistance history:', error);
+      if (requestLabel) {
+        const historyItem: AssistanceHistoryItem = {
+          id: `history-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          label: requestLabel,
+          icon: requestIcon,
+          timestamp: new Date().toISOString(),
+          isCustom: isCustom,
+          status: 'sent', // Estado inicial: enviada
+        };
+        newHistoryItems.push(historyItem);
       }
-      
-      // NO limpiar búsqueda inmediatamente para solicitudes personalizadas
-      // Se limpiará después de mostrar el efecto visual
-      
-      // Opcional: auto-reset después de 3 segundos para permitir nueva solicitud
-      setTimeout(() => {
-        setRequested(prev => prev.filter(reqId => reqId !== requestId));
-      }, 3000);
+    });
+
+    // Agregar al historial
+    const updatedHistory = [...newHistoryItems, ...history];
+    setHistory(updatedHistory);
+    
+    // Guardar en localStorage
+    try {
+      localStorage.setItem(ASSISTANCE_HISTORY_KEY, JSON.stringify(updatedHistory));
+    } catch (error) {
+      console.error('Error saving assistance history:', error);
     }
+
+    // Limpiar selecciones
+    setSelectedRequests([]);
+    setCustomRequestId(null);
+    setCustomRequestLabel('');
+    setSearchQuery('');
   };
 
-  const handleCreateCustomRequest = () => {
-    if (searchQuery.trim() && customRequestId === null) {
-      const requestId = `custom-${Date.now()}`;
-      setCustomRequestId(requestId);
-      handleRequest('', searchQuery.trim());
-      
-      // Auto-reset después de 3 segundos y limpiar búsqueda
-      setTimeout(() => {
-        setCustomRequestId(null);
-        setSearchQuery(''); // Limpiar búsqueda después de mostrar el efecto
-      }, 3000);
+  // Cancelar una solicitud individual
+  const handleCancelRequest = (itemId: string) => {
+    const updatedHistory = history.map(item => {
+      if (item.id === itemId && item.status === 'sent') {
+        return {
+          ...item,
+          status: 'cancelled' as const,
+        };
+      }
+      return item;
+    });
+    
+    setHistory(updatedHistory);
+    
+    // Guardar en localStorage
+    try {
+      localStorage.setItem(ASSISTANCE_HISTORY_KEY, JSON.stringify(updatedHistory));
+    } catch (error) {
+      console.error('Error saving assistance history:', error);
     }
   };
 
@@ -402,22 +462,36 @@ const RequestAssistanceScreen: React.FC = () => {
                     hour: '2-digit', 
                     minute: '2-digit' 
                   });
+                  const isSent = item.status === 'sent' || item.status === undefined; // Por defecto 'sent' para items antiguos
+                  const isCancelled = item.status === 'cancelled';
                   
                   return (
                     <div
                       key={item.id}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700"
+                      className={`flex items-center gap-3 p-3 rounded-xl border ${
+                        isCancelled 
+                          ? 'bg-gray-100 dark:bg-gray-900/50 border-gray-300 dark:border-gray-700 opacity-60'
+                          : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'
+                      }`}
                     >
-                      <div className="flex items-center justify-center size-10 rounded-full bg-primary/10 text-primary flex-shrink-0">
+                      <div className={`flex items-center justify-center size-10 rounded-full flex-shrink-0 ${
+                        isCancelled
+                          ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                          : 'bg-primary/10 text-primary'
+                      }`}>
                         <span className="material-symbols-outlined text-xl">
                           {item.icon}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[#181511] dark:text-white truncate">
+                        <p className={`text-sm font-medium truncate ${
+                          isCancelled
+                            ? 'text-gray-400 dark:text-gray-500 line-through'
+                            : 'text-[#181511] dark:text-white'
+                        }`}>
                           {item.label}
                         </p>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <span className="text-xs text-gray-500 dark:text-gray-400">
                             {timeString}
                           </span>
@@ -426,12 +500,29 @@ const RequestAssistanceScreen: React.FC = () => {
                               {t('assistance.custom')}
                             </span>
                           )}
-                          <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
-                            <span className="material-symbols-outlined text-sm">check_circle</span>
-                            {t('assistance.sent')}
-                          </span>
+                          {isSent && (
+                            <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-sm">check_circle</span>
+                              {t('assistance.sent')}
+                            </span>
+                          )}
+                          {isCancelled && (
+                            <span className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-sm">cancel</span>
+                              {t('assistance.cancelled')}
+                            </span>
+                          )}
                         </div>
                       </div>
+                      {isSent && (
+                        <button
+                          onClick={() => handleCancelRequest(item.id)}
+                          className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex-shrink-0 text-xs font-semibold"
+                        >
+                          <span className="material-symbols-outlined text-sm">cancel</span>
+                          <span>{t('assistance.cancelRequest')}</span>
+                        </button>
+                      )}
                     </div>
                   );
                 })}
@@ -439,24 +530,16 @@ const RequestAssistanceScreen: React.FC = () => {
             </div>
           )}
 
-          {/* Solicitar Asistencia Personalizada Button */}
-          <button
-            onClick={() => {
-              const waiterRequest = assistanceRequests.find(r => r.id === 'waiter');
-              if (waiterRequest && !requested.includes('waiter')) {
-                handleRequest('waiter');
-              }
-            }}
-            disabled={requested.includes('waiter')}
-            className={`bg-primary text-white font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 w-full mb-4 transition-colors ${
-              requested.includes('waiter')
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-primary/90 active:scale-95'
-            }`}
-          >
-            <span className="material-symbols-outlined">person</span>
-            <span>{t('assistance.callPersonalAssistant')}</span>
-          </button>
+          {/* Botón Enviar Solicitud - Solo visible si hay selecciones */}
+          {selectedRequests.length > 0 && (
+            <button
+              onClick={handleSendRequests}
+              className="bg-primary text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 w-full mb-4 transition-colors hover:bg-primary/90 active:scale-95 shadow-lg"
+            >
+              <span className="material-symbols-outlined">send</span>
+              <span>{t('assistance.sendRequest')} ({selectedRequests.length})</span>
+            </button>
+          )}
 
           {/* Search Input */}
           <div className="relative mb-6">
@@ -506,20 +589,19 @@ const RequestAssistanceScreen: React.FC = () => {
               {filteredRequests
                 .filter(request => request.id !== 'waiter') // Excluir "Llamar Mesero" del grid
                 .map((request) => {
-                const isRequested = requested.includes(request.id);
+                const isSelected = selectedRequests.includes(request.id);
                 return (
                   <button
                     key={request.id}
-                    onClick={() => handleRequest(request.id)}
-                    disabled={isRequested}
-                    className={`flex flex-col items-center justify-center gap-3 rounded-xl p-6 border-2 transition-all ${
-                      isRequested
+                    onClick={() => handleToggleRequest(request.id)}
+                    className={`relative flex flex-col items-center justify-center gap-3 rounded-xl p-6 border-2 transition-all ${
+                      isSelected
                         ? 'bg-primary/10 border-primary text-primary'
                         : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary hover:bg-primary/5 text-[#181511] dark:text-white'
-                    } disabled:cursor-not-allowed`}
+                    }`}
                   >
                     <div className={`flex items-center justify-center size-16 rounded-full transition-colors ${
-                      isRequested
+                      isSelected
                         ? 'bg-primary text-white'
                         : 'bg-primary/10 text-primary'
                     }`}>
@@ -527,15 +609,14 @@ const RequestAssistanceScreen: React.FC = () => {
                         {request.icon}
                       </span>
                     </div>
-                    <p className={`text-sm font-semibold text-center ${
-                      isRequested ? 'text-primary' : ''
-                    }`}>
+                    <p className="text-sm font-semibold text-center">
                       {request.label}
                     </p>
-                    {isRequested && (
-                      <div className="flex items-center gap-1 text-xs text-primary">
-                        <span className="material-symbols-outlined text-sm">check_circle</span>
-                        <span>{t('assistance.requested')}</span>
+                    {isSelected && (
+                      <div className="absolute top-2 right-2">
+                        <div className="size-6 rounded-full bg-primary text-white flex items-center justify-center">
+                          <span className="material-symbols-outlined text-sm">check</span>
+                        </div>
                       </div>
                     )}
                   </button>
@@ -548,16 +629,15 @@ const RequestAssistanceScreen: React.FC = () => {
           {shouldShowCustomRequest && (
             <div className="grid grid-cols-2 gap-4 mb-4">
               <button
-                onClick={handleCreateCustomRequest}
-                disabled={customRequestId !== null}
-                className={`flex flex-col items-center justify-center gap-3 rounded-xl p-6 border-2 transition-all ${
-                  customRequestId !== null
+                onClick={handleToggleCustomRequest}
+                className={`relative flex flex-col items-center justify-center gap-3 rounded-xl p-6 border-2 transition-all ${
+                  customRequestId && selectedRequests.includes(customRequestId)
                     ? 'bg-primary/10 border-primary text-primary'
                     : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary hover:bg-primary/5 text-[#181511] dark:text-white'
-                } disabled:cursor-not-allowed`}
+                }`}
               >
                 <div className={`flex items-center justify-center size-16 rounded-full transition-colors ${
-                  customRequestId !== null
+                  customRequestId && selectedRequests.includes(customRequestId)
                     ? 'bg-primary text-white'
                     : 'bg-primary/10 text-primary'
                 }`}>
@@ -565,15 +645,14 @@ const RequestAssistanceScreen: React.FC = () => {
                     priority_high
                   </span>
                 </div>
-                <p className={`text-sm font-semibold text-center ${
-                  customRequestId !== null ? 'text-primary' : ''
-                }`}>
+                <p className="text-sm font-semibold text-center">
                   {searchQuery}
                 </p>
-                {customRequestId !== null && (
-                  <div className="flex items-center gap-1 text-xs text-primary">
-                    <span className="material-symbols-outlined text-sm">check_circle</span>
-                    <span>{t('assistance.requested')}</span>
+                {customRequestId && selectedRequests.includes(customRequestId) && (
+                  <div className="absolute top-2 right-2">
+                    <div className="size-6 rounded-full bg-primary text-white flex items-center justify-center">
+                      <span className="material-symbols-outlined text-sm">check</span>
+                    </div>
                   </div>
                 )}
               </button>

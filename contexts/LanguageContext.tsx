@@ -98,11 +98,14 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     // Guardar el código del idioma para el sistema de traducción
     localStorage.setItem('appLanguage', lang);
     // También guardar el nombre del idioma para compatibilidad con SettingsScreen
-    // Usar las traducciones estáticas del idioma seleccionado
-    const langTranslations = allStaticTranslations[lang] || allStaticTranslations.es;
-    const languageName = langTranslations?.common?.languageNames?.[lang] || 
-      allStaticTranslations.es.common.languageNames[lang] || 
-      lang.toUpperCase();
+    // IMPORTANTE: Usar los nombres de la lista allLanguages ('Español', 'Inglés', 'Portugués', 'Francés')
+    const languageNameMap: Record<Language, string> = {
+      'es': 'Español',
+      'en': 'Inglés',
+      'pt': 'Portugués',
+      'fr': 'Francés'
+    };
+    const languageName = languageNameMap[lang] || 'Español';
     localStorage.setItem('selectedLanguage', languageName);
   };
 

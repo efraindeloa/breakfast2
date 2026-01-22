@@ -256,11 +256,11 @@ Este proyecto es propietario. Todos los derechos reservados.
 
 ---
 
-**Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.1  
+**Última actualización**: Enero 2025  
+**Versión del documento**: 1.4  
 **Responsable**: Equipo de desarrollo
 
-### Cambios Recientes (Diciembre 2024)
+### Cambios Recientes (Enero 2025)
 
 #### Nueva Funcionalidad: Edición de Órdenes
 - ✅ Pantalla de edición de órdenes (`/edit-order`)
@@ -335,3 +335,47 @@ Este proyecto es propietario. Todos los derechos reservados.
 - ✅ Scroll automático al inicio al abrir detalle de producto
 - ✅ Botón para agregar más items en pantalla de edición de órdenes
 - ✅ Mejora en la experiencia de navegación entre menú y detalle de productos
+- ✅ Botón de retroceso de Android funciona como navegación interna de la app
+
+#### Nueva Funcionalidad: Descubrir Restaurantes
+- ✅ Pantalla de descubrir restaurantes (`/discover`)
+- ✅ Mapa interactivo con Leaflet y OpenStreetMap
+- ✅ Geolocalización real con Capacitor Geolocation
+- ✅ Visualización de restaurantes cercanos en el mapa
+- ✅ Marcadores personalizados con imágenes de restaurantes
+- ✅ Selección de ciudad para explorar restaurantes en diferentes zonas
+- ✅ Lista de restaurantes cercanos con distancia, rating y estado
+- ✅ Controles de zoom y centrado en ubicación
+- ✅ Cálculo de distancias en tiempo real
+- ✅ Botón "Reunirse aquí" para compartir ubicación
+- ✅ Traducciones completas en 4 idiomas
+
+#### Nueva Funcionalidad: Punto de Encuentro
+- ✅ Pantalla de punto de encuentro (`/meetup`)
+- ✅ Mapa mostrando restaurante seleccionado como punto de encuentro
+- ✅ Marcador de ubicación del usuario
+- ✅ Selección de restaurante para el punto de encuentro
+- ✅ Compartir punto de encuentro con contactos registrados
+- ✅ Generación de links compartibles
+- ✅ Integración con WhatsApp y email
+- ✅ Traducciones completas en 4 idiomas
+
+#### Nueva Funcionalidad: Gestión de Contactos
+- ✅ Pantalla de gestión de contactos (`/contacts`)
+- ✅ Agregar contactos manualmente
+- ✅ Editar contactos existentes
+- ✅ Eliminar contactos
+- ✅ Importar contactos desde el dispositivo móvil
+- ✅ Acceso real a contactos del dispositivo con Capacitor Contacts
+- ✅ Solicitud de permisos de contactos
+- ✅ Selección múltiple de contactos para importar
+- ✅ Validación de datos (nombre requerido, teléfono o email)
+- ✅ Persistencia en localStorage
+- ✅ Traducciones completas en 4 idiomas
+
+#### Mejoras: Geolocalización
+- ✅ Verificación de permisos antes de obtener ubicación
+- ✅ Solicitud automática de permisos si no están concedidos
+- ✅ Marcador de usuario mejorado y más visible
+- ✅ Manejo de errores mejorado con logs de depuración
+- ✅ Timeout y configuración de precisión optimizada

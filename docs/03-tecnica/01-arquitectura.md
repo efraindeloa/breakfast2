@@ -63,6 +63,8 @@
 #### Bibliotecas Externas
 - **html5-qrcode 2.3.8**: Escaneo de códigos QR
 - **tesseract.js**: OCR (Optical Character Recognition) para escaneo de tarjetas bancarias
+- **leaflet 1.9.4**: Biblioteca de mapas interactivos
+- **react-leaflet 5.0.0**: Componentes React para Leaflet
 
 ---
 
@@ -298,6 +300,12 @@ interface FavoritesContextType {
 /waitlist                   → WaitlistScreen (autenticado)
 /invite-users               → InviteUsersScreen (autenticado)
 /group-order-management     → GroupOrderManagementScreen (autenticado)
+/discover                   → DiscoverRestaurantsScreen (autenticado)
+/meetup                     → MeetUpScreen (autenticado)
+/contacts                   → ContactsScreen (autenticado)
+/loyalty                    → LoyaltyScreen (autenticado)
+/coupons                    → CouponsScreen (autenticado)
+/coupon-detail/:id          → CouponDetailScreen (autenticado)
 /order-confirmed            → OrderConfirmedScreen (autenticado)
 /billing-step-1             → BillingDataScreen
 /billing-step-2             → UploadConstanciaScreen
@@ -521,6 +529,89 @@ interface Review {
 - Las opiniones se pueden editar después de publicarlas
 - Al cambiar de producto seleccionado, se limpian todos los campos
 - Si un producto ya tiene calificación, se cargan los datos al seleccionarlo
+
+### Geolocalización (Capacitor)
+
+#### Implementación
+- **Plugin**: `@capacitor/geolocation`
+- **Funcionalidad**: Obtener ubicación GPS del usuario
+- **Uso**: Descubrir restaurantes cercanos, mostrar ubicación en mapas
+
+#### Permisos
+- **Android**: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`
+- Se solicitan automáticamente al usar la funcionalidad
+- Si se deniegan, se usa ubicación por defecto
+
+#### Funciones Principales
+```typescript
+// Verificar permisos
+const permissions = await Geolocation.checkPermissions();
+
+// Solicitar permisos
+const requestResult = await Geolocation.requestPermissions();
+
+// Obtener ubicación actual
+const position = await Geolocation.getCurrentPosition({
+  enableHighAccuracy: true,
+  timeout: 10000,
+  maximumAge: 0
+});
+```
+
+---
+
+### Contactos del Dispositivo (Capacitor)
+
+#### Implementación
+- **Plugin**: `@capacitor-community/contacts`
+- **Funcionalidad**: Acceder a contactos del dispositivo móvil
+- **Uso**: Importar contactos para compartir puntos de encuentro
+
+#### Permisos
+- **Android**: `READ_CONTACTS`, `WRITE_CONTACTS`
+- Se solicitan al intentar importar contactos
+- Solo funciona en plataformas nativas (Android/iOS)
+
+#### Funciones Principales
+```typescript
+// Verificar permisos
+const permissions = await Contacts.checkPermissions();
+
+// Solicitar permisos
+const result = await Contacts.requestPermissions();
+
+// Obtener contactos
+const result = await Contacts.getContacts({
+  projection: {
+    name: true,
+    phones: true,
+    emails: true
+  }
+});
+```
+
+---
+
+### Mapas Interactivos (Leaflet)
+
+#### Implementación
+- **Biblioteca**: `leaflet`, `react-leaflet`
+- **Funcionalidad**: Mostrar mapas interactivos con restaurantes y ubicaciones
+- **Uso**: Descubrir restaurantes, punto de encuentro
+
+#### Características
+- Mapas de OpenStreetMap
+- Marcadores personalizados para restaurantes y usuario
+- Controles de zoom y centrado
+- Cálculo de distancias
+
+#### Componentes Principales
+```typescript
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+```
+
+---
 
 ### Cámara (Capacitor)
 
@@ -957,5 +1048,5 @@ Intervalo actualiza posiciones y tiempos estimados
 ---
 
 **Última actualización**: Enero 2025  
-**Versión del documento**: 1.3  
+**Versión del documento**: 1.4  
 **Responsable**: Equipo de desarrollo

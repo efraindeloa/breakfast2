@@ -597,9 +597,14 @@ Sí, la app está diseñada para funcionar en teléfonos y tablets, con diseño 
 ---
 
 **Última actualización**: Enero 2025  
-**Versión del documento**: 1.3
+**Versión del documento**: 1.4
 
 ### Cambios Recientes (Enero 2025)
+- ✅ Agregada sección completa de Descubrir Restaurantes
+- ✅ Agregada sección completa de Punto de Encuentro
+- ✅ Agregada sección completa de Gestión de Contactos
+- ✅ Instrucciones para usar geolocalización y mapas
+- ✅ Instrucciones para importar contactos del dispositivo
 - ✅ Agregada información sobre funcionalidad de agregar más items en edición de órdenes
 - ✅ Agregada información sobre navegación inteligente del menú
 - ✅ Actualizada sección de modificación de órdenes con nuevas funcionalidades

@@ -972,10 +972,16 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 ---
 
 **Última actualización**: Enero 2025  
-**Versión del documento**: 1.3  
+**Versión del documento**: 1.4  
 **Responsable**: Equipo de desarrollo
 
 ### Cambios Recientes (Enero 2025)
+- ✅ Agregada sección completa de Descubrir Restaurantes (17)
+- ✅ Agregada sección completa de Punto de Encuentro (18)
+- ✅ Agregada sección completa de Gestión de Contactos (19)
+- ✅ Documentada integración con Leaflet y OpenStreetMap
+- ✅ Documentada geolocalización con Capacitor Geolocation
+- ✅ Documentado acceso a contactos del dispositivo con Capacitor Contacts
 - ✅ Agregada funcionalidad para agregar más items en pantalla de edición de órdenes
 - ✅ Mejora en preservación de categoría y scroll al navegar entre menú y detalle
 - ✅ Scroll automático al inicio al abrir detalle de producto

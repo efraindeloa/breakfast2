@@ -580,7 +580,7 @@ GroupOrder
 ---
 
 **Última actualización**: Enero 2025  
-**Versión del documento**: 1.3  
+**Versión del documento**: 1.4  
 **Responsable**: Equipo de desarrollo
 
 ### Opinión de Usuario (Review)
@@ -659,6 +659,16 @@ interface Review {
 - Al editar una opinión, se actualiza el campo `updatedAt`
 
 ---
+
+### Cambios Recientes (Enero 2025)
+- ✅ Agregado modelo de datos para contactos del usuario (`Contact`)
+- ✅ Agregada clave `user_contacts` en localStorage
+- ✅ Documentación de estructura de contactos (nombre, teléfono, email)
+- ✅ Agregado modelo de datos para restaurantes (`Restaurant`)
+- ✅ Documentación de estructura de restaurantes (id, nombre, ubicación, rating)
+- ✅ Agregado modelo de datos para datos de lealtad (`LoyaltyUser`)
+- ✅ Agregada clave `loyalty_data` en localStorage
+- ✅ Documentación de niveles de lealtad (Bronze, Silver, Gold, Platinum)
 
 ### Cambios Recientes (Diciembre 2024)
 - ✅ Agregado modelo de datos para solicitudes de asistencia (`AssistanceHistoryItem`)

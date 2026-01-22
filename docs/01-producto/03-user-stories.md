@@ -654,7 +654,7 @@
 ---
 
 **Última actualización**: Enero 2025  
-**Versión del documento**: 1.3  
+**Versión del documento**: 1.4  
 **Responsable**: Equipo de desarrollo
 
 ### EPIC 11: Opiniones Verificadas
@@ -863,6 +863,15 @@
 ---
 
 ---
+
+### Cambios Recientes (Enero 2025)
+- ✅ Agregado EPIC 14: Descubrir Restaurantes
+- ✅ Agregadas User Stories US-038 a US-039
+- ✅ Agregado EPIC 15: Punto de Encuentro
+- ✅ Agregadas User Stories US-040 a US-041
+- ✅ Agregado EPIC 16: Gestión de Contactos
+- ✅ Agregadas User Stories US-042 a US-043
+- ✅ Actualizada matriz de prioridades con nuevas user stories
 
 ### Cambios Recientes (Diciembre 2024)
 - ✅ Agregado EPIC 12: Lista de Espera (Waitlist)

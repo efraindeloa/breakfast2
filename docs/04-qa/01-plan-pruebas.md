@@ -444,10 +444,16 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 ---
 
 **Última actualización**: Enero 2025  
-**Versión del documento**: 1.2  
+**Versión del documento**: 1.4  
 **Responsable**: QA Team
 
 ### Cambios Recientes (Enero 2025)
+- ✅ Agregadas pruebas para Descubrir Restaurantes
+- ✅ Agregadas pruebas para Punto de Encuentro
+- ✅ Agregadas pruebas para Gestión de Contactos
+- ✅ Agregadas pruebas para geolocalización y permisos
+- ✅ Agregadas pruebas para importación de contactos del dispositivo
+- ✅ Agregadas pruebas para mapas interactivos (Leaflet)
 - ✅ Agregadas pruebas para preservación de estado de navegación
 - ✅ Agregadas pruebas para funcionalidad de agregar más items en edición
 - ✅ Agregadas pruebas para scroll automático en detalle de producto

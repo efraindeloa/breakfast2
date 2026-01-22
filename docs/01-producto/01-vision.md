@@ -18,7 +18,15 @@
 - **Calificación visible en detalle de producto** con promedio y número de reseñas
 - **Solicitud de asistencia** con **búsqueda fuzzy (difusa)** que tolera errores de tipeo
 - **Historial de solicitudes** para confirmar que las solicitudes fueron enviadas
-- **Asistente IA** para recomendaciones y soporte
+- **Asistente IA** para recomendaciones y soporte con **speech-to-text** (reconocimiento de voz)
+- **Programa de lealtad** con sistema de puntos y niveles
+- **Cupones y recompensas** con programa de referidos
+- **Módulo de promociones** con filtros y sugerencias de IA
+- **Mesa lista** con notificación cuando la mesa está disponible
+- **Pago dividido** para dividir la cuenta entre múltiples comensales
+- **Descubrir restaurantes** con mapa interactivo y geolocalización
+- **Punto de encuentro** para coordinar reuniones en restaurantes
+- **Gestión de contactos** con importación desde dispositivo
 - **Soporte multiidioma** (Español, Inglés, Portugués, Francés)
 - **Modo oscuro/claro** para mejor experiencia visual
 
@@ -117,10 +125,19 @@
 ---
 
 **Última actualización**: Enero 2025  
-**Versión del documento**: 1.2  
+**Versión del documento**: 1.3  
 **Responsable**: Equipo de desarrollo
 
 ### Cambios Recientes (Enero 2025)
+- ✅ Programa de lealtad con puntos y niveles
+- ✅ Cupones y recompensas con referidos
+- ✅ Módulo de promociones con sugerencias de IA
+- ✅ Notificación de mesa lista con contador regresivo
+- ✅ Pago dividido para múltiples comensales
+- ✅ Descubrir restaurantes con mapa interactivo
+- ✅ Punto de encuentro para coordinar reuniones
+- ✅ Gestión de contactos con importación desde dispositivo
+- ✅ Speech-to-text en asistente IA
 - ✅ Mejoras en navegación del menú con preservación de estado
 - ✅ Mejoras en experiencia de usuario al navegar entre menú y detalle
 - ✅ Funcionalidad mejorada de edición de órdenes

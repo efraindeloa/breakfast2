@@ -988,6 +988,173 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 - ✅ Corrección de carga de imágenes en pantalla de edición de órdenes
 - ✅ Mejora en experiencia de navegación del menú
 
+## 20. Programa de Lealtad
+
+### 20.1 Pantalla de Lealtad (`LoyaltyScreen`)
+**Ruta**: `/loyalty`
+
+#### Funcionalidades
+- Resumen de puntos totales con efecto glow
+- Crecimiento mensual de puntos
+- Visualización de nivel actual (Bronce, Plata, Oro, Platino)
+- Barra de progreso hacia el siguiente nivel
+- Lista horizontal scrollable de beneficios del nivel
+- Sección "Cómo ganar más puntos" con tareas
+- Integración en navegación inferior y perfil
+
+#### Reglas de negocio
+- Los puntos se acumulan por acciones del usuario
+- Los niveles se calculan según puntos totales
+- Los beneficios se muestran según el nivel actual
+- Los datos se persisten en `localStorage` con clave `loyalty_data`
+
+## 21. Cupones y Recompensas
+
+### 21.1 Pantalla de Cupones (`CouponsScreen`)
+**Ruta**: `/coupons`
+
+#### Funcionalidades
+- Saludo dinámico según hora del día (Buenos días, Buenas tardes, Buenas noches)
+- Carousel horizontal de cupones con efecto de perforación
+- Programa de referidos con código único
+- Estadísticas de referidos (referidos, puntos ganados)
+- Compartir código de referido (Web Share API)
+- Integración en navegación inferior y perfil
+
+### 21.2 Detalle de Cupón (`CouponDetailScreen`)
+**Ruta**: `/coupon-detail/:id`
+
+#### Funcionalidades
+- Visualización ampliada del cupón
+- QR code grande para mostrar al personal
+- Instrucciones de uso del cupón
+- Información del restaurante
+
+## 22. Módulo de Promociones
+
+### 22.1 Pantalla de Promociones (`PromotionsScreen`)
+**Ruta**: `/promotions`
+
+#### Funcionalidades
+- Filtros por categoría (Desayuno, Temporada, Exclusivo VIP)
+- Carousel horizontal de promociones principales
+- Sección "Sugerencia de IA" con recomendación personalizada
+- Grid de especiales de temporada
+- Integración en navegación inferior con badge de notificación
+
+### 22.2 Detalle de Promoción (`PromotionDetailScreen`)
+**Ruta**: `/promotion-detail/:id`
+
+#### Funcionalidades
+- Imagen principal grande con badge de categoría
+- Título y subtítulo de la oferta
+- Sección "Ahorro Real" con precios antes/después
+- Contador regresivo en tiempo real
+- Condiciones de aplicación (horarios, días)
+- Lista de items incluidos
+- Botón sticky "Aplicar a mi Orden"
+
+#### Reglas de negocio
+- El contador regresivo se actualiza cada segundo
+- Las condiciones se muestran según la promoción
+- El botón "Aplicar" navega al menú con la promoción aplicada
+
+## 23. Mesa Lista (Table Ready)
+
+### 23.1 Pantalla de Mesa Lista (`TableReadyScreen`)
+**Ruta**: `/table-ready`
+
+#### Funcionalidades
+- Detección automática cuando posición en lista de espera es 0 o 1
+- Contador regresivo en tiempo real (minutos y segundos)
+- Botón "¡Ya estoy aquí!" para confirmar asistencia
+- Botón "Necesito 5 min más" para extender tiempo
+- Visualización de zona de la mesa
+- Diseño con gradiente breakfast-gradient
+
+#### Reglas de negocio
+- Se navega automáticamente desde `WaitlistScreen` cuando la mesa está lista
+- El contador inicia en 5 minutos por defecto
+- Se puede extender el tiempo agregando 5 minutos adicionales
+- Los datos se persisten en `localStorage` con clave `tableReadyData`
+- Al confirmar asistencia, se limpian los datos y se navega al menú
+
+## 24. Pago Dividido (Split Payment)
+
+### 24.1 Selección de Items (`SplitPaymentSelectionScreen`)
+**Ruta**: `/split-payment-selection`
+
+#### Funcionalidades
+- Lista de todos los items de las órdenes activas
+- Selección automática de items del usuario por defecto
+- Selección/deselección de cualquier item
+- Agrupación de items iguales para mejor visualización
+- Badge "Tu item" en items del usuario
+- Cálculo de subtotal en tiempo real
+- Botón "Continuar" que se habilita solo si hay items seleccionados
+
+#### Reglas de negocio
+- En órdenes grupales, identifica items del usuario comparando con `currentUserParticipant.orderItems`
+- En órdenes individuales, todos los items se consideran del usuario
+- Cada item se identifica por `id`, `notes` y posición en la orden
+- Los datos seleccionados se guardan en `localStorage` con clave `splitPaymentData`
+
+### 24.2 Resumen y Pago (`SplitPaymentSummaryScreen`)
+**Ruta**: `/split-payment-summary`
+
+#### Funcionalidades
+- Visualización de items seleccionados agrupados
+- Cálculo de subtotal
+- Cálculo de impuestos (16% IVA)
+- Sistema de propina (porcentaje o cantidad fija)
+- Selección de método de pago (efectivo o tarjeta)
+- Visualización de tarjetas guardadas
+- Opción para agregar nueva tarjeta
+- Botón "Pagar ahora" con validación
+
+#### Reglas de negocio
+- Los impuestos se calculan sobre el subtotal
+- La propina se calcula sobre el subtotal (antes de impuestos)
+- El total incluye subtotal + impuestos + propina
+- Se requiere seleccionar método de pago antes de pagar
+- Si se selecciona tarjeta, se requiere seleccionar una tarjeta guardada
+
+### 24.3 Integración con Pagos
+- Botón "Dividir cuenta" en `PaymentMethodsScreen`
+- Navegación a selección de items desde pantalla de pagos
+- Integración con sistema de pagos existente
+
+## 25. Asistente IA con Speech-to-Text
+
+### 25.1 Reconocimiento de Voz (`AssistantModal`)
+**Componente**: `components/AssistantModal.tsx`
+
+#### Funcionalidades
+- Reconocimiento de voz nativo con Capacitor Speech Recognition
+- Reconocimiento de voz web con Web Speech API
+- Detección automática de plataforma (nativo vs web)
+- Solicitud de permisos de micrófono
+- Indicador visual de estado de escucha
+- Botón de micrófono en modal de asistente
+
+#### Reglas de negocio
+- En plataformas nativas (Android/iOS), usa `@capacitor-community/speech-recognition`
+- En web, usa `SpeechRecognition` o `webkitSpeechRecognition`
+- Requiere permisos de micrófono (`RECORD_AUDIO` en Android)
+- Manejo robusto de errores y permisos denegados
+- Los resultados se insertan automáticamente en el campo de texto
+
+---
+
+### Cambios Recientes (Enero 2025)
+- ✅ Agregada sección completa de Programa de Lealtad (20)
+- ✅ Agregada sección completa de Cupones y Recompensas (21)
+- ✅ Agregada sección completa de Módulo de Promociones (22)
+- ✅ Agregada sección completa de Mesa Lista (23)
+- ✅ Agregada sección completa de Pago Dividido (24)
+- ✅ Agregada sección completa de Asistente IA con Speech-to-Text (25)
+- ✅ Documentada integración de todas las nuevas funcionalidades
+
 ### Cambios Recientes (Diciembre 2024)
 - ✅ Agregada sección completa de Edición de Órdenes (9.4)
 - ✅ Agregada sección completa de Lista de Espera (16)

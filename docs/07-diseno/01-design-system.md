@@ -448,5 +448,9 @@ shadow-[0_2px_15px_rgba(0,0,0,0.05)]
 ---
 
 **Última actualización**: Enero 2025  
-**Versión del documento**: 1.1  
+**Versión del documento**: 1.2
+
+### Cambios Recientes (Enero 2025)
+- ✅ Agregado estilo breakfast-gradient para pantallas especiales
+- ✅ Documentados nuevos componentes (LoyaltyScreen, CouponsScreen, PromotionsScreen, TableReadyScreen, SplitPaymentScreen)  
 **Responsable**: Equipo de diseño

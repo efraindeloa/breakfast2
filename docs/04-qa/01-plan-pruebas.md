@@ -124,6 +124,50 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 - ✅ Configuración de IA
 - ✅ Datos fiscales
 
+#### Programa de Lealtad
+- ✅ Visualización de puntos totales
+- ✅ Crecimiento mensual
+- ✅ Niveles (Bronce, Plata, Oro, Platino)
+- ✅ Barra de progreso
+- ✅ Beneficios por nivel
+- ✅ Persistencia de datos
+
+#### Cupones y Recompensas
+- ✅ Carousel de cupones
+- ✅ Programa de referidos
+- ✅ Compartir código de referido
+- ✅ Estadísticas de referidos
+- ✅ Detalle de cupón con QR
+
+#### Promociones
+- ✅ Filtros por categoría
+- ✅ Carousel de promociones principales
+- ✅ Sugerencia de IA
+- ✅ Especiales de temporada
+- ✅ Detalle de promoción con contador
+- ✅ Aplicar promoción a orden
+
+#### Mesa Lista
+- ✅ Detección automática cuando mesa está lista
+- ✅ Contador regresivo en tiempo real
+- ✅ Confirmar asistencia
+- ✅ Extender tiempo (5 minutos más)
+- ✅ Navegación automática desde lista de espera
+
+#### Pago Dividido
+- ✅ Selección de items a pagar
+- ✅ Selección automática de items del usuario
+- ✅ Cálculo de subtotal, impuestos, propina
+- ✅ Selección de método de pago
+- ✅ Integración con tarjetas guardadas
+
+#### Asistente IA con Speech-to-Text
+- ✅ Reconocimiento de voz nativo (Android)
+- ✅ Reconocimiento de voz web
+- ✅ Solicitud de permisos de micrófono
+- ✅ Indicador visual de escucha
+- ✅ Manejo de errores y permisos
+
 ### 2. Usabilidad
 
 #### Navegación
@@ -444,7 +488,7 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 ---
 
 **Última actualización**: Enero 2025  
-**Versión del documento**: 1.4  
+**Versión del documento**: 1.5  
 **Responsable**: QA Team
 
 ### Cambios Recientes (Enero 2025)

@@ -654,7 +654,15 @@
 ---
 
 **Última actualización**: Enero 2025  
-**Versión del documento**: 1.4  
+**Versión del documento**: 1.5
+
+### Cambios Recientes (Enero 2025)
+- ✅ Agregadas user stories para Programa de Lealtad
+- ✅ Agregadas user stories para Cupones y Recompensas
+- ✅ Agregadas user stories para Promociones
+- ✅ Agregadas user stories para Mesa Lista
+- ✅ Agregadas user stories para Pago Dividido
+- ✅ Agregadas user stories para Speech-to-Text en Asistente IA  
 **Responsable**: Equipo de desarrollo
 
 ### EPIC 11: Opiniones Verificadas

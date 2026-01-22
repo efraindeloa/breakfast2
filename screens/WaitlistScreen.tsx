@@ -145,6 +145,33 @@ const WaitlistScreen: React.FC = () => {
     return waitlist.filter(entry => entry.userEntryGroupId === userEntryGroupId && entry.confirmed);
   }, [waitlist, isConfirmed, userEntryGroupId]);
 
+  // Detectar cuando la mesa está lista (posición 0 o 1)
+  useEffect(() => {
+    if (isConfirmed && userEntries.length > 0) {
+      // Verificar si alguna entrada del usuario tiene posición 0 o 1 (mesa lista)
+      const tableReady = userEntries.some(entry => entry.position <= 1);
+      
+      if (tableReady) {
+        // Obtener la zona de la entrada con posición más baja
+        const readyEntry = userEntries.find(entry => entry.position <= 1) || userEntries[0];
+        const zoneLabel = ZONES.find(z => z.id === readyEntry.zone)?.labelKey 
+          ? t(ZONES.find(z => z.id === readyEntry.zone)!.labelKey)
+          : readyEntry.zone;
+        
+        // Guardar datos de mesa lista
+        const tableReadyData = {
+          zone: zoneLabel,
+          timeRemaining: 300, // 5 minutos por defecto
+          numberOfPeople: readyEntry.numberOfPeople
+        };
+        localStorage.setItem('tableReadyData', JSON.stringify(tableReadyData));
+        
+        // Navegar a la pantalla de mesa lista
+        navigate('/table-ready', { state: tableReadyData });
+      }
+    }
+  }, [userEntries, isConfirmed, navigate, t]);
+
   // Calcular posiciones del usuario por zona
   const userPositionsByZone = useMemo(() => {
     const positions: { [zone: string]: { position: number; totalInZone: number; estimatedWait: number } } = {};

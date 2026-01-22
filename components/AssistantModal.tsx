@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useGroupOrder } from '../contexts/GroupOrderContext';
 import { useTranslation, useLanguage } from '../contexts/LanguageContext';
+import { Capacitor } from '@capacitor/core';
+import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 
 interface Message {
   id: string;
@@ -83,11 +85,15 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [isNativePlatform, setIsNativePlatform] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pendingNavigationRef = useRef<string | null>(null);
   const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const recognitionRef = useRef<any>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -106,6 +112,89 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
       searchInputRef.current?.focus();
     }
   }, [isSearchMode]);
+
+  // Verificar soporte de Speech Recognition y configurar
+  useEffect(() => {
+    const checkSpeechSupport = async () => {
+      // Verificar si estamos en plataforma nativa (Android/iOS)
+      if (Capacitor.isNativePlatform()) {
+        setIsNativePlatform(true);
+        try {
+          // Verificar si el plugin está disponible
+          const available = await SpeechRecognition.available();
+          if (available) {
+            setSpeechSupported(true);
+            // Solicitar permisos
+            const permission = await SpeechRecognition.checkPermissions();
+            if (permission.microphone !== 'granted') {
+              await SpeechRecognition.requestPermissions();
+            }
+          }
+        } catch (error) {
+          console.error('Error checking native speech recognition:', error);
+          setSpeechSupported(false);
+        }
+      } else {
+        // Web: usar Web Speech API
+        const SpeechRecognitionWeb = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (SpeechRecognitionWeb) {
+          setSpeechSupported(true);
+          const recognition = new SpeechRecognitionWeb();
+          recognition.continuous = false;
+          recognition.interimResults = false;
+          
+          // Configurar idioma según el idioma de la app
+          const langMap: { [key: string]: string } = {
+            'es': 'es-ES',
+            'en': 'en-US',
+            'pt': 'pt-BR',
+            'fr': 'fr-FR'
+          };
+          recognition.lang = langMap[language] || 'es-ES';
+          
+          recognition.onstart = () => {
+            setIsListening(true);
+          };
+
+          recognition.onresult = (event: any) => {
+            const transcript = event.results[0][0].transcript;
+            setInputValue(prev => prev + (prev ? ' ' : '') + transcript);
+            setIsListening(false);
+          };
+
+          recognition.onerror = (event: any) => {
+            console.error('Speech recognition error:', event.error);
+            setIsListening(false);
+            if (event.error === 'no-speech') {
+              alert(t('assistant.noSpeechDetected'));
+            } else if (event.error === 'not-allowed') {
+              alert(t('assistant.microphonePermissionDenied'));
+            } else {
+              alert(t('assistant.speechError'));
+            }
+          };
+
+          recognition.onend = () => {
+            setIsListening(false);
+          };
+
+          recognitionRef.current = recognition;
+        }
+      }
+    };
+
+    checkSpeechSupport();
+
+    return () => {
+      if (!isNativePlatform && recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          // Ignorar errores al detener
+        }
+      }
+    };
+  }, [language, t, isNativePlatform]);
 
   // Filtrar mensajes basándose en la búsqueda
   const filteredMessages = searchQuery.trim()
@@ -410,6 +499,274 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
       response: 'Entiendo tu consulta. Puedo ayudarte con:\n\n📱 Funcionalidades de la app:\n- Crear y gestionar órdenes\n- Navegar el menú\n- Pagar y dividir pagos\n- Ver historial\n- Configurar perfil y datos fiscales\n- Órdenes grupales\n\n💬 Consultas generales:\n- Información general\n- Definiciones\n- Conceptos\n\n¿Sobre qué te gustaría saber más?',
       navigationRoute: null
     };
+  };
+
+  const toggleSpeechRecognition = async () => {
+    if (!speechSupported) {
+      alert(t('assistant.speechNotSupported'));
+      return;
+    }
+
+    if (isNativePlatform) {
+      // Usar plugin nativo de Capacitor
+      try {
+        if (isListening) {
+          await SpeechRecognition.stop();
+          setIsListening(false);
+        } else {
+          // Configurar idioma según el idioma de la app
+          const langMap: { [key: string]: string } = {
+            'es': 'es-ES',
+            'en': 'en-US',
+            'pt': 'pt-BR',
+            'fr': 'fr-FR'
+          };
+          
+          // Verificar permisos antes de iniciar
+          let permission = await SpeechRecognition.checkPermissions();
+          console.log('Permisos iniciales:', permission);
+          alert('Permisos iniciales: ' + JSON.stringify(permission));
+          
+          // El plugin puede devolver 'microphone' o 'speechRecognition' como clave
+          const hasPermission = permission.microphone === 'granted' || permission.speechRecognition === 'granted';
+          
+          // Si no está otorgado, solicitar
+          if (!hasPermission) {
+            console.log('Solicitando permisos...');
+            alert('Solicitando permisos...');
+            const result = await SpeechRecognition.requestPermissions();
+            console.log('Resultado de solicitud de permisos:', result);
+            alert('Resultado de solicitud: ' + JSON.stringify(result));
+            
+            // Esperar un momento para que Android procese los permisos
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Verificar nuevamente después de solicitar
+            permission = await SpeechRecognition.checkPermissions();
+            console.log('Permisos después de solicitar:', permission);
+            alert('Permisos después de solicitar: ' + JSON.stringify(permission));
+            
+            const hasPermissionAfterRequest = permission.microphone === 'granted' || permission.speechRecognition === 'granted';
+            if (!hasPermissionAfterRequest) {
+              alert(t('assistant.microphonePermissionDenied') + '\n\nPermisos recibidos: ' + JSON.stringify(permission));
+              return;
+            }
+          }
+          
+          // Verificar una vez más justo antes de iniciar
+          const finalCheck = await SpeechRecognition.checkPermissions();
+          console.log('Verificación final de permisos:', finalCheck);
+          alert('Verificación final: ' + JSON.stringify(finalCheck));
+          
+          const hasFinalPermission = finalCheck.microphone === 'granted' || finalCheck.speechRecognition === 'granted';
+          if (!hasFinalPermission) {
+            console.error('Permisos no otorgados en verificación final');
+            alert(t('assistant.microphonePermissionDenied') + '\n\nPermisos recibidos: ' + JSON.stringify(finalCheck));
+            return;
+          }
+          
+          // Si llegamos aquí, los permisos están otorgados
+          console.log('✅ Permisos verificados correctamente, procediendo a iniciar reconocimiento...');
+          alert('✅ Permisos OK. Iniciando reconocimiento...');
+
+          setIsListening(true);
+          
+          // Variables para almacenar los listeners
+          let partialListener: any;
+          let resultsListener: any;
+          let errorListener: any;
+          
+          // Función para limpiar listeners
+          const removeAllListeners = () => {
+            try {
+              if (partialListener) partialListener.remove();
+              if (resultsListener) resultsListener.remove();
+              if (errorListener) errorListener.remove();
+            } catch (e) {
+              // Ignorar errores al remover
+            }
+          };
+
+          // Configurar listeners antes de iniciar
+          partialListener = await SpeechRecognition.addListener('partialResults', (data: any) => {
+            if (data.matches && data.matches.length > 0) {
+              setInputValue(prev => prev + (prev ? ' ' : '') + data.matches[0]);
+            }
+          });
+
+          resultsListener = await SpeechRecognition.addListener('results', (data: any) => {
+            if (data.matches && data.matches.length > 0) {
+              setInputValue(prev => prev + (prev ? ' ' : '') + data.matches[0]);
+            }
+            setIsListening(false);
+            removeAllListeners();
+          });
+
+          errorListener = await SpeechRecognition.addListener('error', async (error: any) => {
+            console.error('Native speech recognition error:', error);
+            console.error('Error completo:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+            setIsListening(false);
+            
+            // Verificar permisos nuevamente cuando hay un error
+            const permissionCheck = await SpeechRecognition.checkPermissions();
+            console.log('Permisos al momento del error:', permissionCheck);
+            
+            // Mostrar detalles completos del error
+            let errorInfo = 'Error en listener:\n';
+            errorInfo += 'Tipo: ' + typeof error + '\n';
+            errorInfo += 'Mensaje: ' + (error?.message || 'Sin mensaje') + '\n';
+            errorInfo += 'Código: ' + (error?.code || 'Sin código') + '\n';
+            errorInfo += 'Error completo: ' + JSON.stringify(error, Object.getOwnPropertyNames(error));
+            errorInfo += '\n\nPermisos al momento del error: ' + JSON.stringify(permissionCheck);
+            alert('❌ ' + errorInfo);
+            
+            // Manejar diferentes tipos de errores
+            const errorMessage = (error?.message || '').toLowerCase();
+            if (errorMessage.includes('permission') || errorMessage.includes('microphone') || errorMessage.includes('micrófono') || errorMessage.includes('permiso')) {
+              // Si el error es de permisos, verificar si realmente están otorgados
+              const hasPermission = permissionCheck.microphone === 'granted' || permissionCheck.speechRecognition === 'granted';
+              if (!hasPermission) {
+                alert(t('assistant.microphonePermissionDenied') + '\n\nPermisos actuales: ' + JSON.stringify(permissionCheck));
+              } else {
+                alert('⚠️ Error de permisos pero los permisos están otorgados.\n\nEsto puede ser un problema del plugin.\n\nError: ' + (error?.message || 'Desconocido'));
+              }
+            }
+            removeAllListeners();
+          });
+
+          // Iniciar reconocimiento
+          console.log('Iniciando reconocimiento de voz...');
+          console.log('Configuración:', {
+            language: langMap[language] || 'es-ES',
+            maxResults: 1,
+            partialResults: false
+          });
+          alert('Intentando iniciar reconocimiento...\nIdioma: ' + (langMap[language] || 'es-ES'));
+          
+          try {
+            // Intentar iniciar con configuración mínima primero
+            const startConfig = {
+              language: langMap[language] || 'es-ES',
+              maxResults: 1,
+              prompt: '',
+              partialResults: false,
+              popup: false
+            };
+            
+            console.log('Configuración de inicio:', JSON.stringify(startConfig));
+            alert('Configuración: ' + JSON.stringify(startConfig));
+            
+            await SpeechRecognition.start(startConfig);
+            console.log('Reconocimiento iniciado correctamente');
+            alert('✅ Reconocimiento iniciado correctamente');
+          } catch (startError: any) {
+            console.error('Error al iniciar reconocimiento:', startError);
+            console.error('Tipo de error:', typeof startError);
+            console.error('Mensaje de error:', startError?.message);
+            console.error('Stack trace:', startError?.stack);
+            console.error('Error completo:', JSON.stringify(startError, null, 2));
+            
+            // Capturar todos los detalles del error
+            let errorDetails = 'Error al iniciar reconocimiento:\n\n';
+            errorDetails += 'Tipo: ' + typeof startError + '\n';
+            errorDetails += 'Mensaje: ' + (startError?.message || 'Sin mensaje') + '\n';
+            errorDetails += 'Código: ' + (startError?.code || 'Sin código') + '\n';
+            errorDetails += 'Error completo: ' + JSON.stringify(startError, Object.getOwnPropertyNames(startError));
+            
+            alert('❌ ' + errorDetails);
+            setIsListening(false);
+            removeAllListeners();
+            
+            // Verificar el mensaje de error específico
+            const errorMessage = startError?.message || startError?.toString() || '';
+            const errorLower = errorMessage.toLowerCase();
+            
+            console.log('Analizando error:', errorMessage);
+            
+            // Si el error menciona permisos o micrófono
+            if (errorLower.includes('permission') || 
+                errorLower.includes('microphone') || 
+                errorLower.includes('micrófono') ||
+                errorLower.includes('permiso') ||
+                errorMessage.includes('Se necesita permiso')) {
+              
+              console.log('Error relacionado con permisos detectado, solicitando nuevamente...');
+              
+              // Esperar un momento
+              await new Promise(resolve => setTimeout(resolve, 300));
+              
+              // Verificar permisos una vez más
+              const recheckPermission = await SpeechRecognition.checkPermissions();
+              console.log('Re-verificación de permisos:', recheckPermission);
+              
+              if (recheckPermission.microphone !== 'granted') {
+                // Solicitar permisos nuevamente
+                const retryPermission = await SpeechRecognition.requestPermissions();
+                console.log('Resultado de nueva solicitud:', retryPermission);
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const finalPermissionCheck = await SpeechRecognition.checkPermissions();
+                console.log('Verificación final después de nueva solicitud:', finalPermissionCheck);
+                
+                if (finalPermissionCheck.microphone !== 'granted') {
+                  alert(t('assistant.microphonePermissionDenied') + '\n\nPor favor, verifica los permisos en Configuración > Apps > ' + (Capacitor.getPlatform() === 'android' ? 'appsistente' : 'la app'));
+                  return;
+                }
+              }
+              
+              // Intentar iniciar nuevamente después de verificar/solicitar permisos
+              try {
+                console.log('Reintentando iniciar reconocimiento...');
+                await SpeechRecognition.start({
+                  language: langMap[language] || 'es-ES',
+                  maxResults: 1,
+                  prompt: '',
+                  partialResults: false,
+                  popup: false
+                });
+                console.log('Reconocimiento iniciado después de resolver permisos');
+              } catch (retryError: any) {
+                console.error('Error al reintentar después de permisos:', retryError);
+                console.error('Mensaje de error en reintento:', retryError?.message);
+                alert(t('assistant.microphonePermissionDenied') + '\n\nError: ' + (retryError?.message || 'Desconocido'));
+                return;
+              }
+            } else {
+              // Error no relacionado con permisos
+              console.error('Error no relacionado con permisos:', errorMessage);
+              alert(t('assistant.speechError') + (errorMessage ? '\n\n' + errorMessage : ''));
+            }
+            return;
+          }
+        }
+      } catch (error: any) {
+        console.error('Error with native speech recognition:', error);
+        setIsListening(false);
+        
+        // Manejar diferentes tipos de errores
+        if (error.message && (error.message.includes('permission') || error.message.includes('microphone'))) {
+          alert(t('assistant.microphonePermissionDenied'));
+        } else {
+          alert(t('assistant.speechError'));
+        }
+      }
+    } else {
+      // Usar Web Speech API
+      if (!recognitionRef.current) return;
+
+      if (isListening) {
+        recognitionRef.current.stop();
+        setIsListening(false);
+      } else {
+        try {
+          recognitionRef.current.start();
+        } catch (error) {
+          console.error('Error starting speech recognition:', error);
+          alert(t('assistant.speechError'));
+        }
+      }
+    }
   };
 
   const handleSend = async () => {
@@ -795,6 +1152,20 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
                   }}
                 />
               </div>
+              {speechSupported && (
+                <button
+                  onClick={toggleSpeechRecognition}
+                  disabled={isTyping}
+                  className={`h-12 w-12 rounded-xl flex items-center justify-center transition-colors ${
+                    isListening
+                      ? 'bg-red-500 text-white hover:bg-red-600 animate-pulse'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                  } ${isTyping ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title={isListening ? t('assistant.stopListening') : t('assistant.startListening')}
+                >
+                  <span className="material-symbols-outlined">{isListening ? 'mic' : 'mic_none'}</span>
+                </button>
+              )}
               <button
                 onClick={handleSend}
                 disabled={!inputValue.trim() || isTyping}

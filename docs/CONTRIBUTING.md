@@ -421,5 +421,9 @@ Si tienes preguntas sobre cómo contribuir:
 
 ---
 
-**Última actualización**: Diciembre 2024  
-**Versión del documento**: 1.0
+**Última actualización**: Enero 2025  
+**Versión del documento**: 1.1
+
+### Cambios Recientes (Enero 2025)
+- ✅ Actualizado con nuevas funcionalidades del proyecto
+- ✅ Documentadas nuevas dependencias y plugins de Capacitor

@@ -532,6 +532,201 @@ Si escribes algo que no aparece en las opciones predefinidas:
 
 ---
 
+## 💎 Programa de Lealtad
+
+### Acceder al Programa de Lealtad
+
+1. Ve a **"Perfil"** en la barra inferior
+2. Haz click en **"Programa de Lealtad"**
+3. O accede directamente desde la navegación inferior (si está disponible)
+
+### Ver tus Puntos
+
+- **Puntos Totales**: Se muestran en un círculo grande con efecto glow
+- **Crecimiento Mensual**: Se muestra el aumento de puntos este mes
+- **Nivel Actual**: Se muestra tu nivel actual (Bronce, Plata, Oro, Platino)
+- **Progreso**: Barra de progreso hacia el siguiente nivel
+
+### Beneficios de tu Nivel
+
+- Desliza horizontalmente para ver todos los beneficios
+- Cada beneficio muestra:
+  - Título del beneficio
+  - Descripción
+  - Restricciones (días, horarios, sucursales)
+
+### Cómo Ganar Más Puntos
+
+La sección "Cómo ganar más puntos" muestra diferentes tareas:
+- Referir amigos
+- Completar perfil
+- Ordenar desayunos fit
+- Y más...
+
+---
+
+## 🎫 Cupones y Recompensas
+
+### Acceder a tus Cupones
+
+1. Ve a **"Perfil"** en la barra inferior
+2. Haz click en **"Cupones y Recompensas"**
+3. O accede directamente desde la navegación inferior
+
+### Ver tus Cupones
+
+- **Carousel Horizontal**: Desliza para ver todos tus cupones
+- **Efecto de Perforación**: Los cupones tienen un diseño especial tipo ticket
+- Cada cupón muestra:
+  - Título del cupón
+  - Descripción
+  - Días de validez
+  - Restricciones
+
+### Detalle de Cupón
+
+1. Haz click en cualquier cupón
+2. Verás:
+   - Imagen ampliada del cupón
+   - QR code grande para mostrar al personal
+   - Instrucciones de uso
+   - Información del restaurante
+
+### Programa de Referidos
+
+- **Tu Código Único**: Se muestra en la sección de referidos
+- **Compartir Código**: Haz click en el botón de compartir
+- **Estadísticas**: Ve cuántos referidos tienes y cuántos puntos has ganado
+- **Copiar Código**: Haz click para copiar tu código al portapapeles
+
+---
+
+## 🎁 Promociones
+
+### Acceder a Promociones
+
+1. Ve a **"Promociones"** en la barra inferior (con badge de notificación)
+2. O desde el menú principal
+
+### Filtrar Promociones
+
+- **Desayuno**: Promociones de desayuno
+- **Temporada**: Promociones de temporada
+- **Exclusivo VIP**: Promociones exclusivas para miembros VIP
+
+### Ver Promociones
+
+- **Carousel Principal**: Desliza para ver las promociones principales
+- **Sugerencia de IA**: Recomendación personalizada basada en tus preferencias
+- **Especiales de Temporada**: Grid con promociones especiales
+
+### Detalle de Promoción
+
+1. Haz click en cualquier promoción
+2. Verás:
+   - Imagen grande de la promoción
+   - Título y subtítulo
+   - **Ahorro Real**: Precios antes y después
+   - **Contador Regresivo**: Tiempo restante de la promoción
+   - **Condiciones**: Horarios y días aplicables
+   - **Qué Incluye**: Lista de items incluidos
+3. Haz click en **"Aplicar a mi Orden"** para agregar la promoción a tu orden
+
+---
+
+## 🪑 Mesa Lista
+
+### ¿Qué es Mesa Lista?
+
+Cuando estás en la lista de espera y tu mesa está lista, recibirás una notificación automática.
+
+### Cuando tu Mesa Está Lista
+
+1. La aplicación te llevará automáticamente a la pantalla "Mesa Lista"
+2. Verás:
+   - Mensaje de confirmación
+   - Zona de tu mesa
+   - **Contador Regresivo**: Tiempo que tienes para confirmar (5 minutos por defecto)
+
+### Confirmar tu Asistencia
+
+1. Haz click en **"¡Ya estoy aquí!"**
+2. Se confirmará tu asistencia
+3. Serás redirigido al menú
+
+### Necesito Más Tiempo
+
+1. Haz click en **"Necesito 5 min más"**
+2. Se agregarán 5 minutos adicionales al contador
+3. Puedes extender el tiempo las veces que necesites
+
+**Nota**: Si el tiempo se agota, deberás volver a solicitar una mesa.
+
+---
+
+## 💳 Pago Dividido
+
+### ¿Qué es Pago Dividido?
+
+El pago dividido te permite pagar solo una parte de la cuenta total, seleccionando qué items quieres pagar.
+
+### Dividir la Cuenta
+
+1. Ve a **"Pagar Cuenta"** desde tu orden
+2. Haz click en **"Dividir cuenta"**
+3. En la pantalla de selección:
+   - **Por defecto**, tus items están seleccionados
+   - Puedes seleccionar/deseleccionar cualquier item
+   - Verás el subtotal en tiempo real
+4. Haz click en **"Continuar"**
+
+### Resumen y Pago
+
+1. Verás:
+   - Items seleccionados
+   - Subtotal
+   - Impuestos (16% IVA)
+   - Propina (opcional)
+   - Total
+2. Selecciona método de pago:
+   - **Efectivo**: Paga directamente en el restaurante
+   - **Tarjeta**: Selecciona una tarjeta guardada o agrega una nueva
+3. Haz click en **"Pagar ahora"**
+
+### Propina
+
+- Puedes incluir propina o no
+- **Porcentaje**: Selecciona 10%, 15%, 18%, 20% o ingresa otro porcentaje
+- **Cantidad Fija**: Ingresa una cantidad específica
+
+---
+
+## 🎤 Asistente IA con Voz
+
+### Usar Reconocimiento de Voz
+
+1. Abre el **Asistente IA** (botón flotante)
+2. Haz click en el **botón de micrófono**
+3. **Primera vez**: Se solicitará permiso para usar el micrófono
+4. **Habla**: Di tu pregunta o solicitud
+5. El texto aparecerá automáticamente en el campo de búsqueda
+6. Haz click en enviar o habla de nuevo
+
+### Permisos
+
+- **Android**: Se solicitará permiso de micrófono
+- **Web**: El navegador solicitará permiso
+- **Importante**: Sin permisos, el reconocimiento de voz no funcionará
+
+### Consejos
+
+- Habla claramente
+- Reduce el ruido de fondo
+- Espera a que aparezca el indicador de "Escuchando"
+- El reconocimiento funciona mejor en espacios tranquilos
+
+---
+
 ## ❓ Preguntas Frecuentes (FAQ)
 
 ### ¿Cómo puedo modificar mi orden después de confirmarla?
@@ -597,9 +792,16 @@ Sí, la app está diseñada para funcionar en teléfonos y tablets, con diseño 
 ---
 
 **Última actualización**: Enero 2025  
-**Versión del documento**: 1.4
+**Versión del documento**: 1.5
 
 ### Cambios Recientes (Enero 2025)
+- ✅ Agregada sección completa de Programa de Lealtad
+- ✅ Agregada sección completa de Cupones y Recompensas
+- ✅ Agregada sección completa de Promociones
+- ✅ Agregada sección completa de Mesa Lista
+- ✅ Agregada sección completa de Pago Dividido
+- ✅ Agregada sección de Speech-to-Text en Asistente IA
+- ✅ Instrucciones para usar reconocimiento de voz
 - ✅ Agregada sección completa de Descubrir Restaurantes
 - ✅ Agregada sección completa de Punto de Encuentro
 - ✅ Agregada sección completa de Gestión de Contactos

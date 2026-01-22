@@ -474,5 +474,9 @@ jobs:
 ---
 
 **Última actualización**: Enero 2025  
-**Versión del documento**: 1.1  
+**Versión del documento**: 1.2  
 **Responsable**: Equipo de DevOps
+
+### Cambios Recientes (Enero 2025)
+- ✅ Actualizado con nuevas dependencias (leaflet, speech-recognition, contacts, geolocation)
+- ✅ Documentados nuevos permisos de Android (RECORD_AUDIO, READ_CONTACTS, WRITE_CONTACTS)

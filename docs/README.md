@@ -257,7 +257,7 @@ Este proyecto es propietario. Todos los derechos reservados.
 ---
 
 **Última actualización**: Enero 2025  
-**Versión del documento**: 1.4  
+**Versión del documento**: 1.5  
 **Responsable**: Equipo de desarrollo
 
 ### Cambios Recientes (Enero 2025)
@@ -379,3 +379,81 @@ Este proyecto es propietario. Todos los derechos reservados.
 - ✅ Marcador de usuario mejorado y más visible
 - ✅ Manejo de errores mejorado con logs de depuración
 - ✅ Timeout y configuración de precisión optimizada
+
+#### Nueva Funcionalidad: Programa de Lealtad
+- ✅ Pantalla de programa de lealtad (`/loyalty`)
+- ✅ Sistema de puntos con niveles (Bronce, Plata, Oro, Platino)
+- ✅ Visualización de puntos totales y crecimiento mensual
+- ✅ Barra de progreso hacia el siguiente nivel
+- ✅ Beneficios por nivel con scroll horizontal
+- ✅ Sección "Cómo ganar más puntos" con tareas
+- ✅ Integración en navegación inferior y perfil
+- ✅ Persistencia en localStorage
+- ✅ Traducciones completas en 4 idiomas
+
+#### Nueva Funcionalidad: Cupones y Recompensas
+- ✅ Pantalla de cupones (`/coupons`)
+- ✅ Saludo dinámico según hora del día
+- ✅ Carousel horizontal de cupones con efecto de perforación
+- ✅ Programa de referidos con código único
+- ✅ Estadísticas de referidos (referidos, puntos ganados)
+- ✅ Compartir código de referido (Web Share API)
+- ✅ Pantalla de detalle de cupón (`/coupon-detail/:id`)
+- ✅ Visualización de QR code en detalle
+- ✅ Instrucciones de uso de cupones
+- ✅ Integración en navegación inferior y perfil
+- ✅ Traducciones completas en 4 idiomas
+
+#### Nueva Funcionalidad: Módulo de Promociones
+- ✅ Pantalla de promociones (`/promotions`)
+- ✅ Filtros por categoría (Desayuno, Temporada, Exclusivo VIP)
+- ✅ Carousel horizontal de promociones principales
+- ✅ Sección "Sugerencia de IA" con recomendación personalizada
+- ✅ Grid de especiales de temporada
+- ✅ Pantalla de detalle de promoción (`/promotion-detail/:id`)
+- ✅ Contador regresivo en tiempo real
+- ✅ Sección "Ahorro Real" con precios antes/después
+- ✅ Condiciones de aplicación (horarios, días)
+- ✅ Lista de items incluidos
+- ✅ Botón sticky "Aplicar a mi Orden"
+- ✅ Integración en navegación inferior con badge de notificación
+- ✅ Traducciones completas en 4 idiomas
+
+#### Nueva Funcionalidad: Mesa Lista (Table Ready)
+- ✅ Pantalla de confirmación de mesa lista (`/table-ready`)
+- ✅ Detección automática cuando posición en lista de espera es 0 o 1
+- ✅ Contador regresivo en tiempo real (minutos y segundos)
+- ✅ Botón "¡Ya estoy aquí!" para confirmar asistencia
+- ✅ Botón "Necesito 5 min más" para extender tiempo
+- ✅ Visualización de zona de la mesa
+- ✅ Diseño con gradiente breakfast-gradient
+- ✅ Navegación automática desde lista de espera
+- ✅ Persistencia de datos en localStorage
+- ✅ Traducciones completas en 4 idiomas
+
+#### Nueva Funcionalidad: Pago Dividido (Split Payment)
+- ✅ Pantalla de selección de items a pagar (`/split-payment-selection`)
+- ✅ Selección automática de items del usuario por defecto
+- ✅ Selección/deselección de cualquier item de la orden
+- ✅ Agrupación de items iguales para mejor visualización
+- ✅ Badge "Tu item" en items del usuario
+- ✅ Cálculo de subtotal en tiempo real
+- ✅ Pantalla de resumen y pago (`/split-payment-summary`)
+- ✅ Cálculo de impuestos (16% IVA)
+- ✅ Sistema de propina (porcentaje o cantidad fija)
+- ✅ Selección de método de pago (efectivo o tarjeta)
+- ✅ Visualización de tarjetas guardadas
+- ✅ Opción para agregar nueva tarjeta
+- ✅ Integración con sistema de pagos existente
+- ✅ Botón "Dividir cuenta" en pantalla de pagos
+- ✅ Traducciones completas en 4 idiomas
+
+#### Mejoras: Asistente IA con Speech-to-Text
+- ✅ Reconocimiento de voz nativo con Capacitor Speech Recognition
+- ✅ Reconocimiento de voz web con Web Speech API
+- ✅ Detección automática de plataforma (nativo vs web)
+- ✅ Solicitud de permisos de micrófono
+- ✅ Manejo robusto de errores y permisos
+- ✅ Indicador visual de estado de escucha
+- ✅ Botón de micrófono en modal de asistente
+- ✅ Traducciones completas en 4 idiomas

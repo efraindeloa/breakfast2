@@ -468,6 +468,107 @@ interface WaitlistEntry {
 
 ---
 
+## Programa de Lealtad (Loyalty)
+
+### Definición
+```typescript
+type LoyaltyLevel = 'bronze' | 'silver' | 'gold' | 'platinum';
+
+interface LoyaltyUser {
+  userId: string;
+  totalPoints: number;
+  currentLevel: LoyaltyLevel;
+  monthlyGrowth: number;
+  joinDate: string; // ISO string
+}
+```
+
+### Almacenamiento
+- **Clave localStorage**: `loyalty_data`
+- **Tipo**: `LoyaltyUser`
+- **Persistencia**: Permanente
+
+### Niveles
+- **Bronze**: 0-999 puntos
+- **Silver**: 1000-4999 puntos
+- **Gold**: 5000-9999 puntos
+- **Platinum**: 10000+ puntos
+
+---
+
+## Contactos del Usuario
+
+### Definición
+```typescript
+interface Contact {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  avatar?: string;
+}
+```
+
+### Almacenamiento
+- **Clave localStorage**: `user_contacts`
+- **Tipo**: Array de `Contact`
+- **Persistencia**: Permanente
+
+### Reglas
+- Nombre es obligatorio
+- Teléfono o email es obligatorio (al menos uno)
+- Se pueden importar desde el dispositivo móvil
+
+---
+
+## Mesa Lista (Table Ready)
+
+### Definición
+```typescript
+interface TableReadyData {
+  zone: string;
+  tableNumber?: string;
+  timeRemaining: number; // en segundos
+  estimatedWaitTime?: number;
+  numberOfPeople?: number;
+}
+```
+
+### Almacenamiento
+- **Clave localStorage**: `tableReadyData`
+- **Tipo**: `TableReadyData`
+- **Persistencia**: Temporal (se limpia al confirmar asistencia)
+
+---
+
+## Pago Dividido (Split Payment)
+
+### Definición
+```typescript
+interface SelectedItem {
+  id: string; // ID único: orderId-itemId-index
+  orderId: string;
+  itemId: number;
+  name: string;
+  price: number;
+  quantity: number;
+  notes?: string;
+  isUserItem: boolean;
+}
+
+interface SplitPaymentData {
+  selectedItems: SelectedItem[];
+  subtotal: number;
+}
+```
+
+### Almacenamiento
+- **Clave localStorage**: `splitPaymentData`
+- **Tipo**: `SplitPaymentData`
+- **Persistencia**: Temporal (se limpia después del pago)
+
+---
+
 ## Claves de localStorage
 
 | Clave | Tipo | Descripción |
@@ -481,6 +582,11 @@ interface WaitlistEntry {
 | `group_order` | GroupOrder \| null | Orden grupal activa |
 | `assistance_history` | AssistanceHistoryItem[] | Historial de solicitudes de asistencia |
 | `waitlist_entries` | WaitlistEntry[] | Lista de espera activa |
+| `loyalty_data` | LoyaltyUser | Datos del programa de lealtad |
+| `user_contacts` | Contact[] | Contactos del usuario |
+| `tableReadyData` | TableReadyData | Datos de mesa lista |
+| `splitPaymentData` | SplitPaymentData | Datos de pago dividido |
+| `selectedRestaurant` | Restaurant \| null | Restaurante seleccionado |
 
 ---
 
@@ -580,7 +686,7 @@ GroupOrder
 ---
 
 **Última actualización**: Enero 2025  
-**Versión del documento**: 1.4  
+**Versión del documento**: 1.5  
 **Responsable**: Equipo de desarrollo
 
 ### Opinión de Usuario (Review)

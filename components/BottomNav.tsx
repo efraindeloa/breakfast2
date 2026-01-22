@@ -206,6 +206,7 @@ const BottomNav: React.FC = () => {
 
   const navItems = [
     { label: t('navigation.home'), icon: 'home', path: '/home' },
+    { label: t('navigation.promotions'), icon: 'local_offer', path: '/promotions', showBadge: true },
     { label: t('navigation.menu'), icon: 'restaurant_menu', path: '/menu' },
     { label: t('navigation.myOrder'), icon: 'receipt_long', path: '/orders' },
     { label: t('navigation.payments'), icon: 'account_balance_wallet', path: '/payments' },
@@ -231,7 +232,7 @@ const BottomNav: React.FC = () => {
               }
             }}
             className={`flex flex-col items-center gap-0.5 transition-colors ${
-              isActive ? 'text-primary' : 'text-gray-400 dark:text-gray-500'
+              isActive ? 'text-primary dark:text-white' : 'text-gray-400 dark:text-gray-500'
             }`}
           >
             <span className="relative">
@@ -241,6 +242,10 @@ const BottomNav: React.FC = () => {
               >
                 {item.icon}
               </span>
+              {/* Badge para promociones (punto rojo) */}
+              {item.showBadge && (
+                <span className="absolute -top-1 -right-1 size-2 bg-red-500 rounded-full border-2 border-background-dark dark:border-background-light"></span>
+              )}
               {/* Solo mostrar badge si hay items pendientes en el carrito (orden complementaria pendiente) */}
               {isOrdersPath && cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">

@@ -161,6 +161,15 @@ const PaymentMethodsScreen: React.FC = () => {
       <div className="px-4 pt-5 pb-2">
         <h3 className="text-xl font-bold text-primary">{t('payment.enjoyMessage')}</h3>
         <p className="text-[#6b7280] dark:text-gray-400 mt-1">{t('payment.reviewOrder')}</p>
+        
+        {/* Botón para pago dividido */}
+        <button
+          onClick={() => navigate('/split-payment-selection')}
+          className="mt-4 w-full py-3 px-4 rounded-xl bg-primary/10 dark:bg-primary/20 border-2 border-primary/30 dark:border-primary/40 text-primary font-semibold hover:bg-primary/20 dark:hover:bg-primary/30 transition-all flex items-center justify-center gap-2"
+        >
+          <span className="material-symbols-outlined">account_balance_wallet</span>
+          <span>{t('splitPayment.splitBill')}</span>
+        </button>
       </div>
 
       {/* Resumen de la Orden */}

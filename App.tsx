@@ -8,6 +8,8 @@ import UploadConstanciaScreen from './screens/UploadConstanciaScreen';
 import EmailConfigScreen from './screens/EmailConfigScreen';
 import ConfirmationScreen from './screens/ConfirmationScreen';
 import PaymentMethodsScreen from './screens/PaymentMethodsScreen';
+import SplitPaymentSelectionScreen from './screens/SplitPaymentSelectionScreen';
+import SplitPaymentSummaryScreen from './screens/SplitPaymentSummaryScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import HomeScreen from './screens/HomeScreen';
 import MenuScreen from './screens/MenuScreen';
@@ -37,6 +39,9 @@ import CouponDetailScreen from './screens/CouponDetailScreen';
 import DiscoverRestaurantsScreen from './screens/DiscoverRestaurantsScreen';
 import MeetUpScreen from './screens/MeetUpScreen';
 import ContactsScreen from './screens/ContactsScreen';
+import PromotionsScreen from './screens/PromotionsScreen';
+import PromotionDetailScreen from './screens/PromotionDetailScreen';
+import TableReadyScreen from './screens/TableReadyScreen';
 import BottomNav from './components/BottomNav';
 import AssistantButton from './components/AssistantButton';
 import AndroidBackButton from './components/AndroidBackButton';
@@ -73,6 +78,8 @@ const App: React.FC = () => {
           <Route path="/billing-step-3" element={<EmailConfigScreen />} />
           <Route path="/billing-step-4" element={<ConfirmationScreen />} />
           <Route path="/payments" element={<PaymentMethodsScreen />} />
+          <Route path="/split-payment-selection" element={isAuthenticated ? <SplitPaymentSelectionScreen /> : <Navigate to="/" />} />
+          <Route path="/split-payment-summary" element={isAuthenticated ? <SplitPaymentSummaryScreen /> : <Navigate to="/" />} />
           <Route path="/payment-success" element={<PaymentSuccessScreen />} />
           <Route path="/add-card" element={<AddCardScreen />} />
           <Route path="/transactions" element={<TransactionsScreen />} />
@@ -97,6 +104,9 @@ const App: React.FC = () => {
           <Route path="/discover" element={isAuthenticated ? <DiscoverRestaurantsScreen /> : <Navigate to="/" />} />
           <Route path="/meetup" element={isAuthenticated ? <MeetUpScreen /> : <Navigate to="/" />} />
           <Route path="/contacts" element={isAuthenticated ? <ContactsScreen /> : <Navigate to="/" />} />
+          <Route path="/promotions" element={isAuthenticated ? <PromotionsScreen /> : <Navigate to="/" />} />
+          <Route path="/promotion-detail/:id" element={isAuthenticated ? <PromotionDetailScreen /> : <Navigate to="/" />} />
+          <Route path="/table-ready" element={isAuthenticated ? <TableReadyScreen /> : <Navigate to="/" />} />
         </Routes>
         
         {isAuthenticated && <BottomNav />}

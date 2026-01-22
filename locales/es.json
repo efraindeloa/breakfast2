@@ -34,7 +34,8 @@
     "profile": "Perfil",
     "settings": "Configuración",
     "assistant": "Asistente",
-    "favorites": "Favoritos"
+    "favorites": "Favoritos",
+    "promotions": "Promociones"
   },
   "home": {
     "welcome": "Bienvenido",
@@ -282,7 +283,13 @@
     "results": "resultados",
     "found": "encontrado",
     "noResultsFound": "No se encontraron resultados",
-    "noMessagesFound": "No se encontraron mensajes que coincidan con"
+    "noMessagesFound": "No se encontraron mensajes que coincidan con",
+    "startListening": "Iniciar reconocimiento de voz",
+    "stopListening": "Detener reconocimiento de voz",
+    "speechNotSupported": "El reconocimiento de voz no está disponible en tu navegador",
+    "noSpeechDetected": "No se detectó ningún habla. Por favor, intenta de nuevo.",
+    "microphonePermissionDenied": "Se necesita permiso para acceder al micrófono",
+    "speechError": "Error al iniciar el reconocimiento de voz"
   },
   "settings": {
     "title": "Configuración",
@@ -439,6 +446,25 @@
     "orderNotSentMessage": "Debes enviar la orden a la cocina antes de poder realizar el pago. Por favor, confirma tu orden en la sección 'Mi Orden'.",
     "orderNotSentAlert": "⚠️ Debes enviar la orden antes de poder pagar.\n\nPor favor, ve a 'Mi Orden' y confirma tu orden primero.",
     "goToOrder": "Ir a Mi Orden"
+  },
+  "splitPayment": {
+    "splitBill": "Dividir cuenta",
+    "selectItems": "Seleccionar items a pagar",
+    "instructions": "Selecciona los items que deseas pagar. Por defecto, están seleccionados los items que pediste.",
+    "yourItem": "Tu item",
+    "quantity": "Cantidad",
+    "selectedItems": "Items seleccionados",
+    "subtotal": "Subtotal",
+    "continue": "Continuar",
+    "selectAtLeastOneItem": "Por favor, selecciona al menos un item para pagar",
+    "paymentSummary": "Resumen de pago",
+    "paymentDetails": "Detalles de pago",
+    "tax": "Impuestos",
+    "total": "Total",
+    "selectPaymentMethod": "Por favor, selecciona un método de pago",
+    "selectCard": "Por favor, selecciona una tarjeta",
+    "payNow": "Pagar ahora",
+    "processingPayment": "Procesando pago..."
   },
   "paymentSuccess": {
     "title": "¡Pago Exitoso!",
@@ -1040,6 +1066,20 @@
     "capacityExceeded": "Capacidad máxima por mesa en esta zona: {max} personas",
     "maxCapacity": "Máx."
   },
+  "tableReady": {
+    "title": "Mesa Lista",
+    "headline": "¡Tu mesa está lista!",
+    "message": "Te esperamos en la recepción. Confirma tu asistencia antes de que expire el tiempo.",
+    "zone": "Zona",
+    "remainingTime": "Tiempo restante",
+    "minutes": "Minutos",
+    "seconds": "Segundos",
+    "imHere": "¡Ya estoy aquí!",
+    "needMoreTime": "Necesito 5 min más",
+    "confirmedAttendance": "Asistencia confirmada. ¡Te esperamos!",
+    "timeExtended": "Se agregaron 5 minutos adicionales",
+    "timeExpired": "El tiempo ha expirado. Por favor, vuelve a solicitar una mesa."
+  },
   "loyalty": {
     "title": "Programa de Lealtad",
     "totalPoints": "Puntos Totales",
@@ -1194,5 +1234,31 @@
     "importSelected": "Importar {count} seleccionados",
     "importedSuccess": "{count} contactos importados exitosamente",
     "unknownName": "Sin nombre"
+  },
+  "promotions": {
+    "title": "Promociones para Ti",
+    "breakfast": "Desayuno",
+    "seasonal": "Temporada",
+    "vipExclusive": "Exclusivo VIP",
+    "aiSuggestion": "Sugerencia de IA",
+    "personalizedRecommendation": "RECOMENDACIÓN PERSONALIZADA",
+    "aiGiftTitle": "Regalo por tu orden",
+    "aiGiftDescription": "Basado en tus gustos, hoy te regalamos un shot de jengibre con tu desayuno.",
+    "claimNow": "Reclamar Ahora",
+    "claimingGift": "Reclamando regalo...",
+    "seasonalSpecials": "Especiales de Temporada",
+    "offerDetail": "Detalle de Oferta",
+    "flashOffer": "Oferta Flash",
+    "realSavings": "Ahorro Real",
+    "before": "Antes",
+    "now": "Ahora",
+    "offerEndsIn": "La oferta termina en",
+    "applicationConditions": "Condiciones de Aplicación",
+    "breakfastHours": "Horario de Desayuno",
+    "applicableDays": "Días Aplicables",
+    "whatIncludes": "¿Qué incluye?",
+    "applyToOrder": "Aplicar a mi Orden",
+    "appliedToOrder": "Promoción aplicada a tu orden",
+    "linkCopied": "Enlace copiado al portapapeles"
   }
 }

@@ -36,6 +36,11 @@
   - Historial de órdenes
   - Opiniones de usuarios (`user_reviews`)
   - Historial de solicitudes de asistencia (`assistance_history`)
+  - Datos de programa de lealtad (`loyalty_data`)
+  - Contactos del usuario (`user_contacts`)
+  - Datos de mesa lista (`tableReadyData`)
+  - Datos de pago dividido (`splitPaymentData`)
+  - Restaurante seleccionado (`selectedRestaurant`)
 
 ### Backend
 
@@ -59,6 +64,10 @@
 #### Plugins de Capacitor
 - **@capacitor/camera**: Acceso a la cámara para escáner QR
 - **@capacitor/android**: Plataforma Android
+- **@capacitor/app**: Manejo del botón de retroceso de Android
+- **@capacitor/geolocation**: Geolocalización para mapas y ubicación
+- **@capacitor-community/contacts**: Acceso a contactos del dispositivo
+- **@capacitor-community/speech-recognition**: Reconocimiento de voz nativo
 
 #### Bibliotecas Externas
 - **html5-qrcode 2.3.8**: Escaneo de códigos QR
@@ -1048,5 +1057,5 @@ Intervalo actualiza posiciones y tiempos estimados
 ---
 
 **Última actualización**: Enero 2025  
-**Versión del documento**: 1.4  
+**Versión del documento**: 1.5  
 **Responsable**: Equipo de desarrollo

@@ -34,7 +34,8 @@
     "profile": "Profile",
     "settings": "Settings",
     "assistant": "Assistant",
-    "favorites": "Favorites"
+    "favorites": "Favorites",
+    "promotions": "Promotions"
   },
   "home": {
     "welcome": "Welcome",
@@ -201,7 +202,13 @@
     "results": "results",
     "found": "found",
     "noResultsFound": "No results found",
-    "noMessagesFound": "No messages found matching"
+    "noMessagesFound": "No messages found matching",
+    "startListening": "Start voice recognition",
+    "stopListening": "Stop voice recognition",
+    "speechNotSupported": "Voice recognition is not available in your browser",
+    "noSpeechDetected": "No speech detected. Please try again.",
+    "microphonePermissionDenied": "Microphone permission is required",
+    "speechError": "Error starting voice recognition"
   },
   "settings": {
     "title": "Settings",
@@ -353,6 +360,25 @@
     "orderNotSentMessage": "You must send the order to the kitchen before you can make a payment. Please confirm your order in the 'My Order' section.",
     "orderNotSentAlert": "⚠️ You must send the order before you can pay.\n\nPlease go to 'My Order' and confirm your order first.",
     "goToOrder": "Go to My Order"
+  },
+  "splitPayment": {
+    "splitBill": "Split bill",
+    "selectItems": "Select items to pay",
+    "instructions": "Select the items you want to pay for. By default, the items you ordered are selected.",
+    "yourItem": "Your item",
+    "quantity": "Quantity",
+    "selectedItems": "Selected items",
+    "subtotal": "Subtotal",
+    "continue": "Continue",
+    "selectAtLeastOneItem": "Please select at least one item to pay",
+    "paymentSummary": "Payment summary",
+    "paymentDetails": "Payment details",
+    "tax": "Tax",
+    "total": "Total",
+    "selectPaymentMethod": "Please select a payment method",
+    "selectCard": "Please select a card",
+    "payNow": "Pay now",
+    "processingPayment": "Processing payment..."
   },
   "paymentSuccess": {
     "title": "Payment successful!",
@@ -974,6 +1000,20 @@
     "capacityExceeded": "Max capacity per table in this zone: {max} people",
     "maxCapacity": "Max"
   },
+  "tableReady": {
+    "title": "Table Ready",
+    "headline": "Your table is ready!",
+    "message": "We are waiting for you at the reception. Confirm your attendance before the time expires.",
+    "zone": "Zone",
+    "remainingTime": "Remaining time",
+    "minutes": "Minutes",
+    "seconds": "Seconds",
+    "imHere": "I'm already here!",
+    "needMoreTime": "I need 5 more min",
+    "confirmedAttendance": "Attendance confirmed. We're waiting for you!",
+    "timeExtended": "5 additional minutes have been added",
+    "timeExpired": "Time has expired. Please request a table again."
+  },
   "loyalty": {
     "title": "Loyalty Program",
     "totalPoints": "Total Points",
@@ -1128,5 +1168,31 @@
     "importSelected": "Import {count} selected",
     "importedSuccess": "{count} contacts imported successfully",
     "unknownName": "Unknown name"
+  },
+  "promotions": {
+    "title": "Promotions for You",
+    "breakfast": "Breakfast",
+    "seasonal": "Seasonal",
+    "vipExclusive": "VIP Exclusive",
+    "aiSuggestion": "AI Suggestion",
+    "personalizedRecommendation": "PERSONALIZED RECOMMENDATION",
+    "aiGiftTitle": "Gift for your order",
+    "aiGiftDescription": "Based on your tastes, today we give you a ginger shot with your breakfast.",
+    "claimNow": "Claim Now",
+    "claimingGift": "Claiming gift...",
+    "seasonalSpecials": "Seasonal Specials",
+    "offerDetail": "Offer Details",
+    "flashOffer": "Flash Offer",
+    "realSavings": "Real Savings",
+    "before": "Before",
+    "now": "Now",
+    "offerEndsIn": "The offer ends in",
+    "applicationConditions": "Application Conditions",
+    "breakfastHours": "Breakfast Hours",
+    "applicableDays": "Applicable Days",
+    "whatIncludes": "What's included?",
+    "applyToOrder": "Apply to my Order",
+    "appliedToOrder": "Promotion applied to your order",
+    "linkCopied": "Link copied to clipboard"
   }
 }

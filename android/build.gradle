@@ -33,6 +33,12 @@ allprojects {
                 }
             }
         }
+        // Force Java 17 for Kotlin toolchain
+        if (project.hasProperty('kotlin')) {
+            project.kotlin {
+                jvmToolchain(17)
+            }
+        }
     }
 }
 

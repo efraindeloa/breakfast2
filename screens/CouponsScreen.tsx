@@ -138,16 +138,6 @@ const CouponsScreen: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {/* Welcome Header */}
-        <div className="px-4 pt-6">
-          <h2 className="text-[#181411] dark:text-white tracking-tight text-3xl font-bold leading-tight">
-            {getGreeting()}, {t('coupons.userName')}!
-          </h2>
-          <p className="text-[#887563] dark:text-gray-400 text-base font-normal mt-1">
-            {t('coupons.welcomeMessage')}
-          </p>
-        </div>
-
         {/* Horizontal Carousel Section */}
         <div className="mt-4">
           <div className="flex items-center justify-between px-4 mb-3">

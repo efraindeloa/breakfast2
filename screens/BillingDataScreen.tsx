@@ -67,7 +67,7 @@ const BillingDataScreen: React.FC = () => {
         </form>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-background-dark/90 ios-blur border-t border-gray-100 p-4 pb-12 z-50">
+      <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 bg-white/90 dark:bg-background-dark/90 ios-blur border-t border-gray-100 p-4 pb-4 z-[55]">
         <button onClick={() => navigate('/billing-step-2')} className="w-full bg-primary hover:bg-[#e07d1d] text-white font-bold py-4 rounded-xl text-lg shadow-lg shadow-primary/20 active:scale-95 transition-all">
           {t('billing.saveAndContinue')}
         </button>

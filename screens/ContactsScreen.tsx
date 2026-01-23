@@ -207,6 +207,39 @@ const ContactsScreen: React.FC = () => {
     }
   };
 
+  // Formatear número de teléfono mientras se escribe
+  const formatPhoneNumber = (value: string): string => {
+    // Remover todos los caracteres que no sean números
+    const numbers = value.replace(/\D/g, '');
+    
+    // Limitar a 10 dígitos (formato mexicano) o 15 (formato internacional)
+    const limitedNumbers = numbers.slice(0, 15);
+    
+    // Formatear según la longitud
+    if (limitedNumbers.length === 0) {
+      return '';
+    } else if (limitedNumbers.length <= 3) {
+      return limitedNumbers;
+    } else if (limitedNumbers.length <= 6) {
+      return `${limitedNumbers.slice(0, 3)} ${limitedNumbers.slice(3)}`;
+    } else if (limitedNumbers.length <= 8) {
+      return `${limitedNumbers.slice(0, 3)} ${limitedNumbers.slice(3, 6)} ${limitedNumbers.slice(6)}`;
+    } else if (limitedNumbers.length <= 10) {
+      // Formato mexicano: (55) 1234 5678
+      if (limitedNumbers.length === 10) {
+        return `(${limitedNumbers.slice(0, 2)}) ${limitedNumbers.slice(2, 6)} ${limitedNumbers.slice(6)}`;
+      }
+      return `${limitedNumbers.slice(0, 3)} ${limitedNumbers.slice(3, 6)} ${limitedNumbers.slice(6)}`;
+    } else {
+      // Formato internacional con código de país
+      if (limitedNumbers.length <= 12) {
+        return `+${limitedNumbers.slice(0, 2)} ${limitedNumbers.slice(2, 5)} ${limitedNumbers.slice(5, 8)} ${limitedNumbers.slice(8)}`;
+      } else {
+        return `+${limitedNumbers.slice(0, 2)} ${limitedNumbers.slice(2, 5)} ${limitedNumbers.slice(5, 8)} ${limitedNumbers.slice(8, 11)} ${limitedNumbers.slice(11)}`;
+      }
+    }
+  };
+
   const handleAddContact = () => {
     setEditingContact(null);
     setFormData({ name: '', phone: '', email: '' });
@@ -215,9 +248,11 @@ const ContactsScreen: React.FC = () => {
 
   const handleEditContact = (contact: Contact) => {
     setEditingContact(contact);
+    // Formatear el teléfono si existe
+    const formattedPhone = contact.phone ? formatPhoneNumber(contact.phone) : '';
     setFormData({
       name: contact.name,
-      phone: contact.phone || '',
+      phone: formattedPhone,
       email: contact.email || ''
     });
     setShowAddModal(true);
@@ -235,7 +270,10 @@ const ContactsScreen: React.FC = () => {
       return;
     }
 
-    if (!formData.phone && !formData.email) {
+    // Limpiar formato del teléfono (solo números)
+    const cleanPhone = formData.phone.replace(/\D/g, '');
+
+    if (!cleanPhone && !formData.email.trim()) {
       alert(t('contacts.phoneOrEmailRequired'));
       return;
     }
@@ -247,7 +285,7 @@ const ContactsScreen: React.FC = () => {
           ? {
               id: c.id,
               name: formData.name.trim(),
-              phone: formData.phone.trim() || undefined,
+              phone: cleanPhone || undefined,
               email: formData.email.trim() || undefined
             }
           : c
@@ -257,7 +295,7 @@ const ContactsScreen: React.FC = () => {
       const newContact: Contact = {
         id: Date.now().toString(),
         name: formData.name.trim(),
-        phone: formData.phone.trim() || undefined,
+        phone: cleanPhone || undefined,
         email: formData.email.trim() || undefined
       };
       setContacts([...contacts, newContact]);
@@ -272,6 +310,11 @@ const ContactsScreen: React.FC = () => {
     setShowAddModal(false);
     setFormData({ name: '', phone: '', email: '' });
     setEditingContact(null);
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setFormData({ ...formData, phone: formatted });
   };
 
   return (
@@ -292,29 +335,9 @@ const ContactsScreen: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto pb-24">
-        {/* Action Buttons */}
-        <div className="p-4 space-y-3">
-          {Capacitor.isNativePlatform() && (
-            <button
-              onClick={hasPermission ? loadDeviceContacts : requestPermissions}
-              className="w-full flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-xl font-bold shadow-md hover:opacity-90 transition-opacity"
-            >
-              <span className="material-symbols-outlined">contacts</span>
-              <span>{hasPermission ? t('contacts.importFromDevice') : t('contacts.requestPermission')}</span>
-            </button>
-          )}
-          <button
-            onClick={handleAddContact}
-            className="w-full flex items-center justify-center gap-2 bg-primary text-white py-3 rounded-xl font-bold shadow-md hover:opacity-90 transition-opacity"
-          >
-            <span className="material-symbols-outlined">add</span>
-            <span>{t('contacts.addContact')}</span>
-          </button>
-        </div>
-
+      <main className="flex-1 overflow-y-auto pb-40">
         {/* Contacts List */}
-        <div className="px-4 space-y-2">
+        <div className="px-4 pt-4 space-y-2">
           {contacts.length === 0 ? (
             <div className="text-center py-12">
               <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4">contacts</span>
@@ -367,10 +390,34 @@ const ContactsScreen: React.FC = () => {
         </div>
       </main>
 
+      {/* Fixed Action Buttons */}
+      {!showAddModal && !showImportModal && (
+        <div className="fixed left-0 right-0 bg-white dark:bg-background-dark border-t border-gray-200 dark:border-gray-700 p-4 z-40 md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2" style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}>
+        <div className="space-y-3">
+          {Capacitor.isNativePlatform() && (
+            <button
+              onClick={hasPermission ? loadDeviceContacts : requestPermissions}
+              className="w-full flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-xl font-bold shadow-md hover:opacity-90 transition-opacity"
+            >
+              <span className="material-symbols-outlined">contacts</span>
+              <span>{hasPermission ? t('contacts.importFromDevice') : t('contacts.requestPermission')}</span>
+            </button>
+          )}
+          <button
+            onClick={handleAddContact}
+            className="w-full flex items-center justify-center gap-2 bg-primary text-white py-3 rounded-xl font-bold shadow-md hover:opacity-90 transition-opacity"
+          >
+            <span className="material-symbols-outlined">add</span>
+            <span>{t('contacts.addContact')}</span>
+          </button>
+        </div>
+        </div>
+      )}
+
       {/* Add/Edit Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 z-30 flex items-end">
-          <div className="bg-white dark:bg-background-dark rounded-t-3xl w-full max-w-[480px] mx-auto max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-end">
+          <div className="bg-white dark:bg-background-dark rounded-t-3xl w-full max-w-[480px] mx-auto max-h-[80vh] overflow-y-auto" style={{ maxHeight: 'calc(80vh - 4.5rem - env(safe-area-inset-bottom))', marginBottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}>
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold">
@@ -408,9 +455,10 @@ const ContactsScreen: React.FC = () => {
                 <input
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={handlePhoneChange}
                   placeholder={t('contacts.phonePlaceholder')}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-stone-800 text-[#181411] dark:text-white focus:outline-none focus:border-primary"
+                  inputMode="numeric"
                 />
               </div>
 
@@ -433,7 +481,7 @@ const ContactsScreen: React.FC = () => {
               </p>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-4 pb-6">
                 <button
                   onClick={handleCancel}
                   className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-[#181411] dark:text-white font-bold hover:bg-gray-50 dark:hover:bg-stone-700 transition-colors"
@@ -454,8 +502,8 @@ const ContactsScreen: React.FC = () => {
 
       {/* Import Contacts Modal */}
       {showImportModal && (
-        <div className="fixed inset-0 bg-black/50 z-30 flex items-end">
-          <div className="bg-white dark:bg-background-dark rounded-t-3xl w-full max-w-[480px] mx-auto max-h-[80vh] overflow-y-auto flex flex-col">
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-end">
+          <div className="bg-white dark:bg-background-dark rounded-t-3xl w-full max-w-[480px] mx-auto max-h-[80vh] overflow-y-auto flex flex-col" style={{ maxHeight: 'calc(80vh - 4.5rem - env(safe-area-inset-bottom))', marginBottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}>
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold">{t('contacts.selectContactsToImport')}</h3>

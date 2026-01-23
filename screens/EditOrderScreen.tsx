@@ -4,9 +4,14 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { useCart, CartItem } from '../contexts/CartContext';
 import { Order, ORDERS_STORAGE_KEY } from '../types/order';
 import { allDishes } from './DishDetailScreen';
+import { useProducts } from '../contexts/ProductsContext';
 
 // Función helper para obtener la imagen de un platillo por su ID
-const getDishImage = (dishId: number): string => {
+const getDishImage = (dishId: number, getProduct: (id: number) => any): string => {
+  const product = getProduct(dishId);
+  if (product) {
+    return product.image;
+  }
   const dish = allDishes.find(d => d.id === dishId);
   return dish?.image || 'https://via.placeholder.com/150'; // Fallback image
 };
@@ -15,6 +20,7 @@ const EditOrderScreen: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
+  const { getProduct } = useProducts();
   const { 
     cart, 
     updateCartItemQuantity, 
@@ -243,7 +249,7 @@ const EditOrderScreen: React.FC = () => {
                     <div className="flex items-start gap-4">
                       <div 
                         className="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-[72px] shrink-0" 
-                        style={{ backgroundImage: `url("${getDishImage(item.id)}")` }}
+                        style={{ backgroundImage: `url("${getDishImage(item.id, getProduct)}")` }}
                       />
                       <div className="flex flex-col">
                         <p className="text-base font-bold leading-tight">{item.name}</p>

@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
+import { useProducts } from '../contexts/ProductsContext';
 
 const REVIEWS_STORAGE_KEY = 'user_reviews';
 
@@ -354,6 +355,7 @@ export const allDishes: Dish[] = [
 const DishDetailScreen: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { getProduct } = useProducts();
   const { id } = useParams<{ id: string }>();
   const { cart, addToCart } = useCart();
   const { t } = useTranslation();
@@ -364,7 +366,19 @@ const DishDetailScreen: React.FC = () => {
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [showAddedFeedback, setShowAddedFeedback] = useState(false);
 
-  const dish = allDishes.find(d => d.id === parseInt(id || '0'));
+  const productFromDB = getProduct(parseInt(id || '0'));
+  const dishFromCode = allDishes.find(d => d.id === parseInt(id || '0'));
+  // Usar producto de Supabase si existe, sino usar el hardcodeado
+  const dish = productFromDB ? {
+    id: productFromDB.id,
+    name: productFromDB.name,
+    description: productFromDB.description,
+    price: typeof productFromDB.price === 'number' ? `$${productFromDB.price.toFixed(2)}` : productFromDB.price,
+    image: productFromDB.image || productFromDB.image_url || '',
+    badges: productFromDB.badges,
+    category: productFromDB.category,
+    origin: productFromDB.origin as OriginType,
+  } : dishFromCode;
   
   // Verificar si el platillo es favorito
   const isFavorite = dish ? checkIsFavorite(dish.id) : false;
@@ -481,8 +495,14 @@ const DishDetailScreen: React.FC = () => {
     { id: 'arrachera', name: 'Arrachera Grill', price: 85 },
   ];
 
+  // Función helper para convertir precio a número (maneja tanto string como number)
+  const getPriceAsNumber = (price: string | number): number => {
+    if (typeof price === 'number') return price;
+    return parseFloat(price.replace('$', '').replace(',', ''));
+  };
+
   // Calcular precio total
-  let basePrice = parseFloat(dish.price.replace('$', ''));
+  let basePrice = getPriceAsNumber(dish.price);
   
   // Si hay opciones de tamaño, usar el precio según la selección
   if (sizeOptions.hasSizes) {
@@ -502,7 +522,7 @@ const DishDetailScreen: React.FC = () => {
 
   const handleAddToOrder = () => {
     // Calcular precio total
-    let basePrice = parseFloat(dish.price.replace('$', ''));
+    let basePrice = getPriceAsNumber(dish.price);
     
     // Si hay opciones de tamaño, usar el precio según la selección
     if (sizeOptions.hasSizes) {
@@ -597,7 +617,7 @@ const DishDetailScreen: React.FC = () => {
                       id: dish.id,
                       name: dish.name,
                       description: dish.description,
-                      price: dish.price,
+                      price: typeof dish.price === 'string' ? dish.price : `$${dish.price.toFixed(2)}`,
                       image: dish.image,
                       category: dish.category,
                       origin: dish.origin,

@@ -51,6 +51,7 @@ import { GroupOrderProvider } from './contexts/GroupOrderContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { FavoritesProvider } from './contexts/FavoritesContext';
 import { LoyaltyProvider } from './contexts/LoyaltyContext';
+import { ProductsProvider } from './contexts/ProductsContext';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -58,10 +59,11 @@ const App: React.FC = () => {
   return (
     <LanguageProvider>
       <RestaurantProvider>
-        <CartProvider>
-          <FavoritesProvider>
-            <LoyaltyProvider>
-            <GroupOrderProvider>
+        <ProductsProvider>
+          <CartProvider>
+            <FavoritesProvider>
+              <LoyaltyProvider>
+                <GroupOrderProvider>
             <HashRouter>
       <AndroidBackButton />
       <div className="w-full max-w-full min-h-screen bg-white dark:bg-background-dark relative overflow-hidden flex flex-col md:max-w-2xl md:mx-auto md:shadow-2xl">
@@ -113,10 +115,11 @@ const App: React.FC = () => {
         {isAuthenticated && <AssistantButton />}
       </div>
             </HashRouter>
-          </GroupOrderProvider>
-            </LoyaltyProvider>
-          </FavoritesProvider>
-        </CartProvider>
+                </GroupOrderProvider>
+              </LoyaltyProvider>
+            </FavoritesProvider>
+          </CartProvider>
+        </ProductsProvider>
       </RestaurantProvider>
     </LanguageProvider>
   );

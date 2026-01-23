@@ -1,0 +1,1301 @@
+import { supabase, isSupabaseConfigured, getSupabaseUrl } from '../config/supabase';
+
+// ==================== TIPOS ====================
+
+export interface Order {
+  id: string;
+  user_id: string;
+  restaurant_id: string;
+  status: string;
+  total: number;
+  items: OrderItem[];
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrderItem {
+  id: number;
+  name: string;
+  price: number;
+  quantity: number;
+  notes?: string;
+  image?: string;
+}
+
+export interface CartItem {
+  id: number;
+  name: string;
+  price: number;
+  quantity: number;
+  notes?: string;
+  image?: string;
+  dish_id?: number; // Para compatibilidad con la base de datos
+}
+
+export interface FavoriteDish {
+  id: number;
+  name: string;
+  price: number;
+  image?: string;
+  category: string;
+}
+
+export interface SavedCombination {
+  id: string;
+  name: string;
+  dishes: number[];
+  createdAt: Date;
+  lastUsed?: Date;
+}
+
+export interface LoyaltyData {
+  user_id: string;
+  total_points: number;
+  current_level: 'bronze' | 'silver' | 'gold' | 'platinum';
+  monthly_growth: number;
+  points_history: Array<{
+    date: string;
+    points: number;
+    reason: string;
+  }>;
+}
+
+export interface Contact {
+  id: string;
+  user_id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  avatar?: string;
+  created_at: string;
+}
+
+export interface WaitlistEntry {
+  id: string;
+  user_id: string;
+  restaurant_id: string;
+  zones: string[];
+  number_of_people: number;
+  position: number;
+  estimated_wait_minutes: number;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssistanceRequest {
+  id: string;
+  user_id: string;
+  restaurant_id: string;
+  type: string;
+  status: 'sent' | 'cancelled' | 'completed';
+  created_at: string;
+}
+
+export interface Review {
+  id: string;
+  user_id: string;
+  dish_id: number;
+  rating: number;
+  comment?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface Product {
+  id: number;
+  restaurant_id: string;
+  name: string;
+  description: string;
+  price: string;
+  image_url?: string;
+  image?: string; // Para compatibilidad
+  badges?: string[];
+  category: string;
+  origin: string;
+  is_active: boolean;
+  is_featured?: boolean;
+  sort_order?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// ==================== HELPERS ====================
+
+// Función para generar un UUID v4 válido
+const generateUUID = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
+// Función para validar si un string es un UUID válido
+const isValidUUID = (str: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
+const getUserId = (): string => {
+  // Obtener user_id del localStorage
+  let userId = localStorage.getItem('user_id');
+  
+  // Si no existe o no es un UUID válido, generar uno nuevo
+  if (!userId || !isValidUUID(userId)) {
+    // Generar un UUID v4 válido
+    userId = generateUUID();
+    localStorage.setItem('user_id', userId);
+    
+    // Crear el usuario en la tabla users si no existe (asíncrono, no bloquea)
+    // Nota: Esto puede fallar si las políticas RLS no permiten inserción
+    // En ese caso, el usuario seguirá funcionando pero sin registro en la tabla users
+    if (isSupabaseConfigured()) {
+      (async () => {
+        try {
+          const { error } = await supabase.from('users').upsert({
+            id: userId,
+            name: 'Usuario',
+            email: `user_${Date.now()}@temp.com`,
+            is_active: true
+          }, { onConflict: 'id' });
+          
+          if (error && error.code !== '42501') { // Ignorar errores de RLS
+            console.warn('Error creating user in database:', error);
+          }
+        } catch (err) {
+          // Ignorar errores silenciosamente - el usuario puede funcionar sin estar en la tabla users
+        }
+      })();
+    }
+  }
+  return userId;
+};
+
+const fallbackToLocalStorage = <T>(
+  key: string,
+  defaultValue: T,
+  operation: 'get' | 'set',
+  value?: T
+): T | null => {
+  if (operation === 'get') {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : defaultValue;
+  } else {
+    localStorage.setItem(key, JSON.stringify(value));
+    return null;
+  }
+};
+
+// ==================== ÓRDENES ====================
+
+export const getOrders = async (): Promise<Order[]> => {
+  if (!isSupabaseConfigured()) {
+    return fallbackToLocalStorage<Order[]>('orders_list', [], 'get') || [];
+  }
+
+  try {
+    const userId = getUserId();
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    return fallbackToLocalStorage<Order[]>('orders_list', [], 'get') || [];
+  }
+};
+
+export const createOrder = async (order: Omit<Order, 'id' | 'created_at' | 'updated_at'>): Promise<Order | null> => {
+  if (!isSupabaseConfigured()) {
+    const newOrder: Order = {
+      ...order,
+      id: `order_${Date.now()}`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const orders = await getOrders();
+    orders.unshift(newOrder);
+    fallbackToLocalStorage('orders_list', orders, 'set', orders);
+    return newOrder;
+  }
+
+  try {
+    const userId = getUserId();
+    const { data, error } = await supabase
+      .from('orders')
+      .insert({
+        user_id: userId,
+        restaurant_id: order.restaurant_id,
+        status: order.status,
+        total: order.total,
+        items: order.items,
+        notes: order.notes,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating order:', error);
+    return null;
+  }
+};
+
+export const updateOrder = async (orderId: string, updates: Partial<Order>): Promise<Order | null> => {
+  if (!isSupabaseConfigured()) {
+    const orders = await getOrders();
+    const index = orders.findIndex(o => o.id === orderId);
+    if (index === -1) return null;
+    
+    orders[index] = { ...orders[index], ...updates, updated_at: new Date().toISOString() };
+    fallbackToLocalStorage('orders_list', orders, 'set', orders);
+    return orders[index];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', orderId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating order:', error);
+    return null;
+  }
+};
+
+// ==================== CARRITO ====================
+
+export const getCart = async (): Promise<CartItem[]> => {
+  if (!isSupabaseConfigured()) {
+    return fallbackToLocalStorage<CartItem[]>('cart', [], 'get') || [];
+  }
+
+  try {
+    const userId = getUserId();
+    // Hacer JOIN con products para obtener name, price, image
+    const { data, error } = await supabase
+      .from('cart_items')
+      .select(`
+        *,
+        products:product_id (
+          id,
+          name,
+          price,
+          image_url
+        )
+      `)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    // Mapear product_id a id y obtener datos del producto
+    return (data || []).map((item: any) => {
+      const product = item.products || {};
+      return {
+        id: item.product_id || item.id,
+        name: product.name || 'Producto',
+        price: typeof product.price === 'number' ? product.price : parseFloat(product.price || '0'),
+        quantity: item.quantity,
+        notes: item.notes || '',
+        image: product.image_url ? getProductImageUrl(product.image_url) : (product.image || ''),
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching cart:', error);
+    return fallbackToLocalStorage<CartItem[]>('cart', [], 'get') || [];
+  }
+};
+
+export const setCart = async (items: CartItem[]): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    fallbackToLocalStorage('cart', items, 'set', items);
+    return true;
+  }
+
+  try {
+    const userId = getUserId();
+    
+    // Eliminar items existentes
+    await supabase
+      .from('cart_items')
+      .delete()
+      .eq('user_id', userId);
+
+    // Insertar nuevos items
+    if (items.length > 0) {
+      const { error } = await supabase
+        .from('cart_items')
+        .insert(items.map(item => ({
+          product_id: item.id,
+          restaurant_id: '00000000-0000-0000-0000-000000000001', // ID del restaurante por defecto
+          quantity: item.quantity,
+          notes: item.notes || '',
+          user_id: userId,
+        })));
+
+      if (error) throw error;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error setting cart:', error);
+    fallbackToLocalStorage('cart', items, 'set', items);
+    return false;
+  }
+};
+
+export const addToCart = async (item: CartItem): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    const cart = await getCart();
+    cart.push(item);
+    fallbackToLocalStorage('cart', cart, 'set', cart);
+    return true;
+  }
+
+  try {
+    const userId = getUserId();
+    // Normalizar notes: usar null en lugar de cadena vacía para consistencia
+    const notes = (item.notes && item.notes.trim() !== '') ? item.notes.trim() : null;
+    
+    // Construir la consulta para verificar si ya existe un item
+    let query = supabase
+      .from('cart_items')
+      .select('id, quantity')
+      .eq('user_id', userId)
+      .eq('product_id', item.id);
+    
+    // Manejar notes: si es null, buscar NULL, si no, buscar el valor exacto
+    if (notes === null) {
+      query = query.is('notes', null);
+    } else {
+      query = query.eq('notes', notes);
+    }
+
+    const { data: existingItems, error: checkError } = await query.limit(1);
+
+    // Si hay error y no es "no rows found", lanzar el error
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError;
+    }
+
+    // Si existe un item, actualizar la cantidad
+    if (existingItems && existingItems.length > 0) {
+      const existingItem = existingItems[0];
+      const newQuantity = (existingItem.quantity || 0) + (item.quantity || 1);
+      const { error: updateError } = await supabase
+        .from('cart_items')
+        .update({ quantity: newQuantity })
+        .eq('id', existingItem.id);
+
+      if (updateError) throw updateError;
+    } else {
+      // Si no existe, insertar nuevo registro
+      const { error: insertError } = await supabase
+        .from('cart_items')
+        .insert({
+          product_id: item.id,
+          restaurant_id: '00000000-0000-0000-0000-000000000001', // ID del restaurante por defecto
+          quantity: item.quantity || 1,
+          notes: notes,
+          user_id: userId,
+        });
+
+      if (insertError) {
+        // Si hay conflicto, intentar actualizar en su lugar
+        if (insertError.code === '23505') {
+          // Buscar el item existente y actualizar
+          let updateQuery = supabase
+            .from('cart_items')
+            .select('id, quantity')
+            .eq('user_id', userId)
+            .eq('product_id', item.id);
+          
+          if (notes === null) {
+            updateQuery = updateQuery.is('notes', null);
+          } else {
+            updateQuery = updateQuery.eq('notes', notes);
+          }
+          
+          const { data: existingItemData, error: findError } = await updateQuery.limit(1);
+          
+          const existingItem = existingItemData && existingItemData.length > 0 ? existingItemData[0] : null;
+          
+          if (!findError && existingItem) {
+            const newQuantity = (existingItem.quantity || 0) + (item.quantity || 1);
+            const { error: updateError2 } = await supabase
+              .from('cart_items')
+              .update({ quantity: newQuantity })
+              .eq('id', existingItem.id);
+            
+            if (updateError2) throw updateError2;
+          } else {
+            throw insertError;
+          }
+        } else {
+          throw insertError;
+        }
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error adding to cart:', error);
+    const cart = await getCart();
+    cart.push(item);
+    fallbackToLocalStorage('cart', cart, 'set', cart);
+    return false;
+  }
+};
+
+export const removeFromCart = async (itemId: number, notes?: string): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    const cart = await getCart();
+    const filtered = cart.filter(item => 
+      item.id !== itemId || (notes !== undefined && item.notes !== notes)
+    );
+    fallbackToLocalStorage('cart', filtered, 'set', filtered);
+    return true;
+  }
+
+  try {
+    const userId = getUserId();
+    let query = supabase
+      .from('cart_items')
+      .delete()
+      .eq('user_id', userId)
+      .eq('product_id', itemId);
+
+    if (notes !== undefined) {
+      query = query.eq('notes', notes);
+    }
+
+    const { error } = await query;
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error removing from cart:', error);
+    return false;
+  }
+};
+
+export const clearCart = async (): Promise<boolean> => {
+  return setCart([]);
+};
+
+// ==================== FAVORITOS ====================
+
+export const getFavorites = async (): Promise<FavoriteDish[]> => {
+  if (!isSupabaseConfigured()) {
+    return fallbackToLocalStorage<FavoriteDish[]>('favorite_dishes', [], 'get') || [];
+  }
+
+  try {
+    const userId = getUserId();
+    const { data, error } = await supabase
+      .from('favorite_dishes')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching favorites:', error);
+    return fallbackToLocalStorage<FavoriteDish[]>('favorite_dishes', [], 'get') || [];
+  }
+};
+
+export const addFavorite = async (dish: FavoriteDish): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    const favorites = await getFavorites();
+    if (!favorites.find(f => f.id === dish.id)) {
+      favorites.push(dish);
+      fallbackToLocalStorage('favorite_dishes', favorites, 'set', favorites);
+    }
+    return true;
+  }
+
+  try {
+    const userId = getUserId();
+    const { error } = await supabase
+      .from('favorite_dishes')
+      .insert({ ...dish, user_id: userId });
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error adding favorite:', error);
+    return false;
+  }
+};
+
+export const removeFavorite = async (dishId: number): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    const favorites = await getFavorites();
+    const filtered = favorites.filter(f => f.id !== dishId);
+    fallbackToLocalStorage('favorite_dishes', filtered, 'set', filtered);
+    return true;
+  }
+
+  try {
+    const userId = getUserId();
+    const { error } = await supabase
+      .from('favorite_dishes')
+      .delete()
+      .eq('user_id', userId)
+      .eq('id', dishId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error removing favorite:', error);
+    return false;
+  }
+};
+
+// ==================== LEALTAD ====================
+
+export const getLoyaltyData = async (): Promise<LoyaltyData | null> => {
+  if (!isSupabaseConfigured()) {
+    return fallbackToLocalStorage<LoyaltyData>('loyalty_data', null, 'get');
+  }
+
+  try {
+    const userId = getUserId();
+    const { data, error } = await supabase
+      .from('loyalty_data')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
+    return data || null;
+  } catch (error) {
+    console.error('Error fetching loyalty data:', error);
+    return fallbackToLocalStorage<LoyaltyData>('loyalty_data', null, 'get');
+  }
+};
+
+export const updateLoyaltyData = async (updates: Partial<LoyaltyData>): Promise<LoyaltyData | null> => {
+  if (!isSupabaseConfigured()) {
+    const current = await getLoyaltyData();
+    const updated = { ...current, ...updates } as LoyaltyData;
+    fallbackToLocalStorage('loyalty_data', updated, 'set', updated);
+    return updated;
+  }
+
+  try {
+    const userId = getUserId();
+    const { data, error } = await supabase
+      .from('loyalty_data')
+      .upsert({ ...updates, user_id: userId }, { onConflict: 'user_id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating loyalty data:', error);
+    return null;
+  }
+};
+
+// ==================== CONTACTOS ====================
+
+export const getContacts = async (): Promise<Contact[]> => {
+  if (!isSupabaseConfigured()) {
+    return fallbackToLocalStorage<Contact[]>('user_contacts', [], 'get') || [];
+  }
+
+  try {
+    const userId = getUserId();
+    const { data, error } = await supabase
+      .from('contacts')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching contacts:', error);
+    return fallbackToLocalStorage<Contact[]>('user_contacts', [], 'get') || [];
+  }
+};
+
+export const addContact = async (contact: Omit<Contact, 'id' | 'user_id' | 'created_at'>): Promise<Contact | null> => {
+  if (!isSupabaseConfigured()) {
+    const newContact: Contact = {
+      ...contact,
+      id: `contact_${Date.now()}`,
+      user_id: getUserId(),
+      created_at: new Date().toISOString(),
+    };
+    const contacts = await getContacts();
+    contacts.unshift(newContact);
+    fallbackToLocalStorage('user_contacts', contacts, 'set', contacts);
+    return newContact;
+  }
+
+  try {
+    const userId = getUserId();
+    const { data, error } = await supabase
+      .from('contacts')
+      .insert({ ...contact, user_id: userId })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error adding contact:', error);
+    return null;
+  }
+};
+
+export const updateContact = async (contactId: string, updates: Partial<Contact>): Promise<Contact | null> => {
+  if (!isSupabaseConfigured()) {
+    const contacts = await getContacts();
+    const index = contacts.findIndex(c => c.id === contactId);
+    if (index === -1) return null;
+    
+    contacts[index] = { ...contacts[index], ...updates };
+    fallbackToLocalStorage('user_contacts', contacts, 'set', contacts);
+    return contacts[index];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('contacts')
+      .update(updates)
+      .eq('id', contactId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating contact:', error);
+    return null;
+  }
+};
+
+export const deleteContact = async (contactId: string): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    const contacts = await getContacts();
+    const filtered = contacts.filter(c => c.id !== contactId);
+    fallbackToLocalStorage('user_contacts', filtered, 'set', filtered);
+    return true;
+  }
+
+  try {
+    const { error } = await supabase
+      .from('contacts')
+      .delete()
+      .eq('id', contactId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting contact:', error);
+    return false;
+  }
+};
+
+// ==================== LISTA DE ESPERA ====================
+
+export const getWaitlistEntries = async (): Promise<WaitlistEntry[]> => {
+  if (!isSupabaseConfigured()) {
+    return fallbackToLocalStorage<WaitlistEntry[]>('waitlist_data', [], 'get') || [];
+  }
+
+  try {
+    const userId = getUserId();
+    const { data, error } = await supabase
+      .from('waitlist_entries')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching waitlist entries:', error);
+    return fallbackToLocalStorage<WaitlistEntry[]>('waitlist_data', [], 'get') || [];
+  }
+};
+
+export const createWaitlistEntry = async (
+  entry: Omit<WaitlistEntry, 'id' | 'created_at' | 'updated_at'>
+): Promise<WaitlistEntry | null> => {
+  if (!isSupabaseConfigured()) {
+    const newEntry: WaitlistEntry = {
+      ...entry,
+      id: `waitlist_${Date.now()}`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const entries = await getWaitlistEntries();
+    entries.unshift(newEntry);
+    fallbackToLocalStorage('waitlist_data', entries, 'set', entries);
+    return newEntry;
+  }
+
+  try {
+    const userId = getUserId();
+    const { data, error } = await supabase
+      .from('waitlist_entries')
+      .insert({
+        ...entry,
+        user_id: userId,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating waitlist entry:', error);
+    return null;
+  }
+};
+
+export const updateWaitlistEntry = async (
+  entryId: string,
+  updates: Partial<WaitlistEntry>
+): Promise<WaitlistEntry | null> => {
+  if (!isSupabaseConfigured()) {
+    const entries = await getWaitlistEntries();
+    const index = entries.findIndex(e => e.id === entryId);
+    if (index === -1) return null;
+    
+    entries[index] = { ...entries[index], ...updates, updated_at: new Date().toISOString() };
+    fallbackToLocalStorage('waitlist_data', entries, 'set', entries);
+    return entries[index];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('waitlist_entries')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', entryId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating waitlist entry:', error);
+    return null;
+  }
+};
+
+// ==================== SOLICITUDES DE ASISTENCIA ====================
+
+export const getAssistanceRequests = async (): Promise<AssistanceRequest[]> => {
+  if (!isSupabaseConfigured()) {
+    return fallbackToLocalStorage<AssistanceRequest[]>('assistance_history', [], 'get') || [];
+  }
+
+  try {
+    const userId = getUserId();
+    const { data, error } = await supabase
+      .from('assistance_requests')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching assistance requests:', error);
+    return fallbackToLocalStorage<AssistanceRequest[]>('assistance_history', [], 'get') || [];
+  }
+};
+
+export const createAssistanceRequest = async (
+  request: Omit<AssistanceRequest, 'id' | 'created_at'>
+): Promise<AssistanceRequest | null> => {
+  if (!isSupabaseConfigured()) {
+    const newRequest: AssistanceRequest = {
+      ...request,
+      id: `assistance_${Date.now()}`,
+      created_at: new Date().toISOString(),
+    };
+    const requests = await getAssistanceRequests();
+    requests.unshift(newRequest);
+    fallbackToLocalStorage('assistance_history', requests, 'set', requests);
+    return newRequest;
+  }
+
+  try {
+    const userId = getUserId();
+    const { data, error } = await supabase
+      .from('assistance_requests')
+      .insert({
+        ...request,
+        user_id: userId,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating assistance request:', error);
+    return null;
+  }
+};
+
+export const updateAssistanceRequest = async (
+  requestId: string,
+  updates: Partial<AssistanceRequest>
+): Promise<AssistanceRequest | null> => {
+  if (!isSupabaseConfigured()) {
+    const requests = await getAssistanceRequests();
+    const index = requests.findIndex(r => r.id === requestId);
+    if (index === -1) return null;
+    
+    requests[index] = { ...requests[index], ...updates };
+    fallbackToLocalStorage('assistance_history', requests, 'set', requests);
+    return requests[index];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('assistance_requests')
+      .update(updates)
+      .eq('id', requestId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating assistance request:', error);
+    return null;
+  }
+};
+
+// ==================== RESEÑAS ====================
+
+export const getReviews = async (dishId?: number): Promise<Review[]> => {
+  if (!isSupabaseConfigured()) {
+    const allReviews = fallbackToLocalStorage<Review[]>('user_reviews', [], 'get') || [];
+    return dishId ? allReviews.filter(r => r.dish_id === dishId) : allReviews;
+  }
+
+  try {
+    let query = supabase
+      .from('reviews')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (dishId) {
+      query = query.eq('dish_id', dishId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+    return [];
+  }
+};
+
+export const createReview = async (
+  review: Omit<Review, 'id' | 'created_at' | 'updated_at'>
+): Promise<Review | null> => {
+  if (!isSupabaseConfigured()) {
+    const newReview: Review = {
+      ...review,
+      id: `review_${Date.now()}`,
+      created_at: new Date().toISOString(),
+    };
+    const reviews = await getReviews();
+    reviews.unshift(newReview);
+    fallbackToLocalStorage('user_reviews', reviews, 'set', reviews);
+    return newReview;
+  }
+
+  try {
+    const userId = getUserId();
+    const { data, error } = await supabase
+      .from('reviews')
+      .insert({
+        ...review,
+        user_id: userId,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating review:', error);
+    return null;
+  }
+};
+
+export const updateReview = async (
+  reviewId: string,
+  updates: Partial<Review>
+): Promise<Review | null> => {
+  if (!isSupabaseConfigured()) {
+    const reviews = await getReviews();
+    const index = reviews.findIndex(r => r.id === reviewId);
+    if (index === -1) return null;
+    
+    reviews[index] = { ...reviews[index], ...updates, updated_at: new Date().toISOString() };
+    fallbackToLocalStorage('user_reviews', reviews, 'set', reviews);
+    return reviews[index];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('reviews')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', reviewId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating review:', error);
+    return null;
+  }
+};
+
+// ==================== PRODUCTOS ====================
+
+export const getProducts = async (filters?: {
+  restaurantId?: string;
+  category?: string;
+  origin?: string;
+  isActive?: boolean;
+  limit?: number;
+  offset?: number;
+}): Promise<Product[]> => {
+  if (!isSupabaseConfigured()) {
+    // Fallback: retornar array vacío, los productos vendrán del código hardcodeado
+    return [];
+  }
+
+  try {
+    let query = supabase
+      .from('products')
+      .select('*')
+      .order('sort_order', { ascending: true })
+      .order('id', { ascending: true });
+
+    if (filters) {
+      if (filters.restaurantId) {
+        query = query.eq('restaurant_id', filters.restaurantId);
+      }
+      if (filters.category) {
+        query = query.eq('category', filters.category);
+      }
+      if (filters.origin) {
+        query = query.eq('origin', filters.origin);
+      }
+      if (filters.isActive !== undefined) {
+        query = query.eq('is_active', filters.isActive);
+      } else {
+        // Por defecto, solo productos activos
+        query = query.eq('is_active', true);
+      }
+      if (filters.limit) {
+        query = query.limit(filters.limit);
+      }
+      if (filters.offset) {
+        query = query.range(filters.offset, filters.offset + (filters.limit || 50) - 1);
+      }
+    } else {
+      // Por defecto, solo productos activos
+      query = query.eq('is_active', true);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    // Mapear image_url a image para compatibilidad y obtener URL pública
+    return (data || []).map(p => ({
+      ...p,
+      image: p.image_url ? getProductImageUrl(p.image_url) : (p.image || ''),
+    }));
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    return [];
+  }
+};
+
+// ==================== STORAGE (IMÁGENES) ====================
+
+/**
+ * Obtiene la URL pública de una imagen almacenada en Supabase Storage
+ * @param bucketName Nombre del bucket (ej: 'product-images', 'restaurant-images')
+ * @param filePath Ruta del archivo dentro del bucket
+ * @returns URL pública de la imagen
+ */
+export const getImageUrl = (bucketName: string, filePath: string): string => {
+  if (!isSupabaseConfigured()) {
+    // Si no está configurado, retornar ruta relativa local
+    return filePath.startsWith('/') ? filePath : `/${filePath}`;
+  }
+
+  // Si ya es una URL completa, retornarla tal cual
+  if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+    return filePath;
+  }
+
+  // Construir URL pública de Supabase Storage
+  const supabaseUrl = getSupabaseUrl();
+  if (!supabaseUrl) {
+    // Fallback: usar ruta relativa
+    return filePath.startsWith('/') ? filePath : `/${filePath}`;
+  }
+  return `${supabaseUrl}/storage/v1/object/public/${bucketName}/${filePath}`;
+};
+
+/**
+ * Sube una imagen a Supabase Storage
+ * @param bucketName Nombre del bucket
+ * @param filePath Ruta donde guardar el archivo (ej: 'products/product-123.jpg')
+ * @param file Archivo a subir (File o Blob)
+ * @returns URL pública de la imagen subida, o null si hay error
+ */
+export const uploadImage = async (
+  bucketName: string,
+  filePath: string,
+  file: File | Blob
+): Promise<string | null> => {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase no está configurado. No se puede subir la imagen.');
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true // Si el archivo ya existe, lo reemplaza
+      });
+
+    if (error) throw error;
+
+    // Retornar URL pública
+    return getImageUrl(bucketName, data.path);
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    return null;
+  }
+};
+
+/**
+ * Elimina una imagen de Supabase Storage
+ * @param bucketName Nombre del bucket
+ * @param filePath Ruta del archivo a eliminar
+ * @returns true si se eliminó correctamente, false en caso contrario
+ */
+export const deleteImage = async (
+  bucketName: string,
+  filePath: string
+): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase no está configurado. No se puede eliminar la imagen.');
+    return false;
+  }
+
+  try {
+    const { error } = await supabase.storage
+      .from(bucketName)
+      .remove([filePath]);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting image:', error);
+    return false;
+  }
+};
+
+/**
+ * Helper para obtener URL de imagen de producto
+ */
+export const getProductImageUrl = (imageUrl: string | null | undefined): string => {
+  if (!imageUrl) return '';
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  // Si es una ruta relativa, intentar desde Supabase Storage primero
+  if (isSupabaseConfigured()) {
+    return getImageUrl('product-images', imageUrl);
+  }
+  // Fallback a ruta local
+  return imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
+};
+
+/**
+ * Helper para obtener URL de imagen de restaurante
+ */
+export const getRestaurantImageUrl = (imageUrl: string | null | undefined, type: 'logo' | 'cover' = 'logo'): string => {
+  if (!imageUrl) return '';
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  if (isSupabaseConfigured()) {
+    return getImageUrl('restaurant-images', imageUrl);
+  }
+  return imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
+};
+
+/**
+ * Helper para obtener URL de avatar de usuario
+ */
+export const getUserAvatarUrl = (imageUrl: string | null | undefined): string => {
+  if (!imageUrl) return '';
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  if (isSupabaseConfigured()) {
+    return getImageUrl('user-avatars', imageUrl);
+  }
+  return imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
+};
+
+export const getProductById = async (productId: number, restaurantId?: string): Promise<Product | null> => {
+  if (!isSupabaseConfigured()) {
+    // Fallback: retornar null, el producto vendrá del código hardcodeado
+    return null;
+  }
+
+  try {
+    let query = supabase
+      .from('products')
+      .select('*')
+      .eq('id', productId)
+      .eq('is_active', true);
+
+    if (restaurantId) {
+      query = query.eq('restaurant_id', restaurantId);
+    }
+
+    const { data, error } = await query.single();
+
+    if (error) throw error;
+    // Mapear image_url a image para compatibilidad y obtener URL pública
+    return data ? { ...data, image: data.image_url ? getProductImageUrl(data.image_url) : (data.image || '') } : null;
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    return null;
+  }
+};
+
+// ==================== RESTAURANTES ====================
+
+export interface Restaurant {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  address?: string;
+  city: string;
+  state?: string;
+  country: string;
+  postal_code?: string;
+  latitude?: number;
+  longitude?: number;
+  phone?: string;
+  email?: string;
+  website?: string;
+  logo_url?: string;
+  cover_image_url?: string;
+  rating: number;
+  total_reviews: number;
+  is_active: boolean;
+  is_verified: boolean;
+  timezone: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const getRestaurants = async (filters?: {
+  city?: string;
+  country?: string;
+  isActive?: boolean;
+  limit?: number;
+  offset?: number;
+}): Promise<Restaurant[]> => {
+  if (!isSupabaseConfigured()) {
+    return [];
+  }
+
+  try {
+    let query = supabase
+      .from('restaurants')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (filters) {
+      if (filters.city) {
+        query = query.eq('city', filters.city);
+      }
+      if (filters.country) {
+        query = query.eq('country', filters.country);
+      }
+      if (filters.isActive !== undefined) {
+        query = query.eq('is_active', filters.isActive);
+      } else {
+        query = query.eq('is_active', true);
+      }
+      if (filters.limit) {
+        query = query.limit(filters.limit);
+      }
+      if (filters.offset) {
+        query = query.range(filters.offset, filters.offset + (filters.limit || 50) - 1);
+      }
+    } else {
+      query = query.eq('is_active', true);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching restaurants:', error);
+    return [];
+  }
+};
+
+export const getRestaurantById = async (restaurantId: string): Promise<Restaurant | null> => {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('*')
+      .eq('id', restaurantId)
+      .eq('is_active', true)
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching restaurant:', error);
+    return null;
+  }
+};

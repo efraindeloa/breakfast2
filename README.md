@@ -21,9 +21,14 @@ Aplicación móvil y web para restaurantes que permite a los comensales interact
    npm install
    ```
 
-2. **Configurar variables de entorno** (si aplica):
-   - Crear archivo `.env.local`
+2. **Configurar variables de entorno**:
+   - Crear archivo `.env` en la raíz del proyecto
    - Configurar `GEMINI_API_KEY` si usas IA
+   - Configurar Supabase (ver [README_SUPABASE.md](./README_SUPABASE.md)):
+     ```env
+     VITE_SUPABASE_URL=https://tkwackqrnsqlmxtalvuw.supabase.co
+     VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRrd2Fja3FybnNxbG14dGFsdnV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxMTU3NzEsImV4cCI6MjA4NDY5MTc3MX0.1PG0x0ZdAAjhunyiPBRzpgpsr9nZGV5epHdUvalHqbA
+     ```
 
 3. **Ejecutar en desarrollo**:
    ```bash

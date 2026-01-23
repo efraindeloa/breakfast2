@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useTranslation, useLanguage } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
+import { useProducts } from '../contexts/ProductsContext';
 
 type OriginType = 'mar' | 'tierra' | 'aire' | 'vegetariano' | 'vegano' | 
   // Filtros para Bebidas
@@ -19,6 +20,7 @@ const MenuScreen: React.FC = () => {
   const { t } = useTranslation();
   const { language } = useLanguage();
   const { favoriteDishes } = useFavorites();
+  const { products, isLoading: productsLoading } = useProducts();
   
   const getCartQuantity = (dishId: number) => {
     return cart.filter(item => item.id === dishId).reduce((sum, item) => sum + item.quantity, 0);
@@ -259,7 +261,7 @@ const MenuScreen: React.FC = () => {
     return keyMap[value] || '';
   };
 
-  const dishes = [
+  const dishesFromCode = [
     {
       id: 1,
       name: 'Tacos de Atún Marinado',
@@ -557,6 +559,24 @@ const MenuScreen: React.FC = () => {
       origin: 'pastel' as OriginType,
     },
   ];
+
+  // Usar productos de Supabase si están disponibles, sino usar los hardcodeados
+  const dishes = useMemo(() => {
+    if (products.length > 0) {
+      // Convertir productos de Supabase al formato esperado
+      return products.map(p => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        image: p.image,
+        badges: p.badges || [],
+        category: p.category,
+        origin: p.origin as OriginType,
+      }));
+    }
+    return dishesFromCode;
+  }, [products]);
 
   // Sugerencias del Chef por categoría
   const chefSuggestions: Record<string, number[]> = {

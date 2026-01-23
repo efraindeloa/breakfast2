@@ -436,7 +436,7 @@ const ProfileScreen: React.FC = () => {
             />
           </div>
           <div className="flex flex-col items-center">
-            <p className="text-[24px] font-bold">{t('profile.greeting')} ☀️</p>
+            <p className="text-[24px] font-bold">{t('profile.greeting')}</p>
             <p className="text-[#8a7560] dark:text-[#c0a890] mt-1 text-center">{t('profile.greetingMessage')}</p>
             <div className="mt-2 px-3 py-1 bg-primary/10 rounded-full">
               <p className="text-primary text-xs font-semibold uppercase">{t('profile.memberSince')}</p>

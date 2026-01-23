@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { getCart, setCart as setCartDB, addToCart as addToCartDB, removeFromCart as removeFromCartDB, clearCart as clearCartDB, CartItem } from '../services/database';
 
 export interface CartItem {
   id: number;
@@ -6,6 +7,7 @@ export interface CartItem {
   price: number;
   notes: string;
   quantity: number;
+  image?: string;
 }
 
 interface CartContextType {
@@ -17,14 +19,31 @@ interface CartContextType {
   clearCart: () => void;
   getCartItemCount: () => number;
   setCartItems: (items: CartItem[]) => void;
+  isLoading: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const addToCart = (item: Omit<CartItem, 'quantity'>) => {
+  // Cargar carrito desde Supabase/localStorage al iniciar
+  useEffect(() => {
+    const loadCart = async () => {
+      try {
+        const cartData = await getCart();
+        setCart(cartData);
+      } catch (error) {
+        console.error('Error loading cart:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadCart();
+  }, []);
+
+  const addToCart = async (item: Omit<CartItem, 'quantity'>) => {
     setCart(prev => {
       const existingItem = prev.find(cartItem => 
         cartItem.id === item.id && cartItem.notes === item.notes
@@ -32,37 +51,54 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (existingItem) {
         // Si el item ya existe con las mismas notas, incrementar cantidad
-        return prev.map(cartItem =>
+        const updated = prev.map(cartItem =>
           cartItem.id === existingItem.id && cartItem.notes === existingItem.notes
             ? { ...cartItem, quantity: cartItem.quantity + 1 }
             : cartItem
         );
+        // Guardar en Supabase/localStorage
+        setCartDB(updated).catch(console.error);
+        return updated;
       } else {
         // Si no existe, agregar nuevo item
-        return [...prev, { ...item, quantity: 1 }];
+        const newItem: CartItem = { ...item, quantity: 1 };
+        const updated = [...prev, newItem];
+        // Guardar en Supabase/localStorage
+        addToCartDB(newItem).catch(console.error);
+        return updated;
       }
     });
   };
 
-  const removeFromCart = (itemId: number) => {
-    setCart(prev => prev.filter(item => item.id !== itemId));
+  const removeFromCart = async (itemId: number) => {
+    setCart(prev => {
+      const updated = prev.filter(item => item.id !== itemId);
+      // Guardar en Supabase/localStorage
+      setCartDB(updated).catch(console.error);
+      return updated;
+    });
   };
 
-  const updateCartItemQuantity = (itemId: number, quantity: number, notes?: string) => {
+  const updateCartItemQuantity = async (itemId: number, quantity: number, notes?: string) => {
     if (quantity <= 0) {
       if (notes !== undefined) {
         // Remover solo el item con este ID y estas notas específicas
-        setCart(prev => prev.filter(item => 
-          !(item.id === itemId && item.notes === notes)
-        ));
+        setCart(prev => {
+          const updated = prev.filter(item => 
+            !(item.id === itemId && item.notes === notes)
+          );
+          // Guardar en Supabase/localStorage
+          setCartDB(updated).catch(console.error);
+          return updated;
+        });
       } else {
         // Remover todos los items con este ID (comportamiento original)
         removeFromCart(itemId);
       }
       return;
     }
-    setCart(prev =>
-      prev.map(item => {
+    setCart(prev => {
+      const updated = prev.map(item => {
         if (notes !== undefined) {
           // Si se especifican notas, solo actualizar el item con esas notas
           return (item.id === itemId && item.notes === notes) 
@@ -72,28 +108,38 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // Comportamiento original: actualizar todos los items con este ID
           return item.id === itemId ? { ...item, quantity } : item;
         }
-      })
-    );
+      });
+      // Guardar en Supabase/localStorage
+      setCartDB(updated).catch(console.error);
+      return updated;
+    });
   };
 
-  const updateCartItemNotes = (itemId: number, notes: string) => {
-    setCart(prev =>
-      prev.map(item =>
+  const updateCartItemNotes = async (itemId: number, notes: string) => {
+    setCart(prev => {
+      const updated = prev.map(item =>
         item.id === itemId ? { ...item, notes } : item
-      )
-    );
+      );
+      // Guardar en Supabase/localStorage
+      setCartDB(updated).catch(console.error);
+      return updated;
+    });
   };
 
-  const clearCart = () => {
+  const clearCart = async () => {
     setCart([]);
+    // Guardar en Supabase/localStorage
+    clearCartDB().catch(console.error);
   };
 
   const getCartItemCount = () => {
     return cart.reduce((sum, item) => sum + item.quantity, 0);
   };
 
-  const setCartItems = (items: CartItem[]) => {
+  const setCartItems = async (items: CartItem[]) => {
     setCart(items);
+    // Guardar en Supabase/localStorage
+    setCartDB(items).catch(console.error);
   };
 
   return (
@@ -105,7 +151,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       updateCartItemNotes,
       clearCart, 
       getCartItemCount,
-      setCartItems
+      setCartItems,
+      isLoading
     }}>
       {children}
     </CartContext.Provider>

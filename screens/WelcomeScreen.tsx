@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation, useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { languagesData, allLanguages, popularLanguages } from '../content/languages';
 
 interface WelcomeScreenProps {
@@ -12,12 +13,15 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { setLanguage } = useLanguage();
+  const { signIn } = useAuth();
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
   const [showAllLanguagesModal, setShowAllLanguagesModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>('');
   const languageSelectorRef = useRef<HTMLDivElement>(null);
 
   // Idiomas disponibles (solo los que tienen traducciones completas)
@@ -123,10 +127,76 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
     };
   }, [showLanguageSelector]);
 
-  const handleLogin = () => {
-    // Aquí se podría agregar validación y lógica de inicio de sesión
-    onLogin();
-    navigate('/home');
+  const handleLogin = async () => {
+    // Validar campos
+    if (!emailOrPhone.trim()) {
+      setError(t('welcome.pleaseEnterEmailOrPhone') || 'Por favor ingresa tu correo o teléfono');
+      return;
+    }
+
+    if (!password.trim()) {
+      setError(t('welcome.pleaseEnterPassword') || 'Por favor ingresa tu contraseña');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // Supabase Auth solo acepta email, no teléfono directamente
+      // Si el usuario ingresó un teléfono, intentar buscar el email asociado
+      let email = emailOrPhone.trim();
+      
+      // Si no contiene @, asumir que es un teléfono y buscar por teléfono
+      // Por ahora, requerimos email para login
+      if (!email.includes('@')) {
+        setError(t('welcome.pleaseUseEmail') || 'Por favor usa tu correo electrónico para iniciar sesión');
+        setIsLoading(false);
+        return;
+      }
+
+      const { error: signInError } = await signIn(email, password);
+
+      if (signInError) {
+        // Solo loguear errores inesperados, no errores de credenciales inválidas (que son esperados)
+        const errorMessage = signInError.message || '';
+        const isExpectedError = errorMessage.includes('Invalid login credentials') || 
+                                errorMessage.includes('invalid_credentials') ||
+                                errorMessage.includes('Invalid login') ||
+                                errorMessage.includes('User not found') ||
+                                errorMessage.includes('user_not_found');
+        
+        if (!isExpectedError) {
+          console.error('Login error:', signInError);
+        }
+        
+        let displayError = '';
+        
+        if (errorMessage.includes('Invalid login credentials') || 
+            errorMessage.includes('invalid_credentials') ||
+            errorMessage.includes('Invalid login')) {
+          displayError = t('welcome.invalidCredentials') || 'Correo o contraseña incorrectos';
+        } else if (errorMessage.includes('User not found') || 
+                   errorMessage.includes('user_not_found')) {
+          displayError = t('welcome.invalidCredentials') || 'Correo o contraseña incorrectos';
+        } else {
+          displayError = errorMessage || t('welcome.loginError') || 'Error al iniciar sesión';
+        }
+        
+        setError(displayError);
+        setIsLoading(false);
+        return;
+      }
+
+      // Login exitoso
+      onLogin();
+      navigate('/home');
+    } catch (err) {
+      console.error('Unexpected login error:', err);
+      setError(t('welcome.loginError') || 'Error inesperado al iniciar sesión');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -206,6 +276,16 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
 
       <div className="flex flex-col flex-1 px-6">
         <div className="max-w-[480px] mx-auto w-full space-y-4">
+          {/* Mensaje de error general */}
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-2">
+              <div className="flex items-start gap-3">
+                <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-xl">error</span>
+                <p className="text-sm text-red-700 dark:text-red-300 flex-1">{error}</p>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
               {t('welcome.emailOrPhone')}
@@ -215,11 +295,21 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
                 person
               </span>
               <input
-                className="w-full h-14 pl-12 pr-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                className={`w-full h-14 pl-12 pr-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary ${
+                  error ? 'ring-2 ring-red-500' : ''
+                }`}
                 placeholder={t('welcome.emailOrPhonePlaceholder')}
-                type="text"
+                type="email"
                 value={emailOrPhone}
-                onChange={(e) => setEmailOrPhone(e.target.value)}
+                onChange={(e) => {
+                  setEmailOrPhone(e.target.value);
+                  if (error) setError('');
+                }}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !isLoading) {
+                    handleLogin();
+                  }
+                }}
               />
             </div>
           </div>
@@ -233,11 +323,16 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
                 lock
               </span>
               <input
-                className="w-full h-14 pl-12 pr-12 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                className={`w-full h-14 pl-12 pr-12 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary ${
+                  error ? 'ring-2 ring-red-500' : ''
+                }`}
                 placeholder={t('welcome.passwordPlaceholder')}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (error) setError('');
+                }}
               />
               <button
                 type="button"
@@ -263,9 +358,19 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
           <div className="pt-4">
             <button
               onClick={handleLogin}
-              className="flex items-center justify-center rounded-xl h-14 bg-primary text-white text-base font-bold w-full shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform"
+              disabled={isLoading}
+              className={`flex items-center justify-center rounded-xl h-14 bg-primary text-white text-base font-bold w-full shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform ${
+                isLoading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
-              {t('welcome.login')}
+              {isLoading ? (
+                <>
+                  <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  {t('welcome.loggingIn') || 'Iniciando sesión...'}
+                </>
+              ) : (
+                t('welcome.login')
+              )}
             </button>
           </div>
 

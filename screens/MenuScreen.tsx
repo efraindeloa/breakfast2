@@ -43,16 +43,43 @@ const MenuScreen: React.FC = () => {
     }
   };
   
+  // Categorías disponibles (se recalcula cuando cambia el idioma)
+  const categories = useMemo(() => [
+    t('menu.categories.appetizers'),
+    t('menu.categories.mains'),
+    t('menu.categories.drinks'),
+    t('menu.categories.desserts'),
+    t('menu.categories.cocktails')
+  ], [t]);
+
   // Restaurar estado desde location.state o sessionStorage
-  const getInitialCategory = () => {
+  const getInitialCategory = (availableCategories: string[]) => {
     if (location.state?.selectedCategory) {
-      return location.state.selectedCategory;
+      const stateCategory = location.state.selectedCategory;
+      // Verificar que la categoría del state sea válida
+      if (availableCategories.includes(stateCategory)) {
+        return stateCategory;
+      }
     }
     const saved = sessionStorage.getItem('menuSelectedCategory');
-    return saved || t('menu.categories.appetizers');
+    if (saved && availableCategories.includes(saved)) {
+      return saved;
+    }
+    // Si no hay categoría válida guardada, usar la primera por defecto
+    return availableCategories[0];
   };
 
-  const [selectedCategory, setSelectedCategory] = useState(getInitialCategory);
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    // Inicializar con una categoría válida
+    const currentCategories = [
+      t('menu.categories.appetizers'),
+      t('menu.categories.mains'),
+      t('menu.categories.drinks'),
+      t('menu.categories.desserts'),
+      t('menu.categories.cocktails')
+    ];
+    return getInitialCategory(currentCategories);
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedOrigin, setSelectedOrigin] = useState<OriginType>('');
@@ -105,6 +132,33 @@ const MenuScreen: React.FC = () => {
     };
   }, [showSuggestions, showHighlights]);
 
+  // Actualizar selectedCategory cuando cambia el idioma
+  useEffect(() => {
+    const currentCategories = [
+      t('menu.categories.appetizers'),
+      t('menu.categories.mains'),
+      t('menu.categories.drinks'),
+      t('menu.categories.desserts'),
+      t('menu.categories.cocktails')
+    ];
+    
+    const saved = sessionStorage.getItem('menuSelectedCategory');
+    if (saved) {
+      // Si la categoría guardada no coincide con ninguna categoría actual (por cambio de idioma),
+      // resetear a la primera categoría
+      if (!currentCategories.includes(saved)) {
+        const defaultCategory = t('menu.categories.appetizers');
+        setSelectedCategory(defaultCategory);
+        sessionStorage.setItem('menuSelectedCategory', defaultCategory);
+      }
+    } else {
+      // Si no hay categoría guardada, usar la primera por defecto
+      const defaultCategory = t('menu.categories.appetizers');
+      setSelectedCategory(defaultCategory);
+      sessionStorage.setItem('menuSelectedCategory', defaultCategory);
+    }
+  }, [language, t]);
+
   // Restaurar posición de scroll y categoría al regresar
   useEffect(() => {
     // Restaurar categoría desde location.state
@@ -149,13 +203,6 @@ const MenuScreen: React.FC = () => {
     'Coctelería': t('menu.categories.cocktails')
   };
   
-  const categories = [
-    t('menu.categories.appetizers'),
-    t('menu.categories.mains'),
-    t('menu.categories.drinks'),
-    t('menu.categories.desserts'),
-    t('menu.categories.cocktails')
-  ];
   
   // Función para obtener la categoría original en español desde la traducción
   const getOriginalCategory = (translatedCategory: string): string => {
@@ -673,20 +720,35 @@ const MenuScreen: React.FC = () => {
     const originalCategory = getOriginalCategory(selectedCategory);
     const hasSearchQuery = searchQuery.trim();
     
+    // Debug: verificar qué categoría está seleccionada
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Selected category (translated):', selectedCategory);
+      console.log('Original category:', originalCategory);
+      console.log('Total dishes:', dishes.length);
+      console.log('Dish categories:', [...new Set(dishes.map(d => d.category))]);
+    }
+    
     return dishes.filter(dish => {
       // Si hay búsqueda, ignorar el filtro de categoría (buscar en todas las categorías)
       if (!hasSearchQuery) {
         // Filtro por categoría solo si NO hay búsqueda
-        if (dish.category !== originalCategory) return false;
+        // Normalizar categorías (trim y comparar sin case sensitivity)
+        const dishCategory = (dish.category || '').trim();
+        const targetCategory = (originalCategory || '').trim();
+        
+        if (dishCategory.toLowerCase() !== targetCategory.toLowerCase()) {
+          return false;
+        }
       }
       
-      // Filtro por búsqueda fuzzy (usando traducciones)
+      // Filtro por búsqueda fuzzy (usando nombres y descripciones reales de los productos)
       if (hasSearchQuery) {
         const query = searchQuery.trim();
-        const translatedName = getDishName(dish.id);
-        const translatedDescription = getDishDescription(dish.id);
-        const matchesName = fuzzyMatch(translatedName, query);
-        const matchesDescription = fuzzyMatch(translatedDescription, query);
+        // Usar nombres y descripciones reales de los productos, no traducciones hardcodeadas
+        const productName = dish.name || '';
+        const productDescription = dish.description || '';
+        const matchesName = fuzzyMatch(productName, query);
+        const matchesDescription = fuzzyMatch(productDescription, query);
         if (!matchesName && !matchesDescription) return false;
       }
       
@@ -851,8 +913,8 @@ const MenuScreen: React.FC = () => {
                       <div className="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">{dish.price}</div>
                     </div>
                     <div className="px-2 pb-2 flex-1 flex flex-col">
-                      <p className="text-[#181611] dark:text-white text-base font-bold leading-tight mb-1 line-clamp-2">{getDishName(dish.id)}</p>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal line-clamp-2">{getDishDescription(dish.id)}</p>
+                      <p className="text-[#181611] dark:text-white text-base font-bold leading-tight mb-1 line-clamp-2">{dish.name}</p>
+                      <p className="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal line-clamp-2">{dish.description}</p>
                     </div>
                   </div>
                 );
@@ -881,8 +943,8 @@ const MenuScreen: React.FC = () => {
                     style={{ backgroundImage: `url("${dish.image}")` }}
                   />
                   <div className="flex-1">
-                    <p className="font-bold dark:text-white">{getDishName(dish.id)}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{getDishDescription(dish.id)}</p>
+                    <p className="font-bold dark:text-white">{dish.name}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{dish.description}</p>
                   </div>
                   <span className="material-symbols-outlined text-gray-300">chevron_right</span>
                 </div>
@@ -945,7 +1007,7 @@ const MenuScreen: React.FC = () => {
             <div className="flex flex-[2_2_0px] flex-col justify-between gap-3">
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
-                  <p className="text-[#181611] dark:text-white text-base font-bold leading-tight">{getDishName(dish.id)}</p>
+                  <p className="text-[#181611] dark:text-white text-base font-bold leading-tight">{dish.name}</p>
                   {dish.badges?.includes('vegano') && (
                     <span className="material-symbols-outlined text-xs text-green-500" title={t('menu.badges.vegan')}>eco</span>
                   )}
@@ -953,7 +1015,7 @@ const MenuScreen: React.FC = () => {
                     <span className="material-symbols-outlined text-xs text-orange-500" title={t('menu.badges.specialty')}>star</span>
                   )}
                 </div>
-                <p className="text-[#897c61] dark:text-stone-400 text-sm font-normal leading-snug">{getDishDescription(dish.id)}</p>
+                <p className="text-[#897c61] dark:text-stone-400 text-sm font-normal leading-snug">{dish.description}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button 

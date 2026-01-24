@@ -34,23 +34,23 @@ const PromotionsScreen: React.FC = () => {
   const mainPromotions: Promotion[] = [
     {
       id: '1',
-      title: '2x1 en Capuchinos',
-      description: 'Solo hoy antes de las 11 AM',
+      title: t('promotions.items.cappuccino2x1.title'),
+      description: t('promotions.items.cappuccino2x1.description'),
       image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB-LjcQbYmHIPRQAwvEJsSVEW_o6MR6wKa4okvLLUG3qDB0JLNmBaT_GQfr35dYzpKxzs2AnzwjahJ43hqhS_YOeiLw4OtI8NAy4BBms3PGwtk8_6MrJ2DCEFqmrwyKHta4Hn23Rpx6xgSZBQIkFsF4a09fe0l5hPpX18wf3ET9WAujUCY-ZbLl_sZEg7brUlp0eibQ2fuOQIM4SYUJbXXhfUbZ5WquMC4TZx8XJAhqosLcR12P-dVK3b-hIzW2w6XpgP_XaGnh_LeE',
       badge: {
-        text: 'FLASH SALE',
+        text: t('promotions.badges.flashSale'),
         color: 'bg-primary'
       },
-      timeRestriction: 'Solo hoy antes de las 11 AM',
+      timeRestriction: t('promotions.items.cappuccino2x1.timeRestriction'),
       category: 'breakfast'
     },
     {
       id: '2',
-      title: 'Combo Desayuno Energético',
-      description: '¡Empieza el día con energía!',
+      title: t('promotions.items.energeticBreakfast.title'),
+      description: t('promotions.items.energeticBreakfast.description'),
       image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB2D9whnHofsGEuqVuGbeUA-4nOaMzTCKbulj90wUjxoE5YeXTyhgwEWFDTKihAotKqGv5aHXzGu0uItimdN8pn61yYyU0HerlRFXriLa-aicKNZu8tovQcNE2wyM8xFYlbJTAKPHP-O2Ma0IAeSbrOnUVN0gyDFGjsWoXsugPl6i5RbZ1HapZwCU-abYO7ewA8v3wbjn7KcXRWFAmD9HKyLKRMQCClxLSu0EwD5WmAYyAnB2SPi_JdWuelB2YzeadxpWeRj_8SFMxN',
       badge: {
-        text: 'SALUDABLE',
+        text: t('promotions.badges.healthy'),
         color: 'bg-green-500'
       },
       category: 'breakfast'
@@ -61,46 +61,46 @@ const PromotionsScreen: React.FC = () => {
   const seasonalPromotions: Promotion[] = [
     {
       id: '3',
-      title: 'Bowl de Temporada',
-      description: 'Frutas frescas',
+      title: t('promotions.items.seasonalBowl.title'),
+      description: t('promotions.items.seasonalBowl.description'),
       image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAyO6uSusIQkFnHn2w8Yn_beZI-CuKu5vF_m3FKeDh6qSeb_OGmR3WW_-6UNtrccC2lvK8K8gMmSoGX4CpTZBIpYik6ToeKxbLdYfqQJ6ODQu-A46Up9lRgVbOjQ_IPtu7sNRfgzkU7eBIP6HqAdorp25SO0Mti8ZWeRtmif262Io9a-AhM-8QT_BKw8as3KGHmLmqUzrbmpllRZ52B_G42gm6L1Z_XTVL6j5jPgc8f5eD6bDH0k8bRCuaRf_6563JQnJvNu5V-x2JJ',
       badge: {
-        text: '20% OFF',
+        text: t('promotions.discounts.20off'),
         color: 'bg-primary'
       },
-      discount: '20% OFF',
+      discount: t('promotions.discounts.20off'),
       category: 'seasonal'
     },
     {
       id: '4',
-      title: 'Pan Masa Madre',
-      description: 'Artesanal diario',
+      title: t('promotions.items.sourdoughBread.title'),
+      description: t('promotions.items.sourdoughBread.description'),
       image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDdpaSwMhbMYcjwgXMgf-3ky0rCvqxrKpI1_PrSfzT08zMaMFKqe6pOZEww9SF3MUPZXGTpHl6eDmKvPDLyB1KE-AIjmuMYalhQqgKeTs-FBNYQhHDuNHQLjw1a0Lq4zcuv1yTG0XJV_bO8XUkaCYXoC-0EyJehUKoMCkHu_U3GCNrbgbafkThkxk98P2wXWDH9YpyaCBCcxOqe-3h1BkrJiH1z55O0KrFXRzLDPRvW6wnMGQgn1rLU7lr0XMGcNQZnvqqWCP42vc9p',
       badge: {
-        text: 'VIP Exclusive',
+        text: t('promotions.badges.vipExclusive'),
         color: 'bg-primary'
       },
       category: 'vip'
     },
     {
       id: '5',
-      title: 'Smoothie Tropical',
-      description: 'Frutas de temporada',
+      title: t('promotions.items.tropicalSmoothie.title'),
+      description: t('promotions.items.tropicalSmoothie.description'),
       image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB-LjcQbYmHIPRQAwvEJsSVEW_o6MR6wKa4okvLLUG3qDB0JLNmBaT_GQfr35dYzpKxzs2AnzwjahJ43hqhS_YOeiLw4OtI8NAy4BBms3PGwtk8_6MrJ2DCEFqmrwyKHta4Hn23Rpx6xgSZBQIkFsF4a09fe0l5hPpX18wf3ET9WAujUCY-ZbLl_sZEg7brUlp0eibQ2fuOQIM4SYUJbXXhfUbZ5WquMC4TZx8XJAhqosLcR12P-dVK3b-hIzW2w6XpgP_XaGnh_LeE',
       badge: {
-        text: '15% OFF',
+        text: t('promotions.discounts.15off'),
         color: 'bg-primary'
       },
-      discount: '15% OFF',
+      discount: t('promotions.discounts.15off'),
       category: 'seasonal'
     },
     {
       id: '6',
-      title: 'Café Especial Premium',
-      description: 'Edición limitada',
+      title: t('promotions.items.premiumCoffee.title'),
+      description: t('promotions.items.premiumCoffee.description'),
       image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB2D9whnHofsGEuqVuGbeUA-4nOaMzTCKbulj90wUjxoE5YeXTyhgwEWFDTKihAotKqGv5aHXzGu0uItimdN8pn61yYyU0HerlRFXriLa-aicKNZu8tovQcNE2wyM8xFYlbJTAKPHP-O2Ma0IAeSbrOnUVN0gyDFGjsWoXsugPl6i5RbZ1HapZwCU-abYO7ewA8v3wbjn7KcXRWFAmD9HKyLKRMQCClxLSu0EwD5WmAYyAnB2SPi_JdWuelB2YzeadxpWeRj_8SFMxN',
       badge: {
-        text: 'VIP Exclusive',
+        text: t('promotions.badges.vipExclusive'),
         color: 'bg-primary'
       },
       category: 'vip'

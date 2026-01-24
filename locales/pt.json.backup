@@ -102,6 +102,64 @@
     "clear": "Limpar",
     "apply": "Aplicar"
   },
+  "dishes": {
+    "1": {
+      "name": "Tacos de Atum Marinado",
+      "description": "Atum fresco com molho de chipotle artesanal, abacate e cebola roxa."
+    },
+    "2": {
+      "name": "Ceviche de Maracujá",
+      "description": "Peixe branco marinado em leite de tigre de maracujá e toques de coentro."
+    },
+    "3": {
+      "name": "Rib Eye na Lenha",
+      "description": "Corte premium de 400g cozido lentamente com madeira de carvalho."
+    },
+    "4": {
+      "name": "Carpaccio de Carne",
+      "description": "Fatias finas de carne com parmesão, rúcula e óleo de trufa branca."
+    },
+    "5": {
+      "name": "Salada Mediterrânea",
+      "description": "Fresco, saudável e sazonal"
+    },
+    "6": {
+      "name": "Frango ao Limão & Ervas",
+      "description": "Prato carro-chefe do dia"
+    },
+    "7": {
+      "name": "Tigela de Quinoa & Abacate",
+      "description": "Nutritivo e equilibrado"
+    },
+    "8": {
+      "name": "Macarrão ao Pomodoro",
+      "description": "Preparação artesanal"
+    },
+    "9": {
+      "name": "Café Expresso",
+      "description": "Café italiano intenso e aromático"
+    },
+    "10": {
+      "name": "Suco de Laranja Natural",
+      "description": "Recém espremido, rico em vitamina C"
+    },
+    "11": {
+      "name": "Torta de Chocolate",
+      "description": "Deliciosa torta com cobertura de chocolate belga"
+    },
+    "12": {
+      "name": "Pudim de Baunilha",
+      "description": "Pudim caseiro tradicional com caramelo"
+    },
+    "13": {
+      "name": "Mojito Clássico",
+      "description": "Rum, hortelã fresca, limão e refrigerante"
+    },
+    "14": {
+      "name": "Margarita Premium",
+      "description": "Tequila reposado, triple sec e suco de limão"
+    }
+  },
   "joinTable": {
     "title": "Entrar na Mesa",
     "headline": "Entre na mesa!",
@@ -169,12 +227,7 @@
     "searchLanguage": "Buscar idioma...",
     "noLanguagesFound": "Nenhum idioma encontrado",
     "tryAnotherSearch": "Tente outro termo de busca",
-    "popularLanguages": "Idiomas Populares",
-    "assistant": {
-      "title": "Assistente",
-      "enableButton": "Botão do Assistente",
-      "enableButtonDesc": "Mostrar ou ocultar o botão flutuante do assistente"
-    }
+    "popularLanguages": "Idiomas Populares"
   },
   "order": {
     "title": "Meu Pedido",
@@ -208,7 +261,7 @@
     "finishedSelecting": "Você terminou de selecionar seus alimentos?",
     "canUnmark": "Você pode desmarcar se precisar fazer alterações",
     "markWhenFinished": "Marque quando terminar de adicionar todos os seus produtos",
-    "confirmAndSendOrder": "Confirmar Pedido",
+    "confirmAndSendOrder": "Confirmar e Enviar Pedido",
     "changeOrder": "Alterar meu pedido",
     "waitingForAll": "Aguardando todos terminarem",
     "pending": "pendentes",
@@ -340,32 +393,31 @@
   "addCard": {
     "title": "Adicionar Cartão",
     "newCard": "Novo Cartão",
-    "description": "Digite os dados do seu cartão para realizar pagamentos de forma rápida e segura",
-    "card": "CARTÃO",
-    "expires": "Expira",
+    "description": "Digite as informações do seu cartão de crédito ou débito",
+    "scanCard": "Escanear cartão com câmera",
+    "orEnterManually": "Ou digite manualmente",
+    "cardNumber": "Número do cartão",
+    "cardholderName": "Nome do portador",
     "cardholder": "Portador",
     "cardholderPlaceholder": "NOME DO PORTADOR",
-    "orEnterManually": "Ou digite manualmente",
-    "cardNumber": "Número do Cartão",
-    "cardholderName": "Nome do Portador",
-    "expiryDate": "Data de Validade",
+    "expiryDate": "Data de validade",
+    "expires": "Expira",
+    "cvv": "CVV",
+    "securityNotice": "Seus dados estão protegidos com criptografia de ponta a ponta. Não armazenamos seu CVV.",
     "addCard": "Adicionar Cartão",
-    "scanCard": "Escanear cartão com câmera",
-    "scanCardTitle": "Escaneie seu cartão",
-    "securityMessage": "Seus dados estão protegidos com criptografia de ponta a ponta. Não armazenamos seu CVV.",
-    "invalidCardNumber": "Por favor, digite um número de cartão válido (16 dígitos)",
-    "invalidCardholder": "Por favor, digite o nome do portador do cartão",
+    "invalidCardNumber": "Por favor, digite um número de cartão válido",
+    "invalidCardholder": "Por favor, digite o nome do portador",
     "invalidExpiryDate": "Por favor, digite uma data de validade válida",
-    "invalidCVV": "Por favor, digite um CVV válido (3 ou 4 dígitos)",
+    "invalidCVV": "Por favor, digite um CVV válido",
     "cardAddedSuccess": "Cartão adicionado com sucesso",
-    "cameraError": "Erro ao acessar a câmera. Por favor, tente novamente ou digite os dados manualmente.",
-    "cardScanned": "Cartão escaneado com sucesso",
-    "processing": "Processando...",
-    "placeCardInFrame": "Coloque seu cartão dentro da moldura",
-    "ensureWellLit": "Certifique-se de que há boa iluminação",
-    "captureCard": "Capturar Cartão",
-    "scanFailed": "Não foi possível extrair os dados do cartão. Por favor, digite os dados manualmente.",
-    "scanError": "Erro ao processar o cartão. Por favor, tente novamente ou digite os dados manualmente."
+    "cardScanned": "Dados do cartão capturados. Por favor, digite o CVV manualmente.",
+    "scanYourCard": "Escaneie seu cartão",
+    "processing": "Processando cartão...",
+    "placeCardInFrame": "Coloque o cartão dentro da moldura",
+    "ensureWellLit": "Certifique-se de que o cartão esteja bem iluminado e focado",
+    "captureCard": "Capturar cartão",
+    "cameraError": "Não foi possível acessar a câmera. Por favor, digite os dados manualmente.",
+    "card": "Cartão"
   },
   "billing": {
     "step1": "Dados Fiscais",
@@ -395,6 +447,7 @@
     "email": "E-mail",
     "emailPlaceholder": "exemplo@email.com",
     "confirmData": "Confirmar Dados",
+    "cfdiUsage": "Uso de CFDI",
     "selectOption": "Selecione uma opção",
     "generalExpenses": "Despesas gerais",
     "selectRegime": "Selecione seu regime",
@@ -526,7 +579,7 @@
     "pending": "Pendente",
     "pendingPlural": "pendentes",
     "inviteMorePeople": "Convidar mais pessoas",
-    "confirmAndSendOrder": "Confirmar Pedido",
+    "confirmAndSendOrder": "Confirmar e Enviar Pedido",
     "waitingForAll": "Aguardando todos terminarem",
     "orderConfirmed": "Pedido confirmado"
   },
@@ -649,14 +702,7 @@
     "forgotPassword": "Esqueci minha senha",
     "noAccount": "Ainda não tem uma conta?",
     "otherLanguage": "Outro idioma",
-    "selectLanguage": "Selecionar Idioma",
-    "pleaseEnterEmailOrPhone": "Por favor, insira seu e-mail ou telefone",
-    "pleaseEnterPassword": "Por favor, insira sua senha",
-    "pleaseUseEmail": "Por favor, use seu endereço de e-mail para entrar",
-    "invalidCredentials": "E-mail ou senha incorretos",
-    "emailNotConfirmed": "Por favor, confirme seu e-mail antes de entrar",
-    "loginError": "Erro ao entrar",
-    "loggingIn": "Entrando..."
+    "selectLanguage": "Selecionar Idioma"
   },
   "register": {
     "title": "Bom dia!",
@@ -686,53 +732,7 @@
     "passwordRuleSymbol": "1 símbolo",
     "passwordConfirmation": "Confirmação",
     "pleaseConfirmPassword": "Por favor, confirme sua senha",
-    "passwordsDoNotMatch": "As senhas não coincidem. Por favor, verifique se ambas as senhas são iguais",
-    "pleaseUseEmail": "Por favor, use seu endereço de e-mail para se cadastrar",
-    "userAlreadyExists": "Este e-mail já está cadastrado",
-    "registrationError": "Erro ao se cadastrar",
-    "registrationSuccess": "Cadastro realizado com sucesso! Redirecionando...",
-    "creatingAccount": "Criando conta..."
-  },
-  "forgotPassword": {
-    "title": "Recuperar senha",
-    "subtitle": "Digite seu endereço de e-mail e enviaremos um link para recuperar sua senha",
-    "email": "E-mail",
-    "emailPlaceholder": "exemplo@email.com",
-    "pleaseEnterEmail": "Por favor, digite seu endereço de e-mail",
-    "invalidEmail": "Por favor, digite um endereço de e-mail válido",
-    "emailNotFound": "Não encontramos uma conta com este e-mail",
-    "resetError": "Erro ao enviar e-mail de recuperação",
-    "sendResetLink": "Enviar link de recuperação",
-    "sending": "Enviando...",
-    "backToLogin": "Voltar ao login",
-    "successMessage": "Enviamos um e-mail com instruções para recuperar sua senha",
-    "checkEmail": "Verifique seu e-mail e siga as instruções para redefinir sua senha."
-  },
-  "resetPassword": {
-    "title": "Redefinir senha",
-    "successTitle": "Senha atualizada!",
-    "subtitle": "Digite sua nova senha",
-    "successMessage": "Sua senha foi atualizada com sucesso. Você será redirecionado para o login.",
-    "newPassword": "Nova senha",
-    "passwordPlaceholder": "Digite sua nova senha",
-    "confirmPassword": "Confirmar senha",
-    "confirmPasswordPlaceholder": "Confirme sua nova senha",
-    "pleaseEnterPassword": "Por favor, digite uma senha",
-    "pleaseConfirmPassword": "Por favor, confirme sua senha",
-    "passwordDoesNotMeet": "A senha não atende às seguintes regras",
-    "passwordRuleMinLength": "8 caracteres",
-    "passwordRuleNumber": "1 número",
-    "passwordRuleLowercase": "1 minúscula",
-    "passwordRuleUppercase": "1 maiúscula",
-    "passwordRuleSymbol": "1 símbolo",
-    "passwordConfirmation": "Confirmação",
-    "passwordsDoNotMatch": "As senhas não coincidem",
-    "invalidToken": "O link de recuperação expirou ou é inválido. Por favor, solicite um novo.",
-    "updateError": "Erro ao atualizar a senha",
-    "updatePassword": "Atualizar senha",
-    "updating": "Atualizando...",
-    "redirecting": "Você será redirecionado para o login em alguns segundos...",
-    "goToLogin": "Ir para o login"
+    "passwordsDoNotMatch": "As senhas não coincidem. Por favor, verifique se ambas as senhas são iguais"
   },
   "dishDetail": {
     "addToCart": "Adicionar ao carrinho",
@@ -761,7 +761,8 @@
     "portion": "Porção/Copo",
     "bottle": "Garrafa",
     "leaveReview": "Deixar opinião",
-    "viewReviews": "Ver opiniões"
+    "viewReviews": "Ver opiniões",
+    "leaveReview": "Deixar opinião"
   },
   "favorites": {
     "title": "Meus Favoritos",
@@ -887,6 +888,36 @@
     "noReviews": "Não há opiniões disponíveis para este produto.",
     "translatedByAI": "Traduzido por IA"
   },
+  "addCard": {
+    "title": "Adicionar Cartão",
+    "newCard": "Novo Cartão",
+    "description": "Digite os dados do seu cartão para realizar pagamentos de forma rápida e segura",
+    "card": "CARTÃO",
+    "expires": "Expira",
+    "cardholder": "Portador",
+    "cardholderPlaceholder": "NOME DO PORTADOR",
+    "orEnterManually": "Ou digite manualmente",
+    "cardNumber": "Número do Cartão",
+    "cardholderName": "Nome do Portador",
+    "expiryDate": "Data de Validade",
+    "addCard": "Adicionar Cartão",
+    "scanCard": "Escanear cartão com câmera",
+    "scanCardTitle": "Escaneie seu cartão",
+    "securityMessage": "Seus dados estão protegidos com criptografia de ponta a ponta. Não armazenamos seu CVV.",
+    "invalidCardNumber": "Por favor, digite um número de cartão válido (16 dígitos)",
+    "invalidCardholder": "Por favor, digite o nome do portador do cartão",
+    "invalidExpiryDate": "Por favor, digite uma data de validade válida",
+    "invalidCVV": "Por favor, digite um CVV válido (3 ou 4 dígitos)",
+    "cardAddedSuccess": "Cartão adicionado com sucesso",
+    "cameraError": "Erro ao acessar a câmera. Por favor, tente novamente ou digite os dados manualmente.",
+    "cardScanned": "Cartão escaneado com sucesso",
+    "processing": "Processando...",
+    "placeCardInFrame": "Coloque seu cartão dentro da moldura",
+    "ensureWellLit": "Certifique-se de que há boa iluminação",
+    "captureCard": "Capturar Cartão",
+    "scanFailed": "Não foi possível extrair os dados do cartão. Por favor, digite os dados manualmente.",
+    "scanError": "Erro ao processar o cartão. Por favor, tente novamente ou digite os dados manualmente."
+  },
   "waitlist": {
     "title": "Lista de Espera",
     "scanQR": "Escanear QR para Lista de Espera",
@@ -959,6 +990,7 @@
     "progressAdvanced": "{percentage}% Avançado",
     "nextInLine": "Próximo na fila",
     "tablesBefore": "Mesas antes",
+    "estimatedWaitShort": "Espera est.",
     "viewMenuAndOrder": "Ver Cardápio e Fazer Pedido",
     "advanceOrderSaveTime": "Faça seu pedido com antecedência para economizar tempo",
     "cancelWait": "Cancelar Espera",
@@ -1161,42 +1193,6 @@
     "whatIncludes": "O que inclui?",
     "applyToOrder": "Aplicar ao meu Pedido",
     "appliedToOrder": "Promoção aplicada ao seu pedido",
-    "linkCopied": "Link copiado para a área de transferência",
-    "badges": {
-      "flashSale": "PROMOÇÃO RELÂMPAGO",
-      "healthy": "SAUDÁVEL",
-      "vipExclusive": "Exclusivo VIP"
-    },
-    "discounts": {
-      "20off": "20% OFF",
-      "15off": "15% OFF"
-    },
-    "items": {
-      "cappuccino2x1": {
-        "title": "2x1 em Cappuccinos",
-        "description": "Apenas hoje antes das 11h",
-        "timeRestriction": "Apenas hoje antes das 11h"
-      },
-      "energeticBreakfast": {
-        "title": "Combo Café da Manhã Energético",
-        "description": "Comece o dia com energia!"
-      },
-      "seasonalBowl": {
-        "title": "Tigela Sazonal",
-        "description": "Frutas frescas"
-      },
-      "sourdoughBread": {
-        "title": "Pão de Fermentação Natural",
-        "description": "Artesanal diário"
-      },
-      "tropicalSmoothie": {
-        "title": "Smoothie Tropical",
-        "description": "Frutas da temporada"
-      },
-      "premiumCoffee": {
-        "title": "Café Especial Premium",
-        "description": "Edição limitada"
-      }
-    }
+    "linkCopied": "Link copiado para a área de transferência"
   }
 }

@@ -1,9 +1,10 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
-import { ORDERS_STORAGE_KEY, ORDER_HISTORY_STORAGE_KEY, HistoricalOrder } from '../types/order';
+import { HistoricalOrder } from '../types/order';
+import { saveOrderHistory } from '../services/database';
 
 interface Email {
   id: number;
@@ -52,20 +53,24 @@ const PaymentSuccessScreen: React.FC = () => {
     setIsEditingFiscalData(false);
   };
 
-  // Cargar órdenes actuales
-  const currentOrders = useMemo(() => {
-    try {
-      const savedData = localStorage.getItem(ORDERS_STORAGE_KEY);
-      if (savedData) {
-        return JSON.parse(savedData);
+  // Cargar órdenes actuales desde Supabase
+  const [currentOrders, setCurrentOrders] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        const { getOrders } = await import('../services/database');
+        const orders = await getOrders();
+        setCurrentOrders(orders);
+      } catch (error) {
+        console.error('Error loading orders:', error);
+        setCurrentOrders([]);
       }
-    } catch {
-      return [];
-    }
-    return [];
+    };
+    loadOrders();
   }, []);
 
-  const saveOrder = (): string | null => {
+  const saveOrder = async (): Promise<string | null> => {
     // Limpiar historial de solicitudes de asistencia
     try {
       localStorage.removeItem('assistance_history');
@@ -124,33 +129,20 @@ const PaymentSuccessScreen: React.FC = () => {
         timestamp: paymentDate.toISOString(),
       };
 
-      // Cargar historial existente y agregar la nueva orden
-      let orderHistory: HistoricalOrder[] = [];
-      try {
-        const historyData = localStorage.getItem(ORDER_HISTORY_STORAGE_KEY);
-        if (historyData) {
-          orderHistory = JSON.parse(historyData);
-        }
-      } catch {
-        orderHistory = [];
-      }
-
-      // Agregar la nueva orden al inicio del historial
-      orderHistory.unshift(historicalOrder);
-      localStorage.setItem(ORDER_HISTORY_STORAGE_KEY, JSON.stringify(orderHistory));
-
-      // Limpiar las órdenes actuales
-      localStorage.removeItem(ORDERS_STORAGE_KEY);
+      // Guardar en Supabase (con fallback a localStorage)
+      const savedOrderId = await saveOrderHistory(historicalOrder);
+      
+      // Las órdenes activas se mantienen en Supabase, no necesitamos limpiar localStorage
 
       // Retornar el ID de la orden para usarlo en ReviewScreen
-      return historicalOrder.id;
+      return savedOrderId || historicalOrder.id;
     }
 
     return null;
   };
 
-  const handleFinish = (navigateToReview: boolean = false) => {
-    const orderId = saveOrder();
+  const handleFinish = async (navigateToReview: boolean = false) => {
+    const orderId = await saveOrder();
     
     if (navigateToReview && orderId) {
       // Navegar a review después de guardar la orden

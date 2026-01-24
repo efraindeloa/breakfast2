@@ -4,7 +4,8 @@ import { useCart } from '../contexts/CartContext';
 import { useGroupOrder } from '../contexts/GroupOrderContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
-import { Order, OrderStatus, ORDERS_STORAGE_KEY } from '../types/order';
+import { Order, OrderStatus } from '../types/order';
+import { getOrders, updateOrder } from '../services/database';
 
 interface StatusHistory {
   status: OrderStatus;
@@ -20,63 +21,29 @@ const OrderDetailScreen: React.FC = () => {
   const { isGroupOrder, participants, currentUserParticipant, isConfirmed } = useGroupOrder();
   const [complementaryOrderInstructions, setComplementaryOrderInstructions] = useState('');
 
-  // Cargar todas las órdenes desde localStorage
-  const [orders, setOrders] = useState<Order[]>(() => {
-    try {
-      const savedData = localStorage.getItem(ORDERS_STORAGE_KEY);
-      if (savedData) {
-        return JSON.parse(savedData);
-      }
-    } catch {
-      return [];
-    }
-    return [];
-  });
+  // Cargar todas las órdenes desde Supabase
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(true);
 
-  // Sincronizar órdenes con localStorage cuando cambien
   useEffect(() => {
-    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
-  }, [orders]);
-
-  // Escuchar cambios en localStorage para actualizar las órdenes cuando se paguen
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === ORDERS_STORAGE_KEY) {
-        if (e.newValue) {
-          try {
-            setOrders(JSON.parse(e.newValue));
-          } catch {
-            setOrders([]);
-          }
-        } else {
-          setOrders([]);
-        }
-      }
-    };
-
-    // También verificar periódicamente para cambios en la misma ventana
-    const checkStorage = () => {
+    const loadOrders = async () => {
       try {
-        const savedData = localStorage.getItem(ORDERS_STORAGE_KEY);
-        if (savedData) {
-          const parsed = JSON.parse(savedData);
-          setOrders(parsed);
-        } else {
-          setOrders([]);
-        }
-      } catch {
+        setIsLoadingOrders(true);
+        const loadedOrders = await getOrders();
+        setOrders(loadedOrders);
+      } catch (error) {
+        console.error('Error loading orders:', error);
         setOrders([]);
+      } finally {
+        setIsLoadingOrders(false);
       }
     };
-
-    window.addEventListener('storage', handleStorageChange);
-    // Verificar cada 500ms si las órdenes cambiaron (para cambios en la misma ventana)
-    const interval = setInterval(checkStorage, 500);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
+    
+    loadOrders();
+    
+    // Recargar órdenes periódicamente para ver actualizaciones
+    const interval = setInterval(loadOrders, 5000); // Cada 5 segundos
+    return () => clearInterval(interval);
   }, []);
 
   // Función para obtener el nombre traducido del platillo
@@ -157,6 +124,13 @@ const OrderDetailScreen: React.FC = () => {
 
   const getStatusInfo = (status: OrderStatus) => {
     switch (status) {
+      case 'pending':
+        return {
+          icon: 'pending',
+          label: t('orderDetail.pending') || 'Pendiente',
+          color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400',
+          borderColor: 'border-yellow-300 dark:border-yellow-700',
+        };
       case 'orden_enviada':
         return {
           icon: 'send',
@@ -446,6 +420,36 @@ const OrderDetailScreen: React.FC = () => {
         </div>
 
         {/* Botones de Acción */}
+        {/* Botón para enviar orden pendiente a cocina */}
+        {orders.some(order => order.status === 'pending') && (
+          <div className="mb-6">
+            <button
+              onClick={async () => {
+                const pendingOrder = orders.find(order => order.status === 'pending');
+                if (pendingOrder) {
+                  try {
+                    const updatedOrder = await updateOrder(pendingOrder.orderId, { status: 'orden_enviada' });
+                    if (updatedOrder) {
+                      // Recargar órdenes
+                      const loadedOrders = await getOrders();
+                      setOrders(loadedOrders);
+                      // Navegar a order-confirmed después de enviar
+                      navigate('/order-confirmed');
+                    }
+                  } catch (error) {
+                    console.error('Error sending order to kitchen:', error);
+                    alert('Error al enviar la orden a cocina. Por favor, intenta de nuevo.');
+                  }
+                }
+              }}
+              className="w-full py-4 px-4 rounded-xl bg-primary text-white font-bold flex items-center justify-center gap-2 transition-colors hover:bg-primary/90 shadow-lg"
+            >
+              <span className="material-symbols-outlined">restaurant</span>
+              <span>{t('orderDetail.sendToKitchen') || 'Enviar a Cocina'}</span>
+            </button>
+          </div>
+        )}
+
         {hasSentOrder && config.allowOrderModification && currentCartItems.length === 0 && (
           <div className="space-y-3">
             {orders.length > 0 && orders.some(order => 

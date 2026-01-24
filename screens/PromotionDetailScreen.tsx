@@ -89,10 +89,38 @@ const PromotionDetailScreen: React.FC = () => {
   };
 
   const handleApplyToOrder = () => {
-    // TODO: Agregar el combo al carrito
-    // Por ahora, solo navegamos al menú
-    alert(t('promotions.appliedToOrder'));
-    navigate('/menu');
+    try {
+      // Agregar la promoción como un item especial de combo al carrito
+      // Usamos un ID especial muy alto (10000 + id de promoción) para identificar combos
+      // Esto evita conflictos con IDs de productos reales (que van del 1 al ~34)
+      const comboId = 10000 + parseInt(promotion.id);
+      
+      // Asegurar que el precio sea un número
+      const price = typeof promotion.currentPrice === 'number' 
+        ? promotion.currentPrice
+        : parseFloat(String(promotion.currentPrice).replace(/[^0-9.]/g, '')) || 0;
+      
+      const comboItem = {
+        id: comboId,
+        name: promotion.title,
+        price: price,
+        notes: `Promoción: ${promotion.subtitle}. Incluye: ${promotion.includes.join(', ')}`,
+        image: promotion.image,
+      };
+
+      // Usar addToCart del contexto, que maneja automáticamente el fallback a localStorage
+      // para items con IDs especiales (combos) que no existen en la base de datos
+      addToCart(comboItem);
+      
+      // Mostrar confirmación y navegar a la orden
+      setTimeout(() => {
+        alert(t('promotions.appliedToOrder'));
+        navigate('/orders');
+      }, 100);
+    } catch (error) {
+      console.error('Error adding promotion to cart:', error);
+      alert('Error al agregar la promoción. Por favor, intenta de nuevo.');
+    }
   };
 
   const handleShare = () => {
@@ -242,7 +270,7 @@ const PromotionDetailScreen: React.FC = () => {
       </div>
 
       {/* Sticky Bottom CTA Area */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] p-4 pb-8 bg-white/90 dark:bg-background-dark/90 backdrop-blur-xl border-t border-black/5 dark:border-white/10 z-20">
+      <div className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] p-4 bg-white/90 dark:bg-background-dark/90 backdrop-blur-xl border-t border-black/5 dark:border-white/10 z-[60]" style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}>
         <button
           onClick={handleApplyToOrder}
           className="w-full h-16 bg-primary hover:bg-primary/90 text-white rounded-full font-bold text-lg shadow-lg flex items-center justify-center gap-3 transition-all active:scale-95"

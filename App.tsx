@@ -42,6 +42,8 @@ import ContactsScreen from './screens/ContactsScreen';
 import PromotionsScreen from './screens/PromotionsScreen';
 import PromotionDetailScreen from './screens/PromotionDetailScreen';
 import TableReadyScreen from './screens/TableReadyScreen';
+import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
+import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import BottomNav from './components/BottomNav';
 import AssistantButton from './components/AssistantButton';
 import AndroidBackButton from './components/AndroidBackButton';
@@ -52,9 +54,24 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { FavoritesProvider } from './contexts/FavoritesContext';
 import { LoyaltyProvider } from './contexts/LoyaltyContext';
 import { ProductsProvider } from './contexts/ProductsContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
-const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+// Componente interno que usa el AuthContext
+const AppContent: React.FC = () => {
+  const { user, loading } = useAuth();
+  const isAuthenticated = !!user;
+
+  // Mostrar loading mientras se verifica la sesión
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <LanguageProvider>
@@ -64,12 +81,14 @@ const App: React.FC = () => {
             <FavoritesProvider>
               <LoyaltyProvider>
                 <GroupOrderProvider>
-            <HashRouter>
-      <AndroidBackButton />
-      <div className="w-full max-w-full min-h-screen bg-white dark:bg-background-dark relative overflow-hidden flex flex-col md:max-w-2xl md:mx-auto md:shadow-2xl">
+                  <HashRouter>
+                    <AndroidBackButton />
+                    <div className="w-full max-w-full min-h-screen bg-white dark:bg-background-dark relative overflow-hidden flex flex-col md:max-w-2xl md:mx-auto md:shadow-2xl">
         <Routes>
-          <Route path="/" element={<WelcomeScreen onLogin={() => setIsAuthenticated(true)} />} />
-          <Route path="/register" element={<RegisterScreen onLogin={() => setIsAuthenticated(true)} />} />
+          <Route path="/" element={!isAuthenticated ? <WelcomeScreen onLogin={() => {}} /> : <Navigate to="/home" />} />
+          <Route path="/register" element={!isAuthenticated ? <RegisterScreen onLogin={() => {}} /> : <Navigate to="/home" />} />
+          <Route path="/forgot-password" element={!isAuthenticated ? <ForgotPasswordScreen /> : <Navigate to="/home" />} />
+          <Route path="/reset-password" element={!isAuthenticated ? <ResetPasswordScreen /> : <Navigate to="/home" />} />
           <Route path="/home" element={isAuthenticated ? <HomeScreen /> : <Navigate to="/" />} />
           <Route path="/menu" element={isAuthenticated ? <MenuScreen /> : <Navigate to="/" />} />
           <Route path="/dish/:id" element={isAuthenticated ? <DishDetailScreen /> : <Navigate to="/" />} />
@@ -111,10 +130,10 @@ const App: React.FC = () => {
           <Route path="/table-ready" element={isAuthenticated ? <TableReadyScreen /> : <Navigate to="/" />} />
         </Routes>
         
-        {isAuthenticated && <BottomNav />}
-        {isAuthenticated && <AssistantButton />}
-      </div>
-            </HashRouter>
+                      {isAuthenticated && <BottomNav />}
+                      {isAuthenticated && <AssistantButton />}
+                    </div>
+                  </HashRouter>
                 </GroupOrderProvider>
               </LoyaltyProvider>
             </FavoritesProvider>
@@ -122,6 +141,14 @@ const App: React.FC = () => {
         </ProductsProvider>
       </RestaurantProvider>
     </LanguageProvider>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };
 

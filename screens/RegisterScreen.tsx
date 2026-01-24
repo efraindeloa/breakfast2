@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 
 interface RegisterScreenProps {
   onLogin: () => void;
@@ -40,6 +41,7 @@ const countryCodes: CountryCode[] = [
 const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { signUp } = useAuth();
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [selectedCountryCode, setSelectedCountryCode] = useState<CountryCode>(countryCodes[0]);
   const [showCountrySelector, setShowCountrySelector] = useState(false);
@@ -50,6 +52,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
   const [emailOrPhoneError, setEmailOrPhoneError] = useState<string>('');
   const [passwordError, setPasswordError] = useState<string>('');
   const [confirmPasswordError, setConfirmPasswordError] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
@@ -163,7 +167,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
     }
   }, [emailOrPhone, password, confirmPassword, emailOrPhoneError, passwordError, confirmPasswordError, inputType, isValidEmail, isValidPhone, passwordValidations]);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     // Limpiar mensajes de error anteriores
     setEmailOrPhoneError('');
     setPasswordError('');
@@ -246,9 +250,55 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
     
     // Si todas las validaciones pasan
     if (isFormValid) {
-      // Aquí se podría agregar validación y lógica de registro
-      onLogin();
-      navigate('/home');
+      setIsLoading(true);
+      setEmailOrPhoneError('');
+      setPasswordError('');
+      setConfirmPasswordError('');
+      setSuccessMessage('');
+
+      try {
+        // Determinar si es email o teléfono
+        let email = '';
+        let phone = undefined;
+
+        if (inputType === 'email') {
+          email = emailOrPhone.trim();
+        } else if (inputType === 'phone') {
+          // Para teléfono, usar email temporal o requerir email
+          // Por ahora, requerimos email para registro
+          setEmailOrPhoneError(t('register.pleaseUseEmail') || 'Por favor usa tu correo electrónico para registrarte');
+          setIsLoading(false);
+          return;
+        }
+
+        const { error: signUpError } = await signUp(email, password, phone);
+
+        if (signUpError) {
+          console.error('Registration error:', signUpError);
+          if (signUpError.message.includes('User already registered')) {
+            setEmailOrPhoneError(t('register.userAlreadyExists') || 'Este correo ya está registrado');
+          } else if (signUpError.message.includes('Password')) {
+            setPasswordError(signUpError.message);
+          } else {
+            setEmailOrPhoneError(signUpError.message || t('register.registrationError') || 'Error al registrarse');
+          }
+          setIsLoading(false);
+          return;
+        }
+
+        // Registro exitoso
+        setSuccessMessage(t('register.registrationSuccess') || '¡Registro exitoso! Redirigiendo...');
+        
+        // Redirigir inmediatamente (no hay necesidad de verificar email)
+        setTimeout(() => {
+          onLogin();
+          navigate('/home');
+        }, 1500);
+      } catch (err) {
+        console.error('Unexpected registration error:', err);
+        setEmailOrPhoneError(t('register.registrationError') || 'Error inesperado al registrarse');
+        setIsLoading(false);
+      }
     }
   };
 
@@ -389,6 +439,11 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
             {emailOrPhoneError && (
               <p className="text-xs text-red-500 px-1 mt-1">
                 {emailOrPhoneError}
+              </p>
+            )}
+            {successMessage && (
+              <p className="text-xs text-green-500 px-1 mt-1">
+                {successMessage}
               </p>
             )}
             {!emailOrPhoneError && inputType === 'email' && emailOrPhone.trim() && !isValidEmail && (
@@ -561,13 +616,21 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
       <div className="fixed bottom-0 left-0 right-0 w-full px-4 sm:px-6 pb-6 pt-4 bg-background-light dark:bg-background-dark border-t border-gray-100 dark:border-gray-800 z-50 md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2">
         <button
           onClick={handleContinue}
+          disabled={isLoading || !isFormValid}
           className={`flex items-center justify-center rounded-xl h-14 text-white text-base font-bold w-full shadow-lg active:scale-[0.98] transition-transform ${
-            isFormValid 
+            isFormValid && !isLoading
               ? 'bg-primary shadow-primary/30 cursor-pointer' 
-              : 'bg-gray-400 dark:bg-gray-600 cursor-pointer opacity-60'
+              : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed opacity-60'
           }`}
         >
-          {t('register.createAccount')}
+          {isLoading ? (
+            <>
+              <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+              {t('register.creatingAccount') || 'Creando cuenta...'}
+            </>
+          ) : (
+            t('register.createAccount')
+          )}
         </button>
       </div>
 

@@ -383,23 +383,6 @@ const DishDetailScreen: React.FC = () => {
   // Verificar si el platillo es favorito
   const isFavorite = dish ? checkIsFavorite(dish.id) : false;
 
-  // Funciones auxiliares para obtener nombres y descripciones traducidas
-  const getDishName = (dishId: number): string => {
-    try {
-      return t(`dishes.${dishId}.name`) || `dish-${dishId}`;
-    } catch {
-      return `dish-${dishId}`;
-    }
-  };
-
-  const getDishDescription = (dishId: number): string => {
-    try {
-      return t(`dishes.${dishId}.description`) || '';
-    } catch {
-      return '';
-    }
-  };
-
   // Función para extraer información de porción/botella de la descripción
   const parseSizeOptions = (description: string): { hasSizes: boolean; portionPrice: number | null; bottlePrice: number | null; volume?: string } => {
     // Buscar patrón: "XXX ml - Porción: $XXX.XX / Botella: $X,XXX.XX"
@@ -424,7 +407,7 @@ const DishDetailScreen: React.FC = () => {
   };
 
   // Obtener opciones de tamaño si existen
-  const dishDescription = dish ? (getDishDescription(dish.id) || dish.description) : '';
+  const dishDescription = dish ? dish.description : '';
   const sizeOptions = parseSizeOptions(dishDescription);
 
   // Cargar reviews del producto y calcular promedio
@@ -520,7 +503,7 @@ const DishDetailScreen: React.FC = () => {
     setQuantity(Math.max(1, quantity + delta));
   };
 
-  const handleAddToOrder = () => {
+  const handleAddToOrder = async () => {
     // Calcular precio total
     let basePrice = getPriceAsNumber(dish.price);
     
@@ -560,14 +543,13 @@ const DishDetailScreen: React.FC = () => {
     }
     
     // Agregar la cantidad seleccionada al carrito
-    for (let i = 0; i < quantity; i++) {
-      addToCart({
-        id: dish.id,
-        name: getDishName(dish.id),
-        price: finalPrice,
-        notes: notes,
-      });
-    }
+    // Llamar una sola vez con la cantidad deseada para evitar duplicados
+    await addToCart({
+      id: dish.id,
+      name: dish.name,
+      price: finalPrice,
+      notes: notes,
+    }, quantity);
     
     // Regresar al menú después de agregar preservando el estado
     navigateBackToMenu();
@@ -674,7 +656,7 @@ const DishDetailScreen: React.FC = () => {
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-[#181611] dark:text-white leading-tight mb-2">
-                {getDishName(dish.id)}
+                {dish.name}
               </h1>
               {/* Calificación con estrellas */}
               {productRating && (
@@ -743,7 +725,7 @@ const DishDetailScreen: React.FC = () => {
 
           {/* Descripción */}
           <p className="text-base text-gray-600 dark:text-gray-300 leading-relaxed mb-6">
-            {getDishDescription(dish.id)}
+            {dish.description}
           </p>
 
           {/* Personalización */}

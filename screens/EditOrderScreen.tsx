@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useCart, CartItem } from '../contexts/CartContext';
-import { Order, ORDERS_STORAGE_KEY } from '../types/order';
+import { Order } from '../types/order';
+import { getOrders, updateOrder as updateOrderDB } from '../services/database';
 import { allDishes } from './DishDetailScreen';
 import { useProducts } from '../contexts/ProductsContext';
 
@@ -43,13 +44,12 @@ const EditOrderScreen: React.FC = () => {
     
     if (id) {
       setOrderId(id);
-      // Cargar todas las órdenes
-      try {
-        const savedData = localStorage.getItem(ORDERS_STORAGE_KEY);
-        if (savedData) {
-          const parsed = JSON.parse(savedData);
-          setOrders(parsed);
-          const order = parsed.find((o: Order) => o.orderId === id);
+      // Cargar todas las órdenes desde Supabase
+      const loadOrders = async () => {
+        try {
+          const loadedOrders = await getOrders();
+          setOrders(loadedOrders);
+          const order = loadedOrders.find((o: Order) => o.orderId === id);
           
           if (order && cart.length === 0 && !itemsLoadedRef.current) {
             // Cargar items de la orden en el carrito
@@ -79,12 +79,14 @@ const EditOrderScreen: React.FC = () => {
           if (id && orderId !== id) {
             itemsLoadedRef.current = false;
           }
+        } catch (error) {
+          console.error('Error loading order:', error);
         }
-      } catch (error) {
-        console.error('Error loading order:', error);
-      }
+      };
+      
+      loadOrders();
     }
-  }, [location.search, addToCart]);
+  }, [location.search, addToCart, orderId]);
 
   // Calcular total actualizado
   const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);

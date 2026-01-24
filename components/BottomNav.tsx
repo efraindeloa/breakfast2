@@ -7,6 +7,7 @@ import AssistantModal from './AssistantModal';
 
 const DOCKED_STATE_KEY = 'assistant_button_docked';
 const POSITION_STORAGE_KEY = 'assistant_button_position';
+const ASSISTANT_ENABLED_KEY = 'assistantEnabled';
 
 const BottomNav: React.FC = () => {
   const [showAssistant, setShowAssistant] = useState(false);
@@ -14,24 +15,37 @@ const BottomNav: React.FC = () => {
     const saved = localStorage.getItem(DOCKED_STATE_KEY);
     return saved === 'true';
   });
+  const [isEnabled, setIsEnabled] = useState(() => {
+    const saved = localStorage.getItem(ASSISTANT_ENABLED_KEY);
+    return saved === null ? true : saved === 'true'; // Por defecto habilitado
+  });
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ startY: number } | null>(null);
   const hasMovedRef = useRef(false);
   const dockedButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Escuchar cambios en el estado de anclado
+  // Escuchar cambios en el estado de anclado y habilitación
   useEffect(() => {
     const handleStorageChange = () => {
       const saved = localStorage.getItem(DOCKED_STATE_KEY);
       setIsDocked(saved === 'true');
+      const enabled = localStorage.getItem(ASSISTANT_ENABLED_KEY);
+      setIsEnabled(enabled === null ? true : enabled === 'true');
+    };
+
+    const handleEnabledChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setIsEnabled(customEvent.detail?.enabled ?? true);
     };
 
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('assistant-enabled-changed', handleEnabledChange as EventListener);
     // También verificar periódicamente para cambios en la misma ventana
     const interval = setInterval(handleStorageChange, 100);
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('assistant-enabled-changed', handleEnabledChange as EventListener);
       clearInterval(interval);
     };
   }, []);
@@ -157,43 +171,68 @@ const BottomNav: React.FC = () => {
   const { t } = useTranslation();
   const cartCount = getCartItemCount();
 
-  // Cargar todas las órdenes para mostrar el contador
-  const ordersCount = useMemo(() => {
-    try {
-      const savedData = localStorage.getItem('orders_list');
-      if (savedData) {
-        const orders = JSON.parse(savedData);
-        return Array.isArray(orders) ? orders.length : 0;
+  // Cargar todas las órdenes desde Supabase para mostrar el contador
+  const [ordersCount, setOrdersCount] = useState(0);
+  const [hasSentOrderState, setHasSentOrderState] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    const loadOrders = async () => {
+      try {
+        const { getOrders } = await import('../services/database');
+        const orders = await getOrders();
+        
+        if (!isMounted) return;
+        
+        setOrdersCount(orders.length);
+        
+        // Verificar si hay una orden enviada
+        const validStatuses = [
+          'orden_enviada',
+          'orden_recibida',
+          'en_preparacion',
+          'lista_para_entregar',
+          'en_entrega',
+          'con_incidencias'
+        ];
+        const hasSent = orders.some(order => validStatuses.includes(order.status));
+        setHasSentOrderState(hasSent);
+      } catch (error) {
+        console.error('Error loading orders:', error);
+        if (isMounted) {
+          setOrdersCount(0);
+          setHasSentOrderState(false);
+        }
       }
-    } catch {
-      return 0;
-    }
-    return 0;
+    };
+    
+    // Cargar inmediatamente
+    loadOrders();
+    
+    // Recargar periódicamente con throttling (cada 30 segundos en lugar de constantemente)
+    const interval = setInterval(() => {
+      if (isMounted) {
+        loadOrders();
+      }
+    }, 30000); // 30 segundos en lugar de 5
+    
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, []);
+    const interval = setInterval(loadOrders, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   // Verificar si hay una orden enviada
   const hasSentOrder = () => {
-    try {
-      const savedData = localStorage.getItem('orders_list');
-      if (savedData) {
-        const orders = JSON.parse(savedData);
-        if (Array.isArray(orders) && orders.length > 0) {
-          const validStatuses = [
-            'orden_enviada',
-            'orden_recibida',
-            'en_preparacion',
-            'lista_para_entregar',
-            'en_entrega',
-            'entregada',
-            'con_incidencias'
-          ];
-          return orders.some((order: any) => validStatuses.includes(order?.status));
-        }
-      }
-    } catch {
-      return false;
-    }
-    return false;
+    return hasSentOrderState;
   };
 
   const handleOrdersClick = () => {
@@ -259,7 +298,7 @@ const BottomNav: React.FC = () => {
       })}
       
       {/* Botón del asistente anclado */}
-      {isDocked && (
+      {isDocked && isEnabled && (
         <button
           ref={dockedButtonRef}
           onMouseDown={handleDockedMouseDown}

@@ -5,7 +5,8 @@ import { useCart, CartItem } from '../contexts/CartContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
-import { Order, OrderStatus, ORDERS_STORAGE_KEY } from '../types/order';
+import { Order, OrderStatus } from '../types/order';
+import { getOrders, createOrder as createOrderDB, updateOrder } from '../services/database';
 
 const OrderScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -50,34 +51,72 @@ const OrderScreen: React.FC = () => {
     }
   };
 
-  // Cargar órdenes desde localStorage
-  const [orders, setOrders] = useState<Order[]>(() => {
-    try {
-      const savedData = localStorage.getItem(ORDERS_STORAGE_KEY);
-      if (savedData) {
-        return JSON.parse(savedData);
+  // Cargar órdenes desde Supabase
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    let visibilityTimeoutId: NodeJS.Timeout | null = null;
+    
+    const loadOrders = async () => {
+      try {
+        setIsLoadingOrders(true);
+        const loadedOrders = await getOrders();
+        
+        if (!isMounted) return;
+        
+        setOrders(loadedOrders);
+      } catch (error) {
+        console.error('[OrderScreen] Error loading orders:', error);
+        if (isMounted) {
+          setOrders([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingOrders(false);
+        }
       }
-    } catch {
-      return [];
-    }
-    return [];
-  });
+    };
+    
+    loadOrders();
+    
+    // Recargar órdenes cuando la ventana vuelve a estar visible (con debouncing)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Debounce: solo recargar si no se ha recargado en los últimos 2 segundos
+        if (visibilityTimeoutId) {
+          clearTimeout(visibilityTimeoutId);
+        }
+        visibilityTimeoutId = setTimeout(() => {
+          if (!document.hidden && isMounted) {
+            loadOrders();
+          }
+        }, 2000);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      isMounted = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (visibilityTimeoutId) {
+        clearTimeout(visibilityTimeoutId);
+      }
+    };
+  }, []);
 
   // Verificar si hay alguna orden enviada
   const hasSentOrder = orders.length > 0 && orders.some(order => 
-    ['orden_enviada', 'orden_recibida', 'en_preparacion', 'lista_para_entregar', 'en_entrega', 'entregada', 'con_incidencias'].includes(order.status)
+    ['orden_enviada', 'orden_recibida', 'en_preparacion', 'lista_para_entregar', 'en_entrega', 'con_incidencias'].includes(order.status)
   );
 
   // Obtener el número de la próxima orden complementaria
   const getNextOrderNumber = (): number => {
     if (orders.length === 0) return 1;
-    return Math.max(...orders.map(o => o.orderNumber)) + 1;
+    return Math.max(...orders.map(o => o.orderNumber || 0)) + 1;
   };
-
-  // Guardar órdenes en localStorage cuando cambien
-  useEffect(() => {
-    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
-  }, [orders]);
 
   // Sincronizar orden del usuario actual con el contexto de orden grupal
   const prevOrderItemsRef = useRef<CartItem[]>([]);
@@ -127,36 +166,55 @@ const OrderScreen: React.FC = () => {
     }
   };
 
-  const handleConfirmOrder = () => {
+  const handleConfirmOrder = async () => {
     if (canConfirmOrder()) {
       confirmGroupOrder();
-      // Crear nueva orden con el carrito actual
-      const orderNumber = getNextOrderNumber();
-      const newOrder: Order = {
-        orderId: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        orderNumber,
-        items: orderItems.map(item => ({
-          id: item.id,
-          name: getDishName(item.id),
-          price: item.price,
-          notes: item.notes,
-          quantity: item.quantity,
-        })),
-        status: 'orden_enviada',
-        timestamp: new Date().toISOString(),
-      };
-      setOrders(prev => [...prev, newOrder]);
-      // Limpiar carrito después de enviar la orden
-      clearCart();
-      // La orden se envía a la cocina, no se paga todavía
-      // El pago será después de que los comensales terminen de comer
-      navigate('/order-confirmed');
+      // Crear nueva orden con el carrito actual en Supabase
+      try {
+        const orderNumber = getNextOrderNumber();
+        const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        
+        const newOrder = await createOrderDB({
+          restaurant_id: '00000000-0000-0000-0000-000000000001', // ID del restaurante por defecto
+          status: 'pending',
+          total: total,
+          items: orderItems.map(item => ({
+            id: item.id,
+            name: item.name || getDishName(item.id),
+            price: item.price,
+            notes: item.notes || '',
+            quantity: item.quantity,
+          })),
+          notes: orderSpecialInstructions || undefined,
+        } as any);
+        
+        if (newOrder) {
+          // Recargar órdenes desde Supabase
+          const loadedOrders = await getOrders();
+          setOrders(loadedOrders);
+          // Limpiar carrito después de crear la orden
+          clearCart();
+          // La orden se crea con status 'pending', el usuario puede enviarla a cocina después
+          // No navegamos a order-confirmed, se queda en la pantalla de órdenes
+        }
+      } catch (error) {
+        console.error('Error creating order:', error);
+        alert('Error al crear la orden. Por favor, intenta de nuevo.');
+      }
     }
   };
 
   // Función para obtener la información del estatus
   const getStatusInfo = (status: OrderStatus) => {
     switch (status) {
+      case 'pending':
+        return {
+          label: t('order.status.pending') || 'Pendiente',
+          icon: 'schedule',
+          color: 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400',
+          borderColor: 'border-yellow-200 dark:border-yellow-800',
+          description: t('order.status.pendingDescription') || 'Tu orden está lista para ser enviada a cocina',
+        };
       case 'orden_enviada':
         return {
           label: t('order.status.sent'),
@@ -443,6 +501,82 @@ const OrderScreen: React.FC = () => {
                 </>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Active Orders Section */}
+        {(isLoadingOrders || orders.length > 0) && (
+          <div className="mb-6">
+            <h2 className="text-[#181411] dark:text-white text-lg font-bold mb-4">{t('order.activeOrders') || 'Órdenes Activas'}</h2>
+            {isLoadingOrders ? (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">Cargando órdenes...</p>
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="text-center py-8 bg-white dark:bg-[#2d2516] rounded-xl border border-gray-100 dark:border-[#3d3321]">
+                <span className="material-symbols-outlined text-gray-400 text-4xl mb-2">receipt_long</span>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">No hay órdenes activas</p>
+                <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Las órdenes aparecerán aquí cuando las confirmes</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {orders.map((order) => {
+                const statusInfo = getStatusInfo(order.status);
+                return (
+                  <div
+                    key={order.orderId}
+                    onClick={() => navigate(`/order-detail/${order.orderId}`)}
+                    className="bg-white dark:bg-[#2d2516] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-[#3d3321] cursor-pointer hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[#181411] dark:text-white font-bold text-base">
+                            {t('order.orderNumber') || 'Orden'} #{order.orderNumber || order.orderId.slice(0, 8)}
+                          </span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color} ${statusInfo.borderColor} border`}>
+                            {statusInfo.label}
+                          </span>
+                        </div>
+                        <p className="text-gray-500 dark:text-gray-400 text-xs">
+                          {new Date(order.timestamp).toLocaleDateString('es-MX', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                        <p className="text-gray-600 dark:text-gray-300 text-sm mt-1">
+                          {order.items?.length || 0} {order.items?.length === 1 ? t('order.item') : t('order.items')}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-primary font-bold text-lg">
+                          ${(() => {
+                            if (!order.items || order.items.length === 0) return '0.00';
+                            const total = order.items.reduce((sum: number, item: any) => {
+                              let price = 0;
+                              if (typeof item.price === 'number') {
+                                price = item.price;
+                              } else if (typeof item.price === 'string') {
+                                price = parseFloat(item.price.replace(/[^0-9.]/g, '')) || 0;
+                              }
+                              return sum + (price * (item.quantity || 1));
+                            }, 0);
+                            return total.toFixed(2);
+                          })()}
+                        </p>
+                      </div>
+                    </div>
+                    {statusInfo.description && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{statusInfo.description}</p>
+                    )}
+                  </div>
+                );
+              })}
+              </div>
+            )}
           </div>
         )}
 
@@ -773,25 +907,37 @@ const OrderScreen: React.FC = () => {
               <>
                 {hasSentOrder && orderItems.length > 0 ? (
                   <button
-                    onClick={() => {
-                      // Crear nueva orden complementaria
-                      const orderNumber = getNextOrderNumber();
-                      const newOrder: Order = {
-                        orderId: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                        orderNumber,
-                        items: orderItems.map(item => ({
-                          id: item.id,
-                          name: getDishName(item.id),
-                          price: item.price,
-                          notes: item.notes,
-                          quantity: item.quantity,
-                        })),
-                        status: 'orden_enviada',
-                        timestamp: new Date().toISOString(),
-                      };
-                      setOrders(prev => [...prev, newOrder]);
-                      clearCart();
-                      navigate('/order-confirmed');
+                    onClick={async () => {
+                      try {
+                        // Crear nueva orden complementaria en Supabase
+                        const orderNumber = getNextOrderNumber();
+                        const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                        
+                        const newOrder = await createOrderDB({
+                          restaurant_id: '00000000-0000-0000-0000-000000000001',
+                          status: 'orden_enviada',
+                          total: total,
+                          items: orderItems.map(item => ({
+                            id: item.id,
+                            name: item.name || getDishName(item.id),
+                            price: item.price,
+                            notes: item.notes || '',
+                            quantity: item.quantity,
+                          })),
+                          notes: orderSpecialInstructions || undefined,
+                        } as any);
+                        
+                        if (newOrder) {
+                          const loadedOrders = await getOrders();
+                          setOrders(loadedOrders);
+                        }
+                        
+                        clearCart();
+                        navigate('/order-confirmed');
+                      } catch (error) {
+                        console.error('Error creating order:', error);
+                        alert('Error al crear la orden. Por favor, intenta de nuevo.');
+                      }
                     }}
                     className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
                   >
@@ -800,25 +946,37 @@ const OrderScreen: React.FC = () => {
                   </button>
                 ) : !hasSentOrder && orderItems.length > 0 ? (
                   <button
-                    onClick={() => {
-                      // Crear primera orden
-                      const orderNumber = getNextOrderNumber();
-                      const newOrder: Order = {
-                        orderId: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                        orderNumber,
-                        items: orderItems.map(item => ({
-                          id: item.id,
-                          name: getDishName(item.id),
-                          price: item.price,
-                          notes: item.notes,
-                          quantity: item.quantity,
-                        })),
-                        status: 'orden_enviada',
-                        timestamp: new Date().toISOString(),
-                      };
-                      setOrders(prev => [...prev, newOrder]);
-                      clearCart();
-                      navigate('/order-confirmed');
+                    onClick={async () => {
+                      try {
+                        // Crear primera orden en Supabase
+                        const orderNumber = getNextOrderNumber();
+                        const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                        
+                        const newOrder = await createOrderDB({
+                          restaurant_id: '00000000-0000-0000-0000-000000000001',
+                          status: 'orden_enviada',
+                          total: total,
+                          items: orderItems.map(item => ({
+                            id: item.id,
+                            name: item.name || getDishName(item.id),
+                            price: item.price,
+                            notes: item.notes || '',
+                            quantity: item.quantity,
+                          })),
+                          notes: orderSpecialInstructions || undefined,
+                        } as any);
+                        
+                        if (newOrder) {
+                          const loadedOrders = await getOrders();
+                          setOrders(loadedOrders);
+                        }
+                        
+                        clearCart();
+                        navigate('/order-confirmed');
+                      } catch (error) {
+                        console.error('Error creating order:', error);
+                        alert('Error al crear la orden. Por favor, intenta de nuevo.');
+                      }
                     }}
                     className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
                   >

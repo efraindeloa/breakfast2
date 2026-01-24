@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useGroupOrder } from '../contexts/GroupOrderContext';
-import { Order, ORDERS_STORAGE_KEY } from '../types/order';
+import { Order } from '../types/order';
+import { getOrders } from '../services/database';
 
 interface SelectableOrderItem {
   id: string; // ID único para este item (orderId-itemId-index)
@@ -20,18 +21,25 @@ const SplitPaymentSelectionScreen: React.FC = () => {
   const { t } = useTranslation();
   const { isGroupOrder, currentUserParticipant } = useGroupOrder();
   
-  // Cargar todas las órdenes
-  const [orders, setOrders] = useState<Order[]>(() => {
-    try {
-      const savedData = localStorage.getItem(ORDERS_STORAGE_KEY);
-      if (savedData) {
-        return JSON.parse(savedData);
+  // Cargar todas las órdenes desde Supabase
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        setIsLoadingOrders(true);
+        const loadedOrders = await getOrders();
+        setOrders(loadedOrders);
+      } catch (error) {
+        console.error('Error loading orders:', error);
+        setOrders([]);
+      } finally {
+        setIsLoadingOrders(false);
       }
-    } catch {
-      return [];
-    }
-    return [];
-  });
+    };
+    loadOrders();
+  }, []);
 
   // Crear lista de items seleccionables
   const selectableItems: SelectableOrderItem[] = useMemo(() => {

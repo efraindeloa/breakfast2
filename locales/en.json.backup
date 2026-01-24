@@ -102,6 +102,64 @@
     "clear": "Clear",
     "apply": "Apply"
   },
+  "dishes": {
+    "1": {
+      "name": "Marinated Tuna Tacos",
+      "description": "Fresh tuna with artisanal chipotle dressing, avocado and purple onion."
+    },
+    "2": {
+      "name": "Passion Fruit Ceviche",
+      "description": "White fish marinated in passion fruit tiger's milk and cilantro touches."
+    },
+    "3": {
+      "name": "Rib Eye on the Wood",
+      "description": "Premium 400g cut cooked slow over oak wood."
+    },
+    "4": {
+      "name": "Beef Carpaccio",
+      "description": "Thin slices of beef with parmesan, arugula and white truffle oil."
+    },
+    "5": {
+      "name": "Mediterranean Salad",
+      "description": "Fresh, healthy and seasonal"
+    },
+    "6": {
+      "name": "Lemon & Herbs Chicken",
+      "description": "Signature dish of the day"
+    },
+    "7": {
+      "name": "Quinoa & Avocado Bowl",
+      "description": "Nutritious and balanced"
+    },
+    "8": {
+      "name": "Pasta Pomodoro",
+      "description": "Handcrafted preparation"
+    },
+    "9": {
+      "name": "Espresso Coffee",
+      "description": "Intense and aromatic Italian coffee"
+    },
+    "10": {
+      "name": "Natural Orange Juice",
+      "description": "Freshly squeezed, rich in vitamin C"
+    },
+    "11": {
+      "name": "Chocolate Cake",
+      "description": "Delicious cake with Belgian chocolate topping"
+    },
+    "12": {
+      "name": "Vanilla Flan",
+      "description": "Traditional homemade flan with caramel"
+    },
+    "13": {
+      "name": "Classic Mojito",
+      "description": "Rum, fresh mint, lime and soda"
+    },
+    "14": {
+      "name": "Premium Margarita",
+      "description": "Reposado tequila, triple sec and lime juice"
+    }
+  },
   "joinTable": {
     "title": "Join Table",
     "headline": "Join the table!",
@@ -169,12 +227,7 @@
     "searchLanguage": "Search language...",
     "noLanguagesFound": "No languages found",
     "tryAnotherSearch": "Try another search term",
-    "popularLanguages": "Popular Languages",
-    "assistant": {
-      "title": "Assistant",
-      "enableButton": "Assistant Button",
-      "enableButtonDesc": "Show or hide the floating assistant button"
-    }
+    "popularLanguages": "Popular Languages"
   },
   "order": {
     "title": "My Order",
@@ -208,7 +261,7 @@
     "finishedSelecting": "Have you finished selecting your food?",
     "canUnmark": "You can unmark if you need to make changes",
     "markWhenFinished": "Mark when you've finished adding all your products",
-    "confirmAndSendOrder": "Confirm Order",
+    "confirmAndSendOrder": "Confirm and Send Order",
     "changeOrder": "Change my order",
     "waitingForAll": "Waiting for everyone to finish",
     "pending": "pending",
@@ -340,32 +393,31 @@
   "addCard": {
     "title": "Add Card",
     "newCard": "New Card",
-    "description": "Enter your card details to make payments quickly and securely",
-    "card": "CARD",
-    "expires": "Expires",
+    "description": "Enter your credit or debit card information",
+    "scanCard": "Scan card with camera",
+    "orEnterManually": "Or enter manually",
+    "cardNumber": "Card number",
+    "cardholderName": "Cardholder name",
     "cardholder": "Cardholder",
     "cardholderPlaceholder": "CARDHOLDER NAME",
-    "orEnterManually": "Or enter manually",
-    "cardNumber": "Card Number",
-    "cardholderName": "Cardholder Name",
-    "expiryDate": "Expiry Date",
+    "expiryDate": "Expiry date",
+    "expires": "Expires",
+    "cvv": "CVV",
+    "securityNotice": "Your data is protected with end-to-end encryption. We do not store your CVV.",
     "addCard": "Add Card",
-    "scanCard": "Scan card with camera",
-    "scanCardTitle": "Scan your card",
-    "securityMessage": "Your data is protected with end-to-end encryption. We do not store your CVV.",
-    "invalidCardNumber": "Please enter a valid card number (16 digits)",
+    "invalidCardNumber": "Please enter a valid card number",
     "invalidCardholder": "Please enter the cardholder name",
     "invalidExpiryDate": "Please enter a valid expiry date",
-    "invalidCVV": "Please enter a valid CVV (3 or 4 digits)",
+    "invalidCVV": "Please enter a valid CVV",
     "cardAddedSuccess": "Card added successfully",
-    "cameraError": "Error accessing camera. Please try again or enter data manually.",
-    "cardScanned": "Card scanned successfully",
-    "processing": "Processing...",
-    "placeCardInFrame": "Place your card within the frame",
-    "ensureWellLit": "Ensure there is good lighting",
-    "captureCard": "Capture Card",
-    "scanFailed": "Could not extract card data. Please enter the data manually.",
-    "scanError": "Error processing card. Please try again or enter the data manually."
+    "cardScanned": "Card data captured. Please enter the CVV manually.",
+    "scanYourCard": "Scan your card",
+    "processing": "Processing card...",
+    "placeCardInFrame": "Place the card inside the frame",
+    "ensureWellLit": "Make sure the card is well lit and focused",
+    "captureCard": "Capture card",
+    "cameraError": "Could not access camera. Please enter the data manually.",
+    "card": "Card"
   },
   "billing": {
     "step1": "Fiscal Data",
@@ -495,7 +547,7 @@
     "pending": "Pending",
     "pendingPlural": "pending",
     "inviteMorePeople": "Invite more people",
-    "confirmAndSendOrder": "Confirm Order",
+    "confirmAndSendOrder": "Confirm and Send Order",
     "waitingForAll": "Waiting for everyone to finish",
     "orderConfirmed": "Order confirmed"
   },
@@ -618,14 +670,7 @@
     "forgotPassword": "Forgot password",
     "noAccount": "Don't have an account yet?",
     "otherLanguage": "Other language",
-    "selectLanguage": "Select Language",
-    "pleaseEnterEmailOrPhone": "Please enter your email or phone",
-    "pleaseEnterPassword": "Please enter your password",
-    "pleaseUseEmail": "Please use your email address to sign in",
-    "invalidCredentials": "Incorrect email or password",
-    "emailNotConfirmed": "Please confirm your email before signing in",
-    "loginError": "Error signing in",
-    "loggingIn": "Signing in..."
+    "selectLanguage": "Select Language"
   },
   "register": {
     "title": "Good morning!",
@@ -655,53 +700,7 @@
     "passwordRuleSymbol": "1 symbol",
     "passwordConfirmation": "Confirmation",
     "pleaseConfirmPassword": "Please confirm your password",
-    "passwordsDoNotMatch": "Passwords do not match. Please verify that both passwords are the same",
-    "pleaseUseEmail": "Please use your email address to sign up",
-    "userAlreadyExists": "This email is already registered",
-    "registrationError": "Error signing up",
-    "registrationSuccess": "Registration successful! Redirecting...",
-    "creatingAccount": "Creating account..."
-  },
-  "forgotPassword": {
-    "title": "Recover password",
-    "subtitle": "Enter your email address and we'll send you a link to recover your password",
-    "email": "Email",
-    "emailPlaceholder": "example@email.com",
-    "pleaseEnterEmail": "Please enter your email address",
-    "invalidEmail": "Please enter a valid email address",
-    "emailNotFound": "We couldn't find an account with this email",
-    "resetError": "Error sending recovery email",
-    "sendResetLink": "Send recovery link",
-    "sending": "Sending...",
-    "backToLogin": "Back to sign in",
-    "successMessage": "We've sent you an email with instructions to recover your password",
-    "checkEmail": "Check your email and follow the instructions to reset your password."
-  },
-  "resetPassword": {
-    "title": "Reset password",
-    "successTitle": "Password updated!",
-    "subtitle": "Enter your new password",
-    "successMessage": "Your password has been successfully updated. You will be redirected to sign in.",
-    "newPassword": "New password",
-    "passwordPlaceholder": "Enter your new password",
-    "confirmPassword": "Confirm password",
-    "confirmPasswordPlaceholder": "Confirm your new password",
-    "pleaseEnterPassword": "Please enter a password",
-    "pleaseConfirmPassword": "Please confirm your password",
-    "passwordDoesNotMeet": "Password does not meet the following rules",
-    "passwordRuleMinLength": "8 characters",
-    "passwordRuleNumber": "1 number",
-    "passwordRuleLowercase": "1 lowercase",
-    "passwordRuleUppercase": "1 uppercase",
-    "passwordRuleSymbol": "1 symbol",
-    "passwordConfirmation": "Confirmation",
-    "passwordsDoNotMatch": "Passwords do not match",
-    "invalidToken": "The recovery link has expired or is invalid. Please request a new one.",
-    "updateError": "Error updating password",
-    "updatePassword": "Update password",
-    "updating": "Updating...",
-    "redirecting": "You will be redirected to sign in in a few seconds...",
-    "goToLogin": "Go to sign in"
+    "passwordsDoNotMatch": "Passwords do not match. Please verify that both passwords are the same"
   },
   "dishDetail": {
     "addToCart": "Add to cart",
@@ -730,7 +729,8 @@
     "portion": "Portion/Glass",
     "bottle": "Bottle",
     "leaveReview": "Leave review",
-    "viewReviews": "View reviews"
+    "viewReviews": "View reviews",
+    "leaveReview": "Leave review"
   },
   "emailConfig": {
     "title": "Shipping Configuration",
@@ -888,6 +888,36 @@
     "noReviews": "No reviews available for this product.",
     "translatedByAI": "Translated by AI"
   },
+  "addCard": {
+    "title": "Add Card",
+    "newCard": "New Card",
+    "description": "Enter your card details to make payments quickly and securely",
+    "card": "CARD",
+    "expires": "Expires",
+    "cardholder": "Cardholder",
+    "cardholderPlaceholder": "CARDHOLDER NAME",
+    "orEnterManually": "Or enter manually",
+    "cardNumber": "Card Number",
+    "cardholderName": "Cardholder Name",
+    "expiryDate": "Expiry Date",
+    "addCard": "Add Card",
+    "scanCard": "Scan card with camera",
+    "scanCardTitle": "Scan your card",
+    "securityMessage": "Your data is protected with end-to-end encryption. We do not store your CVV.",
+    "invalidCardNumber": "Please enter a valid card number (16 digits)",
+    "invalidCardholder": "Please enter the cardholder name",
+    "invalidExpiryDate": "Please enter a valid expiry date",
+    "invalidCVV": "Please enter a valid CVV (3 or 4 digits)",
+    "cardAddedSuccess": "Card added successfully",
+    "cameraError": "Error accessing camera. Please try again or enter data manually.",
+    "cardScanned": "Card scanned successfully",
+    "processing": "Processing...",
+    "placeCardInFrame": "Place your card within the frame",
+    "ensureWellLit": "Ensure there is good lighting",
+    "captureCard": "Capture Card",
+    "scanFailed": "Could not extract card data. Please enter the data manually.",
+    "scanError": "Error processing card. Please try again or enter the data manually."
+  },
   "waitlist": {
     "title": "Waitlist",
     "scanQR": "Scan QR for Waitlist",
@@ -960,6 +990,7 @@
     "progressAdvanced": "{percentage}% Advanced",
     "nextInLine": "Next in line",
     "tablesBefore": "Tables before",
+    "estimatedWaitShort": "Est. wait",
     "viewMenuAndOrder": "View Menu and Place Order",
     "advanceOrderSaveTime": "Place your order in advance to save time",
     "cancelWait": "Cancel Wait",
@@ -1162,42 +1193,6 @@
     "whatIncludes": "What's included?",
     "applyToOrder": "Apply to my Order",
     "appliedToOrder": "Promotion applied to your order",
-    "linkCopied": "Link copied to clipboard",
-    "badges": {
-      "flashSale": "FLASH SALE",
-      "healthy": "HEALTHY",
-      "vipExclusive": "VIP Exclusive"
-    },
-    "discounts": {
-      "20off": "20% OFF",
-      "15off": "15% OFF"
-    },
-    "items": {
-      "cappuccino2x1": {
-        "title": "2x1 Cappuccinos",
-        "description": "Only today before 11 AM",
-        "timeRestriction": "Only today before 11 AM"
-      },
-      "energeticBreakfast": {
-        "title": "Energetic Breakfast Combo",
-        "description": "Start your day with energy!"
-      },
-      "seasonalBowl": {
-        "title": "Seasonal Bowl",
-        "description": "Fresh fruits"
-      },
-      "sourdoughBread": {
-        "title": "Sourdough Bread",
-        "description": "Daily artisan"
-      },
-      "tropicalSmoothie": {
-        "title": "Tropical Smoothie",
-        "description": "Seasonal fruits"
-      },
-      "premiumCoffee": {
-        "title": "Premium Special Coffee",
-        "description": "Limited edition"
-      }
-    }
+    "linkCopied": "Link copied to clipboard"
   }
 }

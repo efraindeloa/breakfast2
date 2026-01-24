@@ -20,6 +20,7 @@ const ProfileScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { config } = useRestaurant();
+  const { signOut } = useAuth();
   const [cards, setCards] = useState<Card[]>([
     {
       id: 1,
@@ -651,7 +652,13 @@ const ProfileScreen: React.FC = () => {
       </section>
 
       <div className="px-4 mt-8">
-        <button className="w-full h-14 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 font-bold rounded-xl border border-red-100 dark:border-red-900/30 active:scale-95 transition-all">
+        <button 
+          onClick={async () => {
+            await signOut();
+            navigate('/');
+          }}
+          className="w-full h-14 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 font-bold rounded-xl border border-red-100 dark:border-red-900/30 active:scale-95 transition-all"
+        >
           {t('profile.logout')}
         </button>
       </div>

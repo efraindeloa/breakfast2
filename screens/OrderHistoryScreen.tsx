@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
-import { ORDER_HISTORY_STORAGE_KEY, HistoricalOrder } from '../types/order';
+import { HistoricalOrder } from '../types/order';
+import { getOrderHistory } from '../services/database';
 
 const REVIEWS_STORAGE_KEY = 'user_reviews';
 
@@ -74,17 +75,21 @@ const OrderHistoryScreen: React.FC = () => {
     status: 'all',
   });
 
-  // Cargar órdenes históricas desde localStorage
-  const historicalOrders: HistoricalOrder[] = useMemo(() => {
-    try {
-      const savedData = localStorage.getItem(ORDER_HISTORY_STORAGE_KEY);
-      if (savedData) {
-        return JSON.parse(savedData);
+  // Cargar órdenes históricas desde Supabase (con fallback a localStorage)
+  const [historicalOrders, setHistoricalOrders] = useState<HistoricalOrder[]>([]);
+  
+  useEffect(() => {
+    const loadOrderHistory = async () => {
+      try {
+        const orders = await getOrderHistory();
+        setHistoricalOrders(orders);
+      } catch (error) {
+        console.error('Error loading order history:', error);
+        setHistoricalOrders([]);
       }
-    } catch {
-      return [];
-    }
-    return [];
+    };
+    
+    loadOrderHistory();
   }, []);
 
   // Cargar opiniones existentes
@@ -116,117 +121,29 @@ const OrderHistoryScreen: React.FC = () => {
 
   // Convertir órdenes históricas al formato Order para compatibilidad con el componente existente
   const orders: Order[] = useMemo(() => {
-    if (historicalOrders.length > 0) {
-      return historicalOrders.map((histOrder, index) => ({
-        id: index + 1,
-        restaurantName: histOrder.restaurantName,
-        date: histOrder.date,
-        time: histOrder.time,
-        total: `$${histOrder.total.toFixed(2)}`,
-        status: histOrder.status as 'completada' | 'cancelada' | 'en_proceso',
-        items: histOrder.items.map(item => ({
-          id: item.id,
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price, // Ya es string
-        })),
-        logo: histOrder.logo,
-        transactionId: histOrder.transactionId,
-      }));
-    }
-    // Fallback: órdenes de ejemplo si no hay datos en localStorage (solo para desarrollo)
-    return [
-    {
-      id: 1,
-      restaurantName: 'DONK RESTAURANT',
-      date: 'Hoy',
-      time: '8:45 AM',
-      total: '$97.65',
-      status: 'completada',
-      logo: '/logo-donk-restaurant.png',
-      items: [
-        { id: 1, name: 'Tacos de Atún Marinado', quantity: 2, price: '$18.00' },
-        { id: 2, name: 'Ceviche de Maracuyá', quantity: 1, price: '$22.00' },
-        { id: 3, name: 'Agua de Horchata', quantity: 2, price: '$4.50' },
-      ],
-      transactionId: 1,
-    },
-    {
-      id: 2,
-      restaurantName: 'DONK RESTAURANT',
-      date: 'Ayer',
-      time: '7:30 PM',
-      total: '$58.95',
-      status: 'completada',
-      logo: '/logo-donk-restaurant.png',
-      items: [
-        { id: 4, name: 'Rib Eye a la Leña', quantity: 1, price: '$45.00' },
-      ],
-      transactionId: 2,
-    },
-    {
-      id: 3,
-      restaurantName: 'Café del Sol',
-      date: '22 Oct',
-      time: '10:02 AM',
-      total: '$41.92',
-      status: 'completada',
-      logo: '/logo-donk-restaurant.png',
-      items: [
-        { id: 5, name: 'Café Americano', quantity: 2, price: '$8.00' },
-        { id: 6, name: 'Croissant', quantity: 2, price: '$12.00' },
-      ],
-      transactionId: 3,
-    },
-    {
-      id: 4,
-      restaurantName: 'DONK RESTAURANT',
-      date: '20 Oct',
-      time: '6:45 PM',
-      total: '$28.88',
-      status: 'cancelada',
-      logo: '/logo-donk-restaurant.png',
-      items: [
-        { id: 7, name: 'Pasta al Pomodoro', quantity: 1, price: '$20.00' },
-        { id: 8, name: 'Refresco', quantity: 1, price: '$4.90' },
-      ],
-      transactionId: 4,
-    },
-    {
-      id: 5,
-      restaurantName: 'La Panadería Artesanal',
-      date: '18 Oct',
-      time: '1:20 PM',
-      total: '$21.76',
-      status: 'completada',
-      logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBkUTW04rD1StMdw5VuFmivxCsbvN_VFjrpbP1fqnSpdDL84rU6b3Mm6VZOi1IGaMZZSGyhRpeuhIyuBuI2qoIJnrvssVJjWywIGD53-994UzA3AXankHvqmjFerRER3Xtv8vI4AXqh2K8rN1puxxdNFmj94DJHZyLW_ViLJYZiW-DiUZ_Z8LlJVyPu-o9dZ004NABiXUsqXvcel_zsQBdyc13Vm9JsBE1FHo2kwkmYEHAejYBBBKvLwheTiiwnprPzmk1jwASDobqC',
-      items: [
-        { id: 9, name: 'Pan Integral', quantity: 2, price: '$8.00' },
-      ],
-      transactionId: 5,
-    },
-    {
-      id: 6,
-      restaurantName: 'Brunch & Co.',
-      date: '15 Oct',
-      time: '11:30 AM',
-      total: '$37.34',
-      status: 'completada',
-      logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDNanplizQsqu_AWgfvOvcfFVNxOTL41X1kCPX1xvEMEsYo9o0WTi5Zp4q-4XKvx8ixXcz9vsSZrCafyWPVQjOxr0skT0HWuaKy2QIBpPU9lHutFSJgkLDlcksL-7CNVKdtkKJaxm4-_Qf-9Zs8CHDtVEK_nLT9Lvx2F1w3rR5aJ0_sVNdNhSKOeqx2atLUGjzVCZnSpfVYviNGCLiGQ8ScYzXfPiY-fLU0OJrfN2_RXnrYGklyPMwO4hkStBj8oI_4Dc0breu5o4hK',
-      items: [
-        { id: 10, name: 'Pancakes', quantity: 1, price: '$18.00' },
-        { id: 11, name: 'Jugo de Naranja', quantity: 1, price: '$10.50' },
-      ],
-      transactionId: 6,
-    },
-    ];
+    return historicalOrders.map((histOrder, index) => ({
+      id: index + 1,
+      restaurantName: histOrder.restaurantName,
+      date: histOrder.date,
+      time: histOrder.time,
+      total: `$${histOrder.total.toFixed(2)}`,
+      status: histOrder.status as 'completada' | 'cancelada' | 'en_proceso',
+      items: histOrder.items.map(item => ({
+        id: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price, // Ya es string
+      })),
+      logo: histOrder.logo,
+      transactionId: histOrder.transactionId,
+    }));
   }, [historicalOrders]);
 
   // Obtener lista única de restaurantes para el filtro
   const restaurants = useMemo(() => {
     const unique = Array.from(new Set(orders.map(o => o.restaurantName)));
     return unique.sort();
-  }, []);
+  }, [orders]);
 
   // Función para convertir fecha a número para comparación
   const parseDate = (dateStr: string): number => {

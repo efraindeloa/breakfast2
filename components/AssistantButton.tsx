@@ -4,6 +4,7 @@ import AssistantModal from './AssistantModal';
 
 const POSITION_STORAGE_KEY = 'assistant_button_position';
 const DOCKED_STATE_KEY = 'assistant_button_docked';
+const ASSISTANT_ENABLED_KEY = 'assistantEnabled';
 
 interface Position {
   x: number;
@@ -16,6 +17,10 @@ const NAVBAR_HEIGHT = 80; // Altura aproximada de la navbar
 const AssistantButton: React.FC = () => {
   const { t } = useTranslation();
   const [showAssistant, setShowAssistant] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(() => {
+    const saved = localStorage.getItem(ASSISTANT_ENABLED_KEY);
+    return saved === null ? true : saved === 'true'; // Por defecto habilitado
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
   const [isInactive, setIsInactive] = useState(false);
@@ -109,6 +114,19 @@ const AssistantButton: React.FC = () => {
       });
     };
   }, [isDocked, isDragging]);
+
+  // Escuchar cambios en la configuración de habilitación
+  useEffect(() => {
+    const handleEnabledChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setIsEnabled(customEvent.detail?.enabled ?? true);
+    };
+
+    window.addEventListener('assistant-enabled-changed', handleEnabledChange as EventListener);
+    return () => {
+      window.removeEventListener('assistant-enabled-changed', handleEnabledChange as EventListener);
+    };
+  }, []);
 
   // Escuchar eventos de desanclado desde BottomNav
   useEffect(() => {
@@ -426,6 +444,11 @@ const AssistantButton: React.FC = () => {
       }, 100);
     }
   };
+
+  // Si el asistente está deshabilitado, no mostrar nada
+  if (!isEnabled) {
+    return null;
+  }
 
   // Si está anclado, no mostrar el botón flotante (se mostrará en la navbar)
   if (isDocked) {

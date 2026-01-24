@@ -102,6 +102,64 @@
     "clear": "Effacer",
     "apply": "Appliquer"
   },
+  "dishes": {
+    "1": {
+      "name": "Tacos au Thon Mariné",
+      "description": "Thon frais avec sauce chipotle artisanale, avocat et oignon violet."
+    },
+    "2": {
+      "name": "Ceviche à la Passion",
+      "description": "Poisson blanc mariné dans le lait de tigre de fruit de la passion et touches de coriandre."
+    },
+    "3": {
+      "name": "Entrecôte au Bois",
+      "description": "Coupe premium de 400g cuite lentement sur du bois de chêne."
+    },
+    "4": {
+      "name": "Carpaccio de Bœuf",
+      "description": "Tranches fines de bœuf avec parmesan, roquette et huile de truffe blanche."
+    },
+    "5": {
+      "name": "Salade Méditerranéenne",
+      "description": "Frais, sain et de saison"
+    },
+    "6": {
+      "name": "Poulet au Citron & Herbes",
+      "description": "Plat signature du jour"
+    },
+    "7": {
+      "name": "Bol Quinoa & Avocat",
+      "description": "Nutritif et équilibré"
+    },
+    "8": {
+      "name": "Pâtes Pomodoro",
+      "description": "Préparation artisanale"
+    },
+    "9": {
+      "name": "Café Expresso",
+      "description": "Café italien intense et aromatique"
+    },
+    "10": {
+      "name": "Jus d'Orange Naturel",
+      "description": "Fraîchement pressé, riche en vitamine C"
+    },
+    "11": {
+      "name": "Tarte au Chocolat",
+      "description": "Délicieuse tarte avec nappage au chocolat belge"
+    },
+    "12": {
+      "name": "Flan à la Vanille",
+      "description": "Flan maison traditionnel au caramel"
+    },
+    "13": {
+      "name": "Mojito Classique",
+      "description": "Rhum, menthe fraîche, citron vert et soda"
+    },
+    "14": {
+      "name": "Margarita Premium",
+      "description": "Tequila reposado, triple sec et jus de citron vert"
+    }
+  },
   "joinTable": {
     "title": "Rejoindre la Table",
     "headline": "Rejoignez la table !",
@@ -169,12 +227,7 @@
     "searchLanguage": "Rechercher une langue...",
     "noLanguagesFound": "Aucune langue trouvée",
     "tryAnotherSearch": "Essayez un autre terme de recherche",
-    "popularLanguages": "Langues Populaires",
-    "assistant": {
-      "title": "Assistant",
-      "enableButton": "Bouton Assistant",
-      "enableButtonDesc": "Afficher ou masquer le bouton flottant de l'assistant"
-    }
+    "popularLanguages": "Langues Populaires"
   },
   "order": {
     "title": "Ma Commande",
@@ -208,7 +261,7 @@
     "finishedSelecting": "Avez-vous terminé de sélectionner vos aliments ?",
     "canUnmark": "Vous pouvez décocher si vous devez apporter des modifications",
     "markWhenFinished": "Cochez lorsque vous avez terminé d'ajouter tous vos produits",
-    "confirmAndSendOrder": "Confirmer la Commande",
+    "confirmAndSendOrder": "Confirmer et Envoyer la Commande",
     "changeOrder": "Modifier ma commande",
     "waitingForAll": "En attente que tous terminent",
     "pending": "en attente",
@@ -340,32 +393,31 @@
   "addCard": {
     "title": "Ajouter une Carte",
     "newCard": "Nouvelle Carte",
-    "description": "Entrez les détails de votre carte pour effectuer des paiements rapidement et en toute sécurité",
-    "card": "CARTE",
-    "expires": "Expire",
+    "description": "Entrez les informations de votre carte de crédit ou de débit",
+    "scanCard": "Scanner la carte avec l'appareil photo",
+    "orEnterManually": "Ou saisissez manuellement",
+    "cardNumber": "Numéro de carte",
+    "cardholderName": "Nom du titulaire",
     "cardholder": "Titulaire",
     "cardholderPlaceholder": "NOM DU TITULAIRE",
-    "orEnterManually": "Ou entrez manuellement",
-    "cardNumber": "Numéro de Carte",
-    "cardholderName": "Nom du Titulaire",
-    "expiryDate": "Date d'Expiration",
-    "addCard": "Ajouter la Carte",
-    "scanCard": "Scannez la carte avec l'appareil photo",
-    "scanCardTitle": "Scannez votre carte",
-    "securityMessage": "Vos données sont protégées avec un cryptage bout en bout. Nous ne stockons pas votre CVV.",
-    "invalidCardNumber": "Veuillez entrer un numéro de carte valide (16 chiffres)",
-    "invalidCardholder": "Veuillez entrer le nom du titulaire de la carte",
+    "expiryDate": "Date d'expiration",
+    "expires": "Expire",
+    "cvv": "CVV",
+    "securityNotice": "Vos données sont protégées par un chiffrement de bout en bout. Nous ne stockons pas votre CVV.",
+    "addCard": "Ajouter une Carte",
+    "invalidCardNumber": "Veuillez entrer un numéro de carte valide",
+    "invalidCardholder": "Veuillez entrer le nom du titulaire",
     "invalidExpiryDate": "Veuillez entrer une date d'expiration valide",
-    "invalidCVV": "Veuillez entrer un CVV valide (3 ou 4 chiffres)",
+    "invalidCVV": "Veuillez entrer un CVV valide",
     "cardAddedSuccess": "Carte ajoutée avec succès",
-    "cameraError": "Erreur lors de l'accès à l'appareil photo. Veuillez réessayer ou saisir les données manuellement.",
-    "cardScanned": "Carte scannée avec succès",
-    "processing": "Traitement...",
-    "placeCardInFrame": "Placez votre carte dans le cadre",
-    "ensureWellLit": "Assurez-vous qu'il y a un bon éclairage",
-    "captureCard": "Capturer la Carte",
-    "scanFailed": "Impossible d'extraire les données de la carte. Veuillez saisir les données manuellement.",
-    "scanError": "Erreur lors du traitement de la carte. Veuillez réessayer ou saisir les données manuellement."
+    "cardScanned": "Données de la carte capturées. Veuillez saisir le CVV manuellement.",
+    "scanYourCard": "Scannez votre carte",
+    "processing": "Traitement de la carte...",
+    "placeCardInFrame": "Placez la carte dans le cadre",
+    "ensureWellLit": "Assurez-vous que la carte est bien éclairée et mise au point",
+    "captureCard": "Capturer la carte",
+    "cameraError": "Impossible d'accéder à l'appareil photo. Veuillez saisir les données manuellement.",
+    "card": "Carte"
   },
   "billing": {
     "step1": "Données Fiscales",
@@ -395,6 +447,7 @@
     "email": "E-mail",
     "emailPlaceholder": "exemple@email.com",
     "confirmData": "Confirmer les Données",
+    "cfdiUsage": "Usage CFDI",
     "selectOption": "Sélectionnez une option",
     "generalExpenses": "Dépenses générales",
     "selectRegime": "Sélectionnez votre régime",
@@ -526,7 +579,7 @@
     "pending": "En attente",
     "pendingPlural": "en attente",
     "inviteMorePeople": "Inviter plus de personnes",
-    "confirmAndSendOrder": "Confirmer la Commande",
+    "confirmAndSendOrder": "Confirmer et Envoyer la Commande",
     "waitingForAll": "En attente que tous terminent",
     "orderConfirmed": "Commande confirmée"
   },
@@ -649,14 +702,7 @@
     "forgotPassword": "J'ai oublié mon mot de passe",
     "noAccount": "Vous n'avez pas encore de compte ?",
     "otherLanguage": "Autre langue",
-    "selectLanguage": "Sélectionner la langue",
-    "pleaseEnterEmailOrPhone": "Veuillez entrer votre e-mail ou téléphone",
-    "pleaseEnterPassword": "Veuillez entrer votre mot de passe",
-    "pleaseUseEmail": "Veuillez utiliser votre adresse e-mail pour vous connecter",
-    "invalidCredentials": "E-mail ou mot de passe incorrect",
-    "emailNotConfirmed": "Veuillez confirmer votre e-mail avant de vous connecter",
-    "loginError": "Erreur de connexion",
-    "loggingIn": "Connexion..."
+    "selectLanguage": "Sélectionner la langue"
   },
   "register": {
     "title": "Bonjour !",
@@ -686,53 +732,7 @@
     "passwordRuleSymbol": "1 symbole",
     "passwordConfirmation": "Confirmation",
     "pleaseConfirmPassword": "Veuillez confirmer votre mot de passe",
-    "passwordsDoNotMatch": "Les mots de passe ne correspondent pas. Veuillez vérifier que les deux mots de passe sont identiques",
-    "pleaseUseEmail": "Veuillez utiliser votre adresse e-mail pour vous inscrire",
-    "userAlreadyExists": "Cet e-mail est déjà enregistré",
-    "registrationError": "Erreur lors de l'inscription",
-    "registrationSuccess": "Inscription réussie ! Redirection...",
-    "creatingAccount": "Création du compte..."
-  },
-  "forgotPassword": {
-    "title": "Récupérer le mot de passe",
-    "subtitle": "Entrez votre adresse e-mail et nous vous enverrons un lien pour récupérer votre mot de passe",
-    "email": "E-mail",
-    "emailPlaceholder": "exemple@email.com",
-    "pleaseEnterEmail": "Veuillez entrer votre adresse e-mail",
-    "invalidEmail": "Veuillez entrer une adresse e-mail valide",
-    "emailNotFound": "Nous n'avons pas trouvé de compte avec cet e-mail",
-    "resetError": "Erreur lors de l'envoi de l'e-mail de récupération",
-    "sendResetLink": "Envoyer le lien de récupération",
-    "sending": "Envoi...",
-    "backToLogin": "Retour à la connexion",
-    "successMessage": "Nous vous avons envoyé un e-mail avec les instructions pour récupérer votre mot de passe",
-    "checkEmail": "Vérifiez votre e-mail et suivez les instructions pour réinitialiser votre mot de passe."
-  },
-  "resetPassword": {
-    "title": "Réinitialiser le mot de passe",
-    "successTitle": "Mot de passe mis à jour !",
-    "subtitle": "Entrez votre nouveau mot de passe",
-    "successMessage": "Votre mot de passe a été mis à jour avec succès. Vous serez redirigé vers la connexion.",
-    "newPassword": "Nouveau mot de passe",
-    "passwordPlaceholder": "Entrez votre nouveau mot de passe",
-    "confirmPassword": "Confirmer le mot de passe",
-    "confirmPasswordPlaceholder": "Confirmez votre nouveau mot de passe",
-    "pleaseEnterPassword": "Veuillez entrer un mot de passe",
-    "pleaseConfirmPassword": "Veuillez confirmer votre mot de passe",
-    "passwordDoesNotMeet": "Le mot de passe ne respecte pas les règles suivantes",
-    "passwordRuleMinLength": "8 caractères",
-    "passwordRuleNumber": "1 chiffre",
-    "passwordRuleLowercase": "1 minuscule",
-    "passwordRuleUppercase": "1 majuscule",
-    "passwordRuleSymbol": "1 symbole",
-    "passwordConfirmation": "Confirmation",
-    "passwordsDoNotMatch": "Les mots de passe ne correspondent pas",
-    "invalidToken": "Le lien de récupération a expiré ou n'est pas valide. Veuillez en demander un nouveau.",
-    "updateError": "Erreur lors de la mise à jour du mot de passe",
-    "updatePassword": "Mettre à jour le mot de passe",
-    "updating": "Mise à jour...",
-    "redirecting": "Vous serez redirigé vers la connexion dans quelques secondes...",
-    "goToLogin": "Aller à la connexion"
+    "passwordsDoNotMatch": "Les mots de passe ne correspondent pas. Veuillez vérifier que les deux mots de passe sont identiques"
   },
   "dishDetail": {
     "addToCart": "Ajouter au panier",
@@ -761,7 +761,8 @@
     "portion": "Portion/Verre",
     "bottle": "Bouteille",
     "leaveReview": "Laisser un avis",
-    "viewReviews": "Voir les avis"
+    "viewReviews": "Voir les avis",
+    "leaveReview": "Laisser un avis"
   },
   "favorites": {
     "title": "Mes Favoris",
@@ -887,6 +888,36 @@
     "noReviews": "Aucun avis disponible pour ce produit.",
     "translatedByAI": "Traduit par IA"
   },
+  "addCard": {
+    "title": "Ajouter une Carte",
+    "newCard": "Nouvelle Carte",
+    "description": "Entrez les détails de votre carte pour effectuer des paiements rapidement et en toute sécurité",
+    "card": "CARTE",
+    "expires": "Expire",
+    "cardholder": "Titulaire",
+    "cardholderPlaceholder": "NOM DU TITULAIRE",
+    "orEnterManually": "Ou entrez manuellement",
+    "cardNumber": "Numéro de Carte",
+    "cardholderName": "Nom du Titulaire",
+    "expiryDate": "Date d'Expiration",
+    "addCard": "Ajouter la Carte",
+    "scanCard": "Scannez la carte avec l'appareil photo",
+    "scanCardTitle": "Scannez votre carte",
+    "securityMessage": "Vos données sont protégées avec un cryptage bout en bout. Nous ne stockons pas votre CVV.",
+    "invalidCardNumber": "Veuillez entrer un numéro de carte valide (16 chiffres)",
+    "invalidCardholder": "Veuillez entrer le nom du titulaire de la carte",
+    "invalidExpiryDate": "Veuillez entrer une date d'expiration valide",
+    "invalidCVV": "Veuillez entrer un CVV valide (3 ou 4 chiffres)",
+    "cardAddedSuccess": "Carte ajoutée avec succès",
+    "cameraError": "Erreur lors de l'accès à l'appareil photo. Veuillez réessayer ou saisir les données manuellement.",
+    "cardScanned": "Carte scannée avec succès",
+    "processing": "Traitement...",
+    "placeCardInFrame": "Placez votre carte dans le cadre",
+    "ensureWellLit": "Assurez-vous qu'il y a un bon éclairage",
+    "captureCard": "Capturer la Carte",
+    "scanFailed": "Impossible d'extraire les données de la carte. Veuillez saisir les données manuellement.",
+    "scanError": "Erreur lors du traitement de la carte. Veuillez réessayer ou saisir les données manuellement."
+  },
   "waitlist": {
     "title": "Liste d'Attente",
     "scanQR": "Scanner QR pour Liste d'Attente",
@@ -959,6 +990,7 @@
     "progressAdvanced": "{percentage}% Avancé",
     "nextInLine": "Prochain dans la file",
     "tablesBefore": "Tables avant",
+    "estimatedWaitShort": "Attente est.",
     "viewMenuAndOrder": "Voir le Menu et Commander",
     "advanceOrderSaveTime": "Passez votre commande à l'avance pour gagner du temps",
     "cancelWait": "Annuler l'Attente",
@@ -1161,42 +1193,6 @@
     "whatIncludes": "Qu'est-ce qui est inclus?",
     "applyToOrder": "Appliquer à ma Commande",
     "appliedToOrder": "Promotion appliquée à votre commande",
-    "linkCopied": "Lien copié dans le presse-papiers",
-    "badges": {
-      "flashSale": "VENTE FLASH",
-      "healthy": "SAIN",
-      "vipExclusive": "Exclusif VIP"
-    },
-    "discounts": {
-      "20off": "20% DE RÉDUCTION",
-      "15off": "15% DE RÉDUCTION"
-    },
-    "items": {
-      "cappuccino2x1": {
-        "title": "2x1 Cappuccinos",
-        "description": "Seulement aujourd'hui avant 11h",
-        "timeRestriction": "Seulement aujourd'hui avant 11h"
-      },
-      "energeticBreakfast": {
-        "title": "Combo Petit-déjeuner Énergétique",
-        "description": "Commencez votre journée avec énergie !"
-      },
-      "seasonalBowl": {
-        "title": "Bol de Saison",
-        "description": "Fruits frais"
-      },
-      "sourdoughBread": {
-        "title": "Pain au Levain",
-        "description": "Artisanal quotidien"
-      },
-      "tropicalSmoothie": {
-        "title": "Smoothie Tropical",
-        "description": "Fruits de saison"
-      },
-      "premiumCoffee": {
-        "title": "Café Spécial Premium",
-        "description": "Édition limitée"
-      }
-    }
+    "linkCopied": "Lien copié dans le presse-papiers"
   }
 }

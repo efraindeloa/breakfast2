@@ -54,6 +54,10 @@ const SettingsScreen: React.FC = () => {
     const saved = localStorage.getItem('showHighlights');
     return saved === 'true';
   });
+  const [assistantEnabled, setAssistantEnabled] = useState(() => {
+    const saved = localStorage.getItem('assistantEnabled');
+    return saved === null ? true : saved === 'true'; // Por defecto habilitado
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [saved, setSaved] = useState(false);
 
@@ -305,6 +309,33 @@ const SettingsScreen: React.FC = () => {
               <Toggle checked={highlights} onChange={(checked) => {
                 setHighlights(checked);
                 localStorage.setItem('showHighlights', checked.toString());
+              }} />
+            </div>
+          </div>
+        </section>
+
+        {/* Assistant Configuration Section */}
+        <section className="mt-6">
+          <div className="px-4 pb-2">
+            <h2 className="text-[#181411] dark:text-white text-sm font-bold uppercase tracking-wider opacity-60">{t('settings.assistant.title') || 'Asistente'}</h2>
+          </div>
+          <div className="mx-4 bg-white dark:bg-[#2d241c] rounded-xl border border-solid border-[#e6e0db] dark:border-[#3d3228] overflow-hidden shadow-sm">
+            {/* Assistant Button Toggle */}
+            <div className="flex items-center gap-4 px-4 py-5 justify-between">
+              <div className="flex items-center gap-4">
+                <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+                  <span className="material-symbols-outlined text-[26px]">smart_toy</span>
+                </div>
+                <div className="flex flex-col justify-center max-w-[200px]">
+                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('settings.assistant.enableButton') || 'Botón de Asistente'}</p>
+                  <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">{t('settings.assistant.enableButtonDesc') || 'Mostrar u ocultar el botón flotante de asistente'}</p>
+                </div>
+              </div>
+              <Toggle checked={assistantEnabled} onChange={(checked) => {
+                setAssistantEnabled(checked);
+                localStorage.setItem('assistantEnabled', checked.toString());
+                // Disparar evento para que AssistantButton se actualice
+                window.dispatchEvent(new CustomEvent('assistant-enabled-changed', { detail: { enabled: checked } }));
               }} />
             </div>
           </div>

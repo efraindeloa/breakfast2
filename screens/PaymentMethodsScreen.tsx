@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { useCart } from '../contexts/CartContext';
-import { Order, OrderStatus, ORDERS_STORAGE_KEY } from '../types/order';
+import { Order, OrderStatus } from '../types/order';
+import { getOrders } from '../services/database';
 
 interface Card {
   id: number;
@@ -48,17 +49,24 @@ const PaymentMethodsScreen: React.FC = () => {
     }
   };
 
-  // Cargar todas las órdenes desde localStorage
-  const orders: Order[] = useMemo(() => {
-    try {
-      const savedData = localStorage.getItem(ORDERS_STORAGE_KEY);
-      if (savedData) {
-        return JSON.parse(savedData);
+  // Cargar todas las órdenes desde Supabase
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        setIsLoadingOrders(true);
+        const loadedOrders = await getOrders();
+        setOrders(loadedOrders);
+      } catch (error) {
+        console.error('Error loading orders:', error);
+        setOrders([]);
+      } finally {
+        setIsLoadingOrders(false);
       }
-    } catch {
-      return [];
-    }
-    return [];
+    };
+    loadOrders();
   }, []);
 
   const hasOrderBeenSent = useMemo(() => {

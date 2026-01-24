@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { getProducts, getProductById, Product } from '../services/database';
 import { allDishes } from '../screens/DishDetailScreen';
 import { useRestaurant } from './RestaurantContext';
+import { useLanguage } from './LanguageContext';
 
 interface ProductsContextType {
   products: Product[];
@@ -18,6 +19,7 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { selectedRestaurant } = useRestaurant();
+  const { language } = useLanguage(); // Escuchar cambios de idioma
 
   // Función para convertir allDishes a formato Product
   const convertDishesToProducts = (): Product[] => {
@@ -64,7 +66,7 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   useEffect(() => {
     loadProducts();
-  }, []);
+  }, [language, selectedRestaurant]); // Recargar cuando cambie el idioma o el restaurante
 
   const getProduct = (id: number): Product | undefined => {
     return products.find(p => p.id === id);

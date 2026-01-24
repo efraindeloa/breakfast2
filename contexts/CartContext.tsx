@@ -12,7 +12,7 @@ export interface CartItem {
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (item: Omit<CartItem, 'quantity'>) => void;
+  addToCart: (item: Omit<CartItem, 'quantity'>, quantity?: number) => Promise<void>;
   removeFromCart: (itemId: number) => void;
   updateCartItemQuantity: (itemId: number, quantity: number, notes?: string) => void;
   updateCartItemNotes: (itemId: number, notes: string) => void;
@@ -43,7 +43,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     loadCart();
   }, []);
 
-  const addToCart = async (item: Omit<CartItem, 'quantity'>) => {
+  const addToCart = async (item: Omit<CartItem, 'quantity'>, quantity: number = 1) => {
+    // Llamar directamente a addToCartDB con la cantidad para evitar duplicados
+    // addToCartDB maneja el upsert correctamente en la base de datos
+    const itemWithQuantity: CartItem = { ...item, quantity };
+    await addToCartDB(itemWithQuantity);
+    
+    // Actualizar el estado local después de la operación en la BD
     setCart(prev => {
       const existingItem = prev.find(cartItem => 
         cartItem.id === item.id && cartItem.notes === item.notes
@@ -51,21 +57,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (existingItem) {
         // Si el item ya existe con las mismas notas, incrementar cantidad
-        const updated = prev.map(cartItem =>
+        return prev.map(cartItem =>
           cartItem.id === existingItem.id && cartItem.notes === existingItem.notes
-            ? { ...cartItem, quantity: cartItem.quantity + 1 }
+            ? { ...cartItem, quantity: cartItem.quantity + quantity }
             : cartItem
         );
-        // Guardar en Supabase/localStorage
-        setCartDB(updated).catch(console.error);
-        return updated;
       } else {
         // Si no existe, agregar nuevo item
-        const newItem: CartItem = { ...item, quantity: 1 };
-        const updated = [...prev, newItem];
-        // Guardar en Supabase/localStorage
-        addToCartDB(newItem).catch(console.error);
-        return updated;
+        return [...prev, itemWithQuantity];
       }
     });
   };

@@ -1,4 +1,19 @@
 import { supabase, isSupabaseConfigured, getSupabaseUrl } from '../config/supabase';
+import { HistoricalOrder, HistoricalOrderItem, Order, OrderStatus } from '../types/order';
+
+// Helper para obtener el idioma actual desde localStorage
+const getCurrentLanguage = (): string => {
+  const savedCode = localStorage.getItem('appLanguage');
+  if (savedCode === 'en' || savedCode === 'pt' || savedCode === 'fr') {
+    return savedCode;
+  }
+  // Fallback al nombre del idioma guardado
+  const savedName = localStorage.getItem('selectedLanguage');
+  if (savedName === 'English' || savedName === 'Inglés') return 'en';
+  if (savedName === 'Português' || savedName === 'Portugués') return 'pt';
+  if (savedName === 'Français' || savedName === 'Francés') return 'fr';
+  return 'es'; // Por defecto español
+};
 
 // ==================== TIPOS ====================
 
@@ -139,7 +154,33 @@ const isValidUUID = (str: string): boolean => {
 };
 
 const getUserId = (): string => {
-  // Obtener user_id del localStorage
+  // Primero intentar obtener el usuario autenticado de Supabase desde la sesión
+  if (isSupabaseConfigured()) {
+    try {
+      // Intentar obtener la sesión de forma síncrona desde el storage
+      // Supabase guarda la sesión en localStorage bajo 'sb-<project-ref>-auth-token'
+      const sessionKey = Object.keys(localStorage).find(key => key.includes('supabase.auth.token'));
+      if (sessionKey) {
+        try {
+          const sessionData = localStorage.getItem(sessionKey);
+          if (sessionData) {
+            const parsed = JSON.parse(sessionData);
+            if (parsed?.currentSession?.user?.id) {
+              console.log('[getUserId] Using authenticated user from session:', parsed.currentSession.user.id);
+              return parsed.currentSession.user.id;
+            }
+          }
+        } catch (e) {
+          // Si falla, continuar con fallback
+        }
+      }
+    } catch (err) {
+      // Si hay error obteniendo el usuario, continuar con fallback
+      console.warn('[getUserId] Error getting authenticated user:', err);
+    }
+  }
+
+  // Fallback: Obtener user_id del localStorage (para usuarios anónimos o cuando no hay autenticación)
   let userId = localStorage.getItem('user_id');
   
   // Si no existe o no es un UUID válido, generar uno nuevo
@@ -147,30 +188,77 @@ const getUserId = (): string => {
     // Generar un UUID v4 válido
     userId = generateUUID();
     localStorage.setItem('user_id', userId);
-    
-    // Crear el usuario en la tabla users si no existe (asíncrono, no bloquea)
-    // Nota: Esto puede fallar si las políticas RLS no permiten inserción
-    // En ese caso, el usuario seguirá funcionando pero sin registro en la tabla users
-    if (isSupabaseConfigured()) {
-      (async () => {
-        try {
-          const { error } = await supabase.from('users').upsert({
-            id: userId,
-            name: 'Usuario',
-            email: `user_${Date.now()}@temp.com`,
-            is_active: true
-          }, { onConflict: 'id' });
-          
-          if (error && error.code !== '42501') { // Ignorar errores de RLS
-            console.warn('Error creating user in database:', error);
-          }
-        } catch (err) {
-          // Ignorar errores silenciosamente - el usuario puede funcionar sin estar en la tabla users
-        }
-      })();
-    }
   }
+  
   return userId;
+};
+
+// Función para asegurar que el usuario existe en la tabla users antes de usarlo
+const ensureUserExists = async (userId: string): Promise<void> => {
+  if (!isSupabaseConfigured()) return;
+  
+  try {
+    // Verificar si el usuario ya existe
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+    
+    // Si el usuario existe, no hacer nada
+    if (existingUser) {
+      console.log('[ensureUserExists] User already exists:', userId);
+      return;
+    }
+    
+    // Si no existe, crearlo
+    console.log('[ensureUserExists] Creating user:', userId);
+    const { data, error } = await supabase.from('users').upsert({
+      id: userId,
+      name: 'Usuario',
+      email: `user_${Date.now()}@temp.com`,
+      is_active: true
+    }, { onConflict: 'id' });
+    
+    if (error) {
+      // Si es error de RLS, intentar verificar de nuevo (puede que se haya creado en otro proceso)
+      if (error.code === '42501') {
+        console.warn('[ensureUserExists] RLS policy error, checking if user exists:', error);
+        // Verificar de nuevo después de un momento
+        await new Promise(resolve => setTimeout(resolve, 200));
+        const { data: retryCheck } = await supabase
+          .from('users')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
+        if (retryCheck) {
+          console.log('[ensureUserExists] User exists after retry');
+          return;
+        }
+        // Si aún no existe después del retry, lanzar el error
+        throw new Error('Failed to create user due to RLS policy');
+      } else {
+        console.error('[ensureUserExists] Error creating user in database:', error);
+        throw error; // Lanzar el error para que se maneje arriba
+      }
+    } else {
+      console.log('[ensureUserExists] User created successfully:', userId);
+      // Verificar que el usuario realmente se creó antes de continuar
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const { data: verifyUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+      if (!verifyUser) {
+        throw new Error('User was not created successfully');
+      }
+      console.log('[ensureUserExists] User verified:', userId);
+    }
+  } catch (err) {
+    console.error('[ensureUserExists] Unexpected error:', err);
+    throw err; // Lanzar el error para que se maneje en addToCart
+  }
 };
 
 const fallbackToLocalStorage = <T>(
@@ -192,41 +280,135 @@ const fallbackToLocalStorage = <T>(
 
 export const getOrders = async (): Promise<Order[]> => {
   if (!isSupabaseConfigured()) {
-    return fallbackToLocalStorage<Order[]>('orders_list', [], 'get') || [];
+    console.warn('Supabase not configured. Cannot fetch orders.');
+    return [];
   }
 
   try {
     const userId = getUserId();
-    const { data, error } = await supabase
+    
+    // Verificar si hay datos pendientes de migración (después de cerrar sesión)
+    const pendingOrders = localStorage.getItem('pending_orders_migration');
+    if (pendingOrders) {
+      try {
+        const orders = JSON.parse(pendingOrders);
+        // Restaurar las órdenes al user_id actual
+        await ensureUserExists(userId);
+        for (const order of orders) {
+          await supabase.from('orders').upsert({
+            id: order.id,
+            user_id: userId,
+            restaurant_id: order.restaurant_id,
+            order_number: order.order_number,
+            status: order.status,
+            total: order.total,
+            subtotal: order.subtotal,
+            tax: order.tax,
+            tip: order.tip,
+            items: order.items,
+            notes: order.notes,
+            payment_method: order.payment_method,
+            payment_status: order.payment_status,
+            table_number: order.table_number,
+            delivery_address: order.delivery_address,
+            estimated_ready_time: order.estimated_ready_time,
+            created_at: order.created_at,
+            updated_at: order.updated_at,
+          }, { onConflict: 'id' });
+        }
+        localStorage.removeItem('pending_orders_migration');
+      } catch (restoreError) {
+        console.warn('[getOrders] Error restoring pending orders:', restoreError);
+      }
+    }
+    
+    // Primero intentar obtener órdenes con el user_id actual
+    let { data, error } = await supabase
       .from('orders')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data || [];
+    if (error) {
+      console.error('[getOrders] Supabase error:', error);
+      throw error;
+    }
+    
+    // Si no se encontraron órdenes, buscar órdenes recientes sin user_id o con user_id diferente
+    // (solo para desarrollo - ayuda a recuperar órdenes huérfanas)
+    if ((data || []).length === 0) {
+      
+      // Buscar órdenes creadas en las últimas 24 horas que no tengan el user_id actual
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const { data: orphanedOrders, error: orphanedError } = await supabase
+        .from('orders')
+        .select('*')
+        .gte('created_at', yesterday.toISOString())
+        .neq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (!orphanedError && orphanedOrders && orphanedOrders.length > 0) {
+        console.log('[getOrders] Found orphaned orders:', orphanedOrders);
+        console.log('[getOrders] Orphaned order user_ids:', orphanedOrders.map(o => o.user_id));
+        console.warn('[getOrders] WARNING: Found orders with different user_id. Consider updating them using fix_order_user_id.sql');
+        
+        // Opcional: Auto-corregir el user_id de órdenes huérfanas recientes
+        // Descomentar si quieres que se actualicen automáticamente
+        /*
+        for (const order of orphanedOrders) {
+          await supabase
+            .from('orders')
+            .update({ user_id: userId })
+            .eq('id', order.id);
+        }
+        console.log('[getOrders] Auto-updated orphaned orders to current user_id');
+        // Recargar después de actualizar
+        const { data: updatedData } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        data = updatedData;
+        */
+      }
+    }
+    
+    console.log('[getOrders] Found orders for current user:', data?.length || 0, data);
+    
+    // Mapear los datos de Supabase al formato Order esperado
+    const mappedOrders = (data || []).map((order: any) => ({
+      orderId: order.id, // Mapear id a orderId
+      orderNumber: order.order_number ? parseInt(order.order_number.replace(/\D/g, '')) || 1 : 1,
+      items: order.items || [],
+      status: order.status as OrderStatus,
+      timestamp: order.created_at || new Date().toISOString(),
+    }));
+    
+    return mappedOrders;
   } catch (error) {
-    console.error('Error fetching orders:', error);
-    return fallbackToLocalStorage<Order[]>('orders_list', [], 'get') || [];
+    console.error('[getOrders] Error fetching orders:', error);
+    return [];
   }
 };
 
 export const createOrder = async (order: Omit<Order, 'id' | 'created_at' | 'updated_at'>): Promise<Order | null> => {
   if (!isSupabaseConfigured()) {
-    const newOrder: Order = {
-      ...order,
-      id: `order_${Date.now()}`,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    const orders = await getOrders();
-    orders.unshift(newOrder);
-    fallbackToLocalStorage('orders_list', orders, 'set', orders);
-    return newOrder;
+    console.warn('Supabase not configured. Cannot create order.');
+    return null;
   }
 
   try {
     const userId = getUserId();
+    
+    // Validar que el status sea de una orden activa (no 'entregada' o 'cancelada')
+    const activeStatuses = ['pending', 'orden_enviada', 'orden_recibida', 'en_preparacion', 'lista_para_entregar', 'en_entrega', 'con_incidencias'];
+    if (!activeStatuses.includes(order.status)) {
+      throw new Error(`Invalid status for active order: ${order.status}. Use moveOrderToHistory() for completed orders.`);
+    }
+    
     const { data, error } = await supabase
       .from('orders')
       .insert({
@@ -234,6 +416,7 @@ export const createOrder = async (order: Omit<Order, 'id' | 'created_at' | 'upda
         restaurant_id: order.restaurant_id,
         status: order.status,
         total: order.total,
+        subtotal: order.total, // Si no se proporciona subtotal, usar total
         items: order.items,
         notes: order.notes,
       })
@@ -248,18 +431,209 @@ export const createOrder = async (order: Omit<Order, 'id' | 'created_at' | 'upda
   }
 };
 
-export const updateOrder = async (orderId: string, updates: Partial<Order>): Promise<Order | null> => {
+// ==================== HISTORIAL DE ÓRDENES ====================
+
+/**
+ * Guarda una orden completada en el historial (Supabase + localStorage)
+ */
+export const saveOrderHistory = async (historicalOrder: HistoricalOrder): Promise<string | null> => {
   if (!isSupabaseConfigured()) {
-    const orders = await getOrders();
-    const index = orders.findIndex(o => o.id === orderId);
-    if (index === -1) return null;
-    
-    orders[index] = { ...orders[index], ...updates, updated_at: new Date().toISOString() };
-    fallbackToLocalStorage('orders_list', orders, 'set', orders);
-    return orders[index];
+    console.warn('Supabase not configured. Cannot save order history.');
+    return null;
   }
 
   try {
+    const userId = getUserId();
+    
+    // Convertir HistoricalOrder a formato de tabla order_history
+    const orderData = {
+      id: historicalOrder.id.startsWith('historical-') ? undefined : historicalOrder.id, // Generar nuevo UUID si es histórico
+      user_id: userId,
+      restaurant_id: '00000000-0000-0000-0000-000000000001', // ID del restaurante por defecto
+      order_number: historicalOrder.transactionId?.toString() || null,
+      status: historicalOrder.status === 'completada' ? 'entregada' : 'cancelada',
+      total: historicalOrder.total,
+      subtotal: historicalOrder.total,
+      tax: 0,
+      tip: 0,
+      items: historicalOrder.items.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: parseFloat(item.price.replace(/[^0-9.]/g, '')) || 0,
+        notes: item.notes || '',
+        quantity: item.quantity,
+      })),
+      notes: null,
+      payment_method: null,
+      payment_status: 'completed',
+      completed_at: historicalOrder.timestamp,
+    };
+
+    // Insertar directamente en order_history
+    const { data, error } = await supabase
+      .from('order_history')
+      .insert({
+        ...orderData,
+        created_at: historicalOrder.timestamp, // Usar timestamp como created_at
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data.id;
+  } catch (error) {
+    console.error('Error saving order history to Supabase:', error);
+    return null;
+  }
+};
+
+/**
+ * Obtiene el historial de órdenes completadas desde Supabase
+ */
+export const getOrderHistory = async (): Promise<HistoricalOrder[]> => {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase not configured. Cannot fetch order history.');
+    return [];
+  }
+
+  try {
+    const userId = getUserId();
+    
+    // Obtener órdenes completadas o canceladas desde order_history
+    // Primero intentamos sin el JOIN para evitar errores si la relación no existe
+    const { data, error } = await supabase
+      .from('order_history')
+      .select('*')
+      .eq('user_id', userId)
+      .order('completed_at', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Convertir a formato HistoricalOrder
+    const historicalOrders: HistoricalOrder[] = (data || []).map((order: any) => {
+      const completedDate = order.completed_at ? new Date(order.completed_at) : new Date(order.created_at);
+      
+      // Por ahora usamos valores por defecto para el restaurante
+      // TODO: Obtener información del restaurante si es necesario
+      return {
+        id: order.id,
+        restaurantName: 'DONK RESTAURANT', // Valor por defecto
+        date: completedDate.toLocaleDateString('es-MX', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        }),
+        time: completedDate.toLocaleTimeString('es-MX', {
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        total: parseFloat(order.total) || 0,
+        status: order.status === 'entregada' ? 'completada' : 'cancelada',
+        items: (order.items || []).map((item: any) => ({
+          id: item.id,
+          name: item.name || `Item ${item.id}`,
+          price: typeof item.price === 'number' ? `$${item.price.toFixed(2)}` : item.price,
+          notes: item.notes || '',
+          quantity: item.quantity || 1,
+        })),
+        logo: '/logo-donk-restaurant.png', // Valor por defecto
+        transactionId: order.order_number ? parseInt(order.order_number.replace(/\D/g, '')) : undefined,
+        timestamp: completedDate.toISOString(),
+      };
+    });
+
+    return historicalOrders;
+  } catch (error) {
+    console.error('Error fetching order history from Supabase:', error);
+    return [];
+  }
+};
+
+/**
+ * Obtiene una orden histórica específica por ID
+ */
+export const getOrderHistoryById = async (orderId: string): Promise<HistoricalOrder | null> => {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase not configured. Cannot fetch order history.');
+    return null;
+  }
+
+  try {
+    const userId = getUserId();
+    
+    // Buscar primero en order_history
+    const { data, error } = await supabase
+      .from('order_history')
+      .select(`
+        id,
+        order_number,
+        status,
+        total,
+        items,
+        completed_at,
+        created_at,
+        restaurant_id,
+        restaurants:restaurant_id (
+          name,
+          logo_url
+        )
+      `)
+      .eq('id', orderId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error) throw error;
+    if (!data) return null;
+
+    // Convertir a formato HistoricalOrder
+    const completedDate = data.completed_at ? new Date(data.completed_at) : new Date(data.created_at);
+      const restaurant = (data.restaurants as any) || {};
+      
+      return {
+        id: data.id,
+        restaurantName: restaurant?.name || 'DONK RESTAURANT',
+      date: completedDate.toLocaleDateString('es-MX', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      }),
+      time: completedDate.toLocaleTimeString('es-MX', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      total: parseFloat(data.total) || 0,
+      status: data.status === 'entregada' ? 'completada' : 'cancelada',
+      items: (data.items || []).map((item: any) => ({
+        id: item.id,
+        name: item.name || `Item ${item.id}`,
+        price: typeof item.price === 'number' ? `$${item.price.toFixed(2)}` : item.price,
+        notes: item.notes || '',
+        quantity: item.quantity || 1,
+      })),
+        logo: restaurant?.logo_url || '/logo-donk-restaurant.png',
+      transactionId: data.order_number ? parseInt(data.order_number.replace(/\D/g, '')) : undefined,
+      timestamp: completedDate.toISOString(),
+    };
+  } catch (error) {
+    console.error('Error fetching order from Supabase:', error);
+    return null;
+  }
+};
+
+export const updateOrder = async (orderId: string, updates: Partial<Order>): Promise<Order | null> => {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase not configured. Cannot update order.');
+    return null;
+  }
+
+  try {
+    // Si el status cambia a 'entregada' o 'cancelada', mover a order_history
+    if (updates.status && ['entregada', 'cancelada'].includes(updates.status)) {
+      return await moveOrderToHistory(orderId, updates.status as 'entregada' | 'cancelada');
+    }
+    
+    // Actualizar orden activa
     const { data, error } = await supabase
       .from('orders')
       .update({ ...updates, updated_at: new Date().toISOString() })
@@ -272,6 +646,85 @@ export const updateOrder = async (orderId: string, updates: Partial<Order>): Pro
   } catch (error) {
     console.error('Error updating order:', error);
     return null;
+  }
+};
+
+/**
+ * Mueve una orden activa al historial usando la función de PostgreSQL
+ */
+export const moveOrderToHistory = async (orderId: string, status: 'entregada' | 'cancelada' = 'entregada'): Promise<Order | null> => {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase not configured. Cannot move order to history.');
+    return null;
+  }
+
+  try {
+    // Usar la función de PostgreSQL para mover la orden
+    const { data, error } = await supabase.rpc('move_order_to_history', {
+      p_order_id: orderId,
+      p_new_status: status
+    });
+
+    if (error) throw error;
+    
+    // La función retorna el ID de la orden en el historial
+    // Necesitamos obtener la orden completa del historial
+    if (data) {
+      const historyOrder = await getOrderHistoryById(data);
+      return historyOrder as any; // Convertir HistoricalOrder a Order para compatibilidad
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error moving order to history:', error);
+    // Si falla, intentar insertar manualmente en order_history
+    try {
+      const { data: orderData, error: fetchError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .single();
+      
+      if (fetchError || !orderData) throw fetchError;
+      
+      // Insertar en order_history
+      const { data: historyData, error: insertError } = await supabase
+        .from('order_history')
+        .insert({
+          order_id: orderData.id,
+          user_id: orderData.user_id,
+          restaurant_id: orderData.restaurant_id,
+          order_number: orderData.order_number,
+          status: status,
+          total: orderData.total,
+          subtotal: orderData.subtotal || orderData.total,
+          tax: orderData.tax || 0,
+          tip: orderData.tip || 0,
+          items: orderData.items,
+          notes: orderData.notes,
+          payment_method: orderData.payment_method,
+          payment_status: 'completed',
+          table_number: orderData.table_number,
+          delivery_address: orderData.delivery_address,
+          completed_at: new Date().toISOString(),
+          created_at: orderData.created_at,
+        })
+        .select()
+        .single();
+      
+      if (insertError) throw insertError;
+      
+      // Eliminar de orders
+      await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderId);
+      
+      return historyData as any;
+    } catch (manualError) {
+      console.error('Error in manual move to history:', manualError);
+      return null;
+    }
   }
 };
 
@@ -356,7 +809,11 @@ export const setCart = async (items: CartItem[]): Promise<boolean> => {
 };
 
 export const addToCart = async (item: CartItem): Promise<boolean> => {
-  if (!isSupabaseConfigured()) {
+  // IDs > 10000 son combos/promociones especiales que no existen como productos en la BD
+  // Estos se guardan solo en localStorage
+  const isCombo = item.id > 10000;
+  
+  if (!isSupabaseConfigured() || isCombo) {
     const cart = await getCart();
     cart.push(item);
     fallbackToLocalStorage('cart', cart, 'set', cart);
@@ -365,10 +822,23 @@ export const addToCart = async (item: CartItem): Promise<boolean> => {
 
   try {
     const userId = getUserId();
+    
+    // Asegurar que el usuario existe en la tabla users antes de agregar al carrito
+    try {
+      await ensureUserExists(userId);
+    } catch (userError) {
+      console.error('[addToCart] Failed to ensure user exists:', userError);
+      // Si falla crear el usuario, usar localStorage como fallback
+      const cart = await getCart();
+      cart.push(item);
+      fallbackToLocalStorage('cart', cart, 'set', cart);
+      return false;
+    }
+    
     // Normalizar notes: usar null en lugar de cadena vacía para consistencia
     const notes = (item.notes && item.notes.trim() !== '') ? item.notes.trim() : null;
     
-    // Construir la consulta para verificar si ya existe un item
+    // Primero intentar obtener el item existente para sumar la cantidad
     let query = supabase
       .from('cart_items')
       .select('id, quantity')
@@ -389,61 +859,50 @@ export const addToCart = async (item: CartItem): Promise<boolean> => {
       throw checkError;
     }
 
-    // Si existe un item, actualizar la cantidad
+    // Calcular la nueva cantidad
+    const existingQuantity = existingItems && existingItems.length > 0 ? existingItems[0].quantity : 0;
+    const newQuantity = existingQuantity + (item.quantity || 1);
+
+    // Si existe, actualizar cantidad
     if (existingItems && existingItems.length > 0) {
-      const existingItem = existingItems[0];
-      const newQuantity = (existingItem.quantity || 0) + (item.quantity || 1);
       const { error: updateError } = await supabase
         .from('cart_items')
         .update({ quantity: newQuantity })
-        .eq('id', existingItem.id);
+        .eq('id', existingItems[0].id);
 
       if (updateError) throw updateError;
     } else {
       // Si no existe, insertar nuevo registro
-      const { error: insertError } = await supabase
+      // Usar upsert con las columnas de la constraint única: user_id, product_id, notes
+      const { error: upsertError } = await supabase
         .from('cart_items')
-        .insert({
+        .upsert({
           product_id: item.id,
           restaurant_id: '00000000-0000-0000-0000-000000000001', // ID del restaurante por defecto
-          quantity: item.quantity || 1,
+          quantity: newQuantity,
           notes: notes,
           user_id: userId,
+        }, {
+          onConflict: 'user_id,product_id,notes'
         });
 
-      if (insertError) {
-        // Si hay conflicto, intentar actualizar en su lugar
-        if (insertError.code === '23505') {
-          // Buscar el item existente y actualizar
-          let updateQuery = supabase
-            .from('cart_items')
-            .select('id, quantity')
-            .eq('user_id', userId)
-            .eq('product_id', item.id);
-          
-          if (notes === null) {
-            updateQuery = updateQuery.is('notes', null);
-          } else {
-            updateQuery = updateQuery.eq('notes', notes);
-          }
-          
-          const { data: existingItemData, error: findError } = await updateQuery.limit(1);
-          
-          const existingItem = existingItemData && existingItemData.length > 0 ? existingItemData[0] : null;
-          
-          if (!findError && existingItem) {
-            const newQuantity = (existingItem.quantity || 0) + (item.quantity || 1);
-            const { error: updateError2 } = await supabase
+      if (upsertError) {
+        // Si aún hay error, intentar actualizar manualmente (race condition)
+        if (upsertError.code === '23505' || upsertError.code === 'PGRST204' || upsertError.code === '42703') {
+          // Reintentar la búsqueda y actualización
+          const { data: retryData, error: retryError } = await query.limit(1);
+          if (!retryError && retryData && retryData.length > 0) {
+            const finalQuantity = retryData[0].quantity + (item.quantity || 1);
+            const { error: finalUpdateError } = await supabase
               .from('cart_items')
-              .update({ quantity: newQuantity })
-              .eq('id', existingItem.id);
-            
-            if (updateError2) throw updateError2;
+              .update({ quantity: finalQuantity })
+              .eq('id', retryData[0].id);
+            if (finalUpdateError) throw finalUpdateError;
           } else {
-            throw insertError;
+            throw upsertError;
           }
         } else {
-          throw insertError;
+          throw upsertError;
         }
       }
     }
@@ -987,6 +1446,7 @@ export const getProducts = async (filters?: {
   isActive?: boolean;
   limit?: number;
   offset?: number;
+  language?: string; // Idioma para traducciones (opcional, se detecta automáticamente si no se proporciona)
 }): Promise<Product[]> => {
   if (!isSupabaseConfigured()) {
     // Fallback: retornar array vacío, los productos vendrán del código hardcodeado
@@ -994,9 +1454,19 @@ export const getProducts = async (filters?: {
   }
 
   try {
+    const language = filters?.language || getCurrentLanguage();
+    
+    // Query principal con JOIN a traducciones
     let query = supabase
       .from('products')
-      .select('*')
+      .select(`
+        *,
+        translations:product_translations!left(
+          name,
+          description,
+          language_code
+        )
+      `)
       .order('sort_order', { ascending: true })
       .order('id', { ascending: true });
 
@@ -1029,11 +1499,31 @@ export const getProducts = async (filters?: {
 
     const { data, error } = await query;
     if (error) throw error;
-    // Mapear image_url a image para compatibilidad y obtener URL pública
-    return (data || []).map(p => ({
-      ...p,
-      image: p.image_url ? getProductImageUrl(p.image_url) : (p.image || ''),
-    }));
+    
+    // Mapear productos con traducciones
+    return (data || []).map((p: any) => {
+      // Buscar traducción en el idioma actual
+      const translation = Array.isArray(p.translations) 
+        ? p.translations.find((t: any) => t.language_code === language)
+        : null;
+      
+      // Si no hay traducción en el idioma actual, buscar en español como fallback
+      const fallbackTranslation = !translation && Array.isArray(p.translations)
+        ? p.translations.find((t: any) => t.language_code === 'es')
+        : null;
+      
+      // Usar traducción si existe, sino usar el nombre/descripción original
+      const finalTranslation = translation || fallbackTranslation;
+      
+      return {
+        ...p,
+        name: finalTranslation?.name || p.name,
+        description: finalTranslation?.description || p.description || '',
+        image: p.image_url ? getProductImageUrl(p.image_url) : (p.image || ''),
+        // Eliminar el campo translations del objeto final (solo era para el JOIN)
+        translations: undefined,
+      };
+    });
   } catch (error) {
     console.error('Error fetching products:', error);
     return [];
@@ -1175,16 +1665,25 @@ export const getUserAvatarUrl = (imageUrl: string | null | undefined): string =>
   return imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
 };
 
-export const getProductById = async (productId: number, restaurantId?: string): Promise<Product | null> => {
+export const getProductById = async (productId: number, restaurantId?: string, language?: string): Promise<Product | null> => {
   if (!isSupabaseConfigured()) {
     // Fallback: retornar null, el producto vendrá del código hardcodeado
     return null;
   }
 
   try {
+    const currentLanguage = language || getCurrentLanguage();
+    
     let query = supabase
       .from('products')
-      .select('*')
+      .select(`
+        *,
+        translations:product_translations!left(
+          name,
+          description,
+          language_code
+        )
+      `)
       .eq('id', productId)
       .eq('is_active', true);
 
@@ -1195,8 +1694,29 @@ export const getProductById = async (productId: number, restaurantId?: string): 
     const { data, error } = await query.single();
 
     if (error) throw error;
-    // Mapear image_url a image para compatibilidad y obtener URL pública
-    return data ? { ...data, image: data.image_url ? getProductImageUrl(data.image_url) : (data.image || '') } : null;
+    
+    if (!data) return null;
+    
+    // Buscar traducción en el idioma actual
+    const translation = Array.isArray(data.translations)
+      ? data.translations.find((t: any) => t.language_code === currentLanguage)
+      : null;
+    
+    // Si no hay traducción en el idioma actual, buscar en español como fallback
+    const fallbackTranslation = !translation && Array.isArray(data.translations)
+      ? data.translations.find((t: any) => t.language_code === 'es')
+      : null;
+    
+    // Usar traducción si existe, sino usar el nombre/descripción original
+    const finalTranslation = translation || fallbackTranslation;
+    
+    return {
+      ...data,
+      name: finalTranslation?.name || data.name,
+      description: finalTranslation?.description || data.description || '',
+      image: data.image_url ? getProductImageUrl(data.image_url) : (data.image || ''),
+      translations: undefined, // Eliminar el campo translations del objeto final
+    };
   } catch (error) {
     console.error('Error fetching product:', error);
     return null;

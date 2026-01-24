@@ -103,6 +103,144 @@
     "clear": "Limpiar",
     "apply": "Aplicar"
   },
+  "dishes": {
+    "1": {
+      "name": "Tacos de Atún Marinado",
+      "description": "Atún fresco con aderezo de chipotle artesanal, aguacate y cebolla morada."
+    },
+    "2": {
+      "name": "Ceviche de Maracuyá",
+      "description": "Pescado blanco marinado en leche de tigre de maracuyá y toques de cilantro."
+    },
+    "3": {
+      "name": "Rib Eye a la Leña",
+      "description": "Corte premium de 400g cocinado a fuego lento con madera de encino."
+    },
+    "4": {
+      "name": "Carpaccio de Res",
+      "description": "Láminas finas de res con parmesano, arúgula y aceite de trufa blanca."
+    },
+    "5": {
+      "name": "Ensalada Mediterránea",
+      "description": "Fresco, saludable y de temporada"
+    },
+    "6": {
+      "name": "Pollo al Limón & Hierbas",
+      "description": "Plato insignia del día"
+    },
+    "7": {
+      "name": "Quinoa & Aguacate Bowl",
+      "description": "Nutritivo y equilibrado"
+    },
+    "8": {
+      "name": "Pasta al Pomodoro",
+      "description": "Elaboración artesanal"
+    },
+    "9": {
+      "name": "Café Espresso",
+      "description": "Café italiano intenso y aromático"
+    },
+    "10": {
+      "name": "Jugo de Naranja Natural",
+      "description": "Recién exprimido, rico en vitamina C"
+    },
+    "11": {
+      "name": "Tarta de Chocolate",
+      "description": "Deliciosa tarta con cobertura de chocolate belga"
+    },
+    "12": {
+      "name": "Flan de Vainilla",
+      "description": "Tradicional flan casero con caramelo"
+    },
+    "13": {
+      "name": "Mojito Clásico",
+      "description": "Ron, menta fresca, lima y soda"
+    },
+    "14": {
+      "name": "Margarita Premium",
+      "description": "Tequila reposado, triple sec y jugo de lima"
+    },
+    "15": {
+      "name": "Americano",
+      "description": "180 ml - NESPRESSO"
+    },
+    "16": {
+      "name": "Espresso",
+      "description": "60 ml - NESPRESSO"
+    },
+    "17": {
+      "name": "Capuchino",
+      "description": "180 ml - NESPRESSO. Opciones: Napolitano, baileys, vainilla"
+    },
+    "18": {
+      "name": "Frapuccino",
+      "description": "180 ml - NESPRESSO"
+    },
+    "19": {
+      "name": "Té",
+      "description": "Opciones: Hierbabuena / Manzanilla"
+    },
+    "20": {
+      "name": "Carajillo",
+      "description": "Café con licor 43"
+    },
+    "21": {
+      "name": "Coketillo",
+      "description": "Carajillo con paleta de chocomilk"
+    },
+    "22": {
+      "name": "Carajilla",
+      "description": "Café con Baileys"
+    },
+    "23": {
+      "name": "Licor 43",
+      "description": "700 ml - Porción: $140.00 / Botella: $1,400.00"
+    },
+    "24": {
+      "name": "Baileys",
+      "description": "700 ml - Porción: $120.00 / Botella: $1,200.00"
+    },
+    "25": {
+      "name": "Frangelico",
+      "description": "700 ml - Porción: $120.00 / Botella: $1,200.00"
+    },
+    "26": {
+      "name": "Sambuca",
+      "description": "700 ml - Porción: $100.00 / Botella: $1,000.00"
+    },
+    "27": {
+      "name": "Chinchón Seco",
+      "description": "1000 ml - Porción: $95.00 / Botella: $950.00"
+    },
+    "28": {
+      "name": "Chinchón Dulce",
+      "description": "1000 ml - Porción: $95.00 / Botella: $950.00"
+    },
+    "29": {
+      "name": "Volcán",
+      "description": "Con una textura única, firme por fuera, suave por dentro, acompañado de helado. Opciones: Dulce de leche o chocolate"
+    },
+    "30": {
+      "name": "Cheesecake Vasco",
+      "description": "Cremoso pay de natilla montado sobre cama de galleta horneada y bañado con mermelada de frutos rojos. (200 g.)"
+    },
+    "31": {
+      "name": "Pan de Elote",
+      "description": "Recién horneado, sobre una cama de mermelada, frutos rojos, helado de vainilla, bañado con dulce de cajeta y nuez. (200 g.)"
+    },
+    "32": {
+      "name": "Cheesecake Lotus",
+      "description": "Pay de queso con la autentica galleta \"Lotus Biscoff\", bañado con mezcla de leches, acompañado de frutos rojos."
+    },
+    "33": {
+      "name": "Pastel 3 Leches",
+      "description": "Delicioso pan de vainilla, con trozos de durazno, bañado con mezcla de 3 leches, con frutos rojos y nuez."
+    },
+    "34": {
+      "name": "Red Velvet",
+      "description": "Pan de red velvet con sabor a chocolate oscuro y betún de queso crema. Coronado con fresa natural."
+    }
+  },
   "joinTable": {
     "title": "Unirse a Mesa",
     "headline": "¡Únete a la mesa!",
@@ -170,12 +308,7 @@
     "searchLanguage": "Buscar idioma...",
     "noLanguagesFound": "No se encontraron idiomas",
     "tryAnotherSearch": "Intenta con otro término de búsqueda",
-    "popularLanguages": "Idiomas Populares",
-    "assistant": {
-      "title": "Asistente",
-      "enableButton": "Botón de Asistente",
-      "enableButtonDesc": "Mostrar u ocultar el botón flotante de asistente"
-    }
+    "popularLanguages": "Idiomas Populares"
   },
   "order": {
     "title": "Mi Orden",
@@ -209,7 +342,7 @@
     "finishedSelecting": "¿Terminaste de seleccionar tus alimentos?",
     "canUnmark": "Puedes desmarcar si necesitas hacer cambios",
     "markWhenFinished": "Marca cuando hayas terminado de agregar todos tus productos",
-    "confirmAndSendOrder": "Confirmar Orden",
+    "confirmAndSendOrder": "Confirmar y Enviar Orden",
     "changeOrder": "Cambiar mi orden",
     "waitingForAll": "Esperando a que todos terminen",
     "pending": "pendientes",
@@ -503,7 +636,7 @@
     "pending": "Pendiente",
     "pendingPlural": "pendientes",
     "inviteMorePeople": "Invitar más personas",
-    "confirmAndSendOrder": "Confirmar Orden",
+    "confirmAndSendOrder": "Confirmar y Enviar Orden",
     "waitingForAll": "Esperando a que todos terminen",
     "orderConfirmed": "Orden confirmada"
   },
@@ -637,14 +770,7 @@
     "forgotPassword": "Olvidé mi contraseña",
     "noAccount": "¿Aún no tienes una cuenta?",
     "otherLanguage": "Otro idioma",
-    "selectLanguage": "Seleccionar Idioma",
-    "pleaseEnterEmailOrPhone": "Por favor ingresa tu correo o teléfono",
-    "pleaseEnterPassword": "Por favor ingresa tu contraseña",
-    "pleaseUseEmail": "Por favor usa tu correo electrónico para iniciar sesión",
-    "invalidCredentials": "Correo o contraseña incorrectos",
-    "emailNotConfirmed": "Por favor confirma tu correo electrónico antes de iniciar sesión",
-    "loginError": "Error al iniciar sesión",
-    "loggingIn": "Iniciando sesión..."
+    "selectLanguage": "Seleccionar Idioma"
   },
   "register": {
     "title": "¡Buen día!",
@@ -666,39 +792,6 @@
     "invalidEmail": "Por favor ingresa un correo electrónico válido",
     "invalidPhone": "Por favor ingresa un número de teléfono válido",
     "pleaseEnterPassword": "Por favor introduce una contraseña",
-    "passwordDoesNotMeet": "La contraseña no cumple con las siguientes reglas",
-    "pleaseUseEmail": "Por favor usa tu correo electrónico para registrarte",
-    "userAlreadyExists": "Este correo ya está registrado",
-    "registrationError": "Error al registrarse",
-    "registrationSuccess": "¡Registro exitoso! Redirigiendo...",
-    "creatingAccount": "Creando cuenta..."
-  },
-  "forgotPassword": {
-    "title": "Recuperar contraseña",
-    "subtitle": "Ingresa tu correo electrónico y te enviaremos un enlace para recuperar tu contraseña",
-    "email": "Correo electrónico",
-    "emailPlaceholder": "ejemplo@correo.com",
-    "pleaseEnterEmail": "Por favor ingresa tu correo electrónico",
-    "invalidEmail": "Por favor ingresa un correo electrónico válido",
-    "emailNotFound": "No encontramos una cuenta con este correo electrónico",
-    "resetError": "Error al enviar el correo de recuperación",
-    "sendResetLink": "Enviar enlace de recuperación",
-    "sending": "Enviando...",
-    "backToLogin": "Volver al inicio de sesión",
-    "successMessage": "Te hemos enviado un correo con las instrucciones para recuperar tu contraseña",
-    "checkEmail": "Revisa tu correo electrónico y sigue las instrucciones para restablecer tu contraseña."
-  },
-  "resetPassword": {
-    "title": "Restablecer contraseña",
-    "successTitle": "¡Contraseña actualizada!",
-    "subtitle": "Ingresa tu nueva contraseña",
-    "successMessage": "Tu contraseña ha sido actualizada exitosamente. Serás redirigido al inicio de sesión.",
-    "newPassword": "Nueva contraseña",
-    "passwordPlaceholder": "Ingresa tu nueva contraseña",
-    "confirmPassword": "Confirmar contraseña",
-    "confirmPasswordPlaceholder": "Confirma tu nueva contraseña",
-    "pleaseEnterPassword": "Por favor ingresa una contraseña",
-    "pleaseConfirmPassword": "Por favor confirma tu contraseña",
     "passwordDoesNotMeet": "La contraseña no cumple con las siguientes reglas",
     "passwordRuleMinLength": "8 caracteres",
     "passwordRuleNumber": "1 número",
@@ -1166,42 +1259,6 @@
     "whatIncludes": "¿Qué incluye?",
     "applyToOrder": "Aplicar a mi Orden",
     "appliedToOrder": "Promoción aplicada a tu orden",
-    "linkCopied": "Enlace copiado al portapapeles",
-    "badges": {
-      "flashSale": "FLASH SALE",
-      "healthy": "SALUDABLE",
-      "vipExclusive": "VIP Exclusive"
-    },
-    "discounts": {
-      "20off": "20% OFF",
-      "15off": "15% OFF"
-    },
-    "items": {
-      "cappuccino2x1": {
-        "title": "2x1 en Capuchinos",
-        "description": "Solo hoy antes de las 11 AM",
-        "timeRestriction": "Solo hoy antes de las 11 AM"
-      },
-      "energeticBreakfast": {
-        "title": "Combo Desayuno Energético",
-        "description": "¡Empieza el día con energía!"
-      },
-      "seasonalBowl": {
-        "title": "Bowl de Temporada",
-        "description": "Frutas frescas"
-      },
-      "sourdoughBread": {
-        "title": "Pan Masa Madre",
-        "description": "Artesanal diario"
-      },
-      "tropicalSmoothie": {
-        "title": "Smoothie Tropical",
-        "description": "Frutas de temporada"
-      },
-      "premiumCoffee": {
-        "title": "Café Especial Premium",
-        "description": "Edición limitada"
-      }
-    }
+    "linkCopied": "Enlace copiado al portapapeles"
   }
 }

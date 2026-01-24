@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
-import { ORDER_HISTORY_STORAGE_KEY, HistoricalOrder, HistoricalOrderItem } from '../types/order';
+import { HistoricalOrder, HistoricalOrderItem } from '../types/order';
+import { getOrderHistoryById } from '../services/database';
 
 const REVIEWS_STORAGE_KEY = 'user_reviews';
 
@@ -43,21 +44,26 @@ const ReviewScreen: React.FC<ReviewScreenProps> = () => {
   const [linkPhotoToDish, setLinkPhotoToDish] = useState(false);
   const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0); // Para forzar actualización de reviews
   
-  // Cargar la última orden pagada
-  const lastOrder = useMemo<HistoricalOrder | null>(() => {
-    if (!orderId) return null;
-    
-    try {
-      const historyData = localStorage.getItem(ORDER_HISTORY_STORAGE_KEY);
-      if (historyData) {
-        const orders: HistoricalOrder[] = JSON.parse(historyData);
-        const order = orders.find(o => o.id === orderId);
-        return order || null;
+  // Cargar la última orden pagada desde Supabase
+  const [lastOrder, setLastOrder] = useState<HistoricalOrder | null>(null);
+  
+  useEffect(() => {
+    const loadOrder = async () => {
+      if (!orderId) {
+        setLastOrder(null);
+        return;
       }
-    } catch (error) {
-      console.error('Error loading order:', error);
-    }
-    return null;
+      
+      try {
+        const order = await getOrderHistoryById(orderId);
+        setLastOrder(order);
+      } catch (error) {
+        console.error('Error loading order:', error);
+        setLastOrder(null);
+      }
+    };
+    
+    loadOrder();
   }, [orderId]);
   
   // Cargar opiniones existentes para esta orden
@@ -76,6 +82,32 @@ const ReviewScreen: React.FC<ReviewScreenProps> = () => {
     return [];
   }, [orderId, reviewsRefreshKey]); // Agregar reviewsRefreshKey como dependencia
   
+  // Función para obtener el nombre correcto del item
+  const getItemName = (item: HistoricalOrderItem): string => {
+    // Si el nombre es una clave de traducción inválida (como "dishes.10001.name"), 
+    // y es un combo (ID > 10000), intentar corregirlo
+    if (item.id > 10000 && item.name && (item.name.startsWith('dishes.') || item.name.includes('.'))) {
+      // Intentar extraer el nombre de las notas si están disponibles
+      // El formato es: "Promoción: [subtitle]. Incluye: ..."
+      if (item.notes) {
+        // Buscar el patrón "Promoción: [texto]" antes de ". Incluye:"
+        const promoMatch = item.notes.match(/Promoción:\s*([^\.]+?)(?:\.\s*Incluye:|$)/);
+        if (promoMatch && promoMatch[1]) {
+          return promoMatch[1].trim();
+        }
+        // Si no funciona, intentar buscar cualquier texto después de "Promoción:" hasta el punto
+        const altMatch = item.notes.match(/Promoción:\s*([^\.]+)/);
+        if (altMatch && altMatch[1]) {
+          return altMatch[1].trim();
+        }
+      }
+      // Si no se puede extraer, usar un nombre genérico basado en el ID
+      return `Combo Promocional #${item.id - 10000}`;
+    }
+    // Para items normales o combos con nombre correcto, usar el nombre directamente
+    return item.name;
+  };
+
   // Obtener productos únicos de la orden (sin duplicados por id)
   const uniqueOrderItems = useMemo<HistoricalOrderItem[]>(() => {
     if (!lastOrder) return [];
@@ -83,7 +115,12 @@ const ReviewScreen: React.FC<ReviewScreenProps> = () => {
     const uniqueItems = new Map<number, HistoricalOrderItem>();
     lastOrder.items.forEach(item => {
       if (!uniqueItems.has(item.id)) {
-        uniqueItems.set(item.id, item);
+        // Corregir el nombre si es necesario
+        const correctedItem = {
+          ...item,
+          name: getItemName(item)
+        };
+        uniqueItems.set(item.id, correctedItem);
       }
     });
     return Array.from(uniqueItems.values());

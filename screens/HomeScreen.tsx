@@ -1,11 +1,61 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase, isSupabaseConfigured } from '../config/supabase';
 
 const HomeScreen: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const [userName, setUserName] = useState<string>('');
+
+  // Cargar nombre del usuario
+  useEffect(() => {
+    const loadUserName = async () => {
+      if (!isSupabaseConfigured() || !user?.id) {
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('name')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          // Si hay error, usar datos de OAuth o email
+          const firstName = user.user_metadata?.full_name?.split(' ')[0] || 
+                           user.user_metadata?.name?.split(' ')[0] || 
+                           user.email?.split('@')[0] || 
+                           '';
+          setUserName(firstName);
+        } else if (data?.name) {
+          // Usar nombre de la BD
+          setUserName(data.name.split(' ')[0]);
+        } else {
+          // Fallback a OAuth o email
+          const firstName = user.user_metadata?.full_name?.split(' ')[0] || 
+                           user.user_metadata?.name?.split(' ')[0] || 
+                           user.email?.split('@')[0] || 
+                           '';
+          setUserName(firstName);
+        }
+      } catch (error) {
+        console.error('[HomeScreen] Error loading user name:', error);
+        // Fallback a OAuth o email
+        const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 
+                         user?.user_metadata?.name?.split(' ')[0] || 
+                         user?.email?.split('@')[0] || 
+                         '';
+        setUserName(firstName);
+      }
+    };
+
+    loadUserName();
+  }, [user?.id]);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background-light dark:bg-background-dark">
@@ -30,7 +80,11 @@ const HomeScreen: React.FC = () => {
           </div>
           <div className="flex-1 px-3 min-w-0">
             <p className="text-primary/80 dark:text-primary/70 text-xs font-semibold uppercase tracking-wider truncate">{t('home.welcome')}</p>
-            <h2 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] truncate">{t('home.goodAppetite')}</h2>
+            <h2 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] truncate">
+              {userName 
+                ? t('home.goodAppetite').replace('Alex', userName)
+                : t('home.goodAppetite')}
+            </h2>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button className="flex size-10 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700">
@@ -83,40 +137,40 @@ const HomeScreen: React.FC = () => {
             <div className="flex flex-col gap-3 w-1/2">
               <div 
                 onClick={() => navigate('/menu')}
-                className="flex flex-col justify-between rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-primary transition-colors cursor-pointer group h-[140px] overflow-hidden"
+                className="flex flex-col rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-primary transition-colors cursor-pointer group min-h-[140px] overflow-hidden"
               >
-                <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 group-hover:bg-primary transition-colors shrink-0">
+                <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 group-hover:bg-primary transition-colors shrink-0 mb-2">
                   <span className="material-symbols-outlined text-primary group-hover:text-white">restaurant_menu</span>
                 </div>
-                <div className="flex flex-col gap-1 flex-1 min-h-0 min-w-0 overflow-hidden">
-                  <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight line-clamp-2 truncate">{t('home.viewMenu')}</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 truncate">{t('home.viewMenuDescription')}</p>
+                <div className="flex flex-col gap-1.5 flex-1 min-h-0 min-w-0">
+                  <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight line-clamp-2">{t('home.viewMenu')}</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{t('home.viewMenuDescription')}</p>
                 </div>
               </div>
               
               <div 
                 onClick={() => navigate('/request-assistance')}
-                className="flex flex-col justify-between rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-primary transition-colors cursor-pointer group h-[140px] overflow-hidden"
+                className="flex flex-col rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-primary transition-colors cursor-pointer group min-h-[140px] overflow-hidden"
               >
-                <div className="flex items-center justify-center size-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 group-hover:bg-blue-600 transition-colors shrink-0">
+                <div className="flex items-center justify-center size-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 group-hover:bg-blue-600 transition-colors shrink-0 mb-2">
                   <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 group-hover:text-white">person</span>
                 </div>
-                <div className="flex flex-col gap-1 flex-1 min-h-0 min-w-0 overflow-hidden">
-                  <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight line-clamp-2 truncate">{t('payment.requestAssistance')}</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 truncate">{t('home.requestAssistanceDescription')}</p>
+                <div className="flex flex-col gap-1.5 flex-1 min-h-0 min-w-0">
+                  <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight line-clamp-2">{t('payment.requestAssistance')}</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{t('home.requestAssistanceDescription')}</p>
                 </div>
               </div>
               
               <div 
                 onClick={() => navigate('/waitlist')}
-                className="flex flex-col justify-between rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-primary transition-colors cursor-pointer group h-[140px] overflow-hidden"
+                className="flex flex-col rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-primary transition-colors cursor-pointer group min-h-[140px] overflow-hidden"
               >
-                <div className="flex items-center justify-center size-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 group-hover:bg-orange-600 transition-colors shrink-0">
+                <div className="flex items-center justify-center size-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 group-hover:bg-orange-600 transition-colors shrink-0 mb-2">
                   <span className="material-symbols-outlined text-orange-600 dark:text-orange-400 group-hover:text-white">schedule</span>
                 </div>
-                <div className="flex flex-col gap-1 flex-1 min-h-0 min-w-0 overflow-hidden">
-                  <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight line-clamp-2 truncate">{t('waitlist.scanQR')}</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 truncate">{t('waitlist.scanQRDescription')}</p>
+                <div className="flex flex-col gap-1.5 flex-1 min-h-0 min-w-0">
+                  <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight line-clamp-2">{t('waitlist.scanQR')}</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{t('waitlist.scanQRDescription')}</p>
                 </div>
               </div>
             </div>
@@ -125,40 +179,40 @@ const HomeScreen: React.FC = () => {
             <div className="flex flex-col gap-3 w-1/2">
               <div 
                 onClick={() => navigate('/join-table')}
-                className="flex flex-col justify-between rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-primary transition-colors cursor-pointer group h-[140px] overflow-hidden"
+                className="flex flex-col rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-primary transition-colors cursor-pointer group min-h-[140px] overflow-hidden"
               >
-                <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 group-hover:bg-primary transition-colors shrink-0">
+                <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 group-hover:bg-primary transition-colors shrink-0 mb-2">
                   <span className="material-symbols-outlined text-primary group-hover:text-white">groups</span>
                 </div>
-                <div className="flex flex-col gap-1 flex-1 min-h-0 min-w-0 overflow-hidden">
-                  <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight line-clamp-2 truncate">{t('home.joinTable')}</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 truncate">{t('home.joinTableDescription')}</p>
+                <div className="flex flex-col gap-1.5 flex-1 min-h-0 min-w-0">
+                  <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight line-clamp-2">{t('home.joinTable')}</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{t('home.joinTableDescription')}</p>
                 </div>
               </div>
               
               <div 
                 onClick={() => navigate('/invite-users')}
-                className="flex flex-col justify-between rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-primary transition-colors cursor-pointer group h-[140px] overflow-hidden"
+                className="flex flex-col rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-primary transition-colors cursor-pointer group min-h-[140px] overflow-hidden"
               >
-                <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 group-hover:bg-primary transition-colors shrink-0">
+                <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 group-hover:bg-primary transition-colors shrink-0 mb-2">
                   <span className="material-symbols-outlined text-primary group-hover:text-white">person_add</span>
                 </div>
-                <div className="flex flex-col gap-1 flex-1 min-h-0 min-w-0 overflow-hidden">
-                  <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight line-clamp-2 truncate">{t('invite.title')}</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 truncate">{t('home.inviteDescription')}</p>
+                <div className="flex flex-col gap-1.5 flex-1 min-h-0 min-w-0">
+                  <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight line-clamp-2">{t('invite.title')}</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{t('home.inviteDescription')}</p>
                 </div>
               </div>
               
               <div 
                 onClick={() => navigate('/discover')}
-                className="flex flex-col justify-between rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-primary transition-colors cursor-pointer group h-[140px] overflow-hidden"
+                className="flex flex-col rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-primary transition-colors cursor-pointer group min-h-[140px] overflow-hidden"
               >
-                <div className="flex items-center justify-center size-10 rounded-lg bg-green-100 dark:bg-green-900/30 group-hover:bg-green-600 transition-colors shrink-0">
+                <div className="flex items-center justify-center size-10 rounded-lg bg-green-100 dark:bg-green-900/30 group-hover:bg-green-600 transition-colors shrink-0 mb-2">
                   <span className="material-symbols-outlined text-green-600 dark:text-green-400 group-hover:text-white">explore</span>
                 </div>
-                <div className="flex flex-col gap-1 flex-1 min-h-0 min-w-0 overflow-hidden">
-                  <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight line-clamp-2 truncate">{t('discover.title')}</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 truncate">{t('discover.description')}</p>
+                <div className="flex flex-col gap-1.5 flex-1 min-h-0 min-w-0">
+                  <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight line-clamp-2">{t('discover.title')}</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{t('discover.description')}</p>
                 </div>
               </div>
             </div>

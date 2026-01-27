@@ -4,6 +4,7 @@ import { useCart } from '../contexts/CartContext';
 import { useTranslation, useLanguage } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useProducts } from '../contexts/ProductsContext';
+import { formatPrice } from '../utils/currency';
 
 type OriginType = 'mar' | 'tierra' | 'aire' | 'vegetariano' | 'vegano' | 
   // Filtros para Bebidas
@@ -85,11 +86,11 @@ const MenuScreen: React.FC = () => {
   const [selectedOrigin, setSelectedOrigin] = useState<OriginType>('');
   const [showSuggestions, setShowSuggestions] = useState(() => {
     const saved = localStorage.getItem('showSuggestions');
-    return saved === 'true';
+    return saved === null ? true : saved === 'true'; // Por defecto activado
   });
   const [showHighlights, setShowHighlights] = useState(() => {
     const saved = localStorage.getItem('showHighlights');
-    return saved === 'true';
+    return saved === null ? true : saved === 'true'; // Por defecto activado
   });
 
   // Escuchar cambios en localStorage para actualizar el estado cuando se cambia el toggle en Settings
@@ -626,12 +627,14 @@ const MenuScreen: React.FC = () => {
   }, [products]);
 
   // Sugerencias del Chef por categoría
+  // Nota: Los IDs deben corresponder a productos que realmente pertenezcan a cada categoría
+  // El código filtra automáticamente para mostrar solo productos de la categoría correcta
   const chefSuggestions: Record<string, number[]> = {
     'Entradas': [1, 2, 5, 4],
     'Platos Fuertes': [3, 6, 7, 8],
-    'Bebidas': [15, 16, 17, 18, 19],
-    'Postres': [29, 30, 31, 32, 33, 34],
-    'Coctelería': [20, 21, 22, 23, 24],
+    'Bebidas': [9, 10, 15, 16, 17, 18, 19], // Incluye todos los IDs posibles de bebidas
+    'Postres': [11, 12, 29, 30, 31, 32, 33, 34],
+    'Coctelería': [13, 14, 20, 21, 22, 23, 24],
   };
 
   // Destacados de hoy por categoría
@@ -899,7 +902,8 @@ const MenuScreen: React.FC = () => {
             <div className="flex gap-4">
               {suggestions.map((dishId) => {
                 const dish = dishes.find(d => d.id === dishId);
-                if (!dish) return null;
+                // Verificar que el plato existe y pertenece a la categoría correcta
+                if (!dish || dish.category !== originalCategory) return null;
                 return (
                   <div 
                     key={dish.id}
@@ -910,7 +914,7 @@ const MenuScreen: React.FC = () => {
                       className="w-full bg-center bg-no-repeat aspect-[16/10] bg-cover rounded-lg flex flex-col relative" 
                       style={{ backgroundImage: `url("${dish.image}")` }}
                     >
-                      <div className="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">{dish.price}</div>
+                      <div className="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">{formatPrice(dish.price, localStorage.getItem('selectedLanguage'))}</div>
                     </div>
                     <div className="px-2 pb-2 flex-1 flex flex-col">
                       <p className="text-[#181611] dark:text-white text-base font-bold leading-tight mb-1 line-clamp-2">{dish.name}</p>
@@ -931,7 +935,8 @@ const MenuScreen: React.FC = () => {
           <div className="flex flex-col gap-3">
             {highlights.map((dishId) => {
               const dish = dishes.find(d => d.id === dishId);
-              if (!dish) return null;
+              // Verificar que el plato existe y pertenece a la categoría correcta
+              if (!dish || dish.category !== originalCategory) return null;
               return (
                 <div 
                   key={dish.id}
@@ -1025,7 +1030,7 @@ const MenuScreen: React.FC = () => {
                   }}
                   className="flex min-w-[84px] cursor-pointer items-center justify-center rounded-full h-8 px-4 bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary/90 transition-colors"
                 >
-                  <span className="truncate">{dish.price}</span>
+                  <span className="truncate">{formatPrice(dish.price, localStorage.getItem('selectedLanguage'))}</span>
                 </button>
                 <div
                   className="relative flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary transition-colors cursor-default"

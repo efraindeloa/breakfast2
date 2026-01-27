@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { useCart } from '../contexts/CartContext';
+import { useGroupOrder } from '../contexts/GroupOrderContext';
 import { Order, OrderStatus } from '../types/order';
-import { getOrders } from '../services/database';
+import { getOrders, getProductById } from '../services/database';
 
 interface Card {
   id: number;
@@ -32,6 +33,7 @@ const PaymentMethodsScreen: React.FC = () => {
   const { t } = useTranslation();
   const { config } = useRestaurant();
   const { cart } = useCart();
+  const { isGroupOrder } = useGroupOrder();
   const [includeTip, setIncludeTip] = useState(true);
   const [tipMode, setTipMode] = useState<'percentage' | 'fixed'>('percentage');
   const [tipPercentage, setTipPercentage] = useState(10);
@@ -40,13 +42,46 @@ const PaymentMethodsScreen: React.FC = () => {
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
   const [showOrderNotSentNotification, setShowOrderNotSentNotification] = useState(false);
 
-  // Función para obtener el nombre traducido del platillo
-  const getDishName = (dishId: number): string => {
+  // Función para obtener el nombre traducido del platillo desde la base de datos
+  const getDishName = async (dishId: number): Promise<string> => {
     try {
-      return t(`dishes.${dishId}.name`) || `dish-${dishId}`;
-    } catch {
-      return `dish-${dishId}`;
+      // Intentar obtener el nombre desde la base de datos
+      const product = await getProductById(dishId);
+      if (product && product.name) {
+        return product.name;
+      }
+    } catch (error) {
+      console.warn(`[getDishName] Error fetching product ${dishId}:`, error);
     }
+    
+    // Fallback: intentar desde traducciones JSON
+    try {
+      const translated = t(`dishes.${dishId}.name`);
+      if (translated && translated !== `dishes.${dishId}.name`) {
+        return translated;
+      }
+    } catch {
+      // Ignorar errores de traducción
+    }
+    
+    // Último fallback
+    return `dish-${dishId}`;
+  };
+  
+  // Función para obtener el nombre traducido de un item, manejando claves de traducción
+  const getItemTranslatedName = async (item: { id: number; name: string }): Promise<string> => {
+    // Si el nombre ya es válido y no es un fallback, usarlo directamente
+    if (item.name && !item.name.startsWith('dish-') && !item.name.match(/^dishes\.\d+\.name$/)) {
+      return item.name;
+    }
+    
+    // Si el nombre es una clave de traducción o un fallback, obtenerlo de la BD
+    if (typeof item.id === 'number' && item.id > 0 && item.id < 10000) {
+      return await getDishName(item.id);
+    }
+    
+    // En otros casos (combos, etc.), usar el nombre directamente
+    return item.name;
   };
 
   // Cargar todas las órdenes desde Supabase
@@ -84,35 +119,43 @@ const PaymentMethodsScreen: React.FC = () => {
   }, [orders]);
 
   // Sumar todos los items de todas las órdenes más el carrito actual
-  const orderItems: OrderItem[] = useMemo(() => {
-    const allItems: OrderItem[] = [];
-    
-    // Agregar items de todas las órdenes
-    orders.forEach(order => {
-      order.items.forEach(item => {
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  
+  useEffect(() => {
+    const loadOrderItems = async () => {
+      const allItems: OrderItem[] = [];
+      
+      // Agregar items de todas las órdenes
+      for (const order of orders) {
+        for (const item of order.items) {
+          const translatedName = await getItemTranslatedName(item);
+          allItems.push({
+            id: item.id,
+            name: translatedName,
+            quantity: item.quantity,
+            price: item.price,
+            notes: item.notes || undefined,
+          });
+        }
+      }
+      
+      // Agregar items del carrito actual
+      for (const item of cart) {
+        const translatedName = await getDishName(item.id);
         allItems.push({
           id: item.id,
-          name: item.name,
+          name: translatedName,
           quantity: item.quantity,
           price: item.price,
           notes: item.notes || undefined,
         });
-      });
-    });
+      }
+      
+      setOrderItems(allItems);
+    };
     
-    // Agregar items del carrito actual
-    cart.forEach(item => {
-      allItems.push({
-        id: item.id,
-        name: getDishName(item.id),
-        quantity: item.quantity,
-        price: item.price,
-        notes: item.notes || undefined,
-      });
-    });
-    
-    return allItems;
-  }, [orders, cart]);
+    loadOrderItems();
+  }, [orders, cart, t]);
 
   // Tarjetas disponibles
   const cards: Card[] = [
@@ -166,19 +209,24 @@ const PaymentMethodsScreen: React.FC = () => {
         </div>
       </header>
 
+      {/* Encabezado - Solo mostrar si hay items en el carrito */}
+      {orderItems.length > 0 && (
       <div className="px-4 pt-5 pb-2">
         <h3 className="text-xl font-bold text-primary">{t('payment.enjoyMessage')}</h3>
         <p className="text-[#6b7280] dark:text-gray-400 mt-1">{t('payment.reviewOrder')}</p>
         
-        {/* Botón para pago dividido */}
-        <button
-          onClick={() => navigate('/split-payment-selection')}
-          className="mt-4 w-full py-3 px-4 rounded-xl bg-primary/10 dark:bg-primary/20 border-2 border-primary/30 dark:border-primary/40 text-primary font-semibold hover:bg-primary/20 dark:hover:bg-primary/30 transition-all flex items-center justify-center gap-2"
-        >
-          <span className="material-symbols-outlined">account_balance_wallet</span>
-          <span>{t('splitPayment.splitBill')}</span>
-        </button>
+        {/* Botón para pago dividido - Solo mostrar si la orden es grupal */}
+        {isGroupOrder && (
+          <button
+            onClick={() => navigate('/split-payment-selection')}
+            className="mt-4 w-full py-3 px-4 rounded-xl bg-primary/10 dark:bg-primary/20 border-2 border-primary/30 dark:border-primary/40 text-primary font-semibold hover:bg-primary/20 dark:hover:bg-primary/30 transition-all flex items-center justify-center gap-2"
+          >
+            <span className="material-symbols-outlined">account_balance_wallet</span>
+            <span>{t('splitPayment.splitBill')}</span>
+          </button>
+        )}
       </div>
+      )}
 
       {/* Resumen de la Orden */}
       <div className="px-4 py-4">
@@ -212,125 +260,8 @@ const PaymentMethodsScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Método de Pago */}
-      <div className="px-4 py-4">
-        <h4 className="text-lg font-bold mb-4">{t('payment.paymentMethod')}</h4>
-        
-        {/* Opción Efectivo */}
-        <div className="mb-4">
-          <label
-            onClick={() => {
-              setSelectedPaymentMethod('cash');
-              setSelectedCardId(null);
-            }}
-            className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-              selectedPaymentMethod === 'cash'
-                ? 'border-primary bg-primary/5 dark:bg-primary/10'
-                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] hover:border-gray-300 dark:hover:border-gray-600'
-            }`}
-          >
-            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-              selectedPaymentMethod === 'cash'
-                ? 'border-primary bg-primary'
-                : 'border-gray-300 dark:border-gray-600'
-            }`}>
-              {selectedPaymentMethod === 'cash' && (
-                <span className="material-symbols-outlined text-white text-sm">check</span>
-              )}
-            </div>
-            <div className="flex items-center gap-3 flex-1">
-              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10">
-                <span className="material-symbols-outlined text-primary text-xl">payments</span>
-              </div>
-              <div>
-                <p className="font-semibold text-[#181411] dark:text-white">{t('payment.payCash')}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('payment.payCashDescription')}</p>
-              </div>
-            </div>
-          </label>
-        </div>
-
-        {/* Opción Tarjeta */}
-        {config.allowCardPayment && (
-          <div className="mb-4">
-            <label
-              onClick={() => {
-                setSelectedPaymentMethod('card');
-                if (cards.length > 0 && !selectedCardId) {
-                  setSelectedCardId(cards[0].id);
-                }
-              }}
-              className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all mb-3 ${
-                selectedPaymentMethod === 'card'
-                  ? 'border-primary bg-primary/5 dark:bg-primary/10'
-                  : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                selectedPaymentMethod === 'card'
-                  ? 'border-primary bg-primary'
-                  : 'border-gray-300 dark:border-gray-600'
-              }`}>
-                {selectedPaymentMethod === 'card' && (
-                  <span className="material-symbols-outlined text-white text-sm">check</span>
-                )}
-              </div>
-              <div className="flex items-center gap-3 flex-1">
-                <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10">
-                  <span className="material-symbols-outlined text-primary text-xl">credit_card</span>
-                </div>
-                <div>
-                  <p className="font-semibold text-[#181411] dark:text-white">{t('payment.payCard')}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('payment.payCardDescription')}</p>
-                </div>
-              </div>
-            </label>
-
-            {/* Selección de Tarjetas */}
-            {selectedPaymentMethod === 'card' && config.allowCardPayment && (
-            <div className="mt-3 space-y-2">
-              {cards.filter(card => !card.isDisabled).map((card) => (
-                <label
-                  key={card.id}
-                  onClick={() => setSelectedCardId(card.id)}
-                  className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                    selectedCardId === card.id
-                      ? 'border-primary bg-primary/5 dark:bg-primary/10'
-                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
-                >
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    selectedCardId === card.id
-                      ? 'border-primary bg-primary'
-                      : 'border-gray-300 dark:border-gray-600'
-                  }`}>
-                    {selectedCardId === card.id && (
-                      <span className="material-symbols-outlined text-white text-xs">check</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-1">
-                    <span className="material-symbols-outlined text-primary">credit_card</span>
-                    <div>
-                      <p className="text-sm font-semibold text-[#181411] dark:text-white">{card.brand}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">{card.number}</p>
-                    </div>
-                  </div>
-                </label>
-              ))}
-              <button
-                onClick={() => navigate('/add-card')}
-                className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/30 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all"
-              >
-                <span className="material-symbols-outlined text-primary">add</span>
-                <span className="text-sm font-semibold text-primary">{t('payment.addNewCard')}</span>
-              </button>
-            </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Summary */}
+      {/* Summary - Solo mostrar si hay items en el carrito */}
+      {orderItems.length > 0 && (
       <div className="px-4 py-4">
         <div className="bg-white dark:bg-[#2d2516] rounded-xl p-5 shadow-sm border border-gray-100 dark:border-[#3d3321]">
           <div className="space-y-3">
@@ -474,6 +405,7 @@ const PaymentMethodsScreen: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Notificación flotante si la orden no ha sido enviada */}
       {showOrderNotSentNotification && (
@@ -526,6 +458,126 @@ const PaymentMethodsScreen: React.FC = () => {
           </div>
           </div>
         </>
+      )}
+
+      {/* Método de Pago - Solo mostrar si hay items en el carrito */}
+      {orderItems.length > 0 && (
+      <div className="px-4 py-4">
+        <h4 className="text-lg font-bold mb-4">{t('payment.paymentMethod')}</h4>
+        
+        {/* Opción Efectivo */}
+        <div className="mb-4">
+          <label
+            onClick={() => {
+              setSelectedPaymentMethod('cash');
+              setSelectedCardId(null);
+            }}
+            className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+              selectedPaymentMethod === 'cash'
+                ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+          >
+            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+              selectedPaymentMethod === 'cash'
+                ? 'border-primary bg-primary'
+                : 'border-gray-300 dark:border-gray-600'
+            }`}>
+              {selectedPaymentMethod === 'cash' && (
+                <span className="material-symbols-outlined text-white text-sm">check</span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 flex-1">
+              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10">
+                <span className="material-symbols-outlined text-primary text-xl">payments</span>
+              </div>
+              <div>
+                <p className="font-semibold text-[#181411] dark:text-white">{t('payment.payCash')}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('payment.payCashDescription')}</p>
+              </div>
+            </div>
+          </label>
+        </div>
+
+        {/* Opción Tarjeta */}
+        {config.allowCardPayment && (
+          <div className="mb-4">
+            <label
+              onClick={() => {
+                setSelectedPaymentMethod('card');
+                if (cards.length > 0 && !selectedCardId) {
+                  setSelectedCardId(cards[0].id);
+                }
+              }}
+              className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all mb-3 ${
+                selectedPaymentMethod === 'card'
+                  ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                  : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] hover:border-gray-300 dark:hover:border-gray-600'
+              }`}
+            >
+              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                selectedPaymentMethod === 'card'
+                  ? 'border-primary bg-primary'
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}>
+                {selectedPaymentMethod === 'card' && (
+                  <span className="material-symbols-outlined text-white text-sm">check</span>
+                )}
+              </div>
+              <div className="flex items-center gap-3 flex-1">
+                <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10">
+                  <span className="material-symbols-outlined text-primary text-xl">credit_card</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-[#181411] dark:text-white">{t('payment.payCard')}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('payment.payCardDescription')}</p>
+                </div>
+              </div>
+            </label>
+
+            {/* Selección de Tarjetas */}
+            {selectedPaymentMethod === 'card' && config.allowCardPayment && (
+            <div className="mt-3 space-y-2">
+              {cards.filter(card => !card.isDisabled).map((card) => (
+                <label
+                  key={card.id}
+                  onClick={() => setSelectedCardId(card.id)}
+                  className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                    selectedCardId === card.id
+                      ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    selectedCardId === card.id
+                      ? 'border-primary bg-primary'
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}>
+                    {selectedCardId === card.id && (
+                      <span className="material-symbols-outlined text-white text-xs">check</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-1">
+                    <span className="material-symbols-outlined text-primary">credit_card</span>
+                    <div>
+                      <p className="text-sm font-semibold text-[#181411] dark:text-white">{card.brand}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">{card.number}</p>
+                    </div>
+                  </div>
+                </label>
+              ))}
+              <button
+                onClick={() => navigate('/add-card')}
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/30 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all"
+              >
+                <span className="material-symbols-outlined text-primary">add</span>
+                <span className="text-sm font-semibold text-primary">{t('payment.addNewCard')}</span>
+              </button>
+            </div>
+            )}
+          </div>
+        )}
+      </div>
       )}
 
       {/* Solicitar Asistencia */}

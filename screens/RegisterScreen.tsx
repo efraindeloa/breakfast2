@@ -41,7 +41,7 @@ const countryCodes: CountryCode[] = [
 const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { signUp } = useAuth();
+  const { signUp, signIn } = useAuth();
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [selectedCountryCode, setSelectedCountryCode] = useState<CountryCode>(countryCodes[0]);
   const [showCountrySelector, setShowCountrySelector] = useState(false);
@@ -286,14 +286,22 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
           return;
         }
 
-        // Registro exitoso
-        setSuccessMessage(t('register.registrationSuccess') || '¡Registro exitoso! Redirigiendo...');
+        // Registro exitoso - iniciar sesión automáticamente
+        setSuccessMessage(t('register.registrationSuccess') || '¡Registro exitoso! Iniciando sesión...');
         
-        // Redirigir inmediatamente (no hay necesidad de verificar email)
+        // Iniciar sesión automáticamente con las credenciales que acaba de usar
+        const { error: signInError } = await signIn(email, password);
+        
+        if (signInError) {
+          console.error('Auto sign-in error after registration:', signInError);
+          // Si falla el auto sign-in, mostrar mensaje pero aún así intentar redirigir
+          setSuccessMessage(t('register.registrationSuccess') || '¡Registro exitoso! Redirigiendo...');
+        }
+        
+        // Redirigir a la app (el AuthContext manejará la sesión)
         setTimeout(() => {
-          onLogin();
           navigate('/home');
-        }, 1500);
+        }, 1000);
       } catch (err) {
         console.error('Unexpected registration error:', err);
         setEmailOrPhoneError(t('register.registrationError') || 'Error inesperado al registrarse');

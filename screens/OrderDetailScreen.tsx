@@ -1,11 +1,12 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useGroupOrder } from '../contexts/GroupOrderContext';
-import { useTranslation } from '../contexts/LanguageContext';
+import { useTranslation, useLanguage } from '../contexts/LanguageContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { Order, OrderStatus } from '../types/order';
 import { getOrders, updateOrder } from '../services/database';
+import { formatPrice } from '../utils/currency';
 
 interface StatusHistory {
   status: OrderStatus;
@@ -15,7 +16,9 @@ interface StatusHistory {
 
 const OrderDetailScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
   const { t } = useTranslation();
+  const { selectedLanguage } = useLanguage();
   const { cart: currentCartItems, clearCart } = useCart();
   const { config } = useRestaurant();
   const { isGroupOrder, participants, currentUserParticipant, isConfirmed } = useGroupOrder();
@@ -24,6 +27,14 @@ const OrderDetailScreen: React.FC = () => {
   // Cargar todas las órdenes desde Supabase
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+
+  // Filtrar órdenes si se especifica un ID en la URL
+  const displayedOrders = useMemo(() => {
+    if (id) {
+      return orders.filter(order => order.orderId === id);
+    }
+    return orders;
+  }, [orders, id]);
 
   useEffect(() => {
     const loadOrders = async () => {
@@ -76,50 +87,140 @@ const OrderDetailScreen: React.FC = () => {
     return Math.max(...orders.map(o => o.orderNumber)) + 1;
   };
 
-  // Función para enviar la orden complementaria
-  const handleSendComplementaryOrder = () => {
+  // Función para enviar la orden complementaria o actualizar la orden original
+  const handleSendComplementaryOrder = async () => {
     if (currentCartItems.length === 0) return;
 
-    const orderNumber = getNextOrderNumber();
-    
-    // Mapear items del carrito a items de la orden
-    const orderItems = currentCartItems.map(item => ({
-      id: item.id,
-      name: getDishName(item.id),
-      price: item.price,
-      notes: item.notes || '', // Mantener las notas individuales del item
-      quantity: item.quantity,
-    }));
+    // Buscar si hay una orden enviada
+    const sentOrder = orders.find(order => 
+      ['orden_enviada', 'orden_recibida', 'en_preparacion', 'lista_para_entregar', 'en_entrega'].includes(order.status)
+    );
 
-    // Si hay instrucciones especiales, agregarlas al primer item que no tenga notas
-    // o al primer item en general
-    if (complementaryOrderInstructions.trim() && orderItems.length > 0) {
-      // Buscar el primer item sin notas, o usar el primero
-      const itemToAddInstructions = orderItems.find(item => !item.notes) || orderItems[0];
-      if (itemToAddInstructions) {
-        itemToAddInstructions.notes = itemToAddInstructions.notes 
-          ? `${itemToAddInstructions.notes}. ${complementaryOrderInstructions}` 
-          : complementaryOrderInstructions;
+    if (sentOrder) {
+      // Si hay una orden enviada, actualizar la orden original agregando los items nuevos
+      const newItems = currentCartItems.filter(cartItem => {
+        // Verificar si el item ya existe en la orden original
+        const existsInOriginal = sentOrder.items.some(
+          origItem => origItem.id === cartItem.id && (origItem.notes || '') === (cartItem.notes || '')
+        );
+        return !existsInOriginal;
+      });
+
+      if (newItems.length === 0) {
+        alert('No hay items nuevos para agregar. Todos los items ya están en la orden.');
+        return;
+      }
+
+      // Combinar items originales con items nuevos
+      const updatedItems = [
+        ...sentOrder.items,
+        ...newItems.map(item => ({
+          id: item.id,
+          name: getDishName(item.id),
+          price: item.price,
+          notes: item.notes || '',
+          quantity: item.quantity,
+        }))
+      ];
+
+      // Si hay instrucciones especiales, agregarlas al primer item nuevo que no tenga notas
+      if (complementaryOrderInstructions.trim() && newItems.length > 0) {
+        const firstNewItem = updatedItems.find(item => 
+          newItems.some(newItem => newItem.id === item.id && (newItem.notes || '') === (item.notes || ''))
+        );
+        if (firstNewItem && !firstNewItem.notes) {
+          firstNewItem.notes = complementaryOrderInstructions;
+        } else if (firstNewItem) {
+          firstNewItem.notes = `${firstNewItem.notes}. ${complementaryOrderInstructions}`;
+        }
+      }
+
+      // Calcular nuevo total
+      const newTotal = updatedItems.reduce((sum, item) => {
+        const price = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0;
+        return sum + (price * item.quantity);
+      }, 0);
+
+      // Actualizar la orden original en Supabase
+      try {
+        const { updateOrder } = await import('../services/database');
+        const updatedOrder = await updateOrder(sentOrder.orderId, {
+          items: updatedItems,
+          total: newTotal,
+          notes: complementaryOrderInstructions.trim() || sentOrder.notes || undefined,
+        } as any);
+
+        if (updatedOrder) {
+          // Recargar órdenes desde Supabase
+          const loadedOrders = await getOrders();
+          setOrders(loadedOrders);
+          clearCart();
+          setComplementaryOrderInstructions('');
+
+          // Navegar a la página de confirmación
+          navigate('/order-confirmed');
+        } else {
+          console.error('Failed to update order');
+          alert('Error al actualizar la orden. Por favor, intenta de nuevo.');
+        }
+      } catch (error) {
+        console.error('Error updating order:', error);
+        alert('Error al actualizar la orden. Por favor, intenta de nuevo.');
+      }
+    } else {
+      // Si no hay orden enviada, crear una nueva orden complementaria
+      const orderNumber = getNextOrderNumber();
+      
+      // Mapear items del carrito a items de la orden
+      const orderItems = currentCartItems.map(item => ({
+        id: item.id,
+        name: getDishName(item.id),
+        price: item.price,
+        notes: item.notes || '',
+        quantity: item.quantity,
+      }));
+
+      // Si hay instrucciones especiales, agregarlas al primer item que no tenga notas
+      if (complementaryOrderInstructions.trim() && orderItems.length > 0) {
+        const itemToAddInstructions = orderItems.find(item => !item.notes) || orderItems[0];
+        if (itemToAddInstructions) {
+          itemToAddInstructions.notes = itemToAddInstructions.notes 
+            ? `${itemToAddInstructions.notes}. ${complementaryOrderInstructions}` 
+            : complementaryOrderInstructions;
+        }
+      }
+
+      // Crear la orden complementaria en Supabase
+      try {
+        const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        
+        const { createOrder } = await import('../services/database');
+        const newOrder = await createOrder({
+          restaurant_id: '00000000-0000-0000-0000-000000000001',
+          status: 'orden_enviada',
+          total: total,
+          items: orderItems,
+          notes: complementaryOrderInstructions.trim() || undefined,
+        } as any);
+
+        if (newOrder) {
+          // Recargar órdenes desde Supabase
+          const loadedOrders = await getOrders();
+          setOrders(loadedOrders);
+          clearCart();
+          setComplementaryOrderInstructions('');
+
+          // Navegar a la página de confirmación
+          navigate('/order-confirmed');
+        } else {
+          console.error('Failed to create complementary order');
+          alert('Error al crear la orden complementaria. Por favor, intenta de nuevo.');
+        }
+      } catch (error) {
+        console.error('Error creating complementary order:', error);
+        alert('Error al crear la orden complementaria. Por favor, intenta de nuevo.');
       }
     }
-
-    const newOrder: Order = {
-      orderId: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      orderNumber,
-      items: orderItems,
-      status: 'orden_enviada',
-      timestamp: new Date().toISOString(),
-    };
-
-    // Actualizar el estado de órdenes (el useEffect se encargará de guardar en localStorage)
-    setOrders(prev => [...prev, newOrder]);
-
-    // Limpiar el carrito y las instrucciones
-    clearCart();
-    setComplementaryOrderInstructions('');
-
-    // Navegar a la página de confirmación
-    navigate('/order-confirmed');
   };
 
   const getStatusInfo = (status: OrderStatus) => {
@@ -214,7 +315,7 @@ const OrderDetailScreen: React.FC = () => {
   };
 
   // Si no hay órdenes, mostrar mensaje
-  if (orders.length === 0 && currentCartItems.length === 0) {
+  if (displayedOrders.length === 0 && currentCartItems.length === 0 && !isLoadingOrders) {
     return (
       <div className="pb-32 overflow-y-auto bg-background-light dark:bg-background-dark min-h-screen">
         <header className="flex items-center bg-white dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-50 border-b border-gray-100 dark:border-gray-800 safe-top">
@@ -262,7 +363,7 @@ const OrderDetailScreen: React.FC = () => {
 
       <div className="px-4 py-6">
         {/* Lista de Órdenes */}
-        {orders.map((order) => {
+        {displayedOrders.map((order) => {
           const statusInfo = getStatusInfo(order.status);
           const timestamp = formatTimestamp(order.timestamp);
           const orderTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -316,7 +417,7 @@ const OrderDetailScreen: React.FC = () => {
                         )}
                       </div>
                       <span className="text-sm font-bold text-[#181411] dark:text-white ml-4">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        {formatPrice(item.price * item.quantity, selectedLanguage)}
                       </span>
                     </div>
                   ))}
@@ -340,7 +441,7 @@ const OrderDetailScreen: React.FC = () => {
             <div className="flex items-center gap-2 mb-4">
               <span className="material-symbols-outlined text-primary">receipt_long</span>
               <h3 className="text-lg font-bold text-[#181411] dark:text-white">
-                {orders.length > 0 ? `${t('orderDetail.complementaryOrder')} #${orders.length + 1}` : t('orderDetail.complementaryOrder')}
+                {displayedOrders.length > 0 ? `${t('orderDetail.complementaryOrder')} #${displayedOrders.length + 1}` : t('orderDetail.complementaryOrder')}
               </h3>
             </div>
             <div className="space-y-2 mb-4">
@@ -421,7 +522,7 @@ const OrderDetailScreen: React.FC = () => {
 
         {/* Botones de Acción */}
         {/* Botón para enviar orden pendiente a cocina */}
-        {orders.some(order => order.status === 'pending') && (
+        {displayedOrders.some(order => order.status === 'pending') && (
           <div className="mb-6">
             <button
               onClick={async () => {
@@ -452,7 +553,7 @@ const OrderDetailScreen: React.FC = () => {
 
         {hasSentOrder && config.allowOrderModification && currentCartItems.length === 0 && (
           <div className="space-y-3">
-            {orders.length > 0 && orders.some(order => 
+            {displayedOrders.length > 0 && displayedOrders.some(order => 
               ['orden_enviada', 'orden_recibida'].includes(order.status)
             ) && (
               <button

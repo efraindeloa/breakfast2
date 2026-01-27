@@ -3,6 +3,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
+import { supabase, isSupabaseConfigured } from '../config/supabase';
 
 interface Card {
   id: number;
@@ -21,6 +24,7 @@ const ProfileScreen: React.FC = () => {
   const { t } = useTranslation();
   const { config } = useRestaurant();
   const { signOut } = useAuth();
+  const { clearCart } = useCart();
   const [cards, setCards] = useState<Card[]>([
     {
       id: 1,
@@ -45,13 +49,15 @@ const ProfileScreen: React.FC = () => {
     },
   ]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
+  const { user } = useAuth();
   const [userData, setUserData] = useState({
-    name: 'Carlos González',
-    email: 'carlos.gonzalez@email.com',
-    phone: '+52 55 1234 5678',
+    name: '',
+    email: '',
+    phone: '',
   });
   const [editingField, setEditingField] = useState<'name' | 'email' | 'phone' | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [isLoadingUserData, setIsLoadingUserData] = useState(true);
   const defaultImage = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCpDz7kylj-nzXQ8dgTtg0umbheeBshTyl9RxUnJSp0BUjFcWJ3sxgOubkQ8zmiPon5fihqbaOxTagMXDyKVNgvKz26RDTYgirEcCoN4D63BS70Z756QE8GvMF0f9jY4ay6NQGHThIUrY9LyBJ36TnvGVD55nEjl3MkjHlHN1Lu8GWsNcmjYRbb1fvVeEXa3U082ocTXHk5jBmvqBPt1G5iwzCVNqXclTyviqCl15lCCSj96Ih0QAmRstK-YiKSnnxj97uPAvxJUJVd';
   const [profileImage, setProfileImage] = useState<string>(defaultImage);
   const [showCropModal, setShowCropModal] = useState(false);
@@ -65,6 +71,75 @@ const ProfileScreen: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Cargar datos del usuario desde la base de datos
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!isSupabaseConfigured() || !user?.id) {
+        setIsLoadingUserData(false);
+        return;
+      }
+
+      try {
+        setIsLoadingUserData(true);
+        const { data, error } = await supabase
+          .from('users')
+          .select('name, email, phone')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('[ProfileScreen] Error loading user data:', error);
+          // Si hay error, usar datos del usuario autenticado de Supabase Auth
+          // Obtener nombre de OAuth si está disponible (full_name, name, o email)
+          const fullName = user.user_metadata?.full_name || 
+                          user.user_metadata?.name || 
+                          user.email?.split('@')[0] || 
+                          '';
+          setUserData({
+            name: fullName,
+            email: user.email || '',
+            phone: user.phone || user.user_metadata?.phone || '',
+          });
+        } else if (data) {
+          // Si hay datos en la BD, usarlos, pero si el nombre está vacío, intentar obtenerlo de OAuth
+          const fullName = data.name || 
+                          user.user_metadata?.full_name || 
+                          user.user_metadata?.name || 
+                          user.email?.split('@')[0] || 
+                          '';
+          setUserData({
+            name: fullName,
+            email: data.email || user.email || '',
+            phone: data.phone || user.phone || user.user_metadata?.phone || '',
+          });
+        } else {
+          // Si no hay datos en la tabla users, usar datos de Supabase Auth (incluyendo OAuth)
+          const fullName = user.user_metadata?.full_name || 
+                          user.user_metadata?.name || 
+                          user.email?.split('@')[0] || 
+                          '';
+          setUserData({
+            name: fullName,
+            email: user.email || '',
+            phone: user.phone || user.user_metadata?.phone || '',
+          });
+        }
+      } catch (error) {
+        console.error('[ProfileScreen] Error loading user data:', error);
+        // Fallback a datos de Supabase Auth
+        setUserData({
+          name: user.user_metadata?.name || user.email?.split('@')[0] || '',
+          email: user.email || '',
+          phone: user.phone || user.user_metadata?.phone || '',
+        });
+      } finally {
+        setIsLoadingUserData(false);
+      }
+    };
+
+    loadUserData();
+  }, [user?.id]);
 
   // Cargar imagen desde localStorage al iniciar
   useEffect(() => {
@@ -158,9 +233,37 @@ const ProfileScreen: React.FC = () => {
     setEditValue(userData[field]);
   };
 
-  const handleSaveEdit = () => {
-    if (editingField) {
-      setUserData({ ...userData, [editingField]: editValue });
+  const handleSaveEdit = async () => {
+    if (editingField && user?.id) {
+      try {
+        // Actualizar en la base de datos
+        if (isSupabaseConfigured()) {
+          const updateData: { name?: string; email?: string; phone?: string } = {};
+          updateData[editingField] = editValue;
+
+          const { error } = await supabase
+            .from('users')
+            .update(updateData)
+            .eq('id', user.id);
+
+          if (error) {
+            console.error('[ProfileScreen] Error updating user data:', error);
+            // Aún así actualizar el estado local
+            setUserData({ ...userData, [editingField]: editValue });
+          } else {
+            // Actualizar estado local solo si la actualización fue exitosa
+            setUserData({ ...userData, [editingField]: editValue });
+          }
+        } else {
+          // Si no hay Supabase, solo actualizar estado local
+          setUserData({ ...userData, [editingField]: editValue });
+        }
+      } catch (error) {
+        console.error('[ProfileScreen] Error saving user data:', error);
+        // Aún así actualizar el estado local
+        setUserData({ ...userData, [editingField]: editValue });
+      }
+      
       setEditingField(null);
       setEditValue('');
     }
@@ -437,7 +540,18 @@ const ProfileScreen: React.FC = () => {
             />
           </div>
           <div className="flex flex-col items-center">
-            <p className="text-[24px] font-bold">{t('profile.greeting')}</p>
+            <p className="text-[24px] font-bold">
+              {(() => {
+                // Obtener el primer nombre del usuario
+                const firstName = userData.name?.split(' ')[0] || 
+                                 user?.user_metadata?.full_name?.split(' ')[0] || 
+                                 user?.user_metadata?.name?.split(' ')[0] || 
+                                 user?.email?.split('@')[0] || 
+                                 'Usuario';
+                // Reemplazar "Carlos" con el nombre real
+                return t('profile.greeting').replace('Carlos', firstName);
+              })()}
+            </p>
             <p className="text-[#8a7560] dark:text-[#c0a890] mt-1 text-center">{t('profile.greetingMessage')}</p>
             <div className="mt-2 px-3 py-1 bg-primary/10 rounded-full">
               <p className="text-primary text-xs font-semibold uppercase">{t('profile.memberSince')}</p>
@@ -484,7 +598,7 @@ const ProfileScreen: React.FC = () => {
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
-                  <p className="font-semibold text-[#181411] dark:text-white">{userData.name}</p>
+                  <p className="font-semibold text-[#181411] dark:text-white">{userData.name || '-'}</p>
                   <button
                     onClick={() => handleStartEdit('name')}
                     className="text-primary hover:text-primary/80 transition-colors p-1"
@@ -532,7 +646,7 @@ const ProfileScreen: React.FC = () => {
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
-                  <p className="font-semibold text-[#181411] dark:text-white">{userData.email}</p>
+                  <p className="font-semibold text-[#181411] dark:text-white">{userData.email || '-'}</p>
                   <button
                     onClick={() => handleStartEdit('email')}
                     className="text-primary hover:text-primary/80 transition-colors p-1"
@@ -580,7 +694,7 @@ const ProfileScreen: React.FC = () => {
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
-                  <p className="font-semibold text-[#181411] dark:text-white">{userData.phone}</p>
+                  <p className="font-semibold text-[#181411] dark:text-white">{userData.phone || '-'}</p>
                   <button
                     onClick={() => handleStartEdit('phone')}
                     className="text-primary hover:text-primary/80 transition-colors p-1"
@@ -654,8 +768,23 @@ const ProfileScreen: React.FC = () => {
       <div className="px-4 mt-8">
         <button 
           onClick={async () => {
-            await signOut();
-            navigate('/');
+            try {
+              // Limpiar carrito ANTES de cerrar sesión (necesita usuario autenticado)
+              await clearCart();
+              // Cerrar sesión
+              await signOut();
+              // Redirigir a la página de login/welcome
+              navigate('/', { replace: true });
+            } catch (error) {
+              console.error('Error al cerrar sesión:', error);
+              // Aún así intentar cerrar sesión y redirigir
+              try {
+                await signOut();
+              } catch (signOutError) {
+                console.error('Error al cerrar sesión después del error:', signOutError);
+              }
+              navigate('/', { replace: true });
+            }
           }}
           className="w-full h-14 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 font-bold rounded-xl border border-red-100 dark:border-red-900/30 active:scale-95 transition-all"
         >

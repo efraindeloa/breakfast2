@@ -8,12 +8,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('⚠️ Supabase URL o Anon Key no están configuradas. Usando localStorage como fallback.');
 }
 
-// Crear cliente de Supabase
+// Crear cliente de Supabase con configuración para evitar expiración de sesiones
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    // Configurar para que los tokens se renueven automáticamente
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    storageKey: 'supabase.auth.token',
+    // Refrescar tokens antes de que expiren (cada 30 minutos)
+    flowType: 'pkce'
   }
 });
 

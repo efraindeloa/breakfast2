@@ -4,6 +4,7 @@ import { useCart } from '../contexts/CartContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useProducts } from '../contexts/ProductsContext';
+import { formatPrice } from '../utils/currency';
 
 const REVIEWS_STORAGE_KEY = 'user_reviews';
 
@@ -366,6 +367,9 @@ const DishDetailScreen: React.FC = () => {
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [showAddedFeedback, setShowAddedFeedback] = useState(false);
 
+  // Obtener el idioma seleccionado para formatear precios
+  const selectedLanguage = localStorage.getItem('selectedLanguage');
+  
   const productFromDB = getProduct(parseInt(id || '0'));
   const dishFromCode = allDishes.find(d => d.id === parseInt(id || '0'));
   // Usar producto de Supabase si existe, sino usar el hardcodeado
@@ -373,7 +377,9 @@ const DishDetailScreen: React.FC = () => {
     id: productFromDB.id,
     name: productFromDB.name,
     description: productFromDB.description,
-    price: typeof productFromDB.price === 'number' ? `$${productFromDB.price.toFixed(2)}` : productFromDB.price,
+    price: typeof productFromDB.price === 'number' 
+      ? formatPrice(productFromDB.price, selectedLanguage)
+      : productFromDB.price,
     image: productFromDB.image || productFromDB.image_url || '',
     badges: productFromDB.badges,
     category: productFromDB.category,
@@ -481,7 +487,8 @@ const DishDetailScreen: React.FC = () => {
   // Función helper para convertir precio a número (maneja tanto string como number)
   const getPriceAsNumber = (price: string | number): number => {
     if (typeof price === 'number') return price;
-    return parseFloat(price.replace('$', '').replace(',', ''));
+    // Remover cualquier símbolo de moneda y caracteres no numéricos excepto punto
+    return parseFloat(price.replace(/[^0-9.]/g, '')) || 0;
   };
 
   // Calcular precio total
@@ -711,10 +718,10 @@ const DishDetailScreen: React.FC = () => {
               {sizeOptions.hasSizes && selectedSize ? (
                 <div>
                   {selectedSize === 'portion' && sizeOptions.portionPrice !== null && (
-                    <p className="text-2xl font-bold text-primary">${sizeOptions.portionPrice.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-primary">{formatPrice(sizeOptions.portionPrice, selectedLanguage)}</p>
                   )}
                   {selectedSize === 'bottle' && sizeOptions.bottlePrice !== null && (
-                    <p className="text-2xl font-bold text-primary">${sizeOptions.bottlePrice.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-primary">{formatPrice(sizeOptions.bottlePrice, selectedLanguage)}</p>
                   )}
                 </div>
               ) : (
@@ -764,7 +771,7 @@ const DishDetailScreen: React.FC = () => {
                           )}
                         </div>
                       </div>
-                      <span className="text-sm font-semibold text-primary">${sizeOptions.portionPrice.toFixed(2)}</span>
+                      <span className="text-sm font-semibold text-primary">{formatPrice(sizeOptions.portionPrice, selectedLanguage)}</span>
                     </label>
                   )}
                   {sizeOptions.bottlePrice !== null && (
@@ -793,7 +800,7 @@ const DishDetailScreen: React.FC = () => {
                           )}
                         </div>
                       </div>
-                      <span className="text-sm font-semibold text-primary">${sizeOptions.bottlePrice.toFixed(2)}</span>
+                      <span className="text-sm font-semibold text-primary">{formatPrice(sizeOptions.bottlePrice, selectedLanguage)}</span>
                     </label>
                   )}
                 </div>
@@ -892,7 +899,7 @@ const DishDetailScreen: React.FC = () => {
               <>
                 <span className="material-symbols-outlined text-xl">note_add</span>
                 <span>{t('dishDetail.add')}</span>
-                <span className="text-xl font-bold">${totalPrice.toFixed(2)}</span>
+                <span className="text-xl font-bold">{formatPrice(totalPrice, selectedLanguage)}</span>
                 {cartQuantity > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[24px] h-6 px-1.5 rounded-full bg-white text-primary text-xs font-bold flex items-center justify-center shadow-lg border-2 border-primary">
                     {cartQuantity > 9 ? '9+' : cartQuantity}

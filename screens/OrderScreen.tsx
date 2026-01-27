@@ -7,10 +7,12 @@ import { useFavorites } from '../contexts/FavoritesContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { Order, OrderStatus } from '../types/order';
 import { getOrders, createOrder as createOrderDB, updateOrder } from '../services/database';
+import { formatPrice } from '../utils/currency';
 
 const OrderScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const selectedLanguage = localStorage.getItem('selectedLanguage');
   const {
     isGroupOrder,
     isConfirmed,
@@ -58,6 +60,7 @@ const OrderScreen: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     let visibilityTimeoutId: NodeJS.Timeout | null = null;
+    let refreshIntervalId: NodeJS.Timeout | null = null;
     
     const loadOrders = async () => {
       try {
@@ -81,6 +84,13 @@ const OrderScreen: React.FC = () => {
     
     loadOrders();
     
+    // Recargar órdenes periódicamente cada 5 segundos para ver actualizaciones de estado
+    refreshIntervalId = setInterval(() => {
+      if (isMounted && !document.hidden) {
+        loadOrders();
+      }
+    }, 5000);
+    
     // Recargar órdenes cuando la ventana vuelve a estar visible (con debouncing)
     const handleVisibilityChange = () => {
       if (!document.hidden) {
@@ -103,6 +113,9 @@ const OrderScreen: React.FC = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (visibilityTimeoutId) {
         clearTimeout(visibilityTimeoutId);
+      }
+      if (refreshIntervalId) {
+        clearInterval(refreshIntervalId);
       }
     };
   }, []);
@@ -189,13 +202,16 @@ const OrderScreen: React.FC = () => {
         } as any);
         
         if (newOrder) {
-          // Recargar órdenes desde Supabase
+          // Recargar órdenes desde Supabase inmediatamente
           const loadedOrders = await getOrders();
           setOrders(loadedOrders);
           // Limpiar carrito después de crear la orden
-          clearCart();
+          await clearCart();
           // La orden se crea con status 'pending', el usuario puede enviarla a cocina después
-          // No navegamos a order-confirmed, se queda en la pantalla de órdenes
+          // Se queda en la pantalla de órdenes y se actualiza automáticamente cada 5 segundos
+        } else {
+          console.error('Failed to create order: createOrderDB returned null');
+          alert('Error al crear la orden. Por favor, intenta de nuevo.');
         }
       } catch (error) {
         console.error('Error creating order:', error);
@@ -340,7 +356,7 @@ const OrderScreen: React.FC = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-24 bg-background-light dark:bg-background-dark">
+    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-32 bg-background-light dark:bg-background-dark">
       {/* Header Section */}
       <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md safe-top">
         <div className="flex items-center p-4 pb-2 justify-between">
@@ -553,8 +569,8 @@ const OrderScreen: React.FC = () => {
                       </div>
                       <div className="text-right">
                         <p className="text-primary font-bold text-lg">
-                          ${(() => {
-                            if (!order.items || order.items.length === 0) return '0.00';
+                          {(() => {
+                            if (!order.items || order.items.length === 0) return formatPrice(0, selectedLanguage);
                             const total = order.items.reduce((sum: number, item: any) => {
                               let price = 0;
                               if (typeof item.price === 'number') {
@@ -564,7 +580,7 @@ const OrderScreen: React.FC = () => {
                               }
                               return sum + (price * (item.quantity || 1));
                             }, 0);
-                            return total.toFixed(2);
+                            return formatPrice(total, selectedLanguage);
                           })()}
                         </p>
                       </div>
@@ -677,7 +693,7 @@ const OrderScreen: React.FC = () => {
                   )}
                 </div>
                 <div className="text-right ml-4">
-                  <p className="text-[#181411] dark:text-white text-base font-bold">${item.price.toFixed(2)}</p>
+                  <p className="text-[#181411] dark:text-white text-base font-bold">{formatPrice(item.price, selectedLanguage)}</p>
                 </div>
               </div>
               {!isConfirmed && (
@@ -782,6 +798,19 @@ const OrderScreen: React.FC = () => {
           </div>
         )}
 
+        {/* Order Total */}
+        {orderItems.length > 0 && (
+          <div className="mb-6 bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border-2 border-primary/20 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">receipt_long</span>
+                <span className="text-[#181411] dark:text-white text-base font-semibold">{t('order.total')}</span>
+              </div>
+              <span className="text-primary text-2xl font-bold">{formatPrice(orderTotal, selectedLanguage)}</span>
+            </div>
+          </div>
+        )}
+
         {/* Suggested Products */}
         {orderItems.length > 0 && !isConfirmed && (
           <div className="mb-6">
@@ -860,135 +889,130 @@ const OrderScreen: React.FC = () => {
           </div>
         )}
 
-        {/* Order Total */}
-        {orderItems.length > 0 && (
-          <div className="mb-6 bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border-2 border-primary/20 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">receipt_long</span>
-                <span className="text-[#181411] dark:text-white text-base font-semibold">{t('order.total')}</span>
-              </div>
-              <span className="text-primary text-2xl font-bold">${orderTotal.toFixed(2)}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Confirm Order Button or Pay Button */}
-        {orderItems.length > 0 && (
-          <div className="mb-6">
-            {isConfirmed ? (
-              <button
-                onClick={() => navigate('/payments')}
-                className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
-              >
-                <span>{t('order.checkout')}</span>
-                <span className="material-symbols-outlined">payment</span>
-              </button>
-            ) : isGroupOrder ? (
-              <>
-                {canConfirmOrder() ? (
-                  <button
-                    onClick={handleConfirmOrder}
-                    className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
-                  >
-                    <span>{t('order.confirmAndSendOrder')}</span>
-                    <span className="material-symbols-outlined">restaurant</span>
-                  </button>
-                ) : (
-                  <div className="w-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-bold py-4 rounded-xl text-lg flex items-center justify-center gap-3 cursor-not-allowed">
-                    <span className="material-symbols-outlined">lock</span>
-                    <span>
-                      {t('order.waitingForAll')} ({getPendingCount()} {getPendingCount() !== 1 ? t('order.pending') : t('order.pendingSingular')})
-                    </span>
-                  </div>
-                )}
-              </>
-            ) : (
-              <>
-                {hasSentOrder && orderItems.length > 0 ? (
-                  <button
-                    onClick={async () => {
-                      try {
-                        // Crear nueva orden complementaria en Supabase
-                        const orderNumber = getNextOrderNumber();
-                        const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                        
-                        const newOrder = await createOrderDB({
-                          restaurant_id: '00000000-0000-0000-0000-000000000001',
-                          status: 'orden_enviada',
-                          total: total,
-                          items: orderItems.map(item => ({
-                            id: item.id,
-                            name: item.name || getDishName(item.id),
-                            price: item.price,
-                            notes: item.notes || '',
-                            quantity: item.quantity,
-                          })),
-                          notes: orderSpecialInstructions || undefined,
-                        } as any);
-                        
-                        if (newOrder) {
-                          const loadedOrders = await getOrders();
-                          setOrders(loadedOrders);
-                        }
-                        
-                        clearCart();
-                        navigate('/order-confirmed');
-                      } catch (error) {
-                        console.error('Error creating order:', error);
-                        alert('Error al crear la orden. Por favor, intenta de nuevo.');
-                      }
-                    }}
-                    className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
-                  >
-                    <span>{t('order.confirmAndSendOrder')}</span>
-                    <span className="material-symbols-outlined">restaurant</span>
-                  </button>
-                ) : !hasSentOrder && orderItems.length > 0 ? (
-                  <button
-                    onClick={async () => {
-                      try {
-                        // Crear primera orden en Supabase
-                        const orderNumber = getNextOrderNumber();
-                        const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                        
-                        const newOrder = await createOrderDB({
-                          restaurant_id: '00000000-0000-0000-0000-000000000001',
-                          status: 'orden_enviada',
-                          total: total,
-                          items: orderItems.map(item => ({
-                            id: item.id,
-                            name: item.name || getDishName(item.id),
-                            price: item.price,
-                            notes: item.notes || '',
-                            quantity: item.quantity,
-                          })),
-                          notes: orderSpecialInstructions || undefined,
-                        } as any);
-                        
-                        if (newOrder) {
-                          const loadedOrders = await getOrders();
-                          setOrders(loadedOrders);
-                        }
-                        
-                        clearCart();
-                        navigate('/order-confirmed');
-                      } catch (error) {
-                        console.error('Error creating order:', error);
-                        alert('Error al crear la orden. Por favor, intenta de nuevo.');
-                      }
-                    }}
-                    className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
-                  >
-                    <span>{t('order.confirmAndSendOrder')}</span>
-                    <span className="material-symbols-outlined">restaurant</span>
-                  </button>
-                ) : null}
-              </>
-            )}
-          </div>
-        )}
+        {/* Confirm Order Button or Pay Button - Removed from here, now fixed at bottom */}
       </main>
+
+      {/* Botón Confirmar Orden - Siempre visible en la parte inferior, justo arriba de la navbar */}
+      {orderItems.length > 0 && (
+        <div className="fixed bottom-20 left-0 right-0 z-40 bg-background-light dark:bg-background-dark border-t border-gray-200 dark:border-gray-800 px-4 py-3 shadow-lg md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2">
+          {isConfirmed ? (
+            <button
+              onClick={() => navigate('/payments')}
+              className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
+            >
+              <span>{t('order.checkout')}</span>
+              <span className="material-symbols-outlined">payment</span>
+            </button>
+          ) : isGroupOrder ? (
+            <>
+              {canConfirmOrder() ? (
+                <button
+                  onClick={handleConfirmOrder}
+                  className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
+                >
+                  <span>{t('order.confirmAndSendOrder')}</span>
+                  <span className="material-symbols-outlined">restaurant</span>
+                </button>
+              ) : (
+                <div className="w-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-bold py-4 rounded-xl text-lg flex items-center justify-center gap-3 cursor-not-allowed">
+                  <span className="material-symbols-outlined">lock</span>
+                  <span>
+                    {t('order.waitingForAll')} ({getPendingCount()} {getPendingCount() !== 1 ? t('order.pending') : t('order.pendingSingular')})
+                  </span>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {hasSentOrder && orderItems.length > 0 ? (
+                <button
+                  onClick={async () => {
+                    try {
+                      // Crear nueva orden complementaria en Supabase
+                      const orderNumber = getNextOrderNumber();
+                      const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                      
+                      const newOrder = await createOrderDB({
+                        restaurant_id: '00000000-0000-0000-0000-000000000001',
+                        status: 'orden_enviada',
+                        total: total,
+                        items: orderItems.map(item => ({
+                          id: item.id,
+                          name: item.name || getDishName(item.id),
+                          price: item.price,
+                          notes: item.notes || '',
+                          quantity: item.quantity,
+                        })),
+                        notes: orderSpecialInstructions || undefined,
+                      } as any);
+                      
+                      if (newOrder) {
+                        // Recargar órdenes desde Supabase inmediatamente
+                        const loadedOrders = await getOrders();
+                        setOrders(loadedOrders);
+                        await clearCart();
+                        // Se queda en la pantalla de órdenes y se actualiza automáticamente cada 5 segundos
+                      } else {
+                        console.error('Failed to create order: createOrderDB returned null');
+                        alert('Error al crear la orden. Por favor, intenta de nuevo.');
+                      }
+                    } catch (error) {
+                      console.error('Error creating order:', error);
+                      alert('Error al crear la orden. Por favor, intenta de nuevo.');
+                    }
+                  }}
+                  className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
+                >
+                  <span>{t('order.confirmAndSendOrder')}</span>
+                  <span className="material-symbols-outlined">restaurant</span>
+                </button>
+              ) : !hasSentOrder && orderItems.length > 0 ? (
+                <button
+                  onClick={async () => {
+                    try {
+                      // Crear primera orden en Supabase
+                      const orderNumber = getNextOrderNumber();
+                      const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                      
+                      const newOrder = await createOrderDB({
+                        restaurant_id: '00000000-0000-0000-0000-000000000001',
+                        status: 'orden_enviada',
+                        total: total,
+                        items: orderItems.map(item => ({
+                          id: item.id,
+                          name: item.name || getDishName(item.id),
+                          price: item.price,
+                          notes: item.notes || '',
+                          quantity: item.quantity,
+                        })),
+                        notes: orderSpecialInstructions || undefined,
+                      } as any);
+                      
+                      if (newOrder) {
+                        // Recargar órdenes desde Supabase inmediatamente
+                        const loadedOrders = await getOrders();
+                        setOrders(loadedOrders);
+                        await clearCart();
+                        // Se queda en la pantalla de órdenes y se actualiza automáticamente cada 5 segundos
+                      } else {
+                        console.error('Failed to create order: createOrderDB returned null');
+                        alert('Error al crear la orden. Por favor, intenta de nuevo.');
+                      }
+                    } catch (error) {
+                      console.error('Error creating order:', error);
+                      alert('Error al crear la orden. Por favor, intenta de nuevo.');
+                    }
+                  }}
+                  className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
+                >
+                  <span>{t('order.confirmAndSendOrder')}</span>
+                  <span className="material-symbols-outlined">restaurant</span>
+                </button>
+              ) : null}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Modal para guardar combinación */}
       {showSaveCombinationModal && (

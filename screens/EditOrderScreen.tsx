@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useCart, CartItem } from '../contexts/CartContext';
@@ -51,28 +51,46 @@ const EditOrderScreen: React.FC = () => {
           setOrders(loadedOrders);
           const order = loadedOrders.find((o: Order) => o.orderId === id);
           
-          if (order && cart.length === 0 && !itemsLoadedRef.current) {
-            // Cargar items de la orden en el carrito
-            // Primero, agrupar items por ID y notas para calcular cantidades totales
-            const groupedItems = order.items.reduce((acc: CartItem[], item) => {
-              const existing = acc.find(i => i.id === item.id && i.notes === (item.notes || ''));
-              if (existing) {
-                existing.quantity += item.quantity;
-              } else {
-                acc.push({
-                  id: item.id,
-                  name: item.name,
-                  price: item.price,
-                  notes: item.notes || '',
-                  quantity: item.quantity,
-                });
-              }
-              return acc;
-            }, [] as CartItem[]);
+          if (order && !itemsLoadedRef.current) {
+            // Si la orden ya está enviada, NO cargar los items en el carrito
+            // Solo se deben agregar items nuevos al carrito para crear una orden complementaria
+            const isOrderSent = ['orden_enviada', 'orden_recibida', 'en_preparacion', 'lista_para_entregar', 'en_entrega'].includes(order.status);
             
-            // Establecer directamente los items en el carrito con sus cantidades correctas
-            setCartItems(groupedItems);
-            itemsLoadedRef.current = true;
+            if (!isOrderSent) {
+              // Solo cargar items en el carrito si la orden NO está enviada (pendiente)
+              // Primero, agrupar items por ID y notas para calcular cantidades totales
+              const groupedItems = order.items.reduce((acc: CartItem[], item) => {
+                const existing = acc.find(i => i.id === item.id && i.notes === (item.notes || ''));
+                if (existing) {
+                  existing.quantity += item.quantity;
+                } else {
+                  acc.push({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    notes: item.notes || '',
+                    quantity: item.quantity,
+                  });
+                }
+                return acc;
+              }, [] as CartItem[]);
+              
+              // setCartItems ya maneja la limpieza y el manejo de errores internamente
+              // Solo establecer los items (setCart elimina los existentes antes de insertar)
+              try {
+                await setCartItems(groupedItems);
+                itemsLoadedRef.current = true;
+              } catch (error) {
+                console.error('Error setting cart items:', error);
+                // Si falla, marcar como cargado para evitar loops infinitos
+                itemsLoadedRef.current = true;
+              }
+            } else {
+              // Si la orden está enviada, limpiar el carrito y marcar como cargado
+              // El usuario solo podrá agregar items nuevos que se crearán como orden complementaria
+              await clearCart();
+              itemsLoadedRef.current = true;
+            }
           }
           
           // Resetear el flag si el orderId cambia
@@ -86,19 +104,93 @@ const EditOrderScreen: React.FC = () => {
       
       loadOrders();
     }
-  }, [location.search, addToCart, orderId]);
+  }, [location.search, clearCart, setCartItems, orderId]);
 
-  // Calcular total actualizado
-  const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  // Obtener la orden actual
+  const currentOrder = orders.find(o => o.orderId === orderId);
+  const isOrderSent = currentOrder && ['orden_enviada', 'orden_recibida', 'en_preparacion', 'lista_para_entregar', 'en_entrega'].includes(currentOrder.status);
+
+  // Calcular total actualizado (incluyendo items originales y nuevos)
+  const total = useMemo(() => {
+    if (isOrderSent && currentOrder) {
+      // Sumar items de la orden original
+      const originalTotal = currentOrder.items.reduce((sum, item) => {
+        const price = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0;
+        return sum + (price * item.quantity);
+      }, 0);
+      
+      // Sumar items nuevos del carrito
+      const newItemsTotal = cart.filter(cartItem => {
+        const existsInOriginal = currentOrder.items.some(
+          origItem => origItem.id === cartItem.id && (origItem.notes || '') === (cartItem.notes || '')
+        );
+        return !existsInOriginal;
+      }).reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      
+      return originalTotal + newItemsTotal;
+    } else {
+      // Para órdenes pendientes, solo sumar items del carrito
+      return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    }
+  }, [cart, currentOrder, isOrderSent]);
 
   // Función para guardar cambios
-  const handleSaveChanges = () => {
-    if (!orderId) return;
+  const handleSaveChanges = async () => {
+    if (!orderId || !currentOrder) return;
 
-    // Actualizar la orden
-    const updatedOrders = orders.map(order => {
-      if (order.orderId === orderId) {
-        // Convertir items del carrito a items de la orden
+    try {
+      if (isOrderSent) {
+        // Si la orden está enviada, agregar los items nuevos del carrito a la orden original
+        const newItems = cart.filter(cartItem => {
+          // Verificar si el item ya existe en la orden original
+          const existsInOriginal = currentOrder.items.some(
+            origItem => origItem.id === cartItem.id && (origItem.notes || '') === (cartItem.notes || '')
+          );
+          return !existsInOriginal;
+        });
+
+        if (newItems.length === 0) {
+          // No hay items nuevos, solo navegar de vuelta
+          clearCart();
+          navigate('/order-detail');
+          return;
+        }
+
+        // Combinar items originales con items nuevos
+        const updatedItems = [
+          ...currentOrder.items,
+          ...newItems.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            notes: item.notes || '',
+            quantity: item.quantity,
+          }))
+        ];
+
+        // Calcular nuevo total
+        const newTotal = updatedItems.reduce((sum, item) => {
+          const price = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0;
+          return sum + (price * item.quantity);
+        }, 0);
+
+        // Actualizar la orden en Supabase
+        const updatedOrder = await updateOrderDB(orderId, {
+          items: updatedItems,
+          total: newTotal,
+        } as any);
+
+        if (updatedOrder) {
+          // Recargar órdenes desde Supabase
+          const loadedOrders = await getOrders();
+          setOrders(loadedOrders);
+          clearCart();
+          navigate('/order-detail');
+        } else {
+          alert('Error al actualizar la orden. Por favor, intenta de nuevo.');
+        }
+      } else {
+        // Si la orden está pendiente, actualizar normalmente con los items del carrito
         const orderItems = cart.map(item => ({
           id: item.id,
           name: item.name,
@@ -107,24 +199,28 @@ const EditOrderScreen: React.FC = () => {
           quantity: item.quantity,
         }));
 
-        return {
-          ...order,
+        const newTotal = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+        // Actualizar la orden en Supabase
+        const updatedOrder = await updateOrderDB(orderId, {
           items: orderItems,
-          timestamp: new Date().toISOString(), // Actualizar timestamp
-        };
+          total: newTotal,
+        } as any);
+
+        if (updatedOrder) {
+          // Recargar órdenes desde Supabase
+          const loadedOrders = await getOrders();
+          setOrders(loadedOrders);
+          clearCart();
+          navigate('/order-detail');
+        } else {
+          alert('Error al actualizar la orden. Por favor, intenta de nuevo.');
+        }
       }
-      return order;
-    });
-
-    // Guardar en localStorage
-    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(updatedOrders));
-    setOrders(updatedOrders);
-
-    // Limpiar carrito
-    clearCart();
-
-    // Navegar de vuelta
-    navigate('/order-detail');
+    } catch (error) {
+      console.error('Error saving changes:', error);
+      alert('Error al guardar los cambios. Por favor, intenta de nuevo.');
+    }
   };
 
   // Función para eliminar item específico por ID y notas
@@ -172,17 +268,50 @@ const EditOrderScreen: React.FC = () => {
     }
   };
 
-  // Agrupar items del carrito por ID y notas (para mostrar correctamente)
-  // El carrito ya agrupa por ID y notas, pero necesitamos asegurarnos de que funcione correctamente
-  const groupedCartItems = cart.reduce((acc: any[], item) => {
+  // Si la orden está enviada, mostrar los items de la orden original + items nuevos del carrito
+  // Si la orden está pendiente, mostrar solo los items del carrito
+  const itemsToDisplay = useMemo(() => {
+    if (isOrderSent && currentOrder) {
+      // Combinar items de la orden original con items nuevos del carrito
+      const originalItems = currentOrder.items.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        notes: item.notes || '',
+        quantity: item.quantity,
+        isFromOriginalOrder: true, // Marcar como item de la orden original
+      }));
+
+      // Agregar items nuevos del carrito (que no están en la orden original)
+      const newItems = cart.filter(cartItem => {
+        const existsInOriginal = currentOrder.items.some(
+          origItem => origItem.id === cartItem.id && (origItem.notes || '') === (cartItem.notes || '')
+        );
+        return !existsInOriginal;
+      }).map(item => ({
+        ...item,
+        notes: item.notes || '',
+        isFromOriginalOrder: false, // Marcar como item nuevo
+      }));
+
+      return [...originalItems, ...newItems];
+    } else {
+      // Para órdenes pendientes, mostrar solo los items del carrito
+      return cart.map(item => ({
+        ...item,
+        notes: item.notes || '',
+        isFromOriginalOrder: false,
+      }));
+    }
+  }, [cart, currentOrder, isOrderSent]);
+
+  // Agrupar items por ID y notas (para mostrar correctamente)
+  const groupedItems = itemsToDisplay.reduce((acc: any[], item) => {
     const existing = acc.find(i => i.id === item.id && i.notes === (item.notes || ''));
     if (existing) {
       existing.quantity += item.quantity;
     } else {
-      acc.push({ 
-        ...item,
-        notes: item.notes || ''
-      });
+      acc.push(item);
     }
     return acc;
   }, []);
@@ -229,7 +358,7 @@ const EditOrderScreen: React.FC = () => {
             {t('orderDetail.yourDishes') || 'Tus Platillos'}
           </h3>
           
-          {groupedCartItems.length === 0 ? (
+          {groupedItems.length === 0 ? (
             <div className="text-center text-gray-500 dark:text-gray-400 py-8">
               <p className="mb-4">{t('orderDetail.noItems') || 'No hay items en la orden.'}</p>
               <button 
@@ -242,7 +371,7 @@ const EditOrderScreen: React.FC = () => {
             </div>
           ) : (
             <>
-              {groupedCartItems.map((item, index) => (
+              {groupedItems.map((item, index) => (
                 <div 
                   key={`${item.id}-${item.notes || ''}-${index}`} 
                   className="bg-white dark:bg-[#2d2419] rounded-xl p-4 shadow-sm border border-[#e6e1db] dark:border-[#3d3429] flex flex-col gap-4"
@@ -254,7 +383,14 @@ const EditOrderScreen: React.FC = () => {
                         style={{ backgroundImage: `url("${getDishImage(item.id, getProduct)}")` }}
                       />
                       <div className="flex flex-col">
-                        <p className="text-base font-bold leading-tight">{item.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-base font-bold leading-tight">{item.name}</p>
+                          {item.isFromOriginalOrder && (
+                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-medium rounded-full">
+                              Original
+                            </span>
+                          )}
+                        </div>
                         <p className="text-primary text-sm font-bold mt-1">${item.price.toFixed(2)}</p>
                         {item.notes && (
                           <p className="text-[#897961] text-xs font-normal mt-1 italic">"{item.notes}"</p>
@@ -262,27 +398,38 @@ const EditOrderScreen: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex flex-col items-end justify-between">
-                      <button 
-                        onClick={() => handleRemoveItem(item.id, item.notes || '')}
-                        className="text-gray-400 hover:text-red-500 transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-xl">delete</span>
-                      </button>
-                      <div className="flex items-center gap-3 bg-background-light dark:bg-white/5 rounded-full p-1 border border-[#e6e1db] dark:border-white/10">
+                      {!item.isFromOriginalOrder && (
                         <button 
-                          onClick={() => handleDecrement(item.id, item.notes || '')}
-                          className="flex h-7 w-7 items-center justify-center rounded-full bg-white dark:bg-[#181511] shadow-sm hover:scale-105 transition-transform active:scale-95"
+                          onClick={() => handleRemoveItem(item.id, item.notes || '')}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
                         >
-                          <span className="material-symbols-outlined text-sm">remove</span>
+                          <span className="material-symbols-outlined text-xl">delete</span>
                         </button>
-                        <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>
-                        <button 
-                          onClick={() => handleIncrement(item.id, item.notes || '')}
-                          className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white shadow-sm hover:scale-105 transition-transform active:scale-95"
-                        >
-                          <span className="material-symbols-outlined text-sm font-bold">add</span>
-                        </button>
-                      </div>
+                      )}
+                      {item.isFromOriginalOrder && (
+                        <div className="h-6"></div>
+                      )}
+                      {!item.isFromOriginalOrder ? (
+                        <div className="flex items-center gap-3 bg-background-light dark:bg-white/5 rounded-full p-1 border border-[#e6e1db] dark:border-white/10">
+                          <button 
+                            onClick={() => handleDecrement(item.id, item.notes || '')}
+                            className="flex h-7 w-7 items-center justify-center rounded-full bg-white dark:bg-[#181511] shadow-sm hover:scale-105 transition-transform active:scale-95"
+                          >
+                            <span className="material-symbols-outlined text-sm">remove</span>
+                          </button>
+                          <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>
+                          <button 
+                            onClick={() => handleIncrement(item.id, item.notes || '')}
+                            className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white shadow-sm hover:scale-105 transition-transform active:scale-95"
+                          >
+                            <span className="material-symbols-outlined text-sm font-bold">add</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-sm font-bold text-gray-600 dark:text-gray-400">
+                          {item.quantity}x
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

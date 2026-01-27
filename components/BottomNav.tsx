@@ -17,7 +17,7 @@ const BottomNav: React.FC = () => {
   });
   const [isEnabled, setIsEnabled] = useState(() => {
     const saved = localStorage.getItem(ASSISTANT_ENABLED_KEY);
-    return saved === null ? true : saved === 'true'; // Por defecto habilitado
+    return saved === null ? false : saved === 'true'; // Por defecto desactivado
   });
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ startY: number } | null>(null);
@@ -225,9 +225,6 @@ const BottomNav: React.FC = () => {
         clearTimeout(timeoutId);
       }
     };
-  }, []);
-    const interval = setInterval(loadOrders, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   // Verificar si hay una orden enviada

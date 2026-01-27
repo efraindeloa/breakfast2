@@ -48,15 +48,15 @@ const SettingsScreen: React.FC = () => {
   const [smartTranslation, setSmartTranslation] = useState(true);
   const [suggestions, setSuggestions] = useState(() => {
     const saved = localStorage.getItem('showSuggestions');
-    return saved === 'true';
+    return saved === null ? true : saved === 'true'; // Por defecto activado
   });
   const [highlights, setHighlights] = useState(() => {
     const saved = localStorage.getItem('showHighlights');
-    return saved === 'true';
+    return saved === null ? true : saved === 'true'; // Por defecto activado
   });
   const [assistantEnabled, setAssistantEnabled] = useState(() => {
     const saved = localStorage.getItem('assistantEnabled');
-    return saved === null ? true : saved === 'true'; // Por defecto habilitado
+    return saved === null ? false : saved === 'true'; // Por defecto desactivado
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [saved, setSaved] = useState(false);

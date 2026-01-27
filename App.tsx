@@ -109,6 +109,7 @@ const AppContent: React.FC = () => {
           <Route path="/invite-users" element={isAuthenticated ? <InviteUsersScreen /> : <Navigate to="/" />} />
           <Route path="/group-order-management" element={isAuthenticated ? <GroupOrderManagementScreen /> : <Navigate to="/" />} />
           <Route path="/order-confirmed" element={isAuthenticated ? <OrderConfirmedScreen /> : <Navigate to="/" />} />
+          <Route path="/order-detail/:id" element={isAuthenticated ? <OrderDetailScreen /> : <Navigate to="/" />} />
           <Route path="/order-detail" element={isAuthenticated ? <OrderDetailScreen /> : <Navigate to="/" />} />
           <Route path="/join-table" element={isAuthenticated ? <JoinTableScreen /> : <Navigate to="/" />} />
           <Route path="/qr-scanner" element={isAuthenticated ? <QRScannerScreen /> : <Navigate to="/" />} />

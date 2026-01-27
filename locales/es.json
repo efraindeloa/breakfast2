@@ -671,7 +671,15 @@
     "userAlreadyExists": "Este correo ya está registrado",
     "registrationError": "Error al registrarse",
     "registrationSuccess": "¡Registro exitoso! Redirigiendo...",
-    "creatingAccount": "Creando cuenta..."
+    "creatingAccount": "Creando cuenta...",
+    "pleaseConfirmPassword": "Por favor confirma tu contraseña",
+    "passwordsDoNotMatch": "Las contraseñas no coinciden. Por favor verifica que ambas contraseñas sean iguales",
+    "passwordRuleMinLength": "8 caracteres",
+    "passwordRuleNumber": "1 número",
+    "passwordRuleLowercase": "1 minúscula",
+    "passwordRuleUppercase": "1 mayúscula",
+    "passwordRuleSymbol": "1 símbolo",
+    "passwordConfirmation": "Confirmación"
   },
   "forgotPassword": {
     "title": "Recuperar contraseña",

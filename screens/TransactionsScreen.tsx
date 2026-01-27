@@ -44,120 +44,36 @@ const TransactionsScreen: React.FC = () => {
     cardLast4: '',
   });
 
-  // Lista completa de transacciones (incluyendo las recientes y más antiguas)
-  const transactions: Transaction[] = [
-    {
-      id: 1,
-      restaurantName: 'DONK RESTAURANT',
-      date: 'Hoy, 8:45 AM',
-      amount: '$97.65',
-      logo: '/logo-donk-restaurant.png',
-      cardLast4: '4242',
-      orderId: 1,
-      subtotal: '$77.50',
-      tip: '$7.75',
-      tipPercentage: 10,
-      iva: '$12.40',
-      total: '$97.65',
-      paymentMethod: 'card',
-      invoiceSent: true,
-      invoiceEmail: 'juan.perez@empresa.com',
-    },
-    {
-      id: 2,
-      restaurantName: 'DONK RESTAURANT',
-      date: 'Ayer, 7:30 PM',
-      amount: '$58.95',
-      logo: '/logo-donk-restaurant.png',
-      cardLast4: '8888',
-      orderId: 2,
-      subtotal: '$45.00',
-      tip: '$6.75',
-      tipPercentage: 15,
-      iva: '$7.20',
-      total: '$58.95',
-      paymentMethod: 'card',
-      invoiceSent: false,
-    },
-    {
-      id: 3,
-      restaurantName: 'Café del Sol',
-      date: '22 Oct, 10:02 AM',
-      amount: '$41.92',
-      logo: '/logo-donk-restaurant.png',
-      cardLast4: '4242',
-      orderId: 3,
-      subtotal: '$32.00',
-      tip: '$4.80',
-      tipPercentage: 15,
-      iva: '$5.12',
-      total: '$41.92',
-      paymentMethod: 'cash',
-      invoiceSent: true,
-      invoiceEmail: 'maria.garcia@empresa.com',
-    },
-    {
-      id: 4,
-      restaurantName: 'DONK RESTAURANT',
-      date: '20 Oct, 6:45 PM',
-      amount: '$28.88',
-      logo: '/logo-donk-restaurant.png',
-      cardLast4: '8888',
-      orderId: 4,
-      subtotal: '$24.90',
-      tip: '$0.00',
-      tipPercentage: 0,
-      iva: '$3.98',
-      total: '$28.88',
-      paymentMethod: 'card',
-      invoiceSent: false,
-    },
-    {
-      id: 5,
-      restaurantName: 'La Panadería Artesanal',
-      date: '18 Oct, 1:20 PM',
-      amount: '$21.76',
-      logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBkUTW04rD1StMdw5VuFmivxCsbvN_VFjrpbP1fqnSpdDL84rU6b3Mm6VZOi1IGaMZZSGyhRpeuhIyuBuI2qoIJnrvssVJjWywIGD53-994UzA3AXankHvqmjFerRER3Xtv8vI4AXqh2K8rN1puxxdNFmj94DJHZyLW_ViLJYZiW-DiUZ_Z8LlJVyPu-o9dZ004NABiXUsqXvcel_zsQBdyc13Vm9JsBE1FHo2kwkmYEHAejYBBBKvLwheTiiwnprPzmk1jwASDobqC',
-      cardLast4: '4242',
-      orderId: 5,
-      subtotal: '$16.00',
-      tip: '$3.20',
-      tipPercentage: 20,
-      iva: '$2.56',
-      total: '$21.76',
-      paymentMethod: 'card',
-      invoiceSent: true,
-      invoiceEmail: 'juan.perez@empresa.com',
-    },
-    {
-      id: 6,
-      restaurantName: 'Brunch & Co.',
-      date: '15 Oct, 11:30 AM',
-      amount: '$37.34',
-      logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDNanplizQsqu_AWgfvOvcfFVNxOTL41X1kCPX1xvEMEsYo9o0WTi5Zp4q-4XKvx8ixXcz9vsSZrCafyWPVQjOxr0skT0HWuaKy2QIBpPU9lHutFSJgkLDlcksL-7CNVKdtkKJaxm4-_Qf-9Zs8CHDtVEK_nLT9Lvx2F1w3rR5aJ0_sVNdNhSKOeqx2atLUGjzVCZnSpfVYviNGCLiGQ8ScYzXfPiY-fLU0OJrfN2_RXnrYGklyPMwO4hkStBj8oI_4Dc0breu5o4hK',
-      cardLast4: '4242',
-      orderId: 6,
-      subtotal: '$28.50',
-      tip: '$4.28',
-      tipPercentage: 15,
-      iva: '$4.56',
-      total: '$37.34',
-      paymentMethod: 'cash',
-      invoiceSent: false,
-    },
-  ];
+  // Lista de transacciones - cargar desde la base de datos
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  
+  // Cargar transacciones desde la base de datos
+  useEffect(() => {
+    const loadTransactions = async () => {
+      try {
+        // TODO: Implementar carga de transacciones desde la base de datos
+        // Por ahora, dejar vacío hasta que se implemente la funcionalidad
+        setTransactions([]);
+      } catch (error) {
+        console.error('Error loading transactions:', error);
+        setTransactions([]);
+      }
+    };
+    
+    loadTransactions();
+  }, []);
 
   // Obtener lista única de restaurantes para el filtro
   const restaurants = useMemo(() => {
     const unique = Array.from(new Set(transactions.map(t => t.restaurantName)));
     return unique.sort();
-  }, []);
+  }, [transactions]);
 
   // Obtener lista única de tarjetas para el filtro
   const cards = useMemo(() => {
     const unique = Array.from(new Set(transactions.map(t => t.cardLast4)));
     return unique.sort();
-  }, []);
+  }, [transactions]);
 
   // Función para convertir fecha a número para comparación
   const parseDate = (dateStr: string): number => {
@@ -297,7 +213,7 @@ const TransactionsScreen: React.FC = () => {
         }
       }
     }
-  }, [orderIdParam, transactionIdParam]);
+  }, [orderIdParam, transactionIdParam, transactions]);
 
   return (
     <div className="pb-32 overflow-y-auto bg-background-light dark:bg-background-dark min-h-screen">

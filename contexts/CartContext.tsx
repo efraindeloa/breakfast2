@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getCart, setCart as setCartDB, addToCart as addToCartDB, removeFromCart as removeFromCartDB, clearCart as clearCartDB, CartItem } from '../services/database';
+import { useAuth } from './AuthContext';
 
 export interface CartItem {
   id: number;
@@ -27,21 +28,38 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
 
-  // Cargar carrito desde Supabase/localStorage al iniciar
+  // Cargar carrito desde Supabase solo cuando hay un usuario autenticado
   useEffect(() => {
+    // Esperar a que la autenticación termine de cargar antes de cargar el carrito
+    if (authLoading) {
+      return;
+    }
+    
+    // Solo cargar el carrito si hay un usuario autenticado
+    if (!user) {
+      // No hay usuario autenticado, no cargar el carrito
+      setIsLoading(false);
+      setCart([]);
+      return;
+    }
+    
     const loadCart = async () => {
       try {
+        setIsLoading(true);
+        console.log('[CartContext] Loading cart for user:', user.id);
         const cartData = await getCart();
+        console.log('[CartContext] Cart loaded:', cartData.length, 'items');
         setCart(cartData);
       } catch (error) {
-        console.error('Error loading cart:', error);
+        console.error('[CartContext] Error loading cart:', error);
       } finally {
         setIsLoading(false);
       }
     };
     loadCart();
-  }, []);
+  }, [user?.id, authLoading]); // Recargar cuando cambia el usuario autenticado o cuando termina de cargar la auth
 
   const addToCart = async (item: Omit<CartItem, 'quantity'>, quantity: number = 1) => {
     // Llamar directamente a addToCartDB con la cantidad para evitar duplicados

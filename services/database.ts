@@ -153,47 +153,32 @@ const isValidUUID = (str: string): boolean => {
   return uuidRegex.test(str);
 };
 
-const getUserId = (): string => {
-  // Primero intentar obtener el usuario autenticado de Supabase desde la sesión
-  if (isSupabaseConfigured()) {
-    try {
-      // Intentar obtener la sesión de forma síncrona desde el storage
-      // Supabase guarda la sesión en localStorage bajo 'sb-<project-ref>-auth-token'
-      const sessionKey = Object.keys(localStorage).find(key => key.includes('supabase.auth.token'));
-      if (sessionKey) {
-        try {
-          const sessionData = localStorage.getItem(sessionKey);
-          if (sessionData) {
-            const parsed = JSON.parse(sessionData);
-            if (parsed?.currentSession?.user?.id) {
-              console.log('[getUserId] Using authenticated user from session:', parsed.currentSession.user.id);
-              return parsed.currentSession.user.id;
-            }
-          }
-        } catch (e) {
-          // Si falla, continuar con fallback
-        }
-      }
-    } catch (err) {
-      // Si hay error obteniendo el usuario, continuar con fallback
-      console.warn('[getUserId] Error getting authenticated user:', err);
-    }
+// Función para obtener el ID del usuario autenticado (requiere autenticación)
+const getAuthenticatedUserId = async (): Promise<string | null> => {
+  if (!isSupabaseConfigured()) {
+    return null;
   }
 
-  // Fallback: Obtener user_id del localStorage (para usuarios anónimos o cuando no hay autenticación)
-  let userId = localStorage.getItem('user_id');
-  
-  // Si no existe o no es un UUID válido, generar uno nuevo
-  if (!userId || !isValidUUID(userId)) {
-    // Generar un UUID v4 válido
-    userId = generateUUID();
-    localStorage.setItem('user_id', userId);
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) {
+      console.warn('[getAuthenticatedUserId] Error getting session:', error);
+      return null;
+    }
+    
+    if (session?.user?.id) {
+      return session.user.id;
+    }
+    
+    return null;
+  } catch (error) {
+    console.warn('[getAuthenticatedUserId] Error:', error);
+    return null;
   }
-  
-  return userId;
 };
 
-// Función para asegurar que el usuario existe en la tabla users antes de usarlo
+// Función para verificar que el usuario autenticado existe en la tabla users
+// (Ya no creamos usuarios anónimos, solo verificamos que el usuario autenticado exista)
 const ensureUserExists = async (userId: string): Promise<void> => {
   if (!isSupabaseConfigured()) return;
   
@@ -207,57 +192,15 @@ const ensureUserExists = async (userId: string): Promise<void> => {
     
     // Si el usuario existe, no hacer nada
     if (existingUser) {
-      console.log('[ensureUserExists] User already exists:', userId);
       return;
     }
     
-    // Si no existe, crearlo
-    console.log('[ensureUserExists] Creating user:', userId);
-    const { data, error } = await supabase.from('users').upsert({
-      id: userId,
-      name: 'Usuario',
-      email: `user_${Date.now()}@temp.com`,
-      is_active: true
-    }, { onConflict: 'id' });
-    
-    if (error) {
-      // Si es error de RLS, intentar verificar de nuevo (puede que se haya creado en otro proceso)
-      if (error.code === '42501') {
-        console.warn('[ensureUserExists] RLS policy error, checking if user exists:', error);
-        // Verificar de nuevo después de un momento
-        await new Promise(resolve => setTimeout(resolve, 200));
-        const { data: retryCheck } = await supabase
-          .from('users')
-          .select('id')
-          .eq('id', userId)
-          .maybeSingle();
-        if (retryCheck) {
-          console.log('[ensureUserExists] User exists after retry');
-          return;
-        }
-        // Si aún no existe después del retry, lanzar el error
-        throw new Error('Failed to create user due to RLS policy');
-      } else {
-        console.error('[ensureUserExists] Error creating user in database:', error);
-        throw error; // Lanzar el error para que se maneje arriba
-      }
-    } else {
-      console.log('[ensureUserExists] User created successfully:', userId);
-      // Verificar que el usuario realmente se creó antes de continuar
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const { data: verifyUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('id', userId)
-        .maybeSingle();
-      if (!verifyUser) {
-        throw new Error('User was not created successfully');
-      }
-      console.log('[ensureUserExists] User verified:', userId);
-    }
-  } catch (err) {
-    console.error('[ensureUserExists] Unexpected error:', err);
-    throw err; // Lanzar el error para que se maneje en addToCart
+    // Si no existe, lanzar error (no debería pasar si el usuario está autenticado)
+    console.error('[ensureUserExists] Authenticated user does not exist in database:', userId);
+    throw new Error('Authenticated user not found in database');
+  } catch (error) {
+    console.error('[ensureUserExists] Error:', error);
+    throw error;
   }
 };
 
@@ -285,7 +228,11 @@ export const getOrders = async (): Promise<Order[]> => {
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[getOrders] No authenticated user');
+      return [];
+    }
     
     // Verificar si hay datos pendientes de migración (después de cerrar sesión)
     const pendingOrders = localStorage.getItem('pending_orders_migration');
@@ -376,8 +323,6 @@ export const getOrders = async (): Promise<Order[]> => {
       }
     }
     
-    console.log('[getOrders] Found orders for current user:', data?.length || 0, data);
-    
     // Mapear los datos de Supabase al formato Order esperado
     const mappedOrders = (data || []).map((order: any) => ({
       orderId: order.id, // Mapear id a orderId
@@ -401,7 +346,11 @@ export const createOrder = async (order: Omit<Order, 'id' | 'created_at' | 'upda
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[updateOrderStatus] No authenticated user - login required');
+      throw new Error('Authentication required');
+    }
     
     // Validar que el status sea de una orden activa (no 'entregada' o 'cancelada')
     const activeStatuses = ['pending', 'orden_enviada', 'orden_recibida', 'en_preparacion', 'lista_para_entregar', 'en_entrega', 'con_incidencias'];
@@ -443,7 +392,11 @@ export const saveOrderHistory = async (historicalOrder: HistoricalOrder): Promis
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[moveOrderToHistory] No authenticated user - login required');
+      throw new Error('Authentication required');
+    }
     
     // Convertir HistoricalOrder a formato de tabla order_history
     const orderData = {
@@ -497,7 +450,11 @@ export const getOrderHistory = async (): Promise<HistoricalOrder[]> => {
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[getOrderHistory] No authenticated user - login required');
+      return [];
+    }
     
     // Obtener órdenes completadas o canceladas desde order_history
     // Primero intentamos sin el JOIN para evitar errores si la relación no existe
@@ -560,7 +517,11 @@ export const getOrderHistoryById = async (orderId: string): Promise<HistoricalOr
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[getOrderById] No authenticated user - login required');
+      return null;
+    }
     
     // Buscar primero en order_history
     const { data, error } = await supabase
@@ -736,25 +697,68 @@ export const getCart = async (): Promise<CartItem[]> => {
   }
 
   try {
-    const userId = getUserId();
-    // Hacer JOIN con products para obtener name, price, image
-    const { data, error } = await supabase
+    // Obtener la sesión actual de Supabase de forma asíncrona
+    let userId: string | null = null;
+    
+    // Primero intentar obtener el usuario autenticado desde la sesión de Supabase
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.warn('[getCart] Error getting session:', sessionError);
+    }
+    
+    if (session?.user?.id) {
+      userId = session.user.id;
+      console.log('[getCart] Using authenticated user ID:', userId);
+      console.log('[getCart] Session user email:', session.user.email);
+    }
+    
+    if (!userId) {
+      console.warn('[getCart] No authenticated user - login required');
+      return [];
+    }
+    
+    // Obtener cart_items primero (sin JOIN para evitar problemas de RLS)
+    console.log('[getCart] Fetching cart_items for user_id:', userId);
+    const { data: cartItemsData, error: cartError } = await supabase
       .from('cart_items')
-      .select(`
-        *,
-        products:product_id (
-          id,
-          name,
-          price,
-          image_url
-        )
-      `)
+      .select('*')
       .eq('user_id', userId);
 
-    if (error) throw error;
-    // Mapear product_id a id y obtener datos del producto
-    return (data || []).map((item: any) => {
-      const product = item.products || {};
+    if (cartError) {
+      console.error('[getCart] Error fetching cart_items:', cartError);
+      throw cartError;
+    }
+    
+    console.log('[getCart] Found cart_items:', cartItemsData?.length || 0);
+    
+    if (!cartItemsData || cartItemsData.length === 0) {
+      return [];
+    }
+    
+    // Obtener los productos por separado para evitar problemas de RLS con JOINs
+    const productIds = [...new Set(cartItemsData.map((item: any) => item.product_id).filter((id: any) => id != null))];
+    console.log('[getCart] Fetching products for IDs:', productIds);
+    
+    let productsMap: Record<number, any> = {};
+    if (productIds.length > 0) {
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select('id, name, price, image_url')
+        .in('id', productIds);
+      
+      if (productsError) {
+        console.warn('[getCart] Error fetching products:', productsError);
+      } else if (productsData) {
+        productsData.forEach((p: any) => {
+          productsMap[p.id] = p;
+        });
+        console.log('[getCart] Fetched products:', productsData.length);
+      }
+    }
+    
+    // Mapear cart_items con datos de productos
+    const mappedCart = cartItemsData.map((item: any) => {
+      const product = productsMap[item.product_id] || {};
       return {
         id: item.product_id || item.id,
         name: product.name || 'Producto',
@@ -764,8 +768,11 @@ export const getCart = async (): Promise<CartItem[]> => {
         image: product.image_url ? getProductImageUrl(product.image_url) : (product.image || ''),
       };
     });
+    
+    console.log('[getCart] Mapped cart items:', mappedCart.length);
+    return mappedCart;
   } catch (error) {
-    console.error('Error fetching cart:', error);
+    console.error('[getCart] Error fetching cart:', error);
     return fallbackToLocalStorage<CartItem[]>('cart', [], 'get') || [];
   }
 };
@@ -777,27 +784,136 @@ export const setCart = async (items: CartItem[]): Promise<boolean> => {
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[setCart] No authenticated user - login required');
+      return false;
+    }
     
-    // Eliminar items existentes
-    await supabase
+    // Agrupar items por (product_id, notes) para evitar duplicados
+    const groupedItems = items.reduce((acc: CartItem[], item) => {
+      const existing = acc.find(i => i.id === item.id && (i.notes || '') === (item.notes || ''));
+      if (existing) {
+        existing.quantity += item.quantity;
+      } else {
+        acc.push({ ...item });
+      }
+      return acc;
+    }, []);
+
+    // Si no hay items en la nueva lista, eliminar todos los items del carrito
+    if (groupedItems.length === 0) {
+      const { error: deleteError } = await supabase
+        .from('cart_items')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (deleteError) {
+        console.error('[setCart] Error deleting all cart items:', deleteError);
+        throw deleteError;
+      }
+      
+      return true;
+    }
+
+    // Obtener items actuales del carrito para identificar cuáles eliminar
+    const { data: currentCartItems, error: fetchError } = await supabase
       .from('cart_items')
-      .delete()
+      .select('product_id, notes')
       .eq('user_id', userId);
 
-    // Insertar nuevos items
-    if (items.length > 0) {
-      const { error } = await supabase
-        .from('cart_items')
-        .insert(items.map(item => ({
-          product_id: item.id,
-          restaurant_id: '00000000-0000-0000-0000-000000000001', // ID del restaurante por defecto
-          quantity: item.quantity,
-          notes: item.notes || '',
-          user_id: userId,
-        })));
+    if (fetchError) {
+      console.error('[setCart] Error fetching current cart items:', fetchError);
+      // Continuar de todas formas, intentar upsert
+    }
 
-      if (error) throw error;
+    // Identificar items que deben eliminarse (están en el carrito actual pero no en la nueva lista)
+    if (currentCartItems && currentCartItems.length > 0) {
+      const itemsToDelete = currentCartItems.filter(current => {
+        const currentNotes = current.notes || '';
+        return !groupedItems.some(item => 
+          item.id === current.product_id && (item.notes || '') === currentNotes
+        );
+      });
+
+      // Eliminar items que ya no están en la nueva lista
+      for (const itemToDelete of itemsToDelete) {
+        let deleteQuery = supabase
+          .from('cart_items')
+          .delete()
+          .eq('user_id', userId)
+          .eq('product_id', itemToDelete.product_id);
+        
+        // Manejar notes: si es null o '', usar is('notes', null)
+        if (itemToDelete.notes === null || itemToDelete.notes === '') {
+          deleteQuery = deleteQuery.is('notes', null);
+        } else {
+          deleteQuery = deleteQuery.eq('notes', itemToDelete.notes);
+        }
+        
+        const { error: deleteItemError } = await deleteQuery;
+        if (deleteItemError) {
+          console.warn('[setCart] Error deleting item:', itemToDelete.product_id, deleteItemError);
+        }
+      }
+    }
+
+    // Usar upsert para cada item (actualiza si existe, inserta si no)
+    // Esto evita condiciones de carrera y maneja duplicados automáticamente
+    for (const item of groupedItems) {
+      // Normalizar notes: usar null en lugar de string vacío para consistencia
+      const normalizedNotes = (item.notes && item.notes.trim() !== '') ? item.notes : null;
+      
+      const { error: upsertError } = await supabase
+        .from('cart_items')
+        .upsert({
+          product_id: item.id,
+          restaurant_id: '00000000-0000-0000-0000-000000000001',
+          quantity: item.quantity,
+          notes: normalizedNotes,
+          user_id: userId,
+        }, {
+          onConflict: 'user_id,product_id,notes'
+        });
+
+      if (upsertError) {
+        console.error('[setCart] Error upserting item:', item.id, upsertError);
+        // Si el upsert falla, intentar eliminar y luego insertar
+        try {
+          let deleteQuery = supabase
+            .from('cart_items')
+            .delete()
+            .eq('user_id', userId)
+            .eq('product_id', item.id);
+          
+          if (normalizedNotes === null) {
+            deleteQuery = deleteQuery.is('notes', null);
+          } else {
+            deleteQuery = deleteQuery.eq('notes', normalizedNotes);
+          }
+          
+          await deleteQuery;
+          
+          // Pequeña pausa antes de insertar
+          await new Promise(resolve => setTimeout(resolve, 50));
+          
+          const { error: insertError } = await supabase
+            .from('cart_items')
+            .insert({
+              product_id: item.id,
+              restaurant_id: '00000000-0000-0000-0000-000000000001',
+              quantity: item.quantity,
+              notes: normalizedNotes,
+              user_id: userId,
+            });
+
+          if (insertError) {
+            console.error('[setCart] Error inserting item after delete:', item.id, insertError);
+          }
+        } catch (fallbackError) {
+          console.error('[setCart] Error in fallback delete+insert:', fallbackError);
+        }
+      }
     }
 
     return true;
@@ -821,7 +937,11 @@ export const addToCart = async (item: CartItem): Promise<boolean> => {
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[addToCart] No authenticated user - login required');
+      throw new Error('Authentication required');
+    }
     
     // Asegurar que el usuario existe en la tabla users antes de agregar al carrito
     try {
@@ -928,7 +1048,11 @@ export const removeFromCart = async (itemId: number, notes?: string): Promise<bo
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[removeFromCart] No authenticated user - login required');
+      return;
+    }
     let query = supabase
       .from('cart_items')
       .delete()
@@ -960,7 +1084,11 @@ export const getFavorites = async (): Promise<FavoriteDish[]> => {
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[getFavorites] No authenticated user - login required');
+      return [];
+    }
     const { data, error } = await supabase
       .from('favorite_dishes')
       .select('*')
@@ -985,7 +1113,11 @@ export const addFavorite = async (dish: FavoriteDish): Promise<boolean> => {
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[addToFavorites] No authenticated user - login required');
+      throw new Error('Authentication required');
+    }
     const { error } = await supabase
       .from('favorite_dishes')
       .insert({ ...dish, user_id: userId });
@@ -1007,7 +1139,11 @@ export const removeFavorite = async (dishId: number): Promise<boolean> => {
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[removeFromFavorites] No authenticated user - login required');
+      return;
+    }
     const { error } = await supabase
       .from('favorite_dishes')
       .delete()
@@ -1030,7 +1166,11 @@ export const getLoyaltyData = async (): Promise<LoyaltyData | null> => {
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[getLoyaltyData] No authenticated user - login required');
+      return null;
+    }
     const { data, error } = await supabase
       .from('loyalty_data')
       .select('*')
@@ -1054,7 +1194,11 @@ export const updateLoyaltyData = async (updates: Partial<LoyaltyData>): Promise<
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[updateLoyaltyData] No authenticated user - login required');
+      throw new Error('Authentication required');
+    }
     const { data, error } = await supabase
       .from('loyalty_data')
       .upsert({ ...updates, user_id: userId }, { onConflict: 'user_id' })
@@ -1077,7 +1221,11 @@ export const getContacts = async (): Promise<Contact[]> => {
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[getContacts] No authenticated user - login required');
+      return [];
+    }
     const { data, error } = await supabase
       .from('contacts')
       .select('*')
@@ -1097,7 +1245,7 @@ export const addContact = async (contact: Omit<Contact, 'id' | 'user_id' | 'crea
     const newContact: Contact = {
       ...contact,
       id: `contact_${Date.now()}`,
-      user_id: getUserId(),
+      user_id: await getAuthenticatedUserId() || '',
       created_at: new Date().toISOString(),
     };
     const contacts = await getContacts();
@@ -1107,7 +1255,11 @@ export const addContact = async (contact: Omit<Contact, 'id' | 'user_id' | 'crea
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[addContact] No authenticated user - login required');
+      return null;
+    }
     const { data, error } = await supabase
       .from('contacts')
       .insert({ ...contact, user_id: userId })
@@ -1179,7 +1331,11 @@ export const getWaitlistEntries = async (): Promise<WaitlistEntry[]> => {
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[getWaitlistEntries] No authenticated user - login required');
+      return [];
+    }
     const { data, error } = await supabase
       .from('waitlist_entries')
       .select('*')
@@ -1211,7 +1367,11 @@ export const createWaitlistEntry = async (
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[addToWaitlist] No authenticated user - login required');
+      throw new Error('Authentication required');
+    }
     const { data, error } = await supabase
       .from('waitlist_entries')
       .insert({
@@ -1267,7 +1427,11 @@ export const getAssistanceRequests = async (): Promise<AssistanceRequest[]> => {
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[getAssistanceRequests] No authenticated user - login required');
+      return [];
+    }
     const { data, error } = await supabase
       .from('assistance_requests')
       .select('*')
@@ -1298,7 +1462,11 @@ export const createAssistanceRequest = async (
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[requestAssistance] No authenticated user - login required');
+      throw new Error('Authentication required');
+    }
     const { data, error } = await supabase
       .from('assistance_requests')
       .insert({
@@ -1389,7 +1557,11 @@ export const createReview = async (
   }
 
   try {
-    const userId = getUserId();
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      console.warn('[submitReview] No authenticated user - login required');
+      throw new Error('Authentication required');
+    }
     const { data, error } = await supabase
       .from('reviews')
       .insert({

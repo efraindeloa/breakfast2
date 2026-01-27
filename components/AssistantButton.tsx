@@ -19,7 +19,7 @@ const AssistantButton: React.FC = () => {
   const [showAssistant, setShowAssistant] = useState(false);
   const [isEnabled, setIsEnabled] = useState(() => {
     const saved = localStorage.getItem(ASSISTANT_ENABLED_KEY);
-    return saved === null ? true : saved === 'true'; // Por defecto habilitado
+    return saved === null ? false : saved === 'true'; // Por defecto desactivado
   });
   const [isDragging, setIsDragging] = useState(false);
   const [isCompact, setIsCompact] = useState(false);

@@ -8,6 +8,7 @@ import { useRestaurant } from '../contexts/RestaurantContext';
 import { Order, OrderStatus } from '../types/order';
 import { getOrders, createOrder as createOrderDB, updateOrder } from '../services/database';
 import { formatPrice } from '../utils/currency';
+import TopNavbar from '../components/TopNavbar';
 
 const OrderScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -59,8 +60,6 @@ const OrderScreen: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
-    let visibilityTimeoutId: NodeJS.Timeout | null = null;
-    let refreshIntervalId: NodeJS.Timeout | null = null;
     
     const loadOrders = async () => {
       try {
@@ -82,41 +81,11 @@ const OrderScreen: React.FC = () => {
       }
     };
     
+    // Carga inicial
     loadOrders();
-    
-    // Recargar órdenes periódicamente cada 5 segundos para ver actualizaciones de estado
-    refreshIntervalId = setInterval(() => {
-      if (isMounted && !document.hidden) {
-        loadOrders();
-      }
-    }, 5000);
-    
-    // Recargar órdenes cuando la ventana vuelve a estar visible (con debouncing)
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        // Debounce: solo recargar si no se ha recargado en los últimos 2 segundos
-        if (visibilityTimeoutId) {
-          clearTimeout(visibilityTimeoutId);
-        }
-        visibilityTimeoutId = setTimeout(() => {
-          if (!document.hidden && isMounted) {
-            loadOrders();
-          }
-        }, 2000);
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
       isMounted = false;
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (visibilityTimeoutId) {
-        clearTimeout(visibilityTimeoutId);
-      }
-      if (refreshIntervalId) {
-        clearInterval(refreshIntervalId);
-      }
     };
   }, []);
 
@@ -358,18 +327,12 @@ const OrderScreen: React.FC = () => {
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-32 bg-background-light dark:bg-background-dark">
       {/* Header Section */}
-      <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md safe-top">
-        <div className="flex items-center p-4 pb-2 justify-between">
-          <div className="flex items-center gap-2">
-            <button onClick={() => navigate(-1)} className="p-2 -ml-2 w-10 h-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">
-              <span className="material-symbols-outlined text-[20px] text-[#8a7560] dark:text-[#d4c4a8]">chevron_left</span>
-            </button>
-            <h1 className="text-[#181411] dark:text-white text-lg font-semibold tracking-tight">
-              {isGroupOrder ? t('order.groupOrder') : t('order.title')}
-            </h1>
-          </div>
-        </div>
-      </header>
+      <TopNavbar 
+        title={isGroupOrder ? t('order.groupOrder') : t('order.title')}
+        showBackButton={true}
+        showAvatar={false}
+        showFavorites={false}
+      />
 
       <main className="flex-1 px-4 py-4 overflow-y-auto">
         {/* Order Info */}
@@ -923,93 +886,46 @@ const OrderScreen: React.FC = () => {
               )}
             </>
           ) : (
-            <>
-              {hasSentOrder && orderItems.length > 0 ? (
-                <button
-                  onClick={async () => {
-                    try {
-                      // Crear nueva orden complementaria en Supabase
-                      const orderNumber = getNextOrderNumber();
-                      const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                      
-                      const newOrder = await createOrderDB({
-                        restaurant_id: '00000000-0000-0000-0000-000000000001',
-                        status: 'orden_enviada',
-                        total: total,
-                        items: orderItems.map(item => ({
-                          id: item.id,
-                          name: item.name || getDishName(item.id),
-                          price: item.price,
-                          notes: item.notes || '',
-                          quantity: item.quantity,
-                        })),
-                        notes: orderSpecialInstructions || undefined,
-                      } as any);
-                      
-                      if (newOrder) {
-                        // Recargar órdenes desde Supabase inmediatamente
-                        const loadedOrders = await getOrders();
-                        setOrders(loadedOrders);
-                        await clearCart();
-                        // Se queda en la pantalla de órdenes y se actualiza automáticamente cada 5 segundos
-                      } else {
-                        console.error('Failed to create order: createOrderDB returned null');
-                        alert('Error al crear la orden. Por favor, intenta de nuevo.');
-                      }
-                    } catch (error) {
-                      console.error('Error creating order:', error);
-                      alert('Error al crear la orden. Por favor, intenta de nuevo.');
-                    }
-                  }}
-                  className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
-                >
-                  <span>{t('order.confirmAndSendOrder')}</span>
-                  <span className="material-symbols-outlined">restaurant</span>
-                </button>
-              ) : !hasSentOrder && orderItems.length > 0 ? (
-                <button
-                  onClick={async () => {
-                    try {
-                      // Crear primera orden en Supabase
-                      const orderNumber = getNextOrderNumber();
-                      const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                      
-                      const newOrder = await createOrderDB({
-                        restaurant_id: '00000000-0000-0000-0000-000000000001',
-                        status: 'orden_enviada',
-                        total: total,
-                        items: orderItems.map(item => ({
-                          id: item.id,
-                          name: item.name || getDishName(item.id),
-                          price: item.price,
-                          notes: item.notes || '',
-                          quantity: item.quantity,
-                        })),
-                        notes: orderSpecialInstructions || undefined,
-                      } as any);
-                      
-                      if (newOrder) {
-                        // Recargar órdenes desde Supabase inmediatamente
-                        const loadedOrders = await getOrders();
-                        setOrders(loadedOrders);
-                        await clearCart();
-                        // Se queda en la pantalla de órdenes y se actualiza automáticamente cada 5 segundos
-                      } else {
-                        console.error('Failed to create order: createOrderDB returned null');
-                        alert('Error al crear la orden. Por favor, intenta de nuevo.');
-                      }
-                    } catch (error) {
-                      console.error('Error creating order:', error);
-                      alert('Error al crear la orden. Por favor, intenta de nuevo.');
-                    }
-                  }}
-                  className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
-                >
-                  <span>{t('order.confirmAndSendOrder')}</span>
-                  <span className="material-symbols-outlined">restaurant</span>
-                </button>
-              ) : null}
-            </>
+            <button
+              onClick={async () => {
+                try {
+                  // Crear orden en Supabase
+                  const orderNumber = getNextOrderNumber();
+                  const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                  
+                  const newOrder = await createOrderDB({
+                    restaurant_id: '00000000-0000-0000-0000-000000000001',
+                    status: 'orden_enviada',
+                    total: total,
+                    items: orderItems.map(item => ({
+                      id: item.id,
+                      name: item.name || getDishName(item.id),
+                      price: item.price,
+                      notes: item.notes || '',
+                      quantity: item.quantity,
+                    })),
+                    notes: orderSpecialInstructions || undefined,
+                  } as any);
+                  
+                  if (newOrder) {
+                    // Recargar órdenes desde Supabase inmediatamente
+                    const loadedOrders = await getOrders();
+                    setOrders(loadedOrders);
+                    await clearCart();
+                  } else {
+                    console.error('Failed to create order: createOrderDB returned null');
+                    alert('Error al crear la orden. Por favor, intenta de nuevo.');
+                  }
+                } catch (error) {
+                  console.error('Error creating order:', error);
+                  alert('Error al crear la orden. Por favor, intenta de nuevo.');
+                }
+              }}
+              className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-primary/90"
+            >
+              <span>{t('order.confirmAndSendOrder')}</span>
+              <span className="material-symbols-outlined">restaurant</span>
+            </button>
           )}
         </div>
       )}

@@ -349,12 +349,21 @@ Al momento de pagar:
 2. Haz click en el ícono de corazón (❤️)
 3. El platillo se guardará en tus favoritos
 
+### Marcar Promociones como Favoritas
+
+1. En la pantalla de promociones (`/promotions`), haz click en el ícono de corazón en cualquier promoción
+2. O en el detalle de una promoción (`/promotion-detail/:id`), haz click en el botón de favoritos
+3. La promoción se guardará en tus favoritos
+
 ### Ver tus Favoritos
 
 1. Haz click en **"Favoritos"** en la navegación inferior
-2. Verás todos tus platillos favoritos
+2. Verás tres pestañas:
+   - **Platillos**: Todos tus platillos favoritos
+   - **Combinaciones**: Combinaciones personalizadas guardadas
+   - **Promociones**: Todas tus promociones favoritas
 3. Puedes hacer click en cualquier favorito para ver detalles
-4. Haz click nuevamente en el corazón para eliminarlo de favoritos
+4. Haz click nuevamente en el corazón o botón de eliminar para quitarlo de favoritos
 
 ---
 
@@ -810,6 +819,8 @@ Sí, la app está diseñada para funcionar en teléfonos y tablets, con diseño 
 - ✅ Agregada información sobre funcionalidad de agregar más items en edición de órdenes
 - ✅ Agregada información sobre navegación inteligente del menú
 - ✅ Actualizada sección de modificación de órdenes con nuevas funcionalidades
+- ✅ Actualizada sección de Favoritos con información sobre promociones favoritas
+- ✅ Instrucciones para marcar promociones como favoritas
 
 ### Cambios Recientes (Diciembre 2024)
 - ✅ Agregada sección completa de Lista de Espera (Waitlist)

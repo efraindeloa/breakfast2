@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useFavorites } from '../contexts/FavoritesContext';
+import TopNavbar from '../components/TopNavbar';
 
 type FilterType = 'breakfast' | 'seasonal' | 'vip';
 
@@ -28,6 +30,7 @@ interface AISuggestion {
 const PromotionsScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { addFavoritePromotion, removeFavoritePromotion, isPromotionFavorite } = useFavorites();
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('breakfast');
 
   // Promociones principales (carousel)
@@ -146,25 +149,11 @@ const PromotionsScreen: React.FC = () => {
   return (
     <div className="relative flex h-auto min-h-screen w-full max-w-[480px] mx-auto flex-col overflow-x-hidden pb-24 bg-background-light dark:bg-background-dark">
       {/* TopAppBar */}
-      <div className="sticky top-0 z-50 flex items-center bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md p-4 pb-2 justify-between">
-        <button 
-          onClick={() => navigate(-1)}
-          className="text-[#181411] dark:text-white flex size-12 shrink-0 items-center justify-center cursor-pointer"
-        >
-          <span className="material-symbols-outlined">arrow_back</span>
-        </button>
-        <h2 className="text-[#181411] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">
-          {t('promotions.title')}
-        </h2>
-        <button 
-          onClick={() => navigate('/profile')}
-          className="flex w-12 items-center justify-end"
-        >
-          <div className="flex size-12 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-primary/10 text-primary">
-            <span className="material-symbols-outlined">account_circle</span>
-          </div>
-        </button>
-      </div>
+      <TopNavbar 
+        title={t('promotions.title')}
+        showBackButton={true}
+        showAvatar={true}
+      />
 
       {/* Chips / Filters */}
       <div className="flex gap-3 p-4 flex-wrap overflow-x-auto whitespace-nowrap scrollbar-hide [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -191,38 +180,59 @@ const PromotionsScreen: React.FC = () => {
       {/* Carousel: Main Offers */}
       <div className="flex overflow-x-auto scroll-smooth [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex items-stretch p-4 gap-4">
-          {filteredMainPromotions.map((promotion) => (
-            <button
-              key={promotion.id}
-              onClick={() => navigate(`/promotion-detail/${promotion.id}`)}
-              className="flex h-full flex-1 flex-col gap-3 rounded-xl min-w-[280px] text-left cursor-pointer hover:opacity-90 transition-opacity"
-            >
-              <div 
-                className="relative w-full aspect-[16/9] bg-center bg-no-repeat bg-cover rounded-xl shadow-lg"
-                style={{ backgroundImage: `url("${promotion.image}")` }}
+          {filteredMainPromotions.map((promotion) => {
+            const isFavorite = isPromotionFavorite(promotion.id);
+            return (
+              <button
+                key={promotion.id}
+                onClick={() => navigate(`/promotion-detail/${promotion.id}`)}
+                className="flex h-full flex-1 flex-col gap-3 rounded-xl min-w-[280px] text-left cursor-pointer hover:opacity-90 transition-opacity"
               >
-                <div className={`absolute top-3 left-3 ${promotion.badge.color} text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider`}>
-                  {promotion.badge.text}
+                <div 
+                  className="relative w-full aspect-[16/9] bg-center bg-no-repeat bg-cover rounded-xl shadow-lg"
+                  style={{ backgroundImage: `url("${promotion.image}")` }}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isFavorite) {
+                        removeFavoritePromotion(promotion.id);
+                      } else {
+                        addFavoritePromotion(promotion);
+                      }
+                    }}
+                    className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 dark:bg-gray-800/90 flex items-center justify-center hover:bg-white dark:hover:bg-gray-800 transition-colors shadow-sm"
+                  >
+                    <span 
+                      className={`material-symbols-outlined text-sm ${isFavorite ? 'text-red-500' : 'text-gray-400'}`}
+                      style={isFavorite ? { fontVariationSettings: "'FILL' 1" } : {}}
+                    >
+                      favorite
+                    </span>
+                  </button>
+                  <div className={`absolute top-3 left-3 ${promotion.badge.color} text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider`}>
+                    {promotion.badge.text}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <p className="text-[#181411] dark:text-white text-base font-bold leading-normal">
-                  {promotion.title}
-                </p>
-                {promotion.timeRestriction && (
-                  <p className="text-[#887563] dark:text-gray-400 text-sm font-medium leading-normal flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">schedule</span>
-                    {promotion.timeRestriction}
+                <div>
+                  <p className="text-[#181411] dark:text-white text-base font-bold leading-normal">
+                    {promotion.title}
                   </p>
-                )}
-                {promotion.description && !promotion.timeRestriction && (
-                  <p className="text-[#887563] dark:text-gray-400 text-sm font-medium leading-normal">
-                    {promotion.description}
-                  </p>
-                )}
-              </div>
-            </button>
-          ))}
+                  {promotion.timeRestriction && (
+                    <p className="text-[#887563] dark:text-gray-400 text-sm font-medium leading-normal flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">schedule</span>
+                      {promotion.timeRestriction}
+                    </p>
+                  )}
+                  {promotion.description && !promotion.timeRestriction && (
+                    <p className="text-[#887563] dark:text-gray-400 text-sm font-medium leading-normal">
+                      {promotion.description}
+                    </p>
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -271,23 +281,45 @@ const PromotionsScreen: React.FC = () => {
 
       {/* Simple Grid for more items */}
       <div className="px-4 grid grid-cols-2 gap-4 pb-24">
-        {filteredSeasonalPromotions.map((promotion) => (
-          <button
-            key={promotion.id}
-            onClick={() => navigate(`/promotion-detail/${promotion.id}`)}
-            className="bg-white dark:bg-[#32281d] p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-none text-left cursor-pointer hover:opacity-90 transition-opacity"
-          >
-            <div 
-              className="w-full aspect-square bg-cover bg-center rounded-xl mb-2"
-              style={{ backgroundImage: `url('${promotion.image}')` }}
-            />
+        {filteredSeasonalPromotions.map((promotion) => {
+          const isFavorite = isPromotionFavorite(promotion.id);
+          return (
+            <button
+              key={promotion.id}
+              onClick={() => navigate(`/promotion-detail/${promotion.id}`)}
+              className="bg-white dark:bg-[#32281d] p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-none text-left cursor-pointer hover:opacity-90 transition-opacity"
+            >
+              <div 
+                className="relative w-full aspect-square bg-cover bg-center rounded-xl mb-2"
+                style={{ backgroundImage: `url('${promotion.image}')` }}
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isFavorite) {
+                      removeFavoritePromotion(promotion.id);
+                    } else {
+                      addFavoritePromotion(promotion);
+                    }
+                  }}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 dark:bg-gray-800/90 flex items-center justify-center hover:bg-white dark:hover:bg-gray-800 transition-colors shadow-sm"
+                >
+                  <span 
+                    className={`material-symbols-outlined text-xs ${isFavorite ? 'text-red-500' : 'text-gray-400'}`}
+                    style={isFavorite ? { fontVariationSettings: "'FILL' 1" } : {}}
+                  >
+                    favorite
+                  </span>
+                </button>
+              </div>
             <p className={`text-xs font-bold mb-1 ${promotion.badge.color === 'bg-primary' ? 'text-primary' : 'text-primary'}`}>
               {promotion.discount || promotion.badge.text}
             </p>
             <p className="text-sm font-bold dark:text-white">{promotion.title}</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">{promotion.description}</p>
           </button>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

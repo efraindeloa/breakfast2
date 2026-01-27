@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useCart } from '../contexts/CartContext';
+import { useFavorites } from '../contexts/FavoritesContext';
 
 interface PromotionDetail {
   id: string;
@@ -31,6 +32,7 @@ const PromotionDetailScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const { addToCart } = useCart();
+  const { addFavoritePromotion, removeFavoritePromotion, isPromotionFavorite } = useFavorites();
   const [timeRemaining, setTimeRemaining] = useState(2712); // 45 minutos y 12 segundos en segundos
 
   // Datos de ejemplo - en producción esto vendría de una API o contexto
@@ -154,12 +156,43 @@ const PromotionDetailScreen: React.FC = () => {
         <h2 className="text-[#181411] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">
           {t('promotions.offerDetail')}
         </h2>
-        <button
-          onClick={handleShare}
-          className="flex size-12 cursor-pointer items-center justify-center rounded-full bg-transparent text-[#181411] dark:text-white"
-        >
-          <span className="material-symbols-outlined">share</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const isFavorite = isPromotionFavorite(promotion.id);
+              if (isFavorite) {
+                removeFavoritePromotion(promotion.id);
+              } else {
+                // Convertir PromotionDetail a FavoritePromotion
+                addFavoritePromotion({
+                  id: promotion.id,
+                  title: promotion.title,
+                  description: promotion.subtitle,
+                  image: promotion.image,
+                  badge: {
+                    text: promotion.badge.text,
+                    color: 'bg-primary'
+                  },
+                  category: promotion.category
+                });
+              }
+            }}
+            className="flex size-12 cursor-pointer items-center justify-center rounded-full bg-transparent text-[#181411] dark:text-white"
+          >
+            <span 
+              className={`material-symbols-outlined ${isPromotionFavorite(promotion.id) ? 'text-red-500' : ''}`}
+              style={isPromotionFavorite(promotion.id) ? { fontVariationSettings: "'FILL' 1" } : {}}
+            >
+              favorite
+            </span>
+          </button>
+          <button
+            onClick={handleShare}
+            className="flex size-12 cursor-pointer items-center justify-center rounded-full bg-transparent text-[#181411] dark:text-white"
+          >
+            <span className="material-symbols-outlined">share</span>
+          </button>
+        </div>
       </div>
 
       {/* Header Image with Badge */}

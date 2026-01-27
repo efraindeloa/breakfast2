@@ -286,22 +286,33 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
           return;
         }
 
-        // Registro exitoso - iniciar sesión automáticamente
-        setSuccessMessage(t('register.registrationSuccess') || '¡Registro exitoso! Iniciando sesión...');
-        
-        // Iniciar sesión automáticamente con las credenciales que acaba de usar
-        const { error: signInError } = await signIn(email, password);
-        
-        if (signInError) {
-          console.error('Auto sign-in error after registration:', signInError);
-          // Si falla el auto sign-in, mostrar mensaje pero aún así intentar redirigir
-          setSuccessMessage(t('register.registrationSuccess') || '¡Registro exitoso! Redirigiendo...');
+        // Registro exitoso - verificar si hay error de email duplicado
+        if (signUpError && signUpError.message?.includes('ya está registrado')) {
+          // El email ya existe, redirigir al login
+          setEmailOrPhoneError(signUpError.message);
+          setIsLoading(false);
+          setTimeout(() => {
+            onLogin();
+          }, 2000);
+        } else if (signUpError && (signUpError.message?.includes('Email not confirmed') || 
+                                   signUpError.message?.includes('email_not_confirmed'))) {
+          // El email no está confirmado - el usuario debe confirmar antes de iniciar sesión
+          setSuccessMessage(t('register.emailConfirmationRequired') || 'Por favor, confirma tu correo electrónico antes de iniciar sesión.');
+          setIsLoading(false);
+          setTimeout(() => {
+            onLogin();
+          }, 3000);
+        } else {
+          // Registro exitoso - verificar si hay sesión antes de redirigir
+          // Esperar un momento para que la sesión se establezca (si el signIn automático funcionó)
+          setTimeout(() => {
+            // Verificar si hay sesión antes de redirigir
+            // Si no hay sesión, redirigir al login
+            setSuccessMessage(t('register.registrationSuccess') || '¡Registro exitoso! Redirigiendo...');
+            // Intentar redirigir a home, pero si no hay sesión, onAuthStateChange manejará el login
+            navigate('/home');
+          }, 1500);
         }
-        
-        // Redirigir a la app (el AuthContext manejará la sesión)
-        setTimeout(() => {
-          navigate('/home');
-        }, 1000);
       } catch (err) {
         console.error('Unexpected registration error:', err);
         setEmailOrPhoneError(t('register.registrationError') || 'Error inesperado al registrarse');

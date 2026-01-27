@@ -21,12 +21,30 @@ export interface SavedCombination {
   useCount: number;
 }
 
+export interface FavoritePromotion {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  badge: {
+    text: string;
+    color: string;
+  };
+  timeRestriction?: string;
+  discount?: string;
+  category: string;
+}
+
 interface FavoritesContextType {
   favoriteDishes: FavoriteDish[];
   savedCombinations: SavedCombination[];
+  favoritePromotions: FavoritePromotion[];
   addFavorite: (dish: FavoriteDish) => void;
   removeFavorite: (dishId: number) => void;
   isFavorite: (dishId: number) => boolean;
+  addFavoritePromotion: (promotion: FavoritePromotion) => void;
+  removeFavoritePromotion: (promotionId: string) => void;
+  isPromotionFavorite: (promotionId: string) => boolean;
   saveCombination: (name: string, items: CartItem[]) => string;
   deleteCombination: (combinationId: string) => void;
   loadCombination: (combinationId: string) => CartItem[];
@@ -37,10 +55,12 @@ const FavoritesContext = createContext<FavoritesContextType | undefined>(undefin
 
 const FAVORITES_STORAGE_KEY = 'favorite_dishes';
 const COMBINATIONS_STORAGE_KEY = 'saved_combinations';
+const PROMOTIONS_STORAGE_KEY = 'favorite_promotions';
 
 export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [favoriteDishes, setFavoriteDishes] = useState<FavoriteDish[]>([]);
   const [savedCombinations, setSavedCombinations] = useState<SavedCombination[]>([]);
+  const [favoritePromotions, setFavoritePromotions] = useState<FavoritePromotion[]>([]);
 
   // Cargar favoritos desde localStorage al iniciar
   useEffect(() => {
@@ -73,6 +93,18 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
   }, []);
 
+  // Cargar promociones favoritas desde localStorage al iniciar
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(PROMOTIONS_STORAGE_KEY);
+      if (stored) {
+        setFavoritePromotions(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Error loading favorite promotions:', error);
+    }
+  }, []);
+
   // Guardar favoritos en localStorage cuando cambian
   useEffect(() => {
     localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favoriteDishes));
@@ -87,6 +119,11 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
     }));
     localStorage.setItem(COMBINATIONS_STORAGE_KEY, JSON.stringify(toStore));
   }, [savedCombinations]);
+
+  // Guardar promociones favoritas en localStorage cuando cambian
+  useEffect(() => {
+    localStorage.setItem(PROMOTIONS_STORAGE_KEY, JSON.stringify(favoritePromotions));
+  }, [favoritePromotions]);
 
   const addFavorite = (dish: FavoriteDish) => {
     setFavoriteDishes(prev => {
@@ -103,6 +140,23 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   const isFavorite = (dishId: number): boolean => {
     return favoriteDishes.some(f => f.id === dishId);
+  };
+
+  const addFavoritePromotion = (promotion: FavoritePromotion) => {
+    setFavoritePromotions(prev => {
+      if (prev.find(p => p.id === promotion.id)) {
+        return prev; // Ya existe
+      }
+      return [...prev, promotion];
+    });
+  };
+
+  const removeFavoritePromotion = (promotionId: string) => {
+    setFavoritePromotions(prev => prev.filter(p => p.id !== promotionId));
+  };
+
+  const isPromotionFavorite = (promotionId: string): boolean => {
+    return favoritePromotions.some(p => p.id === promotionId);
   };
 
   const saveCombination = (name: string, items: CartItem[]): string => {
@@ -146,9 +200,13 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
       value={{
         favoriteDishes,
         savedCombinations,
+        favoritePromotions,
         addFavorite,
         removeFavorite,
         isFavorite,
+        addFavoritePromotion,
+        removeFavoritePromotion,
+        isPromotionFavorite,
         saveCombination,
         deleteCombination,
         loadCombination,

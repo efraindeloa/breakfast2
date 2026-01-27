@@ -178,26 +178,31 @@ const getAuthenticatedUserId = async (): Promise<string | null> => {
 };
 
 // Función para verificar que el usuario autenticado existe en la tabla users
-// (Ya no creamos usuarios anónimos, solo verificamos que el usuario autenticado exista)
+// Si no existe, lanza un error (el usuario debe registrarse primero)
 const ensureUserExists = async (userId: string): Promise<void> => {
   if (!isSupabaseConfigured()) return;
   
   try {
-    // Verificar si el usuario ya existe
+    // Verificar si el usuario existe en la tabla users
     const { data: existingUser, error: checkError } = await supabase
       .from('users')
       .select('id')
       .eq('id', userId)
       .maybeSingle();
     
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('[ensureUserExists] Error checking user existence:', checkError);
+      throw new Error('Error verificando usuario en la base de datos');
+    }
+    
     // Si el usuario existe, no hacer nada
     if (existingUser) {
       return;
     }
     
-    // Si no existe, lanzar error (no debería pasar si el usuario está autenticado)
+    // Si no existe, lanzar error - el usuario debe registrarse primero
     console.error('[ensureUserExists] Authenticated user does not exist in database:', userId);
-    throw new Error('Authenticated user not found in database');
+    throw new Error('Usuario no registrado. Por favor, completa el registro primero.');
   } catch (error) {
     console.error('[ensureUserExists] Error:', error);
     throw error;
@@ -1628,17 +1633,10 @@ export const getProducts = async (filters?: {
   try {
     const language = filters?.language || getCurrentLanguage();
     
-    // Query principal con JOIN a traducciones
+    // Query principal sin JOIN a traducciones (la tabla product_translations no existe)
     let query = supabase
       .from('products')
-      .select(`
-        *,
-        translations:product_translations!left(
-          name,
-          description,
-          language_code
-        )
-      `)
+      .select('*')
       .order('sort_order', { ascending: true })
       .order('id', { ascending: true });
 
@@ -1672,28 +1670,13 @@ export const getProducts = async (filters?: {
     const { data, error } = await query;
     if (error) throw error;
     
-    // Mapear productos con traducciones
+    // Mapear productos (sin traducciones, se usan los nombres de la BD directamente)
     return (data || []).map((p: any) => {
-      // Buscar traducción en el idioma actual
-      const translation = Array.isArray(p.translations) 
-        ? p.translations.find((t: any) => t.language_code === language)
-        : null;
-      
-      // Si no hay traducción en el idioma actual, buscar en español como fallback
-      const fallbackTranslation = !translation && Array.isArray(p.translations)
-        ? p.translations.find((t: any) => t.language_code === 'es')
-        : null;
-      
-      // Usar traducción si existe, sino usar el nombre/descripción original
-      const finalTranslation = translation || fallbackTranslation;
-      
       return {
         ...p,
-        name: finalTranslation?.name || p.name,
-        description: finalTranslation?.description || p.description || '',
+        name: p.name,
+        description: p.description || '',
         image: p.image_url ? getProductImageUrl(p.image_url) : (p.image || ''),
-        // Eliminar el campo translations del objeto final (solo era para el JOIN)
-        translations: undefined,
       };
     });
   } catch (error) {
@@ -1710,7 +1693,7 @@ export const getProducts = async (filters?: {
  * @param filePath Ruta del archivo dentro del bucket
  * @returns URL pública de la imagen
  */
-export const getImageUrl = (bucketName: string, filePath: string): string => {
+export const getImageUrl = (bucketName: string, filePath: string, bustCache: boolean = false): string => {
   if (!isSupabaseConfigured()) {
     // Si no está configurado, retornar ruta relativa local
     return filePath.startsWith('/') ? filePath : `/${filePath}`;
@@ -1727,7 +1710,15 @@ export const getImageUrl = (bucketName: string, filePath: string): string => {
     // Fallback: usar ruta relativa
     return filePath.startsWith('/') ? filePath : `/${filePath}`;
   }
-  return `${supabaseUrl}/storage/v1/object/public/${bucketName}/${filePath}`;
+  
+  let url = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${filePath}`;
+  
+  // Agregar parámetro de cache-busting si se solicita (útil para desarrollo)
+  if (bustCache) {
+    url += (url.includes('?') ? '&' : '?') + '_t=' + Date.now();
+  }
+  
+  return url;
 };
 
 /**
@@ -1812,13 +1803,13 @@ export const getProductImageUrl = (imageUrl: string | null | undefined): string 
 /**
  * Helper para obtener URL de imagen de restaurante
  */
-export const getRestaurantImageUrl = (imageUrl: string | null | undefined, type: 'logo' | 'cover' = 'logo'): string => {
+export const getRestaurantImageUrl = (imageUrl: string | null | undefined, type: 'logo' | 'cover' = 'logo', bustCache: boolean = false): string => {
   if (!imageUrl) return '';
   if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
     return imageUrl;
   }
   if (isSupabaseConfigured()) {
-    return getImageUrl('restaurant-images', imageUrl);
+    return getImageUrl('restaurant-images', imageUrl, bustCache);
   }
   return imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
 };
@@ -1848,14 +1839,7 @@ export const getProductById = async (productId: number, restaurantId?: string, l
     
     let query = supabase
       .from('products')
-      .select(`
-        *,
-        translations:product_translations!left(
-          name,
-          description,
-          language_code
-        )
-      `)
+      .select('*')
       .eq('id', productId)
       .eq('is_active', true);
 
@@ -1869,25 +1853,12 @@ export const getProductById = async (productId: number, restaurantId?: string, l
     
     if (!data) return null;
     
-    // Buscar traducción en el idioma actual
-    const translation = Array.isArray(data.translations)
-      ? data.translations.find((t: any) => t.language_code === currentLanguage)
-      : null;
-    
-    // Si no hay traducción en el idioma actual, buscar en español como fallback
-    const fallbackTranslation = !translation && Array.isArray(data.translations)
-      ? data.translations.find((t: any) => t.language_code === 'es')
-      : null;
-    
-    // Usar traducción si existe, sino usar el nombre/descripción original
-    const finalTranslation = translation || fallbackTranslation;
-    
+    // Retornar producto sin traducciones (se usan los nombres de la BD directamente)
     return {
       ...data,
-      name: finalTranslation?.name || data.name,
-      description: finalTranslation?.description || data.description || '',
+      name: data.name,
+      description: data.description || '',
       image: data.image_url ? getProductImageUrl(data.image_url) : (data.image || ''),
-      translations: undefined, // Eliminar el campo translations del objeto final
     };
   } catch (error) {
     console.error('Error fetching product:', error);
@@ -1921,6 +1892,8 @@ export interface Restaurant {
   timezone: string;
   created_at: string;
   updated_at: string;
+  // Campo calculado: URL completa de la imagen del logo
+  image?: string;
 }
 
 export const getRestaurants = async (filters?: {
@@ -1964,7 +1937,12 @@ export const getRestaurants = async (filters?: {
 
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    
+    // Mapear restaurantes y agregar campo image desde logo_url
+    return (data || []).map((restaurant: any) => ({
+      ...restaurant,
+      image: restaurant.logo_url ? getRestaurantImageUrl(restaurant.logo_url, 'logo') : undefined,
+    }));
   } catch (error) {
     console.error('Error fetching restaurants:', error);
     return [];
@@ -1985,9 +1963,616 @@ export const getRestaurantById = async (restaurantId: string): Promise<Restauran
       .single();
 
     if (error) throw error;
-    return data;
+    if (!data) return null;
+    
+    // Mapear y agregar campo image desde logo_url
+    return {
+      ...data,
+      image: data.logo_url ? getRestaurantImageUrl(data.logo_url, 'logo') : undefined,
+    };
   } catch (error) {
     console.error('Error fetching restaurant:', error);
+    return null;
+  }
+};
+
+export const getRestaurantBySlug = async (slug: string): Promise<Restaurant | null> => {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('*')
+      .eq('slug', slug)
+      .eq('is_active', true)
+      .single();
+
+    if (error) throw error;
+    if (!data) return null;
+    
+    // Mapear y agregar campo image desde logo_url
+    const restaurant = {
+      ...data,
+      image: data.logo_url ? getRestaurantImageUrl(data.logo_url, 'logo') : undefined,
+    };
+    
+    // Log para debugging
+    console.log(`[getRestaurantBySlug] Restaurant "${slug}" loaded:`, {
+      name: restaurant.name,
+      logo_url: data.logo_url,
+      image_url: restaurant.image,
+    });
+    
+    return restaurant;
+  } catch (error) {
+    console.error('Error fetching restaurant by slug:', error);
+    return null;
+  }
+};
+
+export const updateRestaurant = async (
+  restaurantId: string,
+  updates: Partial<Restaurant>
+): Promise<Restaurant | null> => {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .update(updates)
+      .eq('id', restaurantId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!data) return null;
+    
+    // Mapear y agregar campo image desde logo_url
+    return {
+      ...data,
+      image: data.logo_url ? getRestaurantImageUrl(data.logo_url, 'logo') : undefined,
+    };
+  } catch (error) {
+    console.error('Error updating restaurant:', error);
+    return null;
+  }
+};
+
+/**
+ * Crea un nuevo restaurante con imagen de perfil
+ * @param restaurantData Datos del restaurante (sin logo_url, se genera automáticamente)
+ * @param logoImage Imagen del logo (File o Blob) - opcional
+ * @param coverImage Imagen de portada (File o Blob) - opcional
+ * @returns Restaurante creado con campo image mapeado, o null si hay error
+ */
+export const createRestaurant = async (
+  restaurantData: {
+    name: string;
+    slug: string;
+    description?: string;
+    address?: string;
+    city: string;
+    state?: string;
+    country: string;
+    postal_code?: string;
+    latitude?: number;
+    longitude?: number;
+    phone?: string;
+    email?: string;
+    website?: string;
+    timezone?: string;
+  },
+  logoImage?: File | Blob,
+  coverImage?: File | Blob
+): Promise<Restaurant | null> => {
+  if (!isSupabaseConfigured()) {
+    console.error('Supabase no está configurado');
+    return null;
+  }
+
+  try {
+    console.log('🔄 Creando nuevo restaurante...');
+
+    let logoUrl: string | undefined;
+    let coverImageUrl: string | undefined;
+
+    // 1. Subir imagen del logo si se proporciona
+    if (logoImage) {
+      const logoFileName = `logos/${restaurantData.slug}-${Date.now()}.${logoImage instanceof File ? logoImage.name.split('.').pop() : 'png'}`;
+      const { data: logoUploadData, error: logoUploadError } = await supabase.storage
+        .from('restaurant-images')
+        .upload(logoFileName, logoImage, {
+          cacheControl: '3600',
+          upsert: true
+        });
+      
+      if (logoUploadError) {
+        console.warn('⚠️ No se pudo subir el logo:', logoUploadError);
+      } else if (logoUploadData) {
+        // Guardar solo la ruta relativa (data.path)
+        logoUrl = logoUploadData.path;
+        console.log(`✅ Logo subido: ${logoUploadData.path}`);
+      }
+    }
+
+    // 2. Subir imagen de portada si se proporciona
+    if (coverImage) {
+      const coverFileName = `covers/${restaurantData.slug}-${Date.now()}.${coverImage instanceof File ? coverImage.name.split('.').pop() : 'png'}`;
+      const { data: coverUploadData, error: coverUploadError } = await supabase.storage
+        .from('restaurant-images')
+        .upload(coverFileName, coverImage, {
+          cacheControl: '3600',
+          upsert: true
+        });
+      
+      if (coverUploadError) {
+        console.warn('⚠️ No se pudo subir la imagen de portada:', coverUploadError);
+      } else if (coverUploadData) {
+        // Guardar solo la ruta relativa (data.path)
+        coverImageUrl = coverUploadData.path;
+        console.log(`✅ Imagen de portada subida: ${coverUploadData.path}`);
+      }
+    }
+
+    // 3. Crear el restaurante en la base de datos
+    const { data, error } = await supabase
+      .from('restaurants')
+      .insert({
+        ...restaurantData,
+        logo_url: logoUrl,
+        cover_image_url: coverImageUrl,
+        is_active: true,
+        is_verified: false,
+        rating: 0.0,
+        total_reviews: 0,
+        timezone: restaurantData.timezone || 'UTC',
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!data) {
+      console.error('❌ No se retornó ningún dato al crear el restaurante');
+      return null;
+    }
+
+    console.log(`✅ Restaurante creado: ${data.name} (ID: ${data.id})`);
+
+    // 4. Mapear y retornar con campo image
+    return {
+      ...data,
+      image: data.logo_url ? getRestaurantImageUrl(data.logo_url, 'logo') : undefined,
+    };
+  } catch (error) {
+    console.error('❌ Error al crear el restaurante:', error);
+    return null;
+  }
+};
+
+/**
+ * Convierte una imagen base64 a Blob
+ */
+export const base64ToBlob = (base64: string, mimeType: string = 'image/png'): Blob => {
+  const base64Data = base64.includes(',') ? base64.split(',')[1] : base64;
+  const byteCharacters = atob(base64Data);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  return new Blob([new Uint8Array(byteNumbers)], { type: mimeType });
+};
+
+/**
+ * Actualiza la imagen del restaurante desde una imagen base64
+ * @param restaurantSlug Slug del restaurante (ej: 'donk-restaurant')
+ * @param base64Image Imagen en formato base64 (con o sin prefijo data:image/...)
+ * @param imageType Tipo de imagen: 'logo' o 'cover'
+ * @returns true si se actualizó correctamente, false en caso contrario
+ */
+/**
+ * Actualiza el logo del restaurante usando una imagen existente en Storage
+ * @param restaurantSlug Slug del restaurante (ej: 'donk-restaurant')
+ * @param imagePath Ruta relativa de la imagen en Storage (ej: 'logos/logo-donk-restaurant.png')
+ * @param imageType Tipo de imagen: 'logo' o 'cover'
+ * @returns true si se actualizó correctamente, false en caso contrario
+ */
+export const updateRestaurantImageFromStorage = async (
+  restaurantSlug: string,
+  imagePath: string,
+  imageType: 'logo' | 'cover' = 'logo'
+): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    console.error('Supabase no está configurado');
+    return false;
+  }
+
+  try {
+    console.log(`🔄 Actualizando ${imageType} del restaurante "${restaurantSlug}" con imagen: ${imagePath}`);
+
+    // 1. Obtener el restaurante
+    const restaurant = await getRestaurantBySlug(restaurantSlug);
+    if (!restaurant) {
+      console.error(`❌ No se encontró el restaurante con slug: ${restaurantSlug}`);
+      return false;
+    }
+
+    console.log(`✅ Restaurante encontrado: ${restaurant.name} (ID: ${restaurant.id})`);
+
+    // 2. Actualizar el restaurante con la ruta de la imagen
+    const updateField = imageType === 'logo' ? 'logo_url' : 'cover_image_url';
+    const updatedRestaurant = await updateRestaurant(restaurant.id, {
+      [updateField]: imagePath
+    });
+
+    if (!updatedRestaurant) {
+      console.error('❌ Error al actualizar el restaurante');
+      return false;
+    }
+
+    console.log(`✅ Restaurante actualizado. ${updateField}: ${imagePath}`);
+    console.log('🎉 ¡Imagen del restaurante actualizada exitosamente!');
+
+    return true;
+  } catch (error) {
+    console.error('❌ Error al actualizar la imagen del restaurante:', error);
+    return false;
+  }
+};
+
+/**
+ * Actualiza la imagen del restaurante desde una imagen base64
+ * @param restaurantSlug Slug del restaurante (ej: 'donk-restaurant')
+ * @param base64Image Imagen en formato base64 (con o sin prefijo data:image/...)
+ * @param imageType Tipo de imagen: 'logo' o 'cover'
+ * @returns true si se actualizó correctamente, false en caso contrario
+ */
+export const updateRestaurantImageFromBase64 = async (
+  restaurantSlug: string,
+  base64Image: string,
+  imageType: 'logo' | 'cover' = 'logo'
+): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    console.error('Supabase no está configurado');
+    return false;
+  }
+
+  try {
+    console.log(`🔄 Actualizando ${imageType} del restaurante "${restaurantSlug}"...`);
+
+    // 1. Obtener el restaurante
+    const restaurant = await getRestaurantBySlug(restaurantSlug);
+    if (!restaurant) {
+      console.error(`❌ No se encontró el restaurante con slug: ${restaurantSlug}`);
+      return false;
+    }
+
+    console.log(`✅ Restaurante encontrado: ${restaurant.name} (ID: ${restaurant.id})`);
+
+    // 2. Convertir base64 a Blob
+    const blob = base64ToBlob(base64Image, 'image/png');
+    console.log(`✅ Imagen convertida a Blob (tamaño: ${blob.size} bytes)`);
+
+    // 3. Subir imagen a Supabase Storage
+    const folder = imageType === 'logo' ? 'logos' : 'covers';
+    const fileName = `${restaurantSlug}-${Date.now()}.png`;
+    const filePath = `${folder}/${fileName}`;
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('restaurant-images')
+      .upload(filePath, blob, {
+        cacheControl: '3600',
+        upsert: true
+      });
+
+    if (uploadError) {
+      console.error('❌ Error al subir la imagen:', uploadError);
+      return false;
+    }
+
+    console.log(`✅ Imagen subida a: ${filePath}`);
+
+    // 4. Actualizar el restaurante
+    const updateField = imageType === 'logo' ? 'logo_url' : 'cover_image_url';
+    const updatedRestaurant = await updateRestaurant(restaurant.id, {
+      [updateField]: filePath
+    });
+
+    if (!updatedRestaurant) {
+      console.error('❌ Error al actualizar el restaurante');
+      return false;
+    }
+
+    console.log(`✅ Restaurante actualizado. ${updateField}: ${filePath}`);
+    console.log('🎉 ¡Imagen del restaurante actualizada exitosamente!');
+
+    return true;
+  } catch (error) {
+    console.error('❌ Error al actualizar la imagen del restaurante:', error);
+    return false;
+  }
+};
+
+// ==================== USUARIOS Y PERFILES ====================
+
+export interface UserProfile {
+  user_id: string;
+  display_name?: string;
+  bio?: string;
+  gender?: string;
+  country?: string;
+  city?: string;
+  avatar_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserSettings {
+  user_id: string;
+  language: string;
+  theme: 'light' | 'dark' | 'system';
+  notifications_enabled: boolean;
+  marketing_emails_enabled: boolean;
+  default_payment_method?: string;
+  default_tip_percentage: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserPaymentMethod {
+  id: string;
+  user_id: string;
+  provider: string;
+  type: 'card' | 'cash' | 'wallet';
+  brand?: string;
+  last4?: string;
+  exp_month?: number;
+  exp_year?: number;
+  holder_name?: string;
+  token?: string;
+  is_default: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserTransaction {
+  id: string;
+  user_id: string;
+  order_id: string;
+  payment_id?: string;
+  restaurant_id: string;
+  restaurant_name: string;
+  total: number;
+  subtotal: number;
+  tip: number;
+  tip_percentage?: number;
+  tax: number;
+  payment_method: string;
+  payment_method_last4?: string;
+  status: 'completed' | 'pending' | 'failed' | 'refunded';
+  invoice_sent: boolean;
+  invoice_email?: string;
+  created_at: string;
+}
+
+// Obtener perfil de usuario
+export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return null;
+  }
+};
+
+// Crear o actualizar perfil de usuario
+export const upsertUserProfile = async (userId: string, profile: Partial<UserProfile>): Promise<UserProfile | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .upsert({ user_id: userId, ...profile }, { onConflict: 'user_id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error upserting user profile:', error);
+    return null;
+  }
+};
+
+// Obtener configuración de usuario
+export const getUserSettings = async (userId: string): Promise<UserSettings | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching user settings:', error);
+    return null;
+  }
+};
+
+// Crear o actualizar configuración de usuario
+export const upsertUserSettings = async (userId: string, settings: Partial<UserSettings>): Promise<UserSettings | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('user_settings')
+      .upsert({ user_id: userId, ...settings }, { onConflict: 'user_id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error upserting user settings:', error);
+    return null;
+  }
+};
+
+// ==================== MÉTODOS DE PAGO ====================
+
+// Obtener métodos de pago del usuario
+export const getUserPaymentMethods = async (userId: string): Promise<UserPaymentMethod[]> => {
+  if (!isSupabaseConfigured()) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('user_payment_methods')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('is_default', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching payment methods:', error);
+    return [];
+  }
+};
+
+// Agregar método de pago
+export const addPaymentMethod = async (userId: string, method: Omit<UserPaymentMethod, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<UserPaymentMethod | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    // Si se marca como default, quitar default de otros métodos
+    if (method.is_default) {
+      await supabase
+        .from('user_payment_methods')
+        .update({ is_default: false })
+        .eq('user_id', userId)
+        .eq('is_default', true);
+    }
+
+    const { data, error } = await supabase
+      .from('user_payment_methods')
+      .insert({ user_id: userId, ...method })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error adding payment method:', error);
+    return null;
+  }
+};
+
+// Actualizar método de pago
+export const updatePaymentMethod = async (methodId: string, userId: string, updates: Partial<UserPaymentMethod>): Promise<UserPaymentMethod | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    // Si se marca como default, quitar default de otros métodos
+    if (updates.is_default) {
+      await supabase
+        .from('user_payment_methods')
+        .update({ is_default: false })
+        .eq('user_id', userId)
+        .eq('is_default', true)
+        .neq('id', methodId);
+    }
+
+    const { data, error } = await supabase
+      .from('user_payment_methods')
+      .update(updates)
+      .eq('id', methodId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating payment method:', error);
+    return null;
+  }
+};
+
+// Eliminar método de pago (soft delete)
+export const deletePaymentMethod = async (methodId: string, userId: string): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
+
+  try {
+    const { error } = await supabase
+      .from('user_payment_methods')
+      .update({ is_active: false })
+      .eq('id', methodId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting payment method:', error);
+    return false;
+  }
+};
+
+// ==================== TRANSACCIONES ====================
+
+// Obtener transacciones del usuario
+export const getUserTransactions = async (userId: string, limit: number = 50): Promise<UserTransaction[]> => {
+  if (!isSupabaseConfigured()) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('user_transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    return [];
+  }
+};
+
+// Crear transacción (se llama cuando se completa un pago)
+export const createUserTransaction = async (transaction: Omit<UserTransaction, 'id' | 'created_at'>): Promise<UserTransaction | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('user_transactions')
+      .insert(transaction)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating transaction:', error);
     return null;
   }
 };

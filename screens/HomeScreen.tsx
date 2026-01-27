@@ -1,113 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
-import { useAuth } from '../contexts/AuthContext';
-import { supabase, isSupabaseConfigured } from '../config/supabase';
+import TopNavbar from '../components/TopNavbar';
 
 const HomeScreen: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { t } = useTranslation();
-  const { user } = useAuth();
-  const [userName, setUserName] = useState<string>('');
-
-  // Cargar nombre del usuario
-  useEffect(() => {
-    const loadUserName = async () => {
-      if (!isSupabaseConfigured() || !user?.id) {
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('name')
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          // Si hay error, usar datos de OAuth o email
-          const firstName = user.user_metadata?.full_name?.split(' ')[0] || 
-                           user.user_metadata?.name?.split(' ')[0] || 
-                           user.email?.split('@')[0] || 
-                           '';
-          setUserName(firstName);
-        } else if (data?.name) {
-          // Usar nombre de la BD
-          setUserName(data.name.split(' ')[0]);
-        } else {
-          // Fallback a OAuth o email
-          const firstName = user.user_metadata?.full_name?.split(' ')[0] || 
-                           user.user_metadata?.name?.split(' ')[0] || 
-                           user.email?.split('@')[0] || 
-                           '';
-          setUserName(firstName);
-        }
-      } catch (error) {
-        console.error('[HomeScreen] Error loading user name:', error);
-        // Fallback a OAuth o email
-        const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 
-                         user?.user_metadata?.name?.split(' ')[0] || 
-                         user?.email?.split('@')[0] || 
-                         '';
-        setUserName(firstName);
-      }
-    };
-
-    loadUserName();
-  }, [user?.id]);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background-light dark:bg-background-dark">
-      <header className="sticky top-0 z-20 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 safe-top">
-        <div className="flex items-center p-4 pb-2 justify-between">
-          <div className="flex size-10 shrink-0 items-center overflow-hidden rounded-full border-2 border-primary/20 bg-white p-1">
-            <img 
-              src="/logo-donk-restaurant.png" 
-              alt="DONK RESTAURANT"
-              className="w-full h-full object-contain"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                if (target.parentElement) {
-                  const fallback = document.createElement('div');
-                  fallback.className = 'bg-center bg-no-repeat aspect-square bg-cover size-full';
-                  fallback.style.backgroundImage = 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuA8W-gt9UQiSY7Vq9QGzTlt4YQaXiopOLzDS35FWtxZuPAhT8sfWowp3sgEGG2zYwiFX2dTVEF6w8d4LTsJiaLN9vwaGuOzSDCWPEZPkfx3I8FSXCDxj50hfFneZUCxlm-dIycU0RBsZSR1ZYvK4W-7-omiUU4npcZrn_ep2M9bTmKiEheHCmoiZE_peDNWbV_h0qrxneuvBkI26Z1oGSI__V-OwgI0qhQ4K-r-0PUA2ShZkogtWsVC_GzTZTLR0Koa1TBv8Jhd2acm")';
-                  target.parentElement.appendChild(fallback);
-                }
-              }}
-            />
-          </div>
-          <div className="flex-1 px-3 min-w-0">
-            <p className="text-primary/80 dark:text-primary/70 text-xs font-semibold uppercase tracking-wider truncate">{t('home.welcome')}</p>
-            <h2 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] truncate">
-              {userName 
-                ? t('home.goodAppetite').replace('Alex', userName)
-                : t('home.goodAppetite')}
-            </h2>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button className="flex size-10 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700">
-              <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">notifications</span>
-            </button>
-            <button 
-              onClick={() => navigate('/profile')}
-              className={`flex size-10 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm border transition-colors ${
-                location.pathname === '/profile' || location.pathname.includes('billing')
-                  ? 'border-primary bg-primary/10'
-                  : 'border-gray-100 dark:border-gray-700'
-              }`}
-              title={t('navigation.profile')}
-            >
-              <span className={`material-symbols-outlined ${
-                location.pathname === '/profile' || location.pathname.includes('billing')
-                  ? 'text-primary'
-                  : 'text-gray-600 dark:text-gray-300'
-              }`}>person</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      <TopNavbar showWelcome={true} showFavorites={false} />
 
       <main className="flex-1 overflow-y-auto pb-32 hide-scrollbar">
         <h3 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6">{t('home.quickActions')}</h3>

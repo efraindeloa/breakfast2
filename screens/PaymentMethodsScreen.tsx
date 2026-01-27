@@ -5,11 +5,13 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { useCart } from '../contexts/CartContext';
 import { useGroupOrder } from '../contexts/GroupOrderContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Order, OrderStatus } from '../types/order';
-import { getOrders, getProductById } from '../services/database';
+import { getOrders, getProductById, getUserPaymentMethods, UserPaymentMethod } from '../services/database';
+import TopNavbar from '../components/TopNavbar';
 
 interface Card {
-  id: number;
+  id: string; // Cambiar a string para usar UUID de la BD
   color: string;
   textColor: string;
   number: string;
@@ -18,6 +20,7 @@ interface Card {
   brand: string;
   isMastercard?: boolean;
   isDisabled?: boolean;
+  isDefault?: boolean;
 }
 
 interface OrderItem {
@@ -34,13 +37,15 @@ const PaymentMethodsScreen: React.FC = () => {
   const { config } = useRestaurant();
   const { cart } = useCart();
   const { isGroupOrder } = useGroupOrder();
+  const { user } = useAuth();
   const [includeTip, setIncludeTip] = useState(true);
   const [tipMode, setTipMode] = useState<'percentage' | 'fixed'>('percentage');
   const [tipPercentage, setTipPercentage] = useState(10);
   const [tipFixedAmount, setTipFixedAmount] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'card' | 'cash' | null>(null);
-  const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [showOrderNotSentNotification, setShowOrderNotSentNotification] = useState(false);
+  const [cards, setCards] = useState<Card[]>([]);
 
   // Función para obtener el nombre traducido del platillo desde la base de datos
   const getDishName = async (dishId: number): Promise<string> => {
@@ -157,30 +162,51 @@ const PaymentMethodsScreen: React.FC = () => {
     loadOrderItems();
   }, [orders, cart, t]);
 
-  // Tarjetas disponibles
-  const cards: Card[] = [
-    {
-      id: 1,
-      color: 'from-[#e0f2fe] to-[#bae6fd]',
-      textColor: 'text-[#0369a1]',
-      number: '**** **** **** 4242',
-      exp: '12/26',
-      name: 'ALEX GONZALEZ',
-      brand: 'VISA',
-      isDisabled: false,
-    },
-    {
-      id: 2,
-      color: 'from-[#ffedd5] to-[#fed7aa]',
-      textColor: 'text-[#9a3412]',
-      number: '**** **** **** 8888',
-      exp: '09/25',
-      name: 'ALEX GONZALEZ',
-      brand: 'Mastercard',
-      isMastercard: true,
-      isDisabled: false,
-    },
-  ];
+  // Cargar métodos de pago desde la base de datos
+  useEffect(() => {
+    const loadPaymentMethods = async () => {
+      if (!user?.id) {
+        setCards([]);
+        return;
+      }
+
+      try {
+        const paymentMethods = await getUserPaymentMethods(user.id);
+        const formattedCards: Card[] = paymentMethods.map((method: UserPaymentMethod) => {
+          const expMonth = method.exp_month?.toString().padStart(2, '0') || '01';
+          const expYear = method.exp_year?.toString().slice(-2) || '26';
+          const isMastercard = method.brand?.toLowerCase() === 'mastercard';
+          
+          // Determinar colores según la marca
+          const color = isMastercard 
+            ? 'from-[#ffedd5] to-[#fed7aa]' 
+            : 'from-[#e0f2fe] to-[#bae6fd]';
+          const textColor = isMastercard 
+            ? 'text-[#9a3412]' 
+            : 'text-[#0369a1]';
+
+          return {
+            id: method.id,
+            color,
+            textColor,
+            number: `**** **** **** ${method.last4 || '0000'}`,
+            exp: `${expMonth}/${expYear}`,
+            name: method.holder_name || 'ALEX GONZALEZ',
+            brand: method.brand || 'VISA',
+            isMastercard,
+            isDisabled: !method.is_active,
+            isDefault: method.is_default,
+          };
+        });
+        setCards(formattedCards);
+      } catch (error) {
+        console.error('[PaymentMethodsScreen] Error loading payment methods:', error);
+        setCards([]);
+      }
+    };
+
+    loadPaymentMethods();
+  }, [user?.id]);
 
   const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   
@@ -199,15 +225,12 @@ const PaymentMethodsScreen: React.FC = () => {
 
   return (
     <div className="pb-32 overflow-y-auto">
-      <header className="flex items-center bg-white dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-50 safe-top">
-        <button onClick={() => navigate(-1)} className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">
-          <span className="material-symbols-outlined cursor-pointer text-[#8a7560] dark:text-[#d4c4a8]">arrow_back_ios</span>
-        </button>
-        <h2 className="text-lg font-bold flex-1 text-center">{t('payment.payBill')}</h2>
-        <div className="w-12 flex items-center justify-end">
-          <span className="material-symbols-outlined">notifications</span>
-        </div>
-      </header>
+      <TopNavbar 
+        title={t('payment.payBill')}
+        showFavorites={false}
+        showBackButton={true}
+        showAvatar={false}
+      />
 
       {/* Encabezado - Solo mostrar si hay items en el carrito */}
       {orderItems.length > 0 && (

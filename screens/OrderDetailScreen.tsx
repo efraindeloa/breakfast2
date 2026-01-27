@@ -19,7 +19,7 @@ const OrderDetailScreen: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
   const { t } = useTranslation();
   const { selectedLanguage } = useLanguage();
-  const { cart: currentCartItems, clearCart } = useCart();
+  const { cart: currentCartItems, clearCart, removeFromCart, updateCartItemQuantity, setCartItems } = useCart();
   const { config } = useRestaurant();
   const { isGroupOrder, participants, currentUserParticipant, isConfirmed } = useGroupOrder();
   const [complementaryOrderInstructions, setComplementaryOrderInstructions] = useState('');
@@ -37,25 +37,49 @@ const OrderDetailScreen: React.FC = () => {
   }, [orders, id]);
 
   useEffect(() => {
-    const loadOrders = async () => {
+    let isMounted = true;
+    let refreshIntervalId: NodeJS.Timeout | null = null;
+    
+    const loadOrders = async (showLoading = false) => {
       try {
-        setIsLoadingOrders(true);
+        if (showLoading) {
+          setIsLoadingOrders(true);
+        }
         const loadedOrders = await getOrders();
+        
+        if (!isMounted) return;
+        
         setOrders(loadedOrders);
       } catch (error) {
         console.error('Error loading orders:', error);
-        setOrders([]);
+        if (isMounted && showLoading) {
+          setOrders([]);
+        }
       } finally {
-        setIsLoadingOrders(false);
+        if (isMounted && showLoading) {
+          setIsLoadingOrders(false);
+        }
       }
     };
     
-    loadOrders();
+    // Carga inicial
+    loadOrders(true);
     
-    // Recargar órdenes periódicamente para ver actualizaciones
-    const interval = setInterval(loadOrders, 5000); // Cada 5 segundos
-    return () => clearInterval(interval);
-  }, []);
+    // Recargar órdenes cada 15 segundos para ver actualizaciones de estado
+    refreshIntervalId = setInterval(() => {
+      if (isMounted && !document.hidden) {
+        // Siempre recargar para ver cambios de estado
+        loadOrders(false); // No mostrar loading en recargas periódicas
+      }
+    }, 15000); // Cada 15 segundos
+    
+    return () => {
+      isMounted = false;
+      if (refreshIntervalId) {
+        clearInterval(refreshIntervalId);
+      }
+    };
+  }, []); // Sin dependencias para que solo se ejecute una vez al montar
 
   // Función para obtener el nombre traducido del platillo
   const getDishName = (dishId: number): string => {
@@ -151,14 +175,25 @@ const OrderDetailScreen: React.FC = () => {
         } as any);
 
         if (updatedOrder) {
-          // Recargar órdenes desde Supabase
+          // Recargar órdenes desde Supabase inmediatamente para ver el estado actualizado
           const loadedOrders = await getOrders();
           setOrders(loadedOrders);
+          
+          // Recargar una vez más después de un pequeño delay para asegurar que cualquier cambio de estado se refleje
+          setTimeout(async () => {
+            const refreshedOrders = await getOrders();
+            setOrders(refreshedOrders);
+          }, 500);
+          
           clearCart();
           setComplementaryOrderInstructions('');
 
-          // Navegar a la página de confirmación
-          navigate('/order-confirmed');
+          // Regresar a la misma página de detalles de la orden actualizada
+          if (id) {
+            navigate(`/order-detail/${id}`, { replace: true });
+          } else {
+            navigate('/order-detail', { replace: true });
+          }
         } else {
           console.error('Failed to update order');
           alert('Error al actualizar la orden. Por favor, intenta de nuevo.');
@@ -204,9 +239,16 @@ const OrderDetailScreen: React.FC = () => {
         } as any);
 
         if (newOrder) {
-          // Recargar órdenes desde Supabase
+          // Recargar órdenes desde Supabase inmediatamente para ver el estado actualizado
           const loadedOrders = await getOrders();
           setOrders(loadedOrders);
+          
+          // Recargar una vez más después de un pequeño delay para asegurar que cualquier cambio de estado se refleje
+          setTimeout(async () => {
+            const refreshedOrders = await getOrders();
+            setOrders(refreshedOrders);
+          }, 500);
+          
           clearCart();
           setComplementaryOrderInstructions('');
 
@@ -351,6 +393,114 @@ const OrderDetailScreen: React.FC = () => {
     ['orden_enviada', 'orden_recibida', 'en_preparacion', 'lista_para_entregar', 'en_entrega', 'entregada', 'con_incidencias'].includes(order.status)
   );
 
+  // Obtener la orden principal (la primera orden enviada)
+  const mainOrder = displayedOrders.find(order => 
+    ['orden_enviada', 'orden_recibida', 'en_preparacion', 'lista_para_entregar', 'en_entrega'].includes(order.status)
+  ) || displayedOrders[0];
+
+  // Verificar si la orden puede ser editada (no está en preparación)
+  const canEditOrder = mainOrder && !['en_preparacion', 'lista_para_entregar', 'en_entrega', 'entregada', 'orden_cerrada', 'cancelada'].includes(mainOrder.status);
+
+  // Combinar items originales con items del carrito
+  const allOrderItems = useMemo(() => {
+    if (!mainOrder) return [];
+    
+    const originalItems = mainOrder.items.map(item => ({
+      ...item,
+      isFromOriginalOrder: true,
+      isFromCart: false,
+    }));
+
+    const cartItems = currentCartItems.filter(cartItem => {
+      // Solo incluir items del carrito que no están ya en la orden original
+      const existsInOriginal = mainOrder.items.some(
+        origItem => origItem.id === cartItem.id && (origItem.notes || '') === (cartItem.notes || '')
+      );
+      return !existsInOriginal;
+    }).map(item => ({
+      id: item.id,
+      name: item.name || getDishName(item.id),
+      price: item.price,
+      notes: item.notes || '',
+      quantity: item.quantity,
+      isFromOriginalOrder: false,
+      isFromCart: true,
+    }));
+
+    return [...originalItems, ...cartItems];
+  }, [mainOrder, currentCartItems]);
+
+  // Función para eliminar un item de la orden original
+  const handleRemoveItem = async (itemId: number, itemNotes?: string) => {
+    if (!mainOrder || !canEditOrder) return;
+
+    // Buscar el índice del item a eliminar usando id y notas
+    const itemIndex = mainOrder.items.findIndex(
+      (item) =>
+        item.id === itemId &&
+        (item.notes || '') === (itemNotes || '')
+    );
+
+    if (itemIndex === -1) return;
+
+    // Crear nueva lista sin el item eliminado
+    const updatedItems = mainOrder.items.filter((_, index) => index !== itemIndex);
+
+    // Calcular nuevo total
+    const newTotal = updatedItems.reduce((sum, item) => {
+      const price = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0;
+      return sum + (price * item.quantity);
+    }, 0);
+
+    try {
+      const { updateOrder } = await import('../services/database');
+      const updatedOrder = await updateOrder(mainOrder.orderId, {
+        items: updatedItems,
+        total: newTotal,
+        notes: mainOrder.notes || undefined,
+      } as any);
+
+      if (updatedOrder) {
+        // Recargar órdenes desde Supabase inmediatamente para ver el estado actualizado
+        const loadedOrders = await getOrders();
+        setOrders(loadedOrders);
+        
+        // Recargar una vez más después de un pequeño delay para asegurar que cualquier cambio de estado se refleje
+        setTimeout(async () => {
+          const refreshedOrders = await getOrders();
+          setOrders(refreshedOrders);
+        }, 500);
+        
+        if (id) {
+          navigate(`/order-detail/${id}`, { replace: true });
+        } else {
+          navigate('/order-detail', { replace: true });
+        }
+      } else {
+        alert(t('orderDetail.errorUpdatingOrder') || 'Error al actualizar la orden. Por favor, intenta de nuevo.');
+      }
+    } catch (error) {
+      console.error('Error removing item from order:', error);
+      alert(t('orderDetail.errorUpdatingOrder') || 'Error al eliminar el producto. Por favor, intenta de nuevo.');
+    }
+  };
+
+  // Función para eliminar un item del carrito (producto nuevo)
+  const handleRemoveCartItem = async (itemId: number, itemNotes?: string) => {
+    try {
+      // Eliminar del carrito por id y notes para ser precisos
+      const updatedCart = currentCartItems.filter(item => 
+        !(item.id === itemId && (item.notes || '') === (itemNotes || ''))
+      );
+      
+      // Actualizar el carrito
+      await setCartItems(updatedCart);
+    } catch (error) {
+      console.error('Error removing item from cart:', error);
+      alert(t('orderDetail.errorRemovingItem') || 'Error al eliminar el producto. Por favor, intenta de nuevo.');
+    }
+  };
+
   return (
     <div className="pb-32 overflow-y-auto bg-background-light dark:bg-background-dark min-h-screen">
       <header className="flex items-center bg-white dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-50 border-b border-gray-100 dark:border-gray-800 safe-top">
@@ -362,163 +512,266 @@ const OrderDetailScreen: React.FC = () => {
       </header>
 
       <div className="px-4 py-6">
-        {/* Lista de Órdenes */}
+        {/* Lista de Órdenes - Solo mostrar si no hay items en el carrito o si no es la orden principal */}
         {displayedOrders.map((order) => {
-          const statusInfo = getStatusInfo(order.status);
-          const timestamp = formatTimestamp(order.timestamp);
-          const orderTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+          // Solo mostrar órdenes que no son la principal si hay items en el carrito
+          if (mainOrder && order.orderId !== mainOrder.orderId && currentCartItems.length > 0) {
+            const statusInfo = getStatusInfo(order.status);
+            const timestamp = formatTimestamp(order.timestamp);
+            const orderTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-          return (
-            <div key={order.orderId} className="mb-6 bg-white dark:bg-[#2d2516] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-[#3d3321]">
-              {/* Header de la Orden */}
-              <div className="flex items-start justify-between mb-4 pb-4 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg font-bold text-[#181411] dark:text-white">
-                      {order.orderNumber === 1 ? t('orderDetail.mainOrder') : `${t('orderDetail.complementaryOrder')} #${order.orderNumber}`}
+            return (
+              <div key={order.orderId} className="mb-6 bg-white dark:bg-[#2d2516] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-[#3d3321]">
+                <div className="flex items-start justify-between mb-4 pb-4 border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg font-bold text-[#181411] dark:text-white">
+                        {order.orderNumber === 1 ? t('orderDetail.mainOrder') : `${t('orderDetail.complementaryOrder')} #${order.orderNumber}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <span className="material-symbols-outlined text-sm">schedule</span>
+                      <span>{timestamp.full}</span>
+                    </div>
+                  </div>
+                  <div className={`flex items-center justify-center w-12 h-12 rounded-full ${statusInfo.color} shrink-0`}>
+                    <span className="material-symbols-outlined text-xl">{statusInfo.icon}</span>
+                  </div>
+                </div>
+
+                <div className={`mb-4 p-3 rounded-lg border ${statusInfo.borderColor} bg-opacity-10`}>
+                  <p className={`text-sm font-semibold ${statusInfo.color.split(' ')[2]}`}>
+                    {statusInfo.label}
+                  </p>
+                </div>
+
+                <div className="mb-4">
+                  <h4 className="text-sm font-semibold text-[#181411] dark:text-white mb-3">
+                    {t('orderDetail.items')} ({order.items.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {order.items.map((item, index) => (
+                      <div key={`${item.id}-${item.notes || ''}-${index}`} className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-[#181411] dark:text-white">
+                              {item.quantity}x
+                            </span>
+                            <span className="text-sm text-[#181411] dark:text-white">{item.name}</span>
+                          </div>
+                          {item.notes && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
+                              {item.notes}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-sm font-bold text-[#181411] dark:text-white ml-4">
+                          {formatPrice(item.price * item.quantity, selectedLanguage)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between items-center pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+                    <span className="text-sm font-semibold text-[#181411] dark:text-white">
+                      {t('orderDetail.orderTotal')}:
+                    </span>
+                    <span className="text-base font-bold text-primary">
+                      {formatPrice(orderTotal, selectedLanguage)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                    <span className="material-symbols-outlined text-sm">schedule</span>
-                    <span>{timestamp.full}</span>
-                  </div>
-                </div>
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full ${statusInfo.color} shrink-0`}>
-                  <span className="material-symbols-outlined text-xl">{statusInfo.icon}</span>
                 </div>
               </div>
+            );
+          }
+          return null;
+        })}
 
-              {/* Estado de la Orden */}
-              <div className={`mb-4 p-3 rounded-lg border ${statusInfo.borderColor} bg-opacity-10`}>
-                <p className={`text-sm font-semibold ${statusInfo.color.split(' ')[2]}`}>
-                  {statusInfo.label}
-                </p>
+        {/* Orden Principal con todos los items combinados */}
+        {mainOrder && (
+          <div className="mb-6 bg-white dark:bg-[#2d2516] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-[#3d3321]">
+            {/* Header de la Orden */}
+            <div className="flex items-start justify-between mb-4 pb-4 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg font-bold text-[#181411] dark:text-white">
+                    {mainOrder.orderNumber === 1 ? t('orderDetail.mainOrder') : `${t('orderDetail.complementaryOrder')} #${mainOrder.orderNumber}`}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <span className="material-symbols-outlined text-sm">schedule</span>
+                  <span>{formatTimestamp(mainOrder.timestamp).full}</span>
+                </div>
               </div>
+              <div className={`flex items-center justify-center w-12 h-12 rounded-full ${getStatusInfo(mainOrder.status).color} shrink-0`}>
+                <span className="material-symbols-outlined text-xl">{getStatusInfo(mainOrder.status).icon}</span>
+              </div>
+            </div>
 
-              {/* Items de la Orden */}
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-[#181411] dark:text-white mb-3">
-                  {t('orderDetail.items')} ({order.items.length})
-                </h4>
-                <div className="space-y-2">
-                  {order.items.map((item, index) => (
-                    <div key={`${item.id}-${item.notes || ''}-${index}`} className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-[#181411] dark:text-white">
-                            {item.quantity}x
-                          </span>
-                          <span className="text-sm text-[#181411] dark:text-white">{item.name}</span>
+            {/* Estado de la Orden */}
+            <div className={`mb-4 p-3 rounded-lg border ${getStatusInfo(mainOrder.status).borderColor} bg-opacity-10`}>
+              <p className={`text-sm font-semibold ${getStatusInfo(mainOrder.status).color.split(' ')[2]}`}>
+                {getStatusInfo(mainOrder.status).label}
+              </p>
+            </div>
+
+            {/* Notificación sobre condiciones de edición */}
+            {!canEditOrder && mainOrder && (
+              <div className="mb-4 p-3 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20">
+                <div className="flex items-start gap-2">
+                  <span className="material-symbols-outlined text-amber-600 dark:text-amber-400 shrink-0">info</span>
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    {t('orderDetail.cannotEditInPreparation') || 'No puedes modificar esta orden porque ya está en preparación. Si necesitas hacer cambios, contacta al personal.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {canEditOrder && (
+              <div className="mb-4 p-3 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20">
+                <div className="flex items-start gap-2">
+                  <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 shrink-0">info</span>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    {t('orderDetail.canEditOrder') || 'Puedes modificar esta orden agregando o eliminando productos antes de que comience la preparación.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Items de la Orden (combinados: originales + carrito) */}
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-[#181411] dark:text-white mb-3">
+                {t('orderDetail.items')} ({allOrderItems.length})
+              </h4>
+              <div className="space-y-2">
+                {allOrderItems.map((item, index) => {
+                  const isOriginalItem = item.isFromOriginalOrder;
+
+                  return (
+                    <div key={`${item.id}-${item.notes || ''}-${index}-${isOriginalItem ? 'orig' : 'cart'}`} className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                      <div className="flex-1 flex items-start gap-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-[#181411] dark:text-white">
+                              {item.quantity}x
+                            </span>
+                            <span className="text-sm text-[#181411] dark:text-white">{item.name}</span>
+                            {item.isFromCart && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                                {t('orderDetail.new') || 'Nuevo'}
+                              </span>
+                            )}
+                          </div>
+                          {item.notes && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
+                              {item.notes}
+                            </p>
+                          )}
                         </div>
-                        {item.notes && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
-                            {item.notes}
-                          </p>
+                        {/* Botón eliminar para items originales */}
+                        {isOriginalItem && canEditOrder && (
+                          <button
+                            onClick={() => handleRemoveItem(item.id, item.notes || undefined)}
+                            className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors shrink-0"
+                            title={t('orderDetail.removeItem') || 'Eliminar producto'}
+                          >
+                            <span className="material-symbols-outlined text-lg">delete</span>
+                          </button>
+                        )}
+                        {/* Botón eliminar para items del carrito (nuevos) */}
+                        {item.isFromCart && (
+                          <button
+                            onClick={() => handleRemoveCartItem(item.id, item.notes || undefined)}
+                            className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors shrink-0"
+                            title={t('orderDetail.removeItem') || 'Eliminar producto'}
+                          >
+                            <span className="material-symbols-outlined text-lg">delete</span>
+                          </button>
                         )}
                       </div>
                       <span className="text-sm font-bold text-[#181411] dark:text-white ml-4">
                         {formatPrice(item.price * item.quantity, selectedLanguage)}
                       </span>
                     </div>
-                  ))}
-                </div>
-                <div className="flex justify-between items-center pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
-                  <span className="text-sm font-semibold text-[#181411] dark:text-white">
-                    {t('orderDetail.orderTotal')}:
-                  </span>
-                  <span className="text-base font-bold text-primary">
-                    ${orderTotal.toFixed(2)}
-                  </span>
-                </div>
+                  );
+                })}
+              </div>
+
+              {/* Total de la Orden */}
+              <div className="flex justify-between items-center pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+                <span className="text-sm font-semibold text-[#181411] dark:text-white">
+                  {t('orderDetail.orderTotal')}:
+                </span>
+                <span className="text-base font-bold text-primary">
+                  {formatPrice(
+                    allOrderItems.reduce((sum, item) => {
+                      const price = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0;
+                      return sum + (price * item.quantity);
+                    }, 0),
+                    selectedLanguage
+                  )}
+                </span>
               </div>
             </div>
-          );
-        })}
 
-        {/* Items del Carrito Actual (si hay) - Mostrar como Orden Complementaria */}
-        {currentCartItems.length > 0 && (
-          <div className="mb-6 bg-white dark:bg-[#2d2516] rounded-xl p-4 shadow-sm border-2 border-primary/30 border-dashed">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="material-symbols-outlined text-primary">receipt_long</span>
-              <h3 className="text-lg font-bold text-[#181411] dark:text-white">
-                {displayedOrders.length > 0 ? `${t('orderDetail.complementaryOrder')} #${displayedOrders.length + 1}` : t('orderDetail.complementaryOrder')}
-              </h3>
-            </div>
-            <div className="space-y-2 mb-4">
-              {currentCartItems.map((item, index) => (
-                <div key={`current-${item.id}-${item.notes || ''}-${index}`} className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-[#181411] dark:text-white">
-                        {item.quantity}x
-                      </span>
-                      <span className="text-sm text-[#181411] dark:text-white">{item.name}</span>
-                    </div>
-                    {item.notes && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
-                        {item.notes}
-                      </p>
-                    )}
-                  </div>
-                  <span className="text-sm font-bold text-[#181411] dark:text-white ml-4">
-                    ${(item.price * item.quantity).toFixed(2)}
-                  </span>
+            {/* Instrucciones Especiales y Botones de Acción (solo si hay items del carrito) */}
+            {currentCartItems.length > 0 && (
+              <>
+                <div className="mb-4">
+                  <h4 className="text-sm font-semibold text-[#181411] dark:text-white mb-2 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-lg">edit_note</span>
+                    {t('order.specialInstructions')}
+                  </h4>
+                  <textarea
+                    className="w-full bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-[#181411] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none"
+                    placeholder={t('order.specialInstructionsPlaceholder')}
+                    rows={3}
+                    value={complementaryOrderInstructions}
+                    onChange={(e) => setComplementaryOrderInstructions(e.target.value)}
+                  />
                 </div>
-              ))}
-            </div>
 
-            {/* Total de la Orden Complementaria */}
-            <div className="flex justify-between items-center pt-3 mb-4 border-t border-gray-200 dark:border-gray-700">
-              <span className="text-base font-semibold text-[#181411] dark:text-white">
-                {t('orderDetail.orderTotal')}:
-              </span>
-              <span className="text-xl font-bold text-primary">
-                ${complementaryOrderTotal.toFixed(2)}
-              </span>
-            </div>
-
-            {/* Instrucciones Especiales */}
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-[#181411] dark:text-white mb-2 flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-lg">edit_note</span>
-                {t('order.specialInstructions')}
-              </h4>
-              <textarea
-                className="w-full bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-[#181411] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none"
-                placeholder={t('order.specialInstructionsPlaceholder')}
-                rows={3}
-                value={complementaryOrderInstructions}
-                onChange={(e) => setComplementaryOrderInstructions(e.target.value)}
-              />
-            </div>
-
-            {/* Botones de Acción */}
-            <div className="space-y-2">
-              <button
-                onClick={handleSendComplementaryOrder}
-                className="w-full bg-primary text-white font-bold py-3 rounded-xl text-base shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-primary/90"
-              >
-                <span className="material-symbols-outlined">restaurant</span>
-                <span>{t('order.confirmAndSendOrder')}</span>
-              </button>
-              <button
-                onClick={() => navigate('/menu')}
-                className="w-full bg-primary/10 hover:bg-primary/20 text-primary font-semibold py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
-              >
-                <span className="material-symbols-outlined text-lg">add</span>
-                <span>{t('orderDetail.addMoreItems')}</span>
-              </button>
-            </div>
+                {/* Botones de Acción */}
+                <div className="space-y-2">
+                  <button
+                    onClick={handleSendComplementaryOrder}
+                    className="w-full bg-primary text-white font-bold py-3 rounded-xl text-base shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-primary/90"
+                  >
+                    <span className="material-symbols-outlined">restaurant</span>
+                    <span>{t('order.confirmAndSendOrder')}</span>
+                  </button>
+                  <button
+                    onClick={() => navigate('/menu')}
+                    className="w-full bg-primary/10 hover:bg-primary/20 text-primary font-semibold py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-lg">add</span>
+                    <span>{t('orderDetail.addMoreItems')}</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
         {/* Total General */}
-        <div className="mb-6 bg-white dark:bg-[#2d2516] rounded-xl p-5 shadow-sm border border-gray-100 dark:border-[#3d3321]">
-          <div className="flex justify-between items-center">
-            <span className="text-lg font-bold text-[#181411] dark:text-white">{t('orderDetail.total')}:</span>
-            <span className="text-2xl font-bold text-primary">${orderTotal.toFixed(2)}</span>
+        {displayedOrders.length > 0 && (
+          <div className="mb-6 bg-white dark:bg-[#2d2516] rounded-xl p-5 shadow-sm border border-gray-100 dark:border-[#3d3321]">
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-bold text-[#181411] dark:text-white">{t('orderDetail.total')}:</span>
+              <span className="text-2xl font-bold text-primary">
+                {formatPrice(
+                  displayedOrders.reduce((sum, order) => {
+                    const orderSum = order.items.reduce((itemSum, item) => {
+                      const price = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0;
+                      return itemSum + (price * item.quantity);
+                    }, 0);
+                    return sum + orderSum;
+                  }, 0) + complementaryOrderTotal,
+                  selectedLanguage
+                )}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Botones de Acción */}
         {/* Botón para enviar orden pendiente a cocina */}

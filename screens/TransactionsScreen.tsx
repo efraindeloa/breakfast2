@@ -1,6 +1,9 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
+import { getUserTransactions, UserTransaction } from '../services/database';
+import TopNavbar from '../components/TopNavbar';
 
 interface Transaction {
   id: number;
@@ -46,14 +49,45 @@ const TransactionsScreen: React.FC = () => {
 
   // Lista de transacciones - cargar desde la base de datos
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const { user } = useAuth();
   
   // Cargar transacciones desde la base de datos
   useEffect(() => {
     const loadTransactions = async () => {
-      try {
-        // TODO: Implementar carga de transacciones desde la base de datos
-        // Por ahora, dejar vacío hasta que se implemente la funcionalidad
+      if (!user?.id) {
         setTransactions([]);
+        return;
+      }
+
+      try {
+        const dbTransactions = await getUserTransactions(user.id, 100);
+        
+        // Convertir transacciones de la BD al formato esperado por el componente
+        const formattedTransactions: Transaction[] = dbTransactions.map((t: UserTransaction) => {
+          const date = new Date(t.created_at);
+          const dateStr = date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+          const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+          
+          return {
+            id: parseInt(t.id.replace(/-/g, '').substring(0, 8), 16) || Math.floor(Math.random() * 1000000),
+            restaurantName: t.restaurant_name,
+            date: dateStr,
+            amount: `$${t.total.toFixed(2)}`,
+            logo: '/logo.png', // TODO: Obtener logo del restaurante
+            cardLast4: t.payment_method_last4 || '',
+            orderId: parseInt(t.order_id.replace(/-/g, '').substring(0, 8), 16) || 0,
+            subtotal: `$${t.subtotal.toFixed(2)}`,
+            tip: `$${t.tip.toFixed(2)}`,
+            tipPercentage: t.tip_percentage,
+            iva: `$${t.tax.toFixed(2)}`,
+            total: `$${t.total.toFixed(2)}`,
+            paymentMethod: t.payment_method === 'card' ? 'card' : 'cash',
+            invoiceSent: t.invoice_sent,
+            invoiceEmail: t.invoice_email,
+          };
+        });
+        
+        setTransactions(formattedTransactions);
       } catch (error) {
         console.error('Error loading transactions:', error);
         setTransactions([]);
@@ -61,7 +95,7 @@ const TransactionsScreen: React.FC = () => {
     };
     
     loadTransactions();
-  }, []);
+  }, [user?.id]);
 
   // Obtener lista única de restaurantes para el filtro
   const restaurants = useMemo(() => {
@@ -217,15 +251,16 @@ const TransactionsScreen: React.FC = () => {
 
   return (
     <div className="pb-32 overflow-y-auto bg-background-light dark:bg-background-dark min-h-screen">
-      <header className="flex items-center bg-white dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-50 border-b border-gray-100 dark:border-gray-800 safe-top">
-        <button onClick={() => navigate(-1)} className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">
-          <span className="material-symbols-outlined cursor-pointer text-[#8a7560] dark:text-[#d4c4a8]">arrow_back_ios</span>
-        </button>
-        <h2 className="text-lg font-bold flex-1 text-center">Todas las Transacciones</h2>
-        <div className="w-12 flex items-center justify-end">
+      <TopNavbar 
+        title="Todas las Transacciones"
+        showBackButton={true}
+        showAvatar={false}
+      />
+      <div className="sticky top-[73px] z-40 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-end p-2 pr-4">
           <button
             onClick={() => setShowFilters(true)}
-            className={`relative ${hasActiveFilters ? 'text-primary' : ''}`}
+            className={`relative ${hasActiveFilters ? 'text-primary' : 'text-gray-600 dark:text-gray-300'}`}
             title={t('transactions.filter')}
           >
             <span className="material-symbols-outlined cursor-pointer">filter_list</span>
@@ -234,7 +269,7 @@ const TransactionsScreen: React.FC = () => {
             )}
           </button>
         </div>
-      </header>
+      </div>
 
       <div className="px-4 pt-5 pb-2">
         <div className="flex items-center justify-between">

@@ -32,7 +32,7 @@
 - **localStorage**: Persistencia de datos en el cliente
   - Configuración del usuario (idioma, tema)
   - Carrito de compras
-  - Favoritos
+  - Favoritos (platillos y promociones)
   - Historial de órdenes
   - Opiniones de usuarios (`user_reviews`)
   - Historial de solicitudes de asistencia (`assistance_history`)
@@ -92,7 +92,8 @@ breakfast2/
 ├── components/              # Componentes reutilizables
 │   ├── AssistantButton.tsx
 │   ├── AssistantModal.tsx
-│   └── BottomNav.tsx
+│   ├── BottomNav.tsx
+│   └── TopNavbar.tsx
 ├── config/                  # Configuración
 │   └── restaurantConfig.ts
 ├── contexts/                # Contextos de React
@@ -198,6 +199,7 @@ breakfast2/
 
 #### Componentes Reutilizables (`components/`)
 - **`BottomNav`**: Navegación inferior
+- **`TopNavbar`**: Navegación superior reutilizable con avatar, notificaciones, favoritos y perfil
 - **`AssistantButton`**: Botón flotante del asistente
 - **`AssistantModal`**: Modal del asistente con IA
 
@@ -261,16 +263,30 @@ interface LanguageContextType {
 
 #### FavoritesContext
 ```typescript
+interface FavoritePromotion {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  category: string;
+}
+
 interface FavoritesContextType {
   favorites: number[];
   addToFavorites: (dishId: number) => void;
   removeFromFavorites: (dishId: number) => void;
   isFavorite: (dishId: number) => boolean;
   getFavorites: () => number[];
+  favoritePromotions: FavoritePromotion[];
+  addFavoritePromotion: (promotion: FavoritePromotion) => void;
+  removeFavoritePromotion: (promotionId: string) => void;
+  isPromotionFavorite: (promotionId: string) => boolean;
 }
 ```
 
 **Almacenamiento**: localStorage
+- **Platillos favoritos**: Clave `favorites` (array de IDs)
+- **Promociones favoritas**: Clave `favoritePromotions` (array de objetos `FavoritePromotion`)
 
 ---
 
@@ -1042,6 +1058,13 @@ Intervalo actualiza posiciones y tiempos estimados
 - Calcula tiempos estimados dinámicamente
 
 ---
+
+### Cambios Recientes (Enero 2025)
+- ✅ Agregado componente `TopNavbar` reutilizable para navegación superior
+- ✅ Sistema de favoritos extendido para incluir promociones
+- ✅ Integración de `TopNavbar` en pantallas principales (Home, Menu, Order, Transactions, Promotions)
+- ✅ Opción para ocultar botón de favoritos en `TopNavbar` mediante prop `showFavorites`
+- ✅ Mejora en traducciones de nombres y descripciones de platillos favoritos
 
 ### Cambios Recientes (Diciembre 2024)
 - ✅ Agregada sección de gestión de recursos estáticos (imágenes de productos)

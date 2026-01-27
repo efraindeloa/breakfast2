@@ -60,6 +60,178 @@ CREATE TABLE users (
   last_login_at TIMESTAMP WITH TIME ZONE
 );
 
+-- ==================== TABLAS DE USUARIO ====================
+-- Información extendida del usuario
+CREATE TABLE IF NOT EXISTS user_profiles (
+  user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  display_name TEXT,
+  bio TEXT,
+  gender TEXT,
+  country TEXT,
+  city TEXT,
+  avatar_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Configuración de usuario (reemplaza localStorage)
+CREATE TABLE IF NOT EXISTS user_settings (
+  user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  language TEXT NOT NULL DEFAULT 'es',
+  theme TEXT NOT NULL DEFAULT 'light' CHECK (theme IN ('light', 'dark', 'system')),
+  notifications_enabled BOOLEAN DEFAULT true,
+  marketing_emails_enabled BOOLEAN DEFAULT false,
+  default_payment_method TEXT,
+  default_tip_percentage INTEGER DEFAULT 10 CHECK (default_tip_percentage >= 0 AND default_tip_percentage <= 100),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Direcciones del usuario
+CREATE TABLE IF NOT EXISTS user_addresses (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  label TEXT NOT NULL,
+  street TEXT NOT NULL,
+  external_number TEXT,
+  internal_number TEXT,
+  neighborhood TEXT,
+  city TEXT NOT NULL,
+  state TEXT,
+  postal_code TEXT,
+  country TEXT NOT NULL DEFAULT 'México',
+  is_default_shipping BOOLEAN DEFAULT false,
+  is_default_billing BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Métodos de pago del usuario
+CREATE TABLE IF NOT EXISTS user_payment_methods (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL DEFAULT 'test',
+  type TEXT NOT NULL CHECK (type IN ('card', 'cash', 'wallet')),
+  brand TEXT,
+  last4 TEXT,
+  exp_month INTEGER CHECK (exp_month >= 1 AND exp_month <= 12),
+  exp_year INTEGER CHECK (exp_year >= 2020),
+  holder_name TEXT,
+  token TEXT,
+  is_default BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Perfiles de facturación
+CREATE TABLE IF NOT EXISTS user_billing_profiles (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  tax_id TEXT NOT NULL,
+  business_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  street TEXT,
+  external_number TEXT,
+  internal_number TEXT,
+  neighborhood TEXT,
+  city TEXT,
+  state TEXT,
+  postal_code TEXT,
+  country TEXT DEFAULT 'México',
+  is_default BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Pagos (separados de órdenes)
+CREATE TABLE IF NOT EXISTS payments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  payment_method_id UUID REFERENCES user_payment_methods(id) ON DELETE SET NULL,
+  amount DECIMAL(10, 2) NOT NULL CHECK (amount > 0),
+  currency TEXT NOT NULL DEFAULT 'MXN',
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed', 'refunded', 'cancelled')),
+  provider TEXT,
+  provider_payment_id TEXT,
+  error_message TEXT,
+  metadata JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Transacciones del usuario (historial)
+CREATE TABLE IF NOT EXISTS user_transactions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  payment_id UUID REFERENCES payments(id) ON DELETE SET NULL,
+  restaurant_id UUID NOT NULL REFERENCES restaurants(id) ON DELETE RESTRICT,
+  restaurant_name TEXT NOT NULL,
+  total DECIMAL(10, 2) NOT NULL,
+  subtotal DECIMAL(10, 2) NOT NULL,
+  tip DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  tip_percentage INTEGER,
+  tax DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  payment_method TEXT NOT NULL,
+  payment_method_last4 TEXT,
+  status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'pending', 'failed', 'refunded')),
+  invoice_sent BOOLEAN DEFAULT false,
+  invoice_email TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Asegurar que la columna is_active existe en user_payment_methods (por si la tabla ya existía)
+ALTER TABLE user_payment_methods ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+
+-- Índices para tablas de usuario
+CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON user_profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_addresses_user_id ON user_addresses(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_payment_methods_user_id ON user_payment_methods(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_payment_methods_default ON user_payment_methods(user_id, is_default) WHERE is_default = true;
+CREATE INDEX IF NOT EXISTS idx_user_payment_methods_active ON user_payment_methods(user_id, is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_user_billing_profiles_user_id ON user_billing_profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_payments_order_id ON payments(order_id);
+CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_transactions_user_id ON user_transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_transactions_order_id ON user_transactions(order_id);
+CREATE INDEX IF NOT EXISTS idx_user_transactions_created_at ON user_transactions(created_at DESC);
+
+-- Triggers para updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+DROP TRIGGER IF EXISTS update_user_profiles_updated_at ON user_profiles;
+CREATE TRIGGER update_user_profiles_updated_at BEFORE UPDATE ON user_profiles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_settings_updated_at ON user_settings;
+CREATE TRIGGER update_user_settings_updated_at BEFORE UPDATE ON user_settings
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_addresses_updated_at ON user_addresses;
+CREATE TRIGGER update_user_addresses_updated_at BEFORE UPDATE ON user_addresses
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_payment_methods_updated_at ON user_payment_methods;
+CREATE TRIGGER update_user_payment_methods_updated_at BEFORE UPDATE ON user_payment_methods
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_billing_profiles_updated_at ON user_billing_profiles;
+CREATE TRIGGER update_user_billing_profiles_updated_at BEFORE UPDATE ON user_billing_profiles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_payments_updated_at ON payments;
+CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON payments
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- Tabla de Productos (Optimizada)
 DROP TABLE IF EXISTS products CASCADE;
 CREATE TABLE products (
@@ -454,12 +626,31 @@ CREATE POLICY "Anyone can view active restaurants"
   USING (is_active = true);
 
 -- Políticas para usuarios
+-- Eliminar todas las políticas existentes primero
 DROP POLICY IF EXISTS "Users can view their own data" ON users;
 DROP POLICY IF EXISTS "Users can update their own data" ON users;
 DROP POLICY IF EXISTS "Users can insert their own data" ON users;
-CREATE POLICY "Users can view their own data" ON users FOR SELECT USING (true);
-CREATE POLICY "Users can insert their own data" ON users FOR INSERT WITH CHECK (true);
-CREATE POLICY "Users can update their own data" ON users FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Anyone can view users" ON users;
+DROP POLICY IF EXISTS "Anyone can insert users" ON users;
+DROP POLICY IF EXISTS "Anyone can update users" ON users;
+DROP POLICY IF EXISTS "Allow all SELECT on users" ON users;
+DROP POLICY IF EXISTS "Allow all INSERT on users" ON users;
+DROP POLICY IF EXISTS "Allow all UPDATE on users" ON users;
+
+-- Crear políticas muy permisivas (para desarrollo)
+-- Estas políticas permiten todas las operaciones sin restricciones
+CREATE POLICY "Allow all SELECT on users" 
+  ON users FOR SELECT 
+  USING (true);
+
+CREATE POLICY "Allow all INSERT on users" 
+  ON users FOR INSERT 
+  WITH CHECK (true);
+
+CREATE POLICY "Allow all UPDATE on users" 
+  ON users FOR UPDATE 
+  USING (true)
+  WITH CHECK (true);
 
 -- Políticas para productos
 DROP POLICY IF EXISTS "Anyone can view active products" ON products;

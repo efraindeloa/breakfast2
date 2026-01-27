@@ -119,5 +119,11 @@ Para soporte técnico o preguntas:
 
 ---
 
-**Última actualización**: Diciembre 2024  
-**Versión**: 0.0.0
+**Última actualización**: Enero 2025  
+**Versión**: 0.1.0
+
+### Cambios Recientes (Enero 2025)
+- ✅ Componente `TopNavbar` reutilizable para navegación superior
+- ✅ Sistema de favoritos extendido para incluir promociones
+- ✅ Integración de `TopNavbar` en pantallas principales
+- ✅ Mejoras en traducciones de favoritos

@@ -6,9 +6,17 @@ import { useRestaurant } from '../contexts/RestaurantContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { supabase, isSupabaseConfigured } from '../config/supabase';
+import { 
+  getUserProfile, 
+  upsertUserProfile, 
+  getUserSettings, 
+  upsertUserSettings,
+  getUserPaymentMethods,
+  UserPaymentMethod
+} from '../services/database';
 
 interface Card {
-  id: number;
+  id: string; // Cambiar a string para usar UUID de la BD
   color: string;
   textColor: string;
   number: string;
@@ -17,6 +25,7 @@ interface Card {
   brand: string;
   isMastercard?: boolean;
   isDisabled?: boolean;
+  isDefault?: boolean;
 }
 
 const ProfileScreen: React.FC = () => {
@@ -25,30 +34,8 @@ const ProfileScreen: React.FC = () => {
   const { config } = useRestaurant();
   const { signOut } = useAuth();
   const { clearCart } = useCart();
-  const [cards, setCards] = useState<Card[]>([
-    {
-      id: 1,
-      color: 'from-[#e0f2fe] to-[#bae6fd]',
-      textColor: 'text-[#0369a1]',
-      number: '**** **** **** 4242',
-      exp: '12/26',
-      name: 'ALEX GONZALEZ',
-      brand: 'VISA',
-      isDisabled: false,
-    },
-    {
-      id: 2,
-      color: 'from-[#ffedd5] to-[#fed7aa]',
-      textColor: 'text-[#9a3412]',
-      number: '**** **** **** 8888',
-      exp: '09/25',
-      name: 'ALEX GONZALEZ',
-      brand: 'Mastercard',
-      isMastercard: true,
-      isDisabled: false,
-    },
-  ]);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const { user } = useAuth();
   const [userData, setUserData] = useState({
     name: '',
@@ -141,20 +128,101 @@ const ProfileScreen: React.FC = () => {
     loadUserData();
   }, [user?.id]);
 
-  // Cargar imagen desde localStorage al iniciar
+  // Cargar perfil, configuración y métodos de pago desde la base de datos
   useEffect(() => {
-    const savedImage = localStorage.getItem('profileImage');
-    if (savedImage) {
-      setProfileImage(savedImage);
-    }
-  }, []);
+    const loadUserProfileData = async () => {
+      if (!user?.id || !isSupabaseConfigured()) {
+        // Fallback a localStorage si no hay usuario o Supabase
+        const savedImage = localStorage.getItem('profileImage');
+        if (savedImage) {
+          setProfileImage(savedImage);
+        }
+        return;
+      }
 
-  // Guardar imagen en localStorage cuando cambia
+      try {
+        // Cargar perfil de usuario
+        const profile = await getUserProfile(user.id);
+        if (profile?.avatar_url) {
+          setProfileImage(profile.avatar_url);
+        } else {
+          // Fallback a localStorage si no hay avatar en BD
+          const savedImage = localStorage.getItem('profileImage');
+          if (savedImage) {
+            setProfileImage(savedImage);
+          }
+        }
+
+        // Cargar métodos de pago
+        const paymentMethods = await getUserPaymentMethods(user.id);
+        const formattedCards: Card[] = paymentMethods.map((method: UserPaymentMethod) => {
+          const expMonth = method.exp_month?.toString().padStart(2, '0') || '01';
+          const expYear = method.exp_year?.toString().slice(-2) || '26';
+          const isMastercard = method.brand?.toLowerCase() === 'mastercard';
+          
+          // Determinar colores según la marca
+          const color = isMastercard 
+            ? 'from-[#ffedd5] to-[#fed7aa]' 
+            : 'from-[#e0f2fe] to-[#bae6fd]';
+          const textColor = isMastercard 
+            ? 'text-[#9a3412]' 
+            : 'text-[#0369a1]';
+
+          return {
+            id: method.id,
+            color,
+            textColor,
+            number: `**** **** **** ${method.last4 || '0000'}`,
+            exp: `${expMonth}/${expYear}`,
+            name: method.holder_name || 'ALEX GONZALEZ',
+            brand: method.brand || 'VISA',
+            isMastercard,
+            isDisabled: !method.is_active,
+            isDefault: method.is_default,
+          };
+        });
+        setCards(formattedCards);
+      } catch (error) {
+        console.error('[ProfileScreen] Error loading profile data:', error);
+        // Fallback a localStorage
+        const savedImage = localStorage.getItem('profileImage');
+        if (savedImage) {
+          setProfileImage(savedImage);
+        }
+      }
+    };
+
+    loadUserProfileData();
+  }, [user?.id]);
+
+  // Guardar imagen en la base de datos cuando cambia
   useEffect(() => {
+    const saveProfileImage = async () => {
+      if (!user?.id || !isSupabaseConfigured() || profileImage === defaultImage) {
+        // Fallback a localStorage si no hay usuario o Supabase
+        if (profileImage && profileImage !== defaultImage) {
+          localStorage.setItem('profileImage', profileImage);
+        }
+        return;
+      }
+
+      try {
+        // Guardar avatar_url en user_profiles
+        await upsertUserProfile(user.id, { avatar_url: profileImage });
+        // También guardar en localStorage como backup
+        localStorage.setItem('profileImage', profileImage);
+      } catch (error) {
+        console.error('[ProfileScreen] Error saving profile image:', error);
+        // Fallback a localStorage
+        localStorage.setItem('profileImage', profileImage);
+      }
+    };
+
+    // Solo guardar si la imagen cambió y no es la primera carga
     if (profileImage && profileImage !== defaultImage) {
-      localStorage.setItem('profileImage', profileImage);
+      saveProfileImage();
     }
-  }, [profileImage]);
+  }, [profileImage, user?.id]);
 
   // Cerrar menú al hacer clic fuera
   useEffect(() => {
@@ -222,10 +290,38 @@ const ProfileScreen: React.FC = () => {
     };
   }, [isDragging, dragStart, cropData.size]);
 
-  const toggleCardStatus = (cardId: number) => {
-    setCards(cards.map(card => 
-      card.id === cardId ? { ...card, isDisabled: !card.isDisabled } : card
-    ));
+  const toggleCardStatus = async (cardId: string) => {
+    if (!user?.id || !isSupabaseConfigured()) {
+      // Fallback: solo actualizar estado local
+      setCards(cards.map(card => 
+        card.id === cardId ? { ...card, isDisabled: !card.isDisabled } : card
+      ));
+      return;
+    }
+
+    try {
+      const card = cards.find(c => c.id === cardId);
+      if (!card) return;
+
+      // Actualizar en la base de datos
+      const { updatePaymentMethod } = await import('../services/database');
+      const updated = await updatePaymentMethod(cardId, user.id, { 
+        is_active: !card.isDisabled 
+      });
+
+      if (updated) {
+        // Actualizar estado local
+        setCards(cards.map(c => 
+          c.id === cardId ? { ...c, isDisabled: !c.isDisabled } : c
+        ));
+      }
+    } catch (error) {
+      console.error('[ProfileScreen] Error toggling card status:', error);
+      // Fallback: actualizar estado local
+      setCards(cards.map(card => 
+        card.id === cardId ? { ...card, isDisabled: !card.isDisabled } : card
+      ));
+    }
   };
 
   const handleStartEdit = (field: 'name' | 'email' | 'phone') => {
@@ -431,8 +527,19 @@ const ProfileScreen: React.FC = () => {
     setCropData({ x: 0, y: 0, size: 200 });
   };
 
-  const handleDeleteImage = () => {
+  const handleDeleteImage = async () => {
     setProfileImage(defaultImage);
+    
+    // Eliminar de la base de datos
+    if (user?.id && isSupabaseConfigured()) {
+      try {
+        await upsertUserProfile(user.id, { avatar_url: null });
+      } catch (error) {
+        console.error('[ProfileScreen] Error deleting profile image:', error);
+      }
+    }
+    
+    // También eliminar de localStorage
     localStorage.removeItem('profileImage');
     setShowImageMenu(false);
   };
@@ -987,8 +1094,28 @@ const ProfileScreen: React.FC = () => {
                 {t('common.cancel')}
               </button>
               <button
-                onClick={() => {
-                  setCards(cards.filter(card => card.id !== showDeleteConfirm));
+                onClick={async () => {
+                  if (!user?.id || !isSupabaseConfigured()) {
+                    // Fallback: solo actualizar estado local
+                    setCards(cards.filter(card => card.id !== showDeleteConfirm));
+                    setShowDeleteConfirm(null);
+                    return;
+                  }
+
+                  try {
+                    const { deletePaymentMethod } = await import('../services/database');
+                    const deleted = await deletePaymentMethod(showDeleteConfirm, user.id);
+                    
+                    if (deleted) {
+                      setCards(cards.filter(card => card.id !== showDeleteConfirm));
+                    } else {
+                      alert('Error al eliminar la tarjeta. Por favor, intenta de nuevo.');
+                    }
+                  } catch (error) {
+                    console.error('[ProfileScreen] Error deleting card:', error);
+                    alert('Error al eliminar la tarjeta. Por favor, intenta de nuevo.');
+                  }
+                  
                   setShowDeleteConfirm(null);
                 }}
                 className="flex-1 py-3 px-4 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors active:scale-95"

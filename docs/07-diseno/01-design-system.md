@@ -452,5 +452,7 @@ shadow-[0_2px_15px_rgba(0,0,0,0.05)]
 
 ### Cambios Recientes (Enero 2025)
 - ✅ Agregado estilo breakfast-gradient para pantallas especiales
-- ✅ Documentados nuevos componentes (LoyaltyScreen, CouponsScreen, PromotionsScreen, TableReadyScreen, SplitPaymentScreen)  
+- ✅ Documentados nuevos componentes (LoyaltyScreen, CouponsScreen, PromotionsScreen, TableReadyScreen, SplitPaymentScreen)
+- ✅ Agregado componente `TopNavbar` con avatar, notificaciones, favoritos y perfil
+- ✅ Documentados estilos de navegación superior reutilizable
 **Responsable**: Equipo de diseño

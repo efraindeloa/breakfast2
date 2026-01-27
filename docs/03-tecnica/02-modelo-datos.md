@@ -303,15 +303,37 @@ interface GroupOrderItem {
 #### Estructura
 ```typescript
 type Favorites = number[]; // Array de IDs de platillos
+
+interface FavoritePromotion {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  category: string;
+}
 ```
 
 #### Almacenamiento
 - **Clave localStorage**: `favorites`
 - **Tipo**: Array de números (IDs de platillos)
+- **Clave localStorage**: `favoritePromotions`
+- **Tipo**: Array de objetos `FavoritePromotion`
 
 #### Ejemplo
 ```json
+// Favoritos (platillos)
 [1, 5, 12, 23]
+
+// Promociones favoritas
+[
+  {
+    "id": "promo-1",
+    "title": "Desayuno Especial",
+    "description": "Incluye café, jugo y platillo principal",
+    "image": "https://example.com/promo1.jpg",
+    "category": "Desayuno"
+  }
+]
 ```
 
 ---
@@ -576,6 +598,7 @@ interface SplitPaymentData {
 | `selectedLanguage` | string | Idioma seleccionado |
 | `theme` | string | Tema (light/dark) |
 | `favorites` | number[] | IDs de platillos favoritos |
+| `favoritePromotions` | FavoritePromotion[] | Promociones favoritas |
 | `orders_list` | Order[] | Órdenes activas |
 | `order_history` | HistoricalOrder[] | Historial de órdenes completadas |
 | `transactions` | Transaction[] | Historial de transacciones |
@@ -775,6 +798,9 @@ interface Review {
 - ✅ Agregado modelo de datos para datos de lealtad (`LoyaltyUser`)
 - ✅ Agregada clave `loyalty_data` en localStorage
 - ✅ Documentación de niveles de lealtad (Bronze, Silver, Gold, Platinum)
+- ✅ Agregado modelo de datos para promociones favoritas (`FavoritePromotion`)
+- ✅ Agregada clave `favoritePromotions` en localStorage
+- ✅ Documentación de estructura de promociones favoritas
 
 ### Cambios Recientes (Diciembre 2024)
 - ✅ Agregado modelo de datos para solicitudes de asistencia (`AssistanceHistoryItem`)

@@ -53,6 +53,23 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 - Muestra badge con cantidad de items en carrito
 - Indicador visual de la ruta actual activa
 
+### 2.2 Navegación Superior (`TopNavbar`)
+**Componente reutilizable** que aparece en pantallas autenticadas principales
+
+#### Funcionalidades
+- **Avatar del usuario**: Muestra avatar o iniciales del usuario, navega a perfil al hacer click
+- **Título personalizable**: Muestra título de la pantalla o mensaje de bienvenida
+- **Botón de notificaciones**: Acceso a notificaciones (funcionalidad futura)
+- **Botón de favoritos**: Acceso rápido a favoritos (puede ocultarse con prop `showFavorites={false}`)
+- **Botón de perfil**: Acceso rápido a perfil
+- **Botón de retroceso**: Opcional, se muestra con prop `showBackButton={true}`
+
+#### Reglas de negocio
+- Visible en pantallas principales autenticadas
+- El botón de favoritos se oculta en `HomeScreen`, `OrderScreen` y `PaymentMethodsScreen`
+- Los botones cambian de estado visual cuando la ruta actual coincide con su destino
+- El avatar muestra iniciales si no hay imagen de perfil configurada
+
 ### 2.2 Botón de Asistente (`AssistantButton`)
 **Componente global** flotante
 
@@ -492,14 +509,19 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 **Ruta**: `/favorites`
 
 #### Funcionalidades
-- Lista de platillos marcados como favoritos
-- Agregar/eliminar favoritos
-- Navegación a detalle del producto
+- **Tabs de navegación**: Platillos, Combinaciones, Promociones
+- **Lista de platillos marcados como favoritos**: Muestra todos los platillos favoritos con imagen, nombre y descripción traducidos
+- **Lista de combinaciones guardadas**: Muestra combinaciones personalizadas guardadas
+- **Lista de promociones favoritas**: Muestra todas las promociones marcadas como favoritas
+- **Agregar/eliminar favoritos**: Botones para gestionar favoritos en cada sección
+- **Navegación a detalle**: Click en cualquier item navega a su detalle
 
 #### Reglas de negocio
 - Los favoritos persisten en `localStorage`
 - Un platillo puede estar o no en favoritos
-- Se pueden eliminar individualmente
+- Las promociones pueden marcarse como favoritas desde `PromotionsScreen` y `PromotionDetailScreen`
+- Se pueden eliminar individualmente desde la pantalla de favoritos
+- Las traducciones se aplican correctamente a los nombres y descripciones de platillos favoritos
 
 ### 10.2 Contexto de Favoritos (`FavoritesContext`)
 
@@ -508,6 +530,14 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 - **`removeFromFavorites`**: Elimina producto de favoritos
 - **`isFavorite`**: Verifica si un producto es favorito
 - **`getFavorites`**: Obtiene lista de favoritos
+- **`addFavoritePromotion`**: Agrega promoción a favoritos
+- **`removeFavoritePromotion`**: Elimina promoción de favoritos
+- **`isPromotionFavorite`**: Verifica si una promoción es favorita
+- **`favoritePromotions`**: Lista de promociones favoritas
+
+#### Almacenamiento
+- **Platillos favoritos**: `localStorage` con clave `favorites` (array de IDs)
+- **Promociones favoritas**: `localStorage` con clave `favoritePromotions` (array de objetos `FavoritePromotion`)
 
 ---
 
@@ -987,6 +1017,9 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 - ✅ Scroll automático al inicio al abrir detalle de producto
 - ✅ Corrección de carga de imágenes en pantalla de edición de órdenes
 - ✅ Mejora en experiencia de navegación del menú
+- ✅ Agregado componente `TopNavbar` reutilizable (2.2)
+- ✅ Sistema de favoritos extendido para promociones (10.1, 10.2)
+- ✅ Botones de favoritos en promociones (22.1, 22.2)
 
 ## 20. Programa de Lealtad
 
@@ -1040,6 +1073,7 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 - Carousel horizontal de promociones principales
 - Sección "Sugerencia de IA" con recomendación personalizada
 - Grid de especiales de temporada
+- **Botón de favoritos en cada promoción**: Permite marcar/desmarcar promociones como favoritas directamente desde la lista
 - Integración en navegación inferior con badge de notificación
 
 ### 22.2 Detalle de Promoción (`PromotionDetailScreen`)
@@ -1053,11 +1087,14 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 - Condiciones de aplicación (horarios, días)
 - Lista de items incluidos
 - Botón sticky "Aplicar a mi Orden"
+- **Botón de favoritos**: Permite marcar/desmarcar la promoción como favorita
 
 #### Reglas de negocio
 - El contador regresivo se actualiza cada segundo
 - Las condiciones se muestran según la promoción
 - El botón "Aplicar" navega al menú con la promoción aplicada
+- El botón de favoritos cambia de estado visual al marcar/desmarcar
+- Las promociones favoritas se guardan en `localStorage` y aparecen en la pantalla de favoritos
 
 ## 23. Mesa Lista (Table Ready)
 

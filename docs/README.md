@@ -457,3 +457,13 @@ Este proyecto es propietario. Todos los derechos reservados.
 - ✅ Indicador visual de estado de escucha
 - ✅ Botón de micrófono en modal de asistente
 - ✅ Traducciones completas en 4 idiomas
+
+#### Mejoras: Navegación y Favoritos
+- ✅ Componente `TopNavbar` reutilizable para navegación superior
+- ✅ Avatar del usuario con iniciales si no hay imagen
+- ✅ Botones de notificaciones, favoritos y perfil
+- ✅ Opción para ocultar botón de favoritos en pantallas específicas
+- ✅ Sistema de favoritos extendido para incluir promociones
+- ✅ Tab de "Promociones" en pantalla de favoritos
+- ✅ Botones de favoritos en `PromotionsScreen` y `PromotionDetailScreen`
+- ✅ Mejoras en traducciones de nombres y descripciones de platillos favoritos

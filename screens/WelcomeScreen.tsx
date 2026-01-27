@@ -164,7 +164,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
                                 errorMessage.includes('invalid_credentials') ||
                                 errorMessage.includes('Invalid login') ||
                                 errorMessage.includes('User not found') ||
-                                errorMessage.includes('user_not_found');
+                                errorMessage.includes('user_not_found') ||
+                                errorMessage.includes('no está registrada') ||
+                                errorMessage.includes('regístrate primero');
         
         if (!isExpectedError) {
           console.error('Login error:', signInError);
@@ -172,7 +174,10 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
         
         let displayError = '';
         
-        if (errorMessage.includes('Invalid login credentials') || 
+        if (errorMessage.includes('no está registrada') || 
+            errorMessage.includes('regístrate primero')) {
+          displayError = errorMessage; // Usar el mensaje exacto del error
+        } else if (errorMessage.includes('Invalid login credentials') || 
             errorMessage.includes('invalid_credentials') ||
             errorMessage.includes('Invalid login')) {
           displayError = t('welcome.invalidCredentials') || 'Correo o contraseña incorrectos';

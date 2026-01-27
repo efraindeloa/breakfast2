@@ -5,6 +5,7 @@ import { useTranslation, useLanguage } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useProducts } from '../contexts/ProductsContext';
 import { formatPrice } from '../utils/currency';
+import TopNavbar from '../components/TopNavbar';
 
 type OriginType = 'mar' | 'tierra' | 'aire' | 'vegetariano' | 'vegano' | 
   // Filtros para Bebidas
@@ -784,61 +785,8 @@ const MenuScreen: React.FC = () => {
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-24 bg-background-light dark:bg-background-dark">
       {/* Header Section */}
-      <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md safe-top">
-        <div className="flex items-center p-4 pb-2 justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-full overflow-hidden bg-white p-1">
-              <img 
-                src="/logo-donk-restaurant.png" 
-                alt="DONK RESTAURANT"
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  if (target.parentElement) {
-                    const fallback = document.createElement('div');
-                    fallback.className = 'text-primary flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10';
-                    fallback.innerHTML = '<span class="material-symbols-outlined">restaurant_menu</span>';
-                    target.parentElement.appendChild(fallback);
-                  }
-                }}
-              />
-            </div>
-            <h1 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">DONK RESTAURANT</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/favorites')}
-              className="relative flex size-10 items-center justify-center rounded-full bg-white dark:bg-[#322a1a] shadow-sm border border-[#f4f3f0] dark:border-[#3d3321] hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              title={t('navigation.favorites')}
-            >
-              <span className="material-symbols-outlined text-[24px] text-gray-600 dark:text-gray-300">
-                {favoriteDishes.length > 0 ? 'favorite' : 'favorite_border'}
-              </span>
-              {favoriteDishes.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
-                  {favoriteDishes.length > 9 ? '9+' : favoriteDishes.length}
-                </span>
-              )}
-            </button>
-            <button 
-              onClick={() => navigate('/profile')}
-              className={`flex size-10 items-center justify-center rounded-full bg-white dark:bg-[#322a1a] shadow-sm border transition-colors ${
-                location.pathname === '/profile' || location.pathname.includes('billing')
-                  ? 'border-primary bg-primary/10'
-                  : 'border-[#f4f3f0] dark:border-[#3d3321]'
-              }`}
-              title={t('navigation.profile')}
-            >
-              <span className={`material-symbols-outlined ${
-                location.pathname === '/profile' || location.pathname.includes('billing')
-                  ? 'text-primary'
-                  : 'text-gray-600 dark:text-gray-300'
-              }`}>person</span>
-            </button>
-          </div>
-        </div>
-        
+      <TopNavbar title="DONK RESTAURANT" showAvatar={true} />
+      <div className="sticky top-[73px] z-40 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
         {/* Categories Chips */}
         <div className="flex gap-3 p-4 overflow-x-auto no-scrollbar">
           {categories.map((category) => (
@@ -865,7 +813,7 @@ const MenuScreen: React.FC = () => {
             </button>
           ))}
         </div>
-      </header>
+      </div>
 
       {/* Search Input */}
       <div className="px-4 pt-4 pb-2">

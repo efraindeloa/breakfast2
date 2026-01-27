@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-display bg-background-light dark:bg-background-dark text-[#181411] dark:text-white transition-colors duration-300;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+.ios-blur {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.dotted-border {
+  border: 2px dashed #f48c2555;
+  border-radius: 24px;
+}
+
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.custom-restaurant-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-user-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-meetup-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.paper-texture {
+  background-color: #fdf9e7;
+  background-image: radial-gradient(#d1d1d1 0.5px, transparent 0.5px);
+  background-size: 20px 20px;
+  position: relative;
+}
+
+.notebook-lines {
+  background-image: linear-gradient(var(--paper-line) 1px, transparent 1px);
+  background-size: 100% 2.5rem;
+  line-height: 2.5rem;
+}
+
+.red-margin {
+  position: absolute;
+  left: 40px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: rgba(239, 68, 68, 0.3);
+}
+
+.ios-blur {
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.breakfast-gradient {
+  background: radial-gradient(circle at top right, rgba(244, 140, 37, 0.15) 0%, transparent 60%),
+              radial-gradient(circle at bottom left, rgba(255, 214, 0, 0.1) 0%, transparent 40%);
+}
+
+.toggle-checkbox:checked + .toggle-label {
+  background-color: #f48c25;
+}
+
+.toggle-checkbox:checked + .toggle-label .toggle-dot {
+  transform: translateX(100%);
+}
+
+/* Safe area para evitar que el contenido se superponga con la barra de estado */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 24px);
+}
+
+/* Aplicar padding-top a todos los elementos sticky que están en top-0 */
+[class*="sticky"][class*="top-0"] {
+  padding-top: env(safe-area-inset-top, 24px) !important;
+}
+
+header[class*="sticky"] {
+  padding-top: env(safe-area-inset-top, 24px) !important;
+}
+
+div[class*="sticky"][class*="top-0"] {
+  padding-top: env(safe-area-inset-top, 24px) !important;
+}
+
+/* Responsividad mejorada */
+@media (min-width: 768px) {
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+  }
+  #root {
+    width: 100%;
+    max-width: 768px;
+  }
+}
+
+/* Asegurar que los elementos se adapten a diferentes tamaños */
+* {
+  box-sizing: border-box;
+}
+
+img, video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Mejorar la responsividad de textos y elementos */
+@media (max-width: 640px) {
+  .text-responsive {
+    font-size: clamp(0.875rem, 2.5vw, 1rem);
+  }
+}
+
+/* Asegurar que los contenedores se adapten */
+.container-responsive {
+  width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container-responsive {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-responsive {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}

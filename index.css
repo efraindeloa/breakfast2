@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @layer base {
   body {
     @apply font-display bg-background-light dark:bg-background-dark text-[#181411] dark:text-white transition-colors duration-300;

@@ -38,10 +38,13 @@ const countryCodes: CountryCode[] = [
   { code: 'BR', dialCode: '+55', name: 'Brasil' },
 ];
 
+type RegisterType = 'user' | 'restaurant';
+
 const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { signUp, signIn } = useAuth();
+  const [registerType, setRegisterType] = useState<RegisterType | null>(null);
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [selectedCountryCode, setSelectedCountryCode] = useState<CountryCode>(countryCodes[0]);
   const [showCountrySelector, setShowCountrySelector] = useState(false);
@@ -144,6 +147,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
 
   // Validar que todos los campos estén completos y válidos
   const isFormValid = useMemo(() => {
+    // Si no se ha seleccionado el tipo de registro, el formulario no es válido
+    if (!registerType) return false;
+    
     // Validar que el campo de email/teléfono esté lleno y sea válido
     const isEmailOrPhoneValid = emailOrPhone.trim() !== '' && 
       (inputType === 'email' ? isValidEmail : inputType === 'phone' ? isValidPhone : false);
@@ -152,7 +158,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
     const isPasswordValid = Object.values(passwordValidations).every(valid => valid);
     
     return isEmailOrPhoneValid && isPasswordValid;
-  }, [emailOrPhone, inputType, isValidEmail, isValidPhone, passwordValidations]);
+  }, [registerType, emailOrPhone, inputType, isValidEmail, isValidPhone, passwordValidations]);
 
   // Limpiar mensajes de error cuando el usuario corrige los campos
   useEffect(() => {
@@ -351,6 +357,76 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
 
       <div ref={containerRef} className="flex flex-col flex-1 px-6 overflow-y-auto pb-24">
         <div className="max-w-[480px] mx-auto w-full space-y-4">
+          {/* Selector de tipo de registro */}
+          {!registerType && (
+            <div className="flex flex-col gap-4 py-4">
+              <p className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 text-center">
+                {t('register.selectType')}
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setRegisterType('user')}
+                  className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl bg-white dark:bg-white/5 border-2 border-gray-200 dark:border-gray-700 hover:border-primary transition-all active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-4xl text-primary">
+                    person
+                  </span>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-base font-bold text-[#181411] dark:text-white">
+                      {t('register.userType')}
+                    </span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400 text-center">
+                      {t('register.userTypeDescription')}
+                    </span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRegisterType('restaurant')}
+                  className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl bg-white dark:bg-white/5 border-2 border-gray-200 dark:border-gray-700 hover:border-primary transition-all active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-4xl text-primary">
+                    restaurant
+                  </span>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-base font-bold text-[#181411] dark:text-white">
+                      {t('register.restaurantType')}
+                    </span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400 text-center">
+                      {t('register.restaurantTypeDescription')}
+                    </span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Botón para cambiar tipo de registro */}
+          {registerType && (
+            <div className="flex items-center justify-center gap-2 py-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setRegisterType(null);
+                  setEmailOrPhone('');
+                  setPassword('');
+                  setConfirmPassword('');
+                  setEmailOrPhoneError('');
+                  setPasswordError('');
+                  setConfirmPasswordError('');
+                }}
+                className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg">arrow_back</span>
+                <span>{t('register.changeType')}</span>
+              </button>
+            </div>
+          )}
+
+          {/* Formulario de registro */}
+          {registerType && (
+            <>
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
               {t('register.emailOrPhone')}
@@ -616,6 +692,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
               </p>
             )}
           </div>
+            </>
+          )}
         </div>
 
         <div className="mt-auto py-8">
@@ -632,26 +710,28 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
       </div>
 
       {/* Botón Registrarse sticky en la parte inferior */}
-      <div className="fixed bottom-0 left-0 right-0 w-full px-4 sm:px-6 pb-6 pt-4 bg-background-light dark:bg-background-dark border-t border-gray-100 dark:border-gray-800 z-50 md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2">
-        <button
-          onClick={handleContinue}
-          disabled={isLoading || !isFormValid}
-          className={`flex items-center justify-center rounded-xl h-14 text-white text-base font-bold w-full shadow-lg active:scale-[0.98] transition-transform ${
-            isFormValid && !isLoading
-              ? 'bg-primary shadow-primary/30 cursor-pointer' 
-              : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed opacity-60'
-          }`}
-        >
-          {isLoading ? (
-            <>
-              <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-              {t('register.creatingAccount') || 'Creando cuenta...'}
-            </>
-          ) : (
-            t('register.createAccount')
-          )}
-        </button>
-      </div>
+      {registerType && (
+        <div className="fixed bottom-0 left-0 right-0 w-full px-4 sm:px-6 pb-6 pt-4 bg-background-light dark:bg-background-dark border-t border-gray-100 dark:border-gray-800 z-50 md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2">
+          <button
+            onClick={handleContinue}
+            disabled={isLoading || !isFormValid}
+            className={`flex items-center justify-center rounded-xl h-14 text-white text-base font-bold w-full shadow-lg active:scale-[0.98] transition-transform ${
+              isFormValid && !isLoading
+                ? 'bg-primary shadow-primary/30 cursor-pointer' 
+                : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed opacity-60'
+            }`}
+          >
+            {isLoading ? (
+              <>
+                <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                {t('register.creatingAccount') || 'Creando cuenta...'}
+              </>
+            ) : (
+              t('register.createAccount')
+            )}
+          </button>
+        </div>
+      )}
 
       <div className="h-6 bg-background-light dark:bg-background-dark"></div>
     </div>

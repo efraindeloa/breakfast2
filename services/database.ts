@@ -1892,8 +1892,142 @@ export interface Restaurant {
   timezone: string;
   created_at: string;
   updated_at: string;
+  // Nuevas columnas de perfil
+  nombre_comercial?: string;
+  razon_social?: string;
+  descripcion_corta?: string;
+  descripcion_larga?: string;
+  tipo_cocina?: string;
+  tags?: string[];
+  direccion_completa?: string;
+  email_contacto?: string;
+  sitio_web?: string;
   // Campo calculado: URL completa de la imagen del logo
   image?: string;
+}
+
+// ==================== INTERFACES PARA PERFIL DE RESTAURANTE ====================
+
+export interface RestaurantCoverImage {
+  id: string;
+  restaurant_id: string;
+  image_url: string;
+  image_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RestaurantSocialMedia {
+  id: string;
+  restaurant_id: string;
+  platform: 'whatsapp' | 'instagram' | 'facebook' | 'twitter' | 'tiktok' | 'youtube' | 'linkedin';
+  url: string;
+  username?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RestaurantHours {
+  id: string;
+  restaurant_id: string;
+  day_of_week: number; // 0 = Domingo, 6 = Sábado
+  hour_start: string; // TIME format
+  hour_end: string; // TIME format
+  is_closed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RestaurantSpecialHours {
+  id: string;
+  restaurant_id: string;
+  date: string; // DATE format
+  hour_start?: string; // TIME format
+  hour_end?: string; // TIME format
+  is_closed: boolean;
+  reason?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RestaurantServiceConfig {
+  restaurant_id: string;
+  consumo_en_mesa: boolean;
+  para_llevar: boolean;
+  servicio_domicilio: boolean;
+  acepta_reservaciones: boolean;
+  acepta_lista_espera: boolean;
+  tiempo_promedio_preparacion: number; // Minutos
+  numero_mesas: number;
+  capacidad_total: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RestaurantPaymentConfig {
+  restaurant_id: string;
+  acepta_efectivo: boolean;
+  acepta_tarjeta: boolean;
+  acepta_app: boolean;
+  proveedor_pagos?: string;
+  propina_sugerida: number[]; // Porcentajes
+  divide_cuenta: boolean;
+  moneda: 'MXN' | 'USD' | 'EUR' | 'CAD';
+  politica_cancelacion?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RestaurantBillingConfig {
+  restaurant_id: string;
+  requiere_factura: boolean;
+  razon_social_fiscal?: string;
+  rfc?: string;
+  regimen_fiscal?: string;
+  uso_cfdi_default?: string;
+  correo_facturacion?: string;
+  proveedor_facturacion?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RestaurantNotificationConfig {
+  restaurant_id: string;
+  notificaciones_app: boolean;
+  notificaciones_whatsapp: boolean;
+  notificaciones_email: boolean;
+  plantillas_mensajes: Record<string, any>; // JSONB
+  idioma_mensajes: 'es' | 'en' | 'pt' | 'fr';
+  horario_envio_notificaciones: { inicio: string; fin: string }; // JSONB
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RestaurantMetrics {
+  restaurant_id: string;
+  fecha_alta: string;
+  estatus: 'activo' | 'suspendido' | 'en_revision' | 'inactivo';
+  plan: 'basico' | 'premium' | 'enterprise';
+  uso_app: boolean;
+  ordenes_mes: number;
+  clientes_unicos: number;
+  rating_promedio: number;
+  total_opiniones: number;
+  ultima_actualizacion_metricas: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RestaurantStaff {
+  id: string;
+  restaurant_id: string;
+  user_id: string;
+  role: 'owner' | 'admin' | 'manager' | 'waiter' | 'chef' | 'cashier';
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export const getRestaurants = async (filters?: {
@@ -2021,6 +2155,14 @@ export const updateRestaurant = async (
   }
 
   try {
+    // Validar que el restaurantId no sea un UUID de ejemplo
+    if (restaurantId === '00000000-0000-0000-0000-000000000001' || !restaurantId) {
+      console.error('[updateRestaurant] Invalid restaurant ID:', restaurantId);
+      throw new Error('ID de restaurante inválido');
+    }
+
+    console.log('[updateRestaurant] Updating restaurant:', { restaurantId, updates });
+
     const { data, error } = await supabase
       .from('restaurants')
       .update(updates)
@@ -2028,17 +2170,29 @@ export const updateRestaurant = async (
       .select()
       .single();
 
-    if (error) throw error;
-    if (!data) return null;
+    if (error) {
+      console.error('[updateRestaurant] Supabase error:', error);
+      throw error;
+    }
+    
+    if (!data) {
+      console.error('[updateRestaurant] No data returned');
+      return null;
+    }
+    
+    console.log('[updateRestaurant] Restaurant updated successfully:', data.id);
     
     // Mapear y agregar campo image desde logo_url
     return {
       ...data,
       image: data.logo_url ? getRestaurantImageUrl(data.logo_url, 'logo') : undefined,
     };
-  } catch (error) {
-    console.error('Error updating restaurant:', error);
-    return null;
+  } catch (error: any) {
+    console.error('[updateRestaurant] Error updating restaurant:', error);
+    if (error.code === 'PGRST116') {
+      console.error('[updateRestaurant] Restaurant not found or RLS policy blocking update');
+    }
+    throw error; // Re-lanzar el error para que el componente pueda manejarlo
   }
 };
 
@@ -2573,6 +2727,716 @@ export const createUserTransaction = async (transaction: Omit<UserTransaction, '
     return data;
   } catch (error) {
     console.error('Error creating transaction:', error);
+    return null;
+  }
+};
+
+// ==================== PERFIL DE RESTAURANTE ====================
+
+// ==================== RESTAURANT COVER IMAGES ====================
+
+export const getRestaurantCoverImages = async (restaurantId: string): Promise<RestaurantCoverImage[]> => {
+  if (!isSupabaseConfigured()) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_cover_images')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .eq('is_active', true)
+      .order('image_order', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching restaurant cover images:', error);
+    return [];
+  }
+};
+
+export const createRestaurantCoverImage = async (
+  coverImage: Omit<RestaurantCoverImage, 'id' | 'created_at' | 'updated_at'>
+): Promise<RestaurantCoverImage | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_cover_images')
+      .insert(coverImage)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating restaurant cover image:', error);
+    return null;
+  }
+};
+
+export const updateRestaurantCoverImage = async (
+  imageId: string,
+  updates: Partial<RestaurantCoverImage>
+): Promise<RestaurantCoverImage | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_cover_images')
+      .update(updates)
+      .eq('id', imageId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating restaurant cover image:', error);
+    return null;
+  }
+};
+
+export const deleteRestaurantCoverImage = async (imageId: string): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
+
+  try {
+    const { error } = await supabase
+      .from('restaurant_cover_images')
+      .delete()
+      .eq('id', imageId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting restaurant cover image:', error);
+    return false;
+  }
+};
+
+// ==================== RESTAURANT SOCIAL MEDIA ====================
+
+export const getRestaurantSocialMedia = async (restaurantId: string): Promise<RestaurantSocialMedia[]> => {
+  if (!isSupabaseConfigured()) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_social_media')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .eq('is_active', true)
+      .order('platform', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching restaurant social media:', error);
+    return [];
+  }
+};
+
+export const upsertRestaurantSocialMedia = async (
+  socialMedia: Omit<RestaurantSocialMedia, 'id' | 'created_at' | 'updated_at'>
+): Promise<RestaurantSocialMedia | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_social_media')
+      .upsert(socialMedia, { onConflict: 'restaurant_id,platform' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error upserting restaurant social media:', error);
+    return null;
+  }
+};
+
+export const deleteRestaurantSocialMedia = async (socialMediaId: string): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
+
+  try {
+    const { error } = await supabase
+      .from('restaurant_social_media')
+      .delete()
+      .eq('id', socialMediaId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting restaurant social media:', error);
+    return false;
+  }
+};
+
+// ==================== RESTAURANT HOURS ====================
+
+export const getRestaurantHours = async (restaurantId: string): Promise<RestaurantHours[]> => {
+  if (!isSupabaseConfigured()) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_hours')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .order('day_of_week', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching restaurant hours:', error);
+    return [];
+  }
+};
+
+export const upsertRestaurantHours = async (
+  hours: Omit<RestaurantHours, 'id' | 'created_at' | 'updated_at'>
+): Promise<RestaurantHours | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_hours')
+      .upsert(hours, { onConflict: 'restaurant_id,day_of_week' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error upserting restaurant hours:', error);
+    return null;
+  }
+};
+
+export const deleteRestaurantHours = async (hoursId: string): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
+
+  try {
+    const { error } = await supabase
+      .from('restaurant_hours')
+      .delete()
+      .eq('id', hoursId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting restaurant hours:', error);
+    return false;
+  }
+};
+
+// ==================== RESTAURANT SPECIAL HOURS ====================
+
+export const getRestaurantSpecialHours = async (restaurantId: string): Promise<RestaurantSpecialHours[]> => {
+  if (!isSupabaseConfigured()) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_special_hours')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .order('date', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching restaurant special hours:', error);
+    return [];
+  }
+};
+
+export const upsertRestaurantSpecialHours = async (
+  specialHours: Omit<RestaurantSpecialHours, 'id' | 'created_at' | 'updated_at'>
+): Promise<RestaurantSpecialHours | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_special_hours')
+      .upsert(specialHours, { onConflict: 'restaurant_id,date' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error upserting restaurant special hours:', error);
+    return null;
+  }
+};
+
+export const deleteRestaurantSpecialHours = async (specialHoursId: string): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
+
+  try {
+    const { error } = await supabase
+      .from('restaurant_special_hours')
+      .delete()
+      .eq('id', specialHoursId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting restaurant special hours:', error);
+    return false;
+  }
+};
+
+// ==================== RESTAURANT SERVICE CONFIG ====================
+
+export const getRestaurantServiceConfig = async (restaurantId: string): Promise<RestaurantServiceConfig | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  // Validar que el restaurantId no sea un UUID de ejemplo
+  if (restaurantId === '00000000-0000-0000-0000-000000000001' || !restaurantId) {
+    console.warn('[getRestaurantServiceConfig] Invalid restaurant ID:', restaurantId);
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_service_config')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      if (error.code === 'PGRST301' || error.message?.includes('406')) {
+        console.warn('[getRestaurantServiceConfig] RLS policy blocking access:', error.message);
+        return null;
+      }
+      throw error;
+    }
+    return data || null;
+  } catch (error: any) {
+    console.error('[getRestaurantServiceConfig] Error fetching restaurant service config:', error);
+    return null;
+  }
+};
+
+export const upsertRestaurantServiceConfig = async (
+  config: Omit<RestaurantServiceConfig, 'created_at' | 'updated_at'>
+): Promise<RestaurantServiceConfig | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_service_config')
+      .upsert(config, { onConflict: 'restaurant_id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error upserting restaurant service config:', error);
+    return null;
+  }
+};
+
+// ==================== RESTAURANT PAYMENT CONFIG ====================
+
+export const getRestaurantPaymentConfig = async (restaurantId: string): Promise<RestaurantPaymentConfig | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  // Validar que el restaurantId no sea un UUID de ejemplo
+  if (restaurantId === '00000000-0000-0000-0000-000000000001' || !restaurantId) {
+    console.warn('[getRestaurantPaymentConfig] Invalid restaurant ID:', restaurantId);
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_payment_config')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      if (error.code === 'PGRST301' || error.message?.includes('406')) {
+        console.warn('[getRestaurantPaymentConfig] RLS policy blocking access:', error.message);
+        return null;
+      }
+      throw error;
+    }
+    return data || null;
+  } catch (error: any) {
+    console.error('[getRestaurantPaymentConfig] Error fetching restaurant payment config:', error);
+    return null;
+  }
+};
+
+export const upsertRestaurantPaymentConfig = async (
+  config: Omit<RestaurantPaymentConfig, 'created_at' | 'updated_at'>
+): Promise<RestaurantPaymentConfig | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_payment_config')
+      .upsert(config, { onConflict: 'restaurant_id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error upserting restaurant payment config:', error);
+    return null;
+  }
+};
+
+// ==================== RESTAURANT BILLING CONFIG ====================
+
+export const getRestaurantBillingConfig = async (restaurantId: string): Promise<RestaurantBillingConfig | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  // Validar que el restaurantId no sea un UUID de ejemplo
+  if (restaurantId === '00000000-0000-0000-0000-000000000001' || !restaurantId) {
+    console.warn('[getRestaurantBillingConfig] Invalid restaurant ID:', restaurantId);
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_billing_config')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .single();
+
+    if (error) {
+      // Si es un error de "no encontrado", retornar null (no es un error crítico)
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      // Si es un error 406 (RLS), loguear pero no fallar
+      if (error.code === 'PGRST301' || error.message?.includes('406')) {
+        console.warn('[getRestaurantBillingConfig] RLS policy blocking access:', error.message);
+        return null;
+      }
+      throw error;
+    }
+    return data || null;
+  } catch (error: any) {
+    console.error('[getRestaurantBillingConfig] Error fetching restaurant billing config:', error);
+    return null;
+  }
+};
+
+export const upsertRestaurantBillingConfig = async (
+  config: Omit<RestaurantBillingConfig, 'created_at' | 'updated_at'>
+): Promise<RestaurantBillingConfig | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_billing_config')
+      .upsert(config, { onConflict: 'restaurant_id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error upserting restaurant billing config:', error);
+    return null;
+  }
+};
+
+// ==================== RESTAURANT NOTIFICATION CONFIG ====================
+
+export const getRestaurantNotificationConfig = async (restaurantId: string): Promise<RestaurantNotificationConfig | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  // Validar que el restaurantId no sea un UUID de ejemplo
+  if (restaurantId === '00000000-0000-0000-0000-000000000001' || !restaurantId) {
+    console.warn('[getRestaurantNotificationConfig] Invalid restaurant ID:', restaurantId);
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_notification_config')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      if (error.code === 'PGRST301' || error.message?.includes('406')) {
+        console.warn('[getRestaurantNotificationConfig] RLS policy blocking access:', error.message);
+        return null;
+      }
+      throw error;
+    }
+    return data || null;
+  } catch (error: any) {
+    console.error('[getRestaurantNotificationConfig] Error fetching restaurant notification config:', error);
+    return null;
+  }
+};
+
+export const upsertRestaurantNotificationConfig = async (
+  config: Omit<RestaurantNotificationConfig, 'created_at' | 'updated_at'>
+): Promise<RestaurantNotificationConfig | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_notification_config')
+      .upsert(config, { onConflict: 'restaurant_id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error upserting restaurant notification config:', error);
+    return null;
+  }
+};
+
+// ==================== RESTAURANT METRICS ====================
+
+export const getRestaurantMetrics = async (restaurantId: string): Promise<RestaurantMetrics | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  // Validar que el restaurantId no sea un UUID de ejemplo
+  if (restaurantId === '00000000-0000-0000-0000-000000000001' || !restaurantId) {
+    console.warn('[getRestaurantMetrics] Invalid restaurant ID:', restaurantId);
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_metrics')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      if (error.code === 'PGRST301' || error.message?.includes('406')) {
+        console.warn('[getRestaurantMetrics] RLS policy blocking access:', error.message);
+        return null;
+      }
+      throw error;
+    }
+    return data || null;
+  } catch (error: any) {
+    console.error('[getRestaurantMetrics] Error fetching restaurant metrics:', error);
+    return null;
+  }
+};
+
+export const updateRestaurantMetrics = async (
+  restaurantId: string,
+  updates: Partial<Omit<RestaurantMetrics, 'restaurant_id' | 'created_at' | 'updated_at'>>
+): Promise<RestaurantMetrics | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_metrics')
+      .update(updates)
+      .eq('restaurant_id', restaurantId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating restaurant metrics:', error);
+    return null;
+  }
+};
+
+// ==================== RESTAURANT STAFF ====================
+
+export const getRestaurantStaff = async (restaurantId: string): Promise<RestaurantStaff[]> => {
+  if (!isSupabaseConfigured()) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_staff')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .eq('is_active', true)
+      .order('role', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching restaurant staff:', error);
+    return [];
+  }
+};
+
+export const getRestaurantStaffByUser = async (userId: string): Promise<RestaurantStaff[]> => {
+  if (!isSupabaseConfigured()) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_staff')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching restaurant staff by user:', error);
+    return [];
+  }
+};
+
+export const createRestaurantStaff = async (
+  staff: Omit<RestaurantStaff, 'id' | 'created_at' | 'updated_at'>
+): Promise<RestaurantStaff | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_staff')
+      .insert(staff)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating restaurant staff:', error);
+    return null;
+  }
+};
+
+export const updateRestaurantStaff = async (
+  staffId: string,
+  updates: Partial<Omit<RestaurantStaff, 'id' | 'restaurant_id' | 'user_id' | 'created_at' | 'updated_at'>>
+): Promise<RestaurantStaff | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_staff')
+      .update(updates)
+      .eq('id', staffId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating restaurant staff:', error);
+    return null;
+  }
+};
+
+export const deleteRestaurantStaff = async (staffId: string): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
+
+  try {
+    const { error } = await supabase
+      .from('restaurant_staff')
+      .update({ is_active: false })
+      .eq('id', staffId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting restaurant staff:', error);
+    return false;
+  }
+};
+
+// ==================== FUNCIONES HELPER PARA PERFIL COMPLETO ====================
+
+/**
+ * Obtiene el perfil completo de un restaurante (todas las tablas relacionadas)
+ */
+export const getRestaurantFullProfile = async (restaurantId: string): Promise<{
+  restaurant: Restaurant | null;
+  coverImages: RestaurantCoverImage[];
+  socialMedia: RestaurantSocialMedia[];
+  hours: RestaurantHours[];
+  specialHours: RestaurantSpecialHours[];
+  serviceConfig: RestaurantServiceConfig | null;
+  paymentConfig: RestaurantPaymentConfig | null;
+  billingConfig: RestaurantBillingConfig | null;
+  notificationConfig: RestaurantNotificationConfig | null;
+  metrics: RestaurantMetrics | null;
+  staff: RestaurantStaff[];
+} | null> => {
+  if (!isSupabaseConfigured()) return null;
+
+  // Validar que el restaurantId no sea un UUID de ejemplo
+  if (restaurantId === '00000000-0000-0000-0000-000000000001' || !restaurantId) {
+    console.error('[getRestaurantFullProfile] Invalid restaurant ID:', restaurantId);
+    return null;
+  }
+
+  try {
+    // Obtener el restaurante primero (es crítico)
+    const restaurant = await getRestaurantById(restaurantId);
+    if (!restaurant) {
+      console.error('[getRestaurantFullProfile] Restaurant not found:', restaurantId);
+      return null;
+    }
+
+    // Obtener las demás configuraciones en paralelo, pero manejar errores individualmente
+    const [
+      coverImages,
+      socialMedia,
+      hours,
+      specialHours,
+      serviceConfig,
+      paymentConfig,
+      billingConfig,
+      notificationConfig,
+      metrics,
+      staff
+    ] = await Promise.allSettled([
+      getRestaurantCoverImages(restaurantId),
+      getRestaurantSocialMedia(restaurantId),
+      getRestaurantHours(restaurantId),
+      getRestaurantSpecialHours(restaurantId),
+      getRestaurantServiceConfig(restaurantId),
+      getRestaurantPaymentConfig(restaurantId),
+      getRestaurantBillingConfig(restaurantId),
+      getRestaurantNotificationConfig(restaurantId),
+      getRestaurantMetrics(restaurantId),
+      getRestaurantStaff(restaurantId)
+    ]);
+
+    // Extraer valores de los resultados (manejar errores individualmente)
+    return {
+      restaurant,
+      coverImages: coverImages.status === 'fulfilled' ? coverImages.value : [],
+      socialMedia: socialMedia.status === 'fulfilled' ? socialMedia.value : [],
+      hours: hours.status === 'fulfilled' ? hours.value : [],
+      specialHours: specialHours.status === 'fulfilled' ? specialHours.value : [],
+      serviceConfig: serviceConfig.status === 'fulfilled' ? serviceConfig.value : null,
+      paymentConfig: paymentConfig.status === 'fulfilled' ? paymentConfig.value : null,
+      billingConfig: billingConfig.status === 'fulfilled' ? billingConfig.value : null,
+      notificationConfig: notificationConfig.status === 'fulfilled' ? notificationConfig.value : null,
+      metrics: metrics.status === 'fulfilled' ? metrics.value : null,
+      staff: staff.status === 'fulfilled' ? staff.value : []
+    };
+  } catch (error) {
+    console.error('[getRestaurantFullProfile] Error fetching restaurant full profile:', error);
     return null;
   }
 };

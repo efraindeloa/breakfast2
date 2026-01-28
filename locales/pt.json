@@ -706,7 +706,13 @@
     "userAlreadyExists": "Este e-mail já está cadastrado",
     "registrationError": "Erro ao se cadastrar",
     "registrationSuccess": "Cadastro realizado com sucesso! Redirecionando...",
-    "creatingAccount": "Criando conta..."
+    "creatingAccount": "Criando conta...",
+    "selectType": "Como você quer se cadastrar?",
+    "userType": "Usuário",
+    "userTypeDescription": "Para clientes",
+    "restaurantType": "Restaurante",
+    "restaurantTypeDescription": "Para estabelecimentos",
+    "changeType": "Alterar tipo de cadastro"
   },
   "forgotPassword": {
     "title": "Recuperar senha",

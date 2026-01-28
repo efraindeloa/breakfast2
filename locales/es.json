@@ -662,6 +662,12 @@
   "register": {
     "title": "¡Buen día!",
     "subtitle": "Ingresa tus datos para continuar",
+    "selectType": "¿Cómo quieres registrarte?",
+    "userType": "Usuario",
+    "userTypeDescription": "Para comensales",
+    "restaurantType": "Restaurante",
+    "restaurantTypeDescription": "Para establecimientos",
+    "changeType": "Cambiar tipo de registro",
     "name": "Nombre completo",
     "email": "Correo electrónico",
     "phone": "Teléfono",

@@ -675,7 +675,13 @@
     "userAlreadyExists": "This email is already registered",
     "registrationError": "Error signing up",
     "registrationSuccess": "Registration successful! Redirecting...",
-    "creatingAccount": "Creating account..."
+    "creatingAccount": "Creating account...",
+    "selectType": "How do you want to register?",
+    "userType": "User",
+    "userTypeDescription": "For diners",
+    "restaurantType": "Restaurant",
+    "restaurantTypeDescription": "For establishments",
+    "changeType": "Change registration type"
   },
   "forgotPassword": {
     "title": "Recover password",

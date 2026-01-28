@@ -44,6 +44,7 @@ import PromotionDetailScreen from './screens/PromotionDetailScreen';
 import TableReadyScreen from './screens/TableReadyScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
+import RestaurantProfileScreen from './screens/RestaurantProfileScreen';
 import BottomNav from './components/BottomNav';
 import AssistantButton from './components/AssistantButton';
 import AndroidBackButton from './components/AndroidBackButton';
@@ -129,6 +130,7 @@ const AppContent: React.FC = () => {
           <Route path="/promotions" element={isAuthenticated ? <PromotionsScreen /> : <Navigate to="/" />} />
           <Route path="/promotion-detail/:id" element={isAuthenticated ? <PromotionDetailScreen /> : <Navigate to="/" />} />
           <Route path="/table-ready" element={isAuthenticated ? <TableReadyScreen /> : <Navigate to="/" />} />
+          <Route path="/restaurant-profile" element={isAuthenticated ? <RestaurantProfileScreen /> : <Navigate to="/" />} />
         </Routes>
         
                       {isAuthenticated && <BottomNav />}

@@ -706,7 +706,13 @@
     "userAlreadyExists": "Cet e-mail est déjà enregistré",
     "registrationError": "Erreur lors de l'inscription",
     "registrationSuccess": "Inscription réussie ! Redirection...",
-    "creatingAccount": "Création du compte..."
+    "creatingAccount": "Création du compte...",
+    "selectType": "Comment voulez-vous vous inscrire ?",
+    "userType": "Utilisateur",
+    "userTypeDescription": "Pour les clients",
+    "restaurantType": "Restaurant",
+    "restaurantTypeDescription": "Pour les établissements",
+    "changeType": "Changer le type d'inscription"
   },
   "forgotPassword": {
     "title": "Récupérer le mot de passe",

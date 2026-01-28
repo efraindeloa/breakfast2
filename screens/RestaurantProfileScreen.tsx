@@ -685,29 +685,29 @@ const RestaurantProfileScreen: React.FC = () => {
       {/* ActionsBar */}
       <div className="px-4 py-2">
         <div className="gap-3 grid grid-cols-3">
-          <div className="flex flex-col items-center gap-2 bg-white dark:bg-gray-800/50 py-4 px-2 text-center rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
-            <div className="rounded-full bg-primary/10 p-3">
-              <span className="material-symbols-outlined text-primary">restaurant_menu</span>
+          <div className="flex flex-col items-center gap-2 bg-primary py-4 px-2 text-center rounded-xl shadow-lg shadow-primary/20">
+            <div className="rounded-full bg-white/20 p-3">
+              <span className="material-symbols-outlined text-white">restaurant_menu</span>
             </div>
-            <p className="text-[#181411] dark:text-white text-xs font-bold leading-normal uppercase tracking-wider">Gestionar Menú</p>
+            <p className="text-white text-xs font-bold leading-normal uppercase tracking-wider">Gestionar Menú</p>
           </div>
           <button
             onClick={() => navigate('/restaurant-details')}
-            className="flex flex-col items-center gap-2 bg-primary py-4 px-2 text-center rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-dark transition-colors"
-          >
-            <div className="rounded-full bg-white/20 p-3">
-              <span className="material-symbols-outlined text-white">calendar_today</span>
-            </div>
-            <p className="text-white text-xs font-bold leading-normal uppercase tracking-wider">Configurar Reservaciones</p>
-          </button>
-          <button
-            onClick={() => navigate('/admin-control-panel')}
             className="flex flex-col items-center gap-2 bg-white dark:bg-gray-800/50 py-4 px-2 text-center rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
             <div className="rounded-full bg-primary/10 p-3">
-              <span className="material-symbols-outlined text-primary">dashboard</span>
+              <span className="material-symbols-outlined text-primary">calendar_today</span>
             </div>
-            <p className="text-[#181411] dark:text-white text-xs font-bold leading-normal uppercase tracking-wider">Panel de Control</p>
+            <p className="text-[#181411] dark:text-white text-xs font-bold leading-normal uppercase tracking-wider">Configurar Reservaciones</p>
+          </button>
+          <button
+            onClick={() => navigate('/admin-control-panel')}
+            className="flex flex-col items-center gap-2 bg-primary py-4 px-2 text-center rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-dark transition-colors"
+          >
+            <div className="rounded-full bg-white/20 p-3">
+              <span className="material-symbols-outlined text-white">dashboard</span>
+            </div>
+            <p className="text-white text-xs font-bold leading-normal uppercase tracking-wider">Panel de Control</p>
           </button>
         </div>
       </div>

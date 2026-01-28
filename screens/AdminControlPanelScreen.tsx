@@ -31,7 +31,14 @@ const AdminControlPanelScreen: React.FC = () => {
   };
 
   return (
-    <div className="relative flex h-auto min-h-screen w-full max-w-[430px] mx-auto flex-col bg-background-light dark:bg-background-dark overflow-x-hidden">
+    <div
+      className="relative flex h-auto min-h-screen w-full max-w-[430px] mx-auto flex-col bg-background-light dark:bg-background-dark overflow-x-hidden"
+      // Safe areas para dispositivos con notch / barras de sistema
+      style={{
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
+    >
       {/* TopAppBar */}
       <div className="sticky top-0 z-50 flex items-center bg-white/80 dark:bg-background-dark/80 backdrop-blur-md p-4 pb-2 justify-between border-b border-[#e6e0db] dark:border-[#3d2e21]">
         <button
@@ -51,7 +58,7 @@ const AdminControlPanelScreen: React.FC = () => {
       </div>
 
       <div className="px-4 pt-6">
-        <h1 className="text-2xl font-bold tracking-tight">Panel de Control</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Estadísticas</h1>
         <p className="text-sm text-[#8a7560] dark:text-[#c0a891]">Gestiona la operatividad de tu restaurante</p>
       </div>
 
@@ -222,114 +229,11 @@ const AdminControlPanelScreen: React.FC = () => {
           </div>
         </details>
 
-        {/* Experiencia Digital */}
-        <details
-          className="group bg-white dark:bg-[#2d2218] rounded-xl border border-[#e6e0db] dark:border-[#3d2e21] overflow-hidden transition-all duration-300 shadow-sm"
-          open={openSection === 'experiencia'}
-          onClick={() => toggleSection('experiencia')}
-        >
-          <summary className="flex cursor-pointer items-center justify-between p-4 list-none">
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/10 p-2 rounded-lg text-primary">
-                <span className="material-symbols-outlined">palette</span>
-              </div>
-              <p className="text-[#181411] dark:text-white font-semibold">Experiencia Digital</p>
-            </div>
-            <span className="material-symbols-outlined text-[#8a7560] group-open:rotate-180 transition-transform">
-              expand_more
-            </span>
-          </summary>
-          <div className="px-4 pb-4 space-y-4">
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-[#8a7560] uppercase">Color de Marca</p>
-              <div className="flex gap-4">
-                {['#f48c25', '#2563eb', '#16a34a', '#dc2626'].map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setSelectedColor(color)}
-                    className={`w-8 h-8 rounded-full ${
-                      selectedColor === color ? 'border-2 border-white ring-2 ring-primary' : ''
-                    }`}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-[#8a7560] uppercase">Modo de Interfaz</p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setSelectedMode('light')}
-                  className={`flex items-center justify-center gap-2 p-2 rounded-lg text-sm font-bold ${
-                    selectedMode === 'light'
-                      ? 'border-2 border-primary bg-primary/5 text-primary'
-                      : 'border border-[#e6e0db] dark:border-[#3d2e21] font-medium'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-sm">light_mode</span> Claro
-                </button>
-                <button
-                  onClick={() => setSelectedMode('dark')}
-                  className={`flex items-center justify-center gap-2 p-2 rounded-lg text-sm font-bold ${
-                    selectedMode === 'dark'
-                      ? 'border-2 border-primary bg-primary/5 text-primary'
-                      : 'border border-[#e6e0db] dark:border-[#3d2e21] font-medium'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-sm">dark_mode</span> Oscuro
-                </button>
-              </div>
-            </div>
-          </div>
-        </details>
-
-        {/* Horarios */}
-        <details
-          className="group bg-white dark:bg-[#2d2218] rounded-xl border border-[#e6e0db] dark:border-[#3d2e21] overflow-hidden transition-all duration-300 shadow-sm"
-          open={openSection === 'horarios'}
-          onClick={() => toggleSection('horarios')}
-        >
-          <summary className="flex cursor-pointer items-center justify-between p-4 list-none">
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/10 p-2 rounded-lg text-primary">
-                <span className="material-symbols-outlined">schedule</span>
-              </div>
-              <p className="text-[#181411] dark:text-white font-semibold">Horarios de Atención</p>
-            </div>
-            <span className="material-symbols-outlined text-[#8a7560] group-open:rotate-180 transition-transform">
-              expand_more
-            </span>
-          </summary>
-          <div className="px-4 pb-4 space-y-3">
-            <div className="flex items-center justify-between text-sm py-2 border-b border-[#f5f2f0] dark:border-[#3d2e21]">
-              <span className="font-medium">Lunes - Viernes</span>
-              <span className="text-[#8a7560]">09:00 AM - 10:00 PM</span>
-            </div>
-            <div className="flex items-center justify-between text-sm py-2 border-b border-[#f5f2f0] dark:border-[#3d2e21]">
-              <span className="font-medium">Sábados</span>
-              <span className="text-[#8a7560]">10:00 AM - 11:30 PM</span>
-            </div>
-            <div className="flex items-center justify-between text-sm py-2">
-              <span className="font-medium">Domingos</span>
-              <span className="text-[#dc2626] font-bold">Cerrado</span>
-            </div>
-            <button className="w-full mt-2 py-2 text-primary font-bold text-sm border border-primary/30 rounded-lg">
-              Editar Calendario
-            </button>
-          </div>
-        </details>
       </div>
 
-      {/* Footer Actions */}
+      {/* Footer Info */}
       <div className="mt-auto p-6 bg-white dark:bg-[#2d2218] border-t border-[#e6e0db] dark:border-[#3d2e21] pb-10">
-        <button
-          onClick={handleSaveChanges}
-          className="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-        >
-          <span className="material-symbols-outlined">save</span>
-          Guardar Cambios
-        </button>
-        <p className="text-center text-[10px] text-[#8a7560] mt-4 uppercase tracking-widest font-bold">
+        <p className="text-center text-[10px] text-[#8a7560] mt-2 uppercase tracking-widest font-bold">
           Última sincronización: Hoy 14:32
         </p>
       </div>

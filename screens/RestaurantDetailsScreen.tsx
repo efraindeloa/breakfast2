@@ -14,13 +14,26 @@ const RestaurantDetailsScreen: React.FC = () => {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [selectedDay, setSelectedDay] = useState<number>(0); // 0=Lunes, 1=Martes, etc.
   const [isDayOpen, setIsDayOpen] = useState(true);
-  const [startHour, setStartHour] = useState('07');
-  const [startMinute, setStartMinute] = useState('30');
+  const [startHour, setStartHour] = useState('00');
+  const [startMinute, setStartMinute] = useState('00');
   const [startPeriod, setStartPeriod] = useState('AM');
-  const [endHour, setEndHour] = useState('11');
+  const [endHour, setEndHour] = useState('00');
   const [endMinute, setEndMinute] = useState('00');
   const [endPeriod, setEndPeriod] = useState('AM');
   const [editingTime, setEditingTime] = useState<'start' | 'end'>('start');
+  const [showTimePickerModal, setShowTimePickerModal] = useState(false);
+
+  // Servicios disponibles (checkboxes)
+  const [services, setServices] = useState<
+    Array<{ id: string; label: string; icon: string; enabled: boolean }>
+  >([
+    { id: 'reserva_online', label: 'Reserva Online', icon: 'event_available', enabled: true },
+    { id: 'domicilio', label: 'Domicilio', icon: 'delivery_dining', enabled: true },
+    { id: 'pago_digital', label: 'Pago Digital', icon: 'credit_card', enabled: true },
+    { id: 'wifi', label: 'WiFi Gratis', icon: 'wifi', enabled: true },
+  ]);
+  const [isAddingService, setIsAddingService] = useState(false);
+  const [newServiceLabel, setNewServiceLabel] = useState('');
   
   // Refs para los contenedores de scroll
   const hourScrollRef = React.useRef<HTMLDivElement>(null);
@@ -54,15 +67,27 @@ const RestaurantDetailsScreen: React.FC = () => {
   const [isWebsiteConfigured, setIsWebsiteConfigured] = useState(!!restaurant?.sitio_web);
   const [isWhatsappConfigured, setIsWhatsappConfigured] = useState(false); // TODO: agregar campo whatsapp en BD
 
+  // Secciones colapsables (por defecto abiertas)
+  const [sectionsOpen, setSectionsOpen] = useState({
+    location: true,
+    serviceHours: true,
+    services: true,
+    social: true,
+  });
+
+  const toggleSection = (key: keyof typeof sectionsOpen) => {
+    setSectionsOpen(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   // Horarios con estado editable
   const [schedule, setSchedule] = useState([
-    { day: 'Lunes', hours: '07:00 AM - 12:00 PM', closed: false },
-    { day: 'Martes', hours: '07:00 AM - 12:00 PM', closed: false },
-    { day: 'Miércoles', hours: '07:00 AM - 12:00 PM', closed: false },
-    { day: 'Jueves', hours: '07:00 AM - 12:00 PM', closed: false },
-    { day: 'Viernes', hours: '07:00 AM - 01:00 PM', closed: false },
-    { day: 'Sábado', hours: '08:00 AM - 02:00 PM', closed: false },
-    { day: 'Domingo', hours: '08:00 AM - 02:00 PM', closed: true },
+    { day: 'Lunes', hours: '00:00 AM - 00:00 AM', closed: false },
+    { day: 'Martes', hours: '00:00 AM - 00:00 AM', closed: false },
+    { day: 'Miércoles', hours: '00:00 AM - 00:00 AM', closed: false },
+    { day: 'Jueves', hours: '00:00 AM - 00:00 AM', closed: false },
+    { day: 'Viernes', hours: '00:00 AM - 00:00 AM', closed: false },
+    { day: 'Sábado', hours: '00:00 AM - 00:00 AM', closed: false },
+    { day: 'Domingo', hours: '00:00 AM - 00:00 AM', closed: true },
   ]);
 
   useEffect(() => {
@@ -154,6 +179,36 @@ const RestaurantDetailsScreen: React.FC = () => {
     setShowScheduleModal(true);
   };
 
+  const handleOpenScheduleModalForDay = (dayName: string) => {
+    const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const idx = dayNames.indexOf(dayName);
+    const safeIndex = idx >= 0 ? idx : 0;
+    // Cargar el día seleccionado (setea selectedDay + parsea el horario actual)
+    handleSelectDay(safeIndex);
+    setShowScheduleModal(true);
+  };
+
+  const toggleService = (id: string) => {
+    setServices((prev) => prev.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s)));
+    // TODO: persistir en BD cuando exista estructura para servicios
+  };
+
+  const handleAddService = () => {
+    const label = newServiceLabel.trim();
+    if (!label) return;
+    if (label.length > 25) {
+      alert('El nombre del servicio es muy largo. Usa máximo 25 caracteres.');
+      return;
+    }
+    const id = `custom_${label.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`;
+    setServices((prev) => [
+      ...prev,
+      { id, label, icon: 'checklist', enabled: true },
+    ]);
+    setNewServiceLabel('');
+    setIsAddingService(false);
+  };
+
   // Guardar automáticamente cuando cambian los valores
   useEffect(() => {
     if (showScheduleModal) {
@@ -191,15 +246,26 @@ const RestaurantDetailsScreen: React.FC = () => {
           const [endTime, endP] = end.split(' ');
           const [sH, sM] = startTime.split(':');
           const [eH, eM] = endTime.split(':');
-          
-          setStartHour(sH);
-          setStartMinute(sM);
-          setStartPeriod(startP);
-          setEndHour(eH);
-          setEndMinute(eM);
-          setEndPeriod(endP);
+
+          if (sH && sM && startP && eH && eM && endP) {
+            setStartHour(sH);
+            setStartMinute(sM);
+            setStartPeriod(startP);
+            setEndHour(eH);
+            setEndMinute(eM);
+            setEndPeriod(endP);
+            return;
+          }
         }
       }
+
+      // Default (fallback) -> 00:00 AM / 00:00 AM
+      setStartHour('00');
+      setStartMinute('00');
+      setStartPeriod('AM');
+      setEndHour('00');
+      setEndMinute('00');
+      setEndPeriod('AM');
     }
   };
 
@@ -341,182 +407,290 @@ const RestaurantDetailsScreen: React.FC = () => {
 
         {/* Location Section */}
         <div className="px-4 mb-8">
-          <h3 className="text-[#181411] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-3 flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary">location_on</span>
-            Ubicación
-          </h3>
-          <div className="rounded-xl overflow-hidden border border-[#f5f2f0] dark:border-white/5 shadow-sm bg-white dark:bg-white/5">
-            <div
-              className="w-full aspect-video bg-cover bg-center"
-              style={{
-                backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBh2jQUhuOdFP4aRK3dPi8KEp2F7Um8Zuc_lqiOoQPXe-o0n1m8LeSSoyY_E-rELIsUFi0yyspVpo3QsjBvBmkz-ppgsmSOggBLrwY7uvAejFtYZuoxCI4uYLIZJu9I1O3WZtzWV_ALfD1ilKsMoJUjO_MFgG0Tdb8ot4MdlZRftwxToN_yyExclOc-PYqhb2WtK37iOe8gWxHFu5WwsHYI-aySyOIzw-qBRZwIne9V0AxfdMgbHG8O1_Sl-2ukudjPXjNUUrhJY_9h")',
-              }}
-            />
-            <div className="flex items-center gap-4 px-4 min-h-[72px] py-3 justify-between">
-              {isEditingAddress ? (
-                <div className="flex-1 flex items-center gap-3">
-                  <div className="flex-1">
-                    <p className="text-[#181411] dark:text-white text-xs font-semibold mb-1 uppercase">
-                      Nueva Dirección
-                    </p>
-                    <input
-                      type="text"
-                      value={addressInput}
-                      onChange={(e) => setAddressInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSaveAddress();
-                        if (e.key === 'Escape') setIsEditingAddress(false);
-                      }}
-                      placeholder="Ej: Av. Reforma 450, Juárez, CDMX"
-                      className="w-full px-3 py-2 text-sm border border-primary rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-                      autoFocus
-                    />
+          <button
+            type="button"
+            onClick={() => toggleSection('location')}
+            className="w-full flex items-center justify-between pb-3 text-left"
+          >
+            <h3 className="text-[#181411] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">location_on</span>
+              Ubicación
+            </h3>
+            <span
+              className={`material-symbols-outlined text-gray-400 transition-transform ${
+                sectionsOpen.location ? 'rotate-180' : ''
+              }`}
+            >
+              expand_more
+            </span>
+          </button>
+          {sectionsOpen.location && (
+            <div className="rounded-xl overflow-hidden border border-[#f5f2f0] dark:border-white/5 shadow-sm bg-white dark:bg-white/5">
+              <div
+                className="w-full aspect-video bg-cover bg-center"
+                style={{
+                  backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBh2jQUhuOdFP4aRK3dPi8KEp2F7Um8Zuc_lqiOoQPXe-o0n1m8LeSSoyY_E-rELIsUFi0yyspVpo3QsjBvBmkz-ppgsmSOggBLrwY7uvAejFtYZuoxCI4uYLIZJu9I1O3WZtzWV_ALfD1ilKsMoJUjO_MFgG0Tdb8ot4MdlZRftwxToN_yyExclOc-PYqhb2WtK37iOe8gWxHFu5WwsHYI-aySyOIzw-qBRZwIne9V0AxfdMgbHG8O1_Sl-2ukudjPXjNUUrhJY_9h")',
+                }}
+              />
+              <div className="flex items-center gap-4 px-4 min-h-[72px] py-3 justify-between">
+                {isEditingAddress ? (
+                  <div className="flex-1 flex items-center gap-3">
+                    <div className="flex-1">
+                      <p className="text-[#181411] dark:text-white text-xs font-semibold mb-1 uppercase">
+                        Nueva Dirección
+                      </p>
+                      <input
+                        type="text"
+                        value={addressInput}
+                        onChange={(e) => setAddressInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveAddress();
+                          if (e.key === 'Escape') setIsEditingAddress(false);
+                        }}
+                        placeholder="Ej: Av. Reforma 450, Juárez, CDMX"
+                        className="w-full px-3 py-2 text-sm border border-primary rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                        autoFocus
+                      />
+                    </div>
+                    <button
+                      onClick={handleSaveAddress}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white hover:bg-primary-dark transition-colors"
+                      title="Guardar dirección"
+                    >
+                      <span className="material-symbols-outlined">check</span>
+                    </button>
+                    <button
+                      onClick={() => setIsEditingAddress(false)}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                      title="Cancelar"
+                    >
+                      <span className="material-symbols-outlined">close</span>
+                    </button>
                   </div>
-                  <button
-                    onClick={handleSaveAddress}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white hover:bg-primary-dark transition-colors"
-                    title="Guardar dirección"
+                ) : (
+                  <>
+                    <div className="flex flex-col justify-center max-w-[70%]">
+                      <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight line-clamp-1">
+                        Dirección Completa
+                      </p>
+                      <p className="text-[#8a7560] dark:text-white/60 text-sm font-normal leading-normal">{address}</p>
+                    </div>
+                    <div className="shrink-0">
+                      <button
+                        onClick={handleEditAddress}
+                        className="flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-primary/10 dark:bg-primary/20 text-primary transition-all hover:bg-primary hover:text-white"
+                        title="Editar dirección"
+                      >
+                        <span className="material-symbols-outlined">edit</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Operating Hours Section */}
+        <div className="px-4 mb-8">
+          <button
+            type="button"
+            onClick={() => toggleSection('serviceHours')}
+            className="w-full flex items-center justify-between pb-3 text-left"
+          >
+            <h3 className="text-[#181411] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">schedule</span>
+              Horario de servicio
+            </h3>
+            <span
+              className={`material-symbols-outlined text-gray-400 transition-transform ${
+                sectionsOpen.serviceHours ? 'rotate-180' : ''
+              }`}
+            >
+              expand_more
+            </span>
+          </button>
+          {sectionsOpen.serviceHours && (
+            <>
+              <div className="bg-white dark:bg-white/5 rounded-xl border border-[#f5f2f0] dark:border-white/5 overflow-hidden">
+                {schedule.map((item, index) => (
+                  <div
+                    key={index}
+                    className={`flex justify-between items-center px-4 py-3 ${
+                      index < schedule.length - 1 ? 'border-b border-[#f5f2f0] dark:border-white/5' : ''
+                    }`}
                   >
-                    <span className="material-symbols-outlined">check</span>
+                <button
+                  type="button"
+                  onClick={() => handleOpenScheduleModalForDay(item.day)}
+                  className="w-full flex justify-between items-center text-left"
+                  title={`Configurar horarios: ${item.day}`}
+                >
+                  <span
+                    className={`text-sm font-medium ${
+                      item.closed ? 'text-[#dc2626] font-bold' : 'text-[#8a7560] dark:text-white/60'
+                    }`}
+                  >
+                    {item.day}
+                  </span>
+                  <span className={`text-sm ${item.closed ? 'text-[#dc2626] font-bold' : 'font-semibold'}`}>
+                    {item.closed ? 'Cerrado' : item.hours}
+                  </span>
+                </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={handleOpenScheduleModal}
+                className="w-full mt-3 py-3 text-primary font-bold text-sm border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors"
+              >
+                Configurar Horarios
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Services & Amenities */}
+        <div className="px-4 mb-8">
+          <button
+            type="button"
+            onClick={() => toggleSection('services')}
+            className="w-full flex items-center justify-between pb-3 text-left"
+          >
+            <h3 className="text-[#181411] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">restaurant</span>
+              Servicios Disponibles
+            </h3>
+            <span
+              className={`material-symbols-outlined text-gray-400 transition-transform ${
+                sectionsOpen.services ? 'rotate-180' : ''
+              }`}
+            >
+              expand_more
+            </span>
+          </button>
+          {sectionsOpen.services && (
+            <div className="grid grid-cols-2 gap-3">
+              {services.map((service) => (
+                <button
+                  key={service.id}
+                  type="button"
+                  onClick={() => toggleService(service.id)}
+                  className={`flex items-center gap-3 p-3 rounded-xl border shadow-sm transition-colors text-left ${
+                    service.enabled
+                      ? 'bg-primary/5 border-primary/30'
+                      : 'bg-white dark:bg-white/5 border-[#f5f2f0] dark:border-white/5'
+                  }`}
+                  title={service.enabled ? 'Quitar' : 'Activar'}
+                >
+                  <div className="text-primary size-8 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined !text-lg">{service.icon}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-bold block line-clamp-2 break-words">
+                      {service.label}
+                    </span>
+                  </div>
+                  <span className="material-symbols-outlined text-primary shrink-0">
+                    {service.enabled ? 'check_box' : 'check_box_outline_blank'}
+                  </span>
+                </button>
+              ))}
+
+              {/* Agregar servicio */}
+              {isAddingService ? (
+                <div className="col-span-2 flex items-center gap-2 p-3 bg-white dark:bg-gray-800 rounded-xl border border-primary/30">
+                  <input
+                    value={newServiceLabel}
+                    onChange={(e) => setNewServiceLabel(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleAddService();
+                      if (e.key === 'Escape') {
+                        setIsAddingService(false);
+                        setNewServiceLabel('');
+                      }
+                    }}
+                    placeholder="Nuevo servicio (máx. 25 caracteres)"
+                    className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-primary"
+                    maxLength={25}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddService}
+                    disabled={!newServiceLabel.trim()}
+                    className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm disabled:opacity-50"
+                  >
+                    Agregar
                   </button>
                   <button
-                    onClick={() => setIsEditingAddress(false)}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    type="button"
+                    onClick={() => {
+                      setIsAddingService(false);
+                      setNewServiceLabel('');
+                    }}
+                    className="h-10 w-10 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
                     title="Cancelar"
                   >
                     <span className="material-symbols-outlined">close</span>
                   </button>
                 </div>
               ) : (
-                <>
-                  <div className="flex flex-col justify-center max-w-[70%]">
-                    <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight line-clamp-1">
-                      Dirección Completa
-                    </p>
-                    <p className="text-[#8a7560] dark:text-white/60 text-sm font-normal leading-normal">{address}</p>
-                  </div>
-                  <div className="shrink-0">
-                    <button
-                      onClick={handleEditAddress}
-                      className="flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-primary/10 dark:bg-primary/20 text-primary transition-all hover:bg-primary hover:text-white"
-                      title="Editar dirección"
-                    >
-                      <span className="material-symbols-outlined">edit</span>
-                    </button>
-                  </div>
-                </>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingService(true)}
+                  className="col-span-2 flex items-center justify-center gap-2 p-3 rounded-xl border border-primary/30 bg-primary/10 text-primary font-bold"
+                >
+                  <span className="material-symbols-outlined">add</span>
+                  Agregar servicio
+                </button>
               )}
             </div>
-          </div>
-        </div>
-
-        {/* Operating Hours Section */}
-        <div className="px-4 mb-8">
-          <div className="flex items-center justify-between pb-3">
-            <h3 className="text-[#181411] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">schedule</span>
-              Horarios de Apertura
-            </h3>
-            {isOpen && (
-              <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold rounded uppercase">
-                Abierto Ahora
-              </span>
-            )}
-          </div>
-          <div className="bg-white dark:bg-white/5 rounded-xl border border-[#f5f2f0] dark:border-white/5 overflow-hidden">
-            {schedule.map((item, index) => (
-              <div
-                key={index}
-                className={`flex justify-between items-center px-4 py-3 ${
-                  item.day === currentDay
-                    ? 'bg-primary/5 border-b border-[#f5f2f0] dark:border-white/5'
-                    : index < schedule.length - 1
-                    ? 'border-b border-[#f5f2f0] dark:border-white/5'
-                    : ''
-                }`}
-              >
-                <span
-                  className={`text-sm font-medium ${
-                    item.day === currentDay
-                      ? 'font-bold text-primary'
-                      : item.closed
-                      ? 'text-[#dc2626] font-bold'
-                      : 'text-[#8a7560] dark:text-white/60'
-                  }`}
-                >
-                  {item.day} {item.day === currentDay && '(Hoy)'}
-                </span>
-                <span
-                  className={`text-sm ${
-                    item.day === currentDay
-                      ? 'font-bold text-primary'
-                      : item.closed
-                      ? 'text-[#dc2626] font-bold'
-                      : 'font-semibold'
-                  }`}
-                >
-                  {item.closed ? 'Cerrado' : item.hours}
-                </span>
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={handleOpenScheduleModal}
-            className="w-full mt-3 py-3 text-primary font-bold text-sm border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors"
-          >
-            Configurar Horarios
-          </button>
-        </div>
-
-        {/* Services & Amenities */}
-        <div className="px-4 mb-8">
-          <h3 className="text-[#181411] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-3 flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary">restaurant</span>
-            Servicios Disponibles
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex items-center gap-3 p-3 bg-white dark:bg-white/5 rounded-xl border border-[#f5f2f0] dark:border-white/5">
-              <div className="text-primary size-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                <span className="material-symbols-outlined !text-lg">event_available</span>
-              </div>
-              <span className="text-xs font-bold">Reserva Online</span>
-            </div>
-            <div className="flex items-center gap-3 p-3 bg-white dark:bg-white/5 rounded-xl border border-[#f5f2f0] dark:border-white/5">
-              <div className="text-primary size-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                <span className="material-symbols-outlined !text-lg">delivery_dining</span>
-              </div>
-              <span className="text-xs font-bold">Domicilio</span>
-            </div>
-            <div className="flex items-center gap-3 p-3 bg-white dark:bg-white/5 rounded-xl border border-[#f5f2f0] dark:border-white/5">
-              <div className="text-primary size-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                <span className="material-symbols-outlined !text-lg">credit_card</span>
-              </div>
-              <span className="text-xs font-bold">Pago Digital</span>
-            </div>
-            <div className="flex items-center gap-3 p-3 bg-white dark:bg-white/5 rounded-xl border border-[#f5f2f0] dark:border-white/5">
-              <div className="text-primary size-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                <span className="material-symbols-outlined !text-lg">wifi</span>
-              </div>
-              <span className="text-xs font-bold">WiFi Gratis</span>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Social Media Direct Links */}
         <div className="px-4 mb-8">
-          <h3 className="text-[#181411] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-3">
-            Síguenos
-          </h3>
-          <div className="flex gap-4 overflow-x-auto no-scrollbar py-1">
-            <button className="flex items-center gap-3 px-5 py-3 bg-[#E4405F]/10 dark:bg-[#E4405F]/20 text-[#E4405F] rounded-xl font-bold whitespace-nowrap border border-[#E4405F]/20">
-              <span className="material-symbols-outlined !text-xl">camera_alt</span>
-              Instagram
-            </button>
-            <button className="flex items-center gap-3 px-5 py-3 bg-[#25D366]/10 dark:bg-[#25D366]/20 text-[#25D366] rounded-xl font-bold whitespace-nowrap border border-[#25D366]/20">
-              <span className="material-symbols-outlined !text-xl">chat</span>
-              WhatsApp Directo
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => toggleSection('social')}
+            className="w-full flex items-center justify-between pb-3 text-left"
+          >
+            <h3 className="text-[#181411] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">
+              Redes sociales
+            </h3>
+            <span
+              className={`material-symbols-outlined text-gray-400 transition-transform ${
+                sectionsOpen.social ? 'rotate-180' : ''
+              }`}
+            >
+              expand_more
+            </span>
+          </button>
+          {sectionsOpen.social && (
+            <div className="flex gap-4 overflow-x-auto no-scrollbar py-1">
+              {/* Instagram: degradado oficial aproximado */}
+              <button className="flex items-center gap-3 px-5 py-3 rounded-full font-bold whitespace-nowrap border border-transparent text-white bg-gradient-to-r from-[#f58529] via-[#dd2a7b] via-[#8134af] to-[#515bd4] shadow-sm">
+                <span className="material-symbols-outlined !text-xl">camera_alt</span>
+                Instagram
+              </button>
+
+              {/* Facebook: azul oficial */}
+              <button className="flex items-center gap-3 px-5 py-3 rounded-full font-bold whitespace-nowrap border border-[#1877F2] bg-[#1877F2] text-white shadow-sm">
+                <span className="material-symbols-outlined !text-xl">facebook</span>
+                Facebook
+              </button>
+
+              {/* TikTok: fondo negro con acentos neón aproximados */}
+              <button className="flex items-center gap-3 px-5 py-3 rounded-full font-bold whitespace-nowrap border border-[#000000] bg-[#000000] text-white shadow-sm">
+                <span className="material-symbols-outlined !text-xl text-[#25F4EE]">music_note</span>
+                <span className="relative">
+                  TikTok
+                  <span className="absolute inset-0 -z-10 blur-sm bg-gradient-to-r from-[#25F4EE] to-[#FE2C55] opacity-70" />
+                </span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Policies Section */}
@@ -667,7 +841,11 @@ const RestaurantDetailsScreen: React.FC = () => {
       {/* Schedule Configuration Modal */}
       {showScheduleModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-[480px] bg-background-light dark:bg-background-dark rounded-t-3xl shadow-2xl animate-slide-up max-h-[90vh] overflow-y-auto">
+          <div
+            className="w-full max-w-[480px] bg-background-light dark:bg-background-dark rounded-t-3xl shadow-2xl animate-slide-up max-h-[90vh] overflow-y-auto"
+            // Reservar espacio para la BottomNav fija (Android/iOS safe area)
+            style={{ paddingBottom: 'calc(6.5rem + env(safe-area-inset-bottom))' }}
+          >
             {/* Modal Header */}
             <div className="sticky top-0 z-50 flex items-center bg-white dark:bg-background-dark p-4 pb-2 justify-between border-b border-gray-100 dark:border-gray-800">
               <button
@@ -747,7 +925,10 @@ const RestaurantDetailsScreen: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4">
                       {/* Start Time */}
                       <button
-                        onClick={() => setEditingTime('start')}
+                        onClick={() => {
+                          setEditingTime('start');
+                          setShowTimePickerModal(true);
+                        }}
                         className="space-y-2 text-left"
                       >
                         <label className="text-xs font-semibold text-gray-500 px-1 uppercase">Apertura</label>
@@ -767,7 +948,10 @@ const RestaurantDetailsScreen: React.FC = () => {
 
                       {/* End Time */}
                       <button
-                        onClick={() => setEditingTime('end')}
+                        onClick={() => {
+                          setEditingTime('end');
+                          setShowTimePickerModal(true);
+                        }}
                         className="space-y-2 text-left"
                       >
                         <label className="text-xs font-semibold text-gray-500 px-1 uppercase">Cierre</label>
@@ -786,123 +970,142 @@ const RestaurantDetailsScreen: React.FC = () => {
                       </button>
                     </div>
 
-                    {/* Drum Picker Interactive */}
-                    <div className="mt-6 border-t border-gray-100 dark:border-gray-700 pt-6 pb-10 mb-32">
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 text-center">
-                        Editando: {editingTime === 'start' ? 'Hora de Apertura' : 'Hora de Cierre'}
-                      </p>
-                      <div className="relative h-44 w-full overflow-hidden bg-white dark:bg-gray-800 flex justify-around items-center">
-                        {/* Overlay gradients */}
-                        <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white dark:from-gray-800 to-transparent z-10 pointer-events-none"></div>
-                        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white dark:from-gray-800 to-transparent z-10 pointer-events-none"></div>
-                        <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-12 bg-primary/10 rounded-lg border-y-2 border-primary/30 pointer-events-none"></div>
-
-                        {/* Time Picker Columns */}
-                        <div className="flex space-x-12 z-0 w-full justify-center">
-                          {/* Hours */}
-                          <div 
-                            ref={hourScrollRef}
-                            className="h-44 overflow-y-scroll snap-y snap-mandatory hide-scrollbar flex flex-col items-center py-16"
-                            onWheel={(e) => e.stopPropagation()}
-                            onTouchMove={(e) => e.stopPropagation()}
-                            onScroll={(e) => {
-                              const hours = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
-                              handleScroll(
-                                e.currentTarget,
-                                hours,
-                                editingTime === 'start' ? setStartHour : setEndHour
-                              );
-                            }}
-                          >
-                            {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map((h) => {
-                              const currentHour = editingTime === 'start' ? startHour : endHour;
-                              return (
-                                <button
-                                  key={h}
-                                  onClick={() => editingTime === 'start' ? setStartHour(h) : setEndHour(h)}
-                                  className={`py-3 px-3 transition-all min-w-[3rem] shrink-0 snap-center ${
-                                    h === currentHour 
-                                      ? 'text-2xl font-bold text-primary scale-110' 
-                                      : 'text-base text-gray-300 dark:text-gray-600 hover:text-primary'
-                                  }`}
-                                >
-                                  {h}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          {/* Minutes */}
-                          <div 
-                            ref={minuteScrollRef}
-                            className="h-44 overflow-y-scroll snap-y snap-mandatory hide-scrollbar flex flex-col items-center py-16"
-                            onWheel={(e) => e.stopPropagation()}
-                            onTouchMove={(e) => e.stopPropagation()}
-                            onScroll={(e) => {
-                              const minutes = ['00', '15', '30', '45'];
-                              handleScroll(
-                                e.currentTarget,
-                                minutes,
-                                editingTime === 'start' ? setStartMinute : setEndMinute
-                              );
-                            }}
-                          >
-                            {['00', '15', '30', '45'].map((m) => {
-                              const currentMinute = editingTime === 'start' ? startMinute : endMinute;
-                              return (
-                                <button
-                                  key={m}
-                                  onClick={() => editingTime === 'start' ? setStartMinute(m) : setEndMinute(m)}
-                                  className={`py-3 px-3 transition-all min-w-[3rem] shrink-0 snap-center ${
-                                    m === currentMinute 
-                                      ? 'text-2xl font-bold text-primary scale-110' 
-                                      : 'text-base text-gray-300 dark:text-gray-600 hover:text-primary'
-                                  }`}
-                                >
-                                  {m}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          {/* Period */}
-                          <div 
-                            ref={periodScrollRef}
-                            className="h-44 overflow-y-scroll snap-y snap-mandatory hide-scrollbar flex flex-col items-center py-16"
-                            onWheel={(e) => e.stopPropagation()}
-                            onTouchMove={(e) => e.stopPropagation()}
-                            onScroll={(e) => {
-                              const periods = ['AM', 'PM'];
-                              handleScroll(
-                                e.currentTarget,
-                                periods,
-                                editingTime === 'start' ? setStartPeriod : setEndPeriod
-                              );
-                            }}
-                          >
-                            {['AM', 'PM'].map((p) => {
-                              const currentPeriod = editingTime === 'start' ? startPeriod : endPeriod;
-                              return (
-                                <button
-                                  key={p}
-                                  onClick={() => editingTime === 'start' ? setStartPeriod(p) : setEndPeriod(p)}
-                                  className={`py-3 px-3 transition-all min-w-[3rem] shrink-0 snap-center ${
-                                    p === currentPeriod 
-                                      ? 'text-2xl font-bold text-primary scale-110' 
-                                      : 'text-base text-gray-300 dark:text-gray-600 hover:text-primary'
-                                  }`}
-                                >
-                                  {p}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    {/* Time picker ahora se abre como modal al tocar Apertura/Cierre */}
                   </div>
                 </div>
               )}
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Time Picker Sub-Modal (se abre al tocar Apertura/Cierre) */}
+      {showTimePickerModal && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowTimePickerModal(false)}
+        >
+          <div
+            className="w-full max-w-[480px] bg-background-light dark:bg-background-dark rounded-t-3xl shadow-2xl animate-slide-up max-h-[70vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 z-50 flex items-center bg-white dark:bg-background-dark p-4 justify-between border-b border-gray-100 dark:border-gray-800">
+              <button
+                onClick={() => setShowTimePickerModal(false)}
+                className="text-[#181411] dark:text-white flex size-12 shrink-0 items-center cursor-pointer"
+                title="Cerrar"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+              <h3 className="text-[#181411] dark:text-white text-base font-bold leading-tight tracking-[-0.015em] flex-1 text-center">
+                {editingTime === 'start' ? 'Apertura' : 'Cierre'}
+              </h3>
+              <div className="flex w-12 items-center justify-end" />
+            </div>
+
+            <div className="px-4 pt-4 pb-8">
+              <div className="relative h-44 w-full overflow-hidden bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 flex justify-around items-center">
+                {/* Overlay gradients */}
+                <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white dark:from-gray-800 to-transparent z-10 pointer-events-none"></div>
+                <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white dark:from-gray-800 to-transparent z-10 pointer-events-none"></div>
+                <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-12 bg-primary/10 rounded-lg border-y-2 border-primary/30 pointer-events-none"></div>
+
+                {/* Time Picker Columns */}
+                <div className="flex space-x-12 z-0 w-full justify-center">
+                  {/* Hours */}
+                  <div
+                    ref={hourScrollRef}
+                    className="h-44 overflow-y-scroll snap-y snap-mandatory hide-scrollbar flex flex-col items-center py-16"
+                    onWheel={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => e.stopPropagation()}
+                    onScroll={(e) => {
+                      const hours = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+                      handleScroll(e.currentTarget, hours, editingTime === 'start' ? setStartHour : setEndHour);
+                    }}
+                  >
+                    {['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map((h) => {
+                      const currentHour = editingTime === 'start' ? startHour : endHour;
+                      return (
+                        <button
+                          key={h}
+                          onClick={() => (editingTime === 'start' ? setStartHour(h) : setEndHour(h))}
+                          className={`py-3 px-3 transition-all min-w-[3rem] shrink-0 snap-center ${
+                            h === currentHour
+                              ? 'text-2xl font-bold text-primary scale-110'
+                              : 'text-base text-gray-300 dark:text-gray-600 hover:text-primary'
+                          }`}
+                        >
+                          {h}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Minutes */}
+                  <div
+                    ref={minuteScrollRef}
+                    className="h-44 overflow-y-scroll snap-y snap-mandatory hide-scrollbar flex flex-col items-center py-16"
+                    onWheel={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => e.stopPropagation()}
+                    onScroll={(e) => {
+                      const minutes = ['00', '15', '30', '45'];
+                      handleScroll(e.currentTarget, minutes, editingTime === 'start' ? setStartMinute : setEndMinute);
+                    }}
+                  >
+                    {['00', '15', '30', '45'].map((m) => {
+                      const currentMinute = editingTime === 'start' ? startMinute : endMinute;
+                      return (
+                        <button
+                          key={m}
+                          onClick={() => (editingTime === 'start' ? setStartMinute(m) : setEndMinute(m))}
+                          className={`py-3 px-3 transition-all min-w-[3rem] shrink-0 snap-center ${
+                            m === currentMinute
+                              ? 'text-2xl font-bold text-primary scale-110'
+                              : 'text-base text-gray-300 dark:text-gray-600 hover:text-primary'
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Period */}
+                  <div
+                    ref={periodScrollRef}
+                    className="h-44 overflow-y-scroll snap-y snap-mandatory hide-scrollbar flex flex-col items-center py-16"
+                    onWheel={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => e.stopPropagation()}
+                    onScroll={(e) => {
+                      const periods = ['AM', 'PM'];
+                      handleScroll(e.currentTarget, periods, editingTime === 'start' ? setStartPeriod : setEndPeriod);
+                    }}
+                  >
+                    {['AM', 'PM'].map((p) => {
+                      const currentPeriod = editingTime === 'start' ? startPeriod : endPeriod;
+                      return (
+                        <button
+                          key={p}
+                          onClick={() => (editingTime === 'start' ? setStartPeriod(p) : setEndPeriod(p))}
+                          className={`py-3 px-3 transition-all min-w-[3rem] shrink-0 snap-center ${
+                            p === currentPeriod
+                              ? 'text-2xl font-bold text-primary scale-110'
+                              : 'text-base text-gray-300 dark:text-gray-600 hover:text-primary'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-3">
+                Toca fuera para cerrar
+              </p>
+            </div>
           </div>
         </div>
       )}

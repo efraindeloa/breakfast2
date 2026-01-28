@@ -449,7 +449,11 @@ const RestaurantProfileScreen: React.FC = () => {
   };
 
   return (
-    <div className="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-background-dark">
+    <div
+      className="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-background-dark"
+      // Reservar espacio para la BottomNav fija (evita que el último contenido quede detrás, especialmente en Android)
+      style={{ paddingBottom: 'calc(6.5rem + env(safe-area-inset-bottom))' }}
+    >
       {/* TopAppBar */}
       <div className="fixed top-0 z-50 w-full flex items-center bg-white/80 dark:bg-background-dark/80 backdrop-blur-md p-4 pb-2 justify-between border-b border-gray-100 dark:border-gray-800">
         <div className="text-[#181411] dark:text-white flex size-12 shrink-0 items-center justify-start">
@@ -834,9 +838,6 @@ const RestaurantProfileScreen: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Bottom Safe Area Spacer */}
-      <div className="h-10"></div>
     </div>
   );
 };

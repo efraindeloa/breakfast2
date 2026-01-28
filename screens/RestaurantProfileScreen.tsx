@@ -27,6 +27,10 @@ const RestaurantProfileScreen: React.FC = () => {
   const [editValue, setEditValue] = useState('');
   const [coverImages, setCoverImages] = useState<string[]>([]);
   const [logoImage, setLogoImage] = useState<string>('');
+  const [imageZoom, setImageZoom] = useState<{ [key: number]: number }>({}); // Zoom por índice de imagen (1.0 = 100%)
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [newTagValue, setNewTagValue] = useState('');
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   
   // Refs para inputs de archivos
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -156,6 +160,108 @@ const RestaurantProfileScreen: React.FC = () => {
   const cancelEdit = () => {
     setEditingField(null);
     setEditValue('');
+  };
+
+  // Agregar tag
+  const handleAddTag = async () => {
+    if (!newTagValue.trim() || !restaurantId || !restaurant) {
+      return;
+    }
+
+    // Validar que el restaurantId no sea un UUID de ejemplo
+    if (restaurantId === '00000000-0000-0000-0000-000000000001') {
+      alert('Error: ID de restaurante inválido. Por favor, ejecuta el script SQL para crear el restaurante correctamente.');
+      return;
+    }
+
+    const currentTags = restaurant.tags || [];
+    const tagToAdd = newTagValue.trim();
+
+    // Verificar que el tag no exista ya
+    if (currentTags.includes(tagToAdd)) {
+      alert('Este tag ya existe');
+      setNewTagValue('');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const updatedTags = [...currentTags, tagToAdd];
+      const updated = await updateRestaurant(restaurantId, { tags: updatedTags });
+      
+      if (updated) {
+        setRestaurant(updated);
+        setNewTagValue('');
+        setIsAddingTag(false);
+        // Mostrar mensaje de éxito
+        const successMsg = document.createElement('div');
+        successMsg.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-lg shadow-lg bg-green-500 text-white';
+        successMsg.textContent = 'Tag agregado correctamente';
+        document.body.appendChild(successMsg);
+        setTimeout(() => {
+          document.body.removeChild(successMsg);
+        }, 3000);
+      } else {
+        throw new Error('No se pudo actualizar el restaurante');
+      }
+    } catch (error: any) {
+      console.error('[handleAddTag] Error adding tag:', error);
+      let errorMessage = 'Error al agregar el tag';
+      if (error.code === 'PGRST116') {
+        errorMessage = 'No se encontró el restaurante o no tienes permisos para actualizarlo.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      alert(errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Eliminar tag
+  const handleRemoveTag = async (tagToRemove: string) => {
+    if (!restaurantId || !restaurant) {
+      return;
+    }
+
+    // Validar que el restaurantId no sea un UUID de ejemplo
+    if (restaurantId === '00000000-0000-0000-0000-000000000001') {
+      alert('Error: ID de restaurante inválido. Por favor, ejecuta el script SQL para crear el restaurante correctamente.');
+      return;
+    }
+
+    const currentTags = restaurant.tags || [];
+    const updatedTags = currentTags.filter(tag => tag !== tagToRemove);
+
+    setIsSaving(true);
+    try {
+      const updated = await updateRestaurant(restaurantId, { tags: updatedTags });
+      
+      if (updated) {
+        setRestaurant(updated);
+        // Mostrar mensaje de éxito
+        const successMsg = document.createElement('div');
+        successMsg.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-lg shadow-lg bg-green-500 text-white';
+        successMsg.textContent = 'Tag eliminado correctamente';
+        document.body.appendChild(successMsg);
+        setTimeout(() => {
+          document.body.removeChild(successMsg);
+        }, 3000);
+      } else {
+        throw new Error('No se pudo actualizar el restaurante');
+      }
+    } catch (error: any) {
+      console.error('[handleRemoveTag] Error removing tag:', error);
+      let errorMessage = 'Error al eliminar el tag';
+      if (error.code === 'PGRST116') {
+        errorMessage = 'No se encontró el restaurante o no tienes permisos para actualizarlo.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      alert(errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Manejar cambio de logo
@@ -313,6 +419,35 @@ const RestaurantProfileScreen: React.FC = () => {
   const rating = restaurant.rating || 4.8;
   const totalReviews = restaurant.total_reviews || 250;
 
+  // Funciones para controlar el zoom de las imágenes
+  const handleZoomIn = (index: number) => {
+    setImageZoom(prev => {
+      const currentZoom = prev[index] || 1.0;
+      const newZoom = Math.min(currentZoom + 0.1, 3.0); // Máximo 300%
+      return { ...prev, [index]: newZoom };
+    });
+  };
+
+  const handleZoomOut = (index: number) => {
+    setImageZoom(prev => {
+      const currentZoom = prev[index] || 1.0;
+      const newZoom = Math.max(currentZoom - 0.1, 0.5); // Mínimo 50%
+      return { ...prev, [index]: newZoom };
+    });
+  };
+
+  const handleResetZoom = (index: number) => {
+    setImageZoom(prev => {
+      const newState = { ...prev };
+      delete newState[index];
+      return newState;
+    });
+  };
+
+  const getImageZoom = (index: number): number => {
+    return imageZoom[index] || 1.0;
+  };
+
   return (
     <div className="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-background-dark">
       {/* TopAppBar */}
@@ -341,18 +476,68 @@ const RestaurantProfileScreen: React.FC = () => {
             
             return (
               <div key={index} className="flex h-full flex-1 flex-col gap-4 rounded-xl min-w-[85vw] snap-center relative">
-                <div 
-                  className="w-full bg-center bg-no-repeat aspect-[16/10] bg-cover rounded-xl flex flex-col shadow-sm relative group"
-                  style={{ backgroundImage: `url("${image}")` }}
-                >
-                  {/* Botón + para agregar/editar imagen */}
-                  <button
-                    onClick={() => coverInputRefs.current[index]?.click()}
-                    className="absolute top-2 right-2 w-10 h-10 rounded-full bg-white/90 dark:bg-gray-800/90 flex items-center justify-center hover:bg-white dark:hover:bg-gray-800 transition-colors z-10 shadow-md"
-                    title="Cambiar imagen"
-                  >
-                    <span className="material-symbols-outlined text-primary text-xl">add</span>
-                  </button>
+                <div className="w-full aspect-[16/10] rounded-xl flex flex-col shadow-sm relative group bg-gradient-to-br from-primary/20 to-primary-dark/60 dark:from-primary/30 dark:to-primary-dark overflow-hidden">
+                  {image ? (
+                    <div className="w-full h-full overflow-hidden rounded-xl relative">
+                      <img
+                        src={image}
+                        alt={`Imagen de portada ${index + 1}`}
+                        className="w-full h-full object-cover rounded-xl transition-transform duration-300 ease-out"
+                        style={{ 
+                          transform: `scale(${getImageZoom(index)})`,
+                          transformOrigin: 'center center',
+                          willChange: 'transform'
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full h-full bg-center bg-no-repeat bg-contain rounded-xl" />
+                  )}
+
+                  {/* Controles de zoom y edición */}
+                  <div className="absolute top-2 right-2 flex flex-col gap-2 z-10">
+                    {/* Botón + para agregar/editar imagen */}
+                    <button
+                      onClick={() => coverInputRefs.current[index]?.click()}
+                      className="w-10 h-10 rounded-full bg-white/90 dark:bg-gray-800/90 flex items-center justify-center hover:bg-white dark:hover:bg-gray-800 transition-colors shadow-md"
+                      title="Cambiar imagen"
+                    >
+                      <span className="material-symbols-outlined text-primary text-xl">add</span>
+                    </button>
+                    
+                    {/* Controles de zoom */}
+                    {image && (
+                      <div className="flex flex-col gap-1 bg-white/90 dark:bg-gray-800/90 rounded-lg p-1 shadow-md">
+                        <button
+                          onClick={() => handleZoomIn(index)}
+                          className="w-8 h-8 rounded-md bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 flex items-center justify-center transition-colors"
+                          title="Acercar"
+                        >
+                          <span className="material-symbols-outlined text-primary text-sm">zoom_in</span>
+                        </button>
+                        <button
+                          onClick={() => handleZoomOut(index)}
+                          className="w-8 h-8 rounded-md bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 flex items-center justify-center transition-colors"
+                          title="Alejar"
+                        >
+                          <span className="material-symbols-outlined text-primary text-sm">zoom_out</span>
+                        </button>
+                        {getImageZoom(index) !== 1.0 && (
+                          <button
+                            onClick={() => handleResetZoom(index)}
+                            className="w-8 h-8 rounded-md bg-gray-200/80 hover:bg-gray-300/80 dark:bg-gray-700/80 dark:hover:bg-gray-600/80 flex items-center justify-center transition-colors"
+                            title="Restablecer zoom"
+                          >
+                            <span className="material-symbols-outlined text-gray-600 dark:text-gray-300 text-sm">restart_alt</span>
+                          </button>
+                        )}
+                        <div className="text-xs text-center text-gray-600 dark:text-gray-300 px-1 py-0.5">
+                          {Math.round(getImageZoom(index) * 100)}%
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
                   <input
                     ref={(el) => { coverInputRefs.current[index] = el; }}
                     type="file"
@@ -374,10 +559,19 @@ const RestaurantProfileScreen: React.FC = () => {
           <div className="flex gap-4 flex-col items-center">
             {/* Logo con botón + */}
             <div className="relative group">
-              <div 
-                className="bg-center bg-no-repeat aspect-square bg-cover rounded-xl min-h-28 w-28 border-4 border-white dark:border-background-dark shadow-md"
-                style={{ backgroundImage: logoImage ? `url("${logoImage}")` : 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBY_roTh_HopL4hrmhXpA19NfBXb_Cm70Zm36VuqYDSmDxbujvhOR5mP0zh5hFcE0b24KfKBWY8os_NtTqLircInX1Jndrbn75kECMIuEO2Ok9Cl9Y8_yXPEeqLDhPNsRl2mfgFk_6CTEo-SsUMUNU6j3fOu_PdjyQuDW79Xp1vRE-01e-f24KBn2AoWxtkWA8F1p8GW5ipNQqH6VZ9pB5thDJumHZh81JVlOaY39Wdn4es_zzHnZeJ3rViORCNpBRV2TJRxM65helB")' }}
-              >
+              <div className="aspect-square rounded-xl min-h-28 w-28 border-4 border-white dark:border-background-dark shadow-md flex items-center justify-center bg-white overflow-hidden">
+                {logoImage ? (
+                  <img
+                    src={logoImage}
+                    alt="Logo del restaurante"
+                    className="max-w-full max-h-full object-contain"
+                  />
+                ) : (
+                  <div 
+                    className="bg-center bg-no-repeat bg-contain w-full h-full"
+                    style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBY_roTh_HopL4hrmhXpA19NfBXb_Cm70Zm36VuqYDSmDxbujvhOR5mP0zh5hFcE0b24KfKBWY8os_NtTqLircInX1Jndrbn75kECMIuEO2Ok9Cl9Y8_yXPEeqLDhPNsRl2mfgFk_6CTEo-SsUMUNU6j3fOu_PdjyQuDW79Xp1vRE-01e-f24KBn2AoWxtkWA8F1p8GW5ipNQqH6VZ9pB5thDJumHZh81JVlOaY39Wdn4es_zzHnZeJ3rViORCNpBRV2TJRxM65helB")' }}
+                  />
+                )}
               </div>
               <button
                 onClick={() => logoInputRef.current?.click()}
@@ -465,7 +659,7 @@ const RestaurantProfileScreen: React.FC = () => {
               ) : (
                 <div className="flex items-center gap-2 mt-1">
                   <p className="text-[#8a7560] dark:text-gray-400 text-base font-medium leading-normal text-center">
-                    {tipoCocina} • $$
+                    {tipoCocina}
                   </p>
                   <button
                     onClick={() => startEdit('tipo_cocina', restaurant.tipo_cocina || '')}
@@ -495,20 +689,26 @@ const RestaurantProfileScreen: React.FC = () => {
             <div className="rounded-full bg-primary/10 p-3">
               <span className="material-symbols-outlined text-primary">restaurant_menu</span>
             </div>
-            <p className="text-[#181411] dark:text-white text-xs font-bold leading-normal uppercase tracking-wider">Ver Menú</p>
+            <p className="text-[#181411] dark:text-white text-xs font-bold leading-normal uppercase tracking-wider">Gestionar Menú</p>
           </div>
-          <div className="flex flex-col items-center gap-2 bg-primary py-4 px-2 text-center rounded-xl shadow-lg shadow-primary/20">
+          <button
+            onClick={() => navigate('/restaurant-details')}
+            className="flex flex-col items-center gap-2 bg-primary py-4 px-2 text-center rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-dark transition-colors"
+          >
             <div className="rounded-full bg-white/20 p-3">
               <span className="material-symbols-outlined text-white">calendar_today</span>
             </div>
-            <p className="text-white text-xs font-bold leading-normal uppercase tracking-wider">Reservar</p>
-          </div>
-          <div className="flex flex-col items-center gap-2 bg-white dark:bg-gray-800/50 py-4 px-2 text-center rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
+            <p className="text-white text-xs font-bold leading-normal uppercase tracking-wider">Configurar Reservaciones</p>
+          </button>
+          <button
+            onClick={() => navigate('/admin-control-panel')}
+            className="flex flex-col items-center gap-2 bg-white dark:bg-gray-800/50 py-4 px-2 text-center rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
             <div className="rounded-full bg-primary/10 p-3">
-              <span className="material-symbols-outlined text-primary">near_me</span>
+              <span className="material-symbols-outlined text-primary">dashboard</span>
             </div>
-            <p className="text-[#181411] dark:text-white text-xs font-bold leading-normal uppercase tracking-wider">Cómo llegar</p>
-          </div>
+            <p className="text-[#181411] dark:text-white text-xs font-bold leading-normal uppercase tracking-wider">Panel de Control</p>
+          </button>
         </div>
       </div>
 
@@ -548,7 +748,7 @@ const RestaurantProfileScreen: React.FC = () => {
           ) : (
             <div className="relative group">
               <p className="text-[#8a7560] dark:text-gray-300 text-base leading-relaxed">
-                {descripcionCorta}
+                {isDescriptionExpanded ? descripcionLarga : descripcionCorta}
               </p>
               <button
                 onClick={() => startEdit('descripcion_corta', restaurant.descripcion_corta || '')}
@@ -557,7 +757,14 @@ const RestaurantProfileScreen: React.FC = () => {
               >
                 <span className="material-symbols-outlined text-sm">add</span>
               </button>
-              <button className="text-primary font-bold mt-2 text-sm">Leer más...</button>
+              {descripcionLarga && descripcionLarga !== descripcionCorta && (
+                <button
+                  onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                  className="text-primary font-bold mt-2 text-sm hover:underline transition-all"
+                >
+                  {isDescriptionExpanded ? 'Leer menos' : 'Leer más...'}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -570,12 +777,61 @@ const RestaurantProfileScreen: React.FC = () => {
             <div key={index} className="flex items-center gap-1.5 px-3 py-1.5 bg-background-light dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700">
               <span className="material-symbols-outlined text-sm text-primary">local_offer</span>
               <span className="text-sm font-medium">{tag}</span>
+              <button
+                onClick={() => handleRemoveTag(tag)}
+                disabled={isSaving}
+                className="ml-1 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                title="Eliminar tag"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
             </div>
           ))}
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 rounded-full border border-primary/30 hover:bg-primary/20 transition-colors">
-            <span className="material-symbols-outlined text-sm text-primary">add</span>
-            <span className="text-sm font-medium text-primary">Agregar tag</span>
-          </button>
+          {isAddingTag ? (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 rounded-full border-2 border-primary">
+              <input
+                type="text"
+                value={newTagValue}
+                onChange={(e) => setNewTagValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddTag();
+                  if (e.key === 'Escape') {
+                    setIsAddingTag(false);
+                    setNewTagValue('');
+                  }
+                }}
+                className="text-sm font-medium text-primary bg-transparent border-none outline-none min-w-[120px]"
+                placeholder="Nuevo tag..."
+                autoFocus
+              />
+              <button
+                onClick={handleAddTag}
+                disabled={isSaving || !newTagValue.trim()}
+                className="text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Guardar tag"
+              >
+                <span className="material-symbols-outlined text-sm">check</span>
+              </button>
+              <button
+                onClick={() => {
+                  setIsAddingTag(false);
+                  setNewTagValue('');
+                }}
+                className="text-gray-400"
+                title="Cancelar"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsAddingTag(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 rounded-full border border-primary/30 hover:bg-primary/20 transition-colors"
+            >
+              <span className="material-symbols-outlined text-sm text-primary">add</span>
+              <span className="text-sm font-medium text-primary">Agregar tag</span>
+            </button>
+          )}
         </div>
       </div>
 

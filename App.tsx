@@ -45,6 +45,8 @@ import TableReadyScreen from './screens/TableReadyScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import RestaurantProfileScreen from './screens/RestaurantProfileScreen';
+import RestaurantDetailsScreen from './screens/RestaurantDetailsScreen';
+import AdminControlPanelScreen from './screens/AdminControlPanelScreen';
 import BottomNav from './components/BottomNav';
 import AssistantButton from './components/AssistantButton';
 import AndroidBackButton from './components/AndroidBackButton';
@@ -131,6 +133,8 @@ const AppContent: React.FC = () => {
           <Route path="/promotion-detail/:id" element={isAuthenticated ? <PromotionDetailScreen /> : <Navigate to="/" />} />
           <Route path="/table-ready" element={isAuthenticated ? <TableReadyScreen /> : <Navigate to="/" />} />
           <Route path="/restaurant-profile" element={isAuthenticated ? <RestaurantProfileScreen /> : <Navigate to="/" />} />
+          <Route path="/restaurant-details" element={isAuthenticated ? <RestaurantDetailsScreen /> : <Navigate to="/" />} />
+          <Route path="/admin-control-panel" element={isAuthenticated ? <AdminControlPanelScreen /> : <Navigate to="/" />} />
         </Routes>
         
                       {isAuthenticated && <BottomNav />}

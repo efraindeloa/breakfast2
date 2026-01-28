@@ -117,6 +117,19 @@ const HomeScreen: React.FC = () => {
                   <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{t('discover.description')}</p>
                 </div>
               </div>
+              
+              <div 
+                onClick={() => navigate('/restaurant-profile')}
+                className="flex flex-col rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-primary transition-colors cursor-pointer group min-h-[140px] overflow-hidden"
+              >
+                <div className="flex items-center justify-center size-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 group-hover:bg-purple-600 transition-colors shrink-0 mb-2">
+                  <span className="material-symbols-outlined text-purple-600 dark:text-purple-400 group-hover:text-white">store</span>
+                </div>
+                <div className="flex flex-col gap-1.5 flex-1 min-h-0 min-w-0">
+                  <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight line-clamp-2">Perfil del Restaurante</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">Gestiona tu restaurante</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

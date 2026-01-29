@@ -47,6 +47,11 @@ import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import RestaurantProfileScreen from './screens/RestaurantProfileScreen';
 import RestaurantDetailsScreen from './screens/RestaurantDetailsScreen';
 import AdminControlPanelScreen from './screens/AdminControlPanelScreen';
+import HomeRestaurantScreen from './screens/HomeRestaurantScreen';
+import PromotionsRestaurantScreen from './screens/PromotionsRestaurantScreen';
+import MenuRestaurantScreen from './screens/MenuRestaurantScreen';
+import ReservationsRestaurantScreen from './screens/ReservationsRestaurantScreen';
+import StatisticsRestaurantScreen from './screens/StatisticsRestaurantScreen';
 import BottomNav from './components/BottomNav';
 import AssistantButton from './components/AssistantButton';
 import AndroidBackButton from './components/AndroidBackButton';
@@ -61,7 +66,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // Componente interno que usa el AuthContext
 const AppContent: React.FC = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, accountType } = useAuth();
   const isAuthenticated = !!user;
 
   // Mostrar loading mientras se verifica la sesión
@@ -92,8 +97,26 @@ const AppContent: React.FC = () => {
           <Route path="/register" element={!isAuthenticated ? <RegisterScreen onLogin={() => {}} /> : <Navigate to="/home" />} />
           <Route path="/forgot-password" element={!isAuthenticated ? <ForgotPasswordScreen /> : <Navigate to="/home" />} />
           <Route path="/reset-password" element={!isAuthenticated ? <ResetPasswordScreen /> : <Navigate to="/home" />} />
-          <Route path="/home" element={isAuthenticated ? <HomeScreen /> : <Navigate to="/" />} />
-          <Route path="/menu" element={isAuthenticated ? <MenuScreen /> : <Navigate to="/" />} />
+          <Route
+            path="/home"
+            element={
+              isAuthenticated
+                ? accountType === 'restaurant'
+                  ? <Navigate to="/home-restaurant" />
+                  : <HomeScreen />
+                : <Navigate to="/" />
+            }
+          />
+          <Route
+            path="/menu"
+            element={
+              isAuthenticated
+                ? accountType === 'restaurant'
+                  ? <Navigate to="/menu-restaurant" />
+                  : <MenuScreen />
+                : <Navigate to="/" />
+            }
+          />
           <Route path="/dish/:id" element={isAuthenticated ? <DishDetailScreen /> : <Navigate to="/" />} />
           <Route path="/orders" element={isAuthenticated ? <OrderScreen /> : <Navigate to="/" />} />
           <Route path="/profile" element={isAuthenticated ? <ProfileScreen /> : <Navigate to="/" />} />
@@ -135,6 +158,13 @@ const AppContent: React.FC = () => {
           <Route path="/restaurant-profile" element={isAuthenticated ? <RestaurantProfileScreen /> : <Navigate to="/" />} />
           <Route path="/restaurant-details" element={isAuthenticated ? <RestaurantDetailsScreen /> : <Navigate to="/" />} />
           <Route path="/admin-control-panel" element={isAuthenticated ? <AdminControlPanelScreen /> : <Navigate to="/" />} />
+
+          {/* Rutas específicas de restaurante */}
+          <Route path="/home-restaurant" element={isAuthenticated ? <HomeRestaurantScreen /> : <Navigate to="/" />} />
+          <Route path="/promotions-restaurant" element={isAuthenticated ? <PromotionsRestaurantScreen /> : <Navigate to="/" />} />
+          <Route path="/menu-restaurant" element={isAuthenticated ? <MenuRestaurantScreen /> : <Navigate to="/" />} />
+          <Route path="/reservaciones-restaurant" element={isAuthenticated ? <ReservationsRestaurantScreen /> : <Navigate to="/" />} />
+          <Route path="/estadisticas-restaurant" element={isAuthenticated ? <StatisticsRestaurantScreen /> : <Navigate to="/" />} />
         </Routes>
         
                       {isAuthenticated && <BottomNav />}

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import AssistantModal from './AssistantModal';
 
 const DOCKED_STATE_KEY = 'assistant_button_docked';
@@ -169,6 +170,7 @@ const BottomNav: React.FC = () => {
   const location = useLocation();
   const { getCartItemCount } = useCart();
   const { t } = useTranslation();
+  const { accountType } = useAuth();
   const cartCount = getCartItemCount();
 
   // Cargar todas las órdenes desde Supabase para mostrar el contador
@@ -240,19 +242,28 @@ const BottomNav: React.FC = () => {
     }
   };
 
-  const navItems = [
-    { label: t('navigation.home'), icon: 'home', path: '/home' },
-    { label: t('navigation.promotions'), icon: 'local_offer', path: '/promotions', showBadge: true },
-    { label: t('navigation.menu'), icon: 'restaurant_menu', path: '/menu' },
-    { label: t('navigation.myOrder'), icon: 'receipt_long', path: '/orders' },
-    { label: t('navigation.payments'), icon: 'account_balance_wallet', path: '/payments' },
-  ];
+  const navItems =
+    accountType === 'restaurant'
+      ? [
+          { label: 'Inicio', icon: 'home', path: '/home-restaurant' },
+          { label: 'Promociones', icon: 'local_offer', path: '/promotions-restaurant', showBadge: true },
+          { label: 'Menú', icon: 'restaurant_menu', path: '/menu-restaurant' },
+          { label: 'Reservaciones', icon: 'calendar_today', path: '/reservaciones-restaurant' },
+          { label: 'Estadísticas', icon: 'bar_chart', path: '/estadisticas-restaurant' },
+        ]
+      : [
+          { label: t('navigation.home'), icon: 'home', path: '/home' },
+          { label: t('navigation.promotions'), icon: 'local_offer', path: '/promotions', showBadge: true },
+          { label: t('navigation.menu'), icon: 'restaurant_menu', path: '/menu' },
+          { label: t('navigation.myOrder'), icon: 'receipt_long', path: '/orders' },
+          { label: t('navigation.payments'), icon: 'account_balance_wallet', path: '/payments' },
+        ];
 
   return (
     <>
       <nav className="fixed bottom-0 left-0 right-0 w-full bg-white/80 dark:bg-background-dark/80 backdrop-blur-lg border-t border-gray-100 dark:border-white/10 px-4 sm:px-6 py-2 flex justify-between items-center z-50 md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2" style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
         {navItems.map((item) => {
-        const isOrdersPath = item.path === '/orders';
+        const isOrdersPath = accountType !== 'restaurant' && item.path === '/orders';
         const isActive = isOrdersPath 
           ? (location.pathname === '/orders' || location.pathname === '/order-detail')
           : (location.pathname === item.path);

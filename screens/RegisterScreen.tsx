@@ -264,25 +264,41 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
 
       try {
         // Determinar si es email o teléfono
-        let email = '';
-        let phone = undefined;
+        let email: string | undefined;
+        let phone: string | undefined;
 
         if (inputType === 'email') {
           email = emailOrPhone.trim();
         } else if (inputType === 'phone') {
-          // Para teléfono, usar email temporal o requerir email
-          // Por ahora, requerimos email para registro
-          setEmailOrPhoneError(t('register.pleaseUseEmail') || 'Por favor usa tu correo electrónico para registrarte');
-          setIsLoading(false);
-          return;
+          // Normalizar a formato E.164 usando el código de país seleccionado
+          const raw = emailOrPhone.trim();
+          const digits = raw.replace(/[^\d+]/g, '');
+          const dialDigits = selectedCountryCode.dialCode.replace('+', '');
+          const withoutPlus = digits.startsWith('+') ? digits.slice(1) : digits;
+          const withoutCode = withoutPlus.startsWith(dialDigits) ? withoutPlus.slice(dialDigits.length) : withoutPlus;
+          const onlyDigits = withoutCode.replace(/\D/g, '');
+          phone = `${selectedCountryCode.dialCode}${onlyDigits}`;
         }
 
-        const { error: signUpError } = await signUp(email, password, phone);
+        const { error: signUpError } = await signUp({ email, phone, password });
 
         if (signUpError) {
           console.error('Registration error:', signUpError);
           if (signUpError.message.includes('User already registered')) {
             setEmailOrPhoneError(t('register.userAlreadyExists') || 'Este correo ya está registrado');
+          } else if (signUpError.message.includes('Phone signups are disabled')) {
+            setEmailOrPhoneError('El registro por teléfono está deshabilitado. Actívalo en Supabase (Auth > Providers > Phone) o regístrate con correo.');
+            } else if (
+              signUpError.message.includes('Error sending confirmation OTP to provider') ||
+              signUpError.message.includes('twilio') ||
+              signUpError.message.includes('www.twilio.com/docs/errors/20003') ||
+              signUpError.message.toLowerCase().includes('invalid username')
+            ) {
+              setEmailOrPhoneError(
+                'No se pudo enviar el SMS de confirmación (OTP). Revisa la configuración de Twilio en Supabase (credenciales/SID/Auth Token o Messaging Service).'
+              );
+          } else if (signUpError.message.toLowerCase().includes('phone') && signUpError.message.toLowerCase().includes('not')) {
+            setEmailOrPhoneError('El registro por teléfono no está habilitado en Supabase. Habilita Phone Auth o regístrate con correo.');
           } else if (signUpError.message.includes('Password')) {
             setPasswordError(signUpError.message);
           } else {

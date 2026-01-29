@@ -51,14 +51,14 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
         if (error) {
           name = user.user_metadata?.full_name || 
                  user.user_metadata?.name || 
-                 user.email?.split('@')[0] || 
+                 user.email || 
                  '';
         } else if (data?.name) {
           name = data.name;
         } else {
           name = user.user_metadata?.full_name || 
                  user.user_metadata?.name || 
-                 user.email?.split('@')[0] || 
+                 user.email || 
                  '';
         }
 
@@ -164,9 +164,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
                 {t('home.welcome')}
               </p>
               <h2 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] truncate">
-                {userName 
-                  ? t('home.goodAppetite').replace('Alex', userName)
-                  : t('home.goodAppetite')}
+                {userName ?? ''}
               </h2>
             </>
           ) : title ? (

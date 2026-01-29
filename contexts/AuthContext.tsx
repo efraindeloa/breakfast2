@@ -6,7 +6,8 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, phone?: string) => Promise<{ error: AuthError | null }>;
+  accountType: 'restaurant' | 'diner';
+  signUp: (params: { email?: string; phone?: string; password: string }) => Promise<{ error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signInWithGoogle: () => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
@@ -20,6 +21,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accountType, setAccountType] = useState<'restaurant' | 'diner'>('diner');
   // Track users currently being created to avoid race conditions with onAuthStateChange
   const usersBeingCreated = React.useRef<Set<string>>(new Set());
 
@@ -30,10 +32,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
+    const refreshAccountType = async (userId?: string | null) => {
+      if (!userId) {
+        setAccountType('diner');
+        return;
+      }
+      try {
+        const { data: staffRow } = await supabase
+          .from('restaurant_staff')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+        setAccountType(staffRow ? 'restaurant' : 'diner');
+      } catch {
+        setAccountType('diner');
+      }
+    };
+
     // Obtener sesión inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      refreshAccountType(session?.user?.id ?? null);
       setLoading(false);
     });
 
@@ -265,6 +287,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // Ahora sí actualizar el estado - el usuario está verificado
           setSession(session);
           setUser(session.user);
+
+          // Determinar tipo de cuenta (restaurant vs diner) por relación en restaurant_staff
+          await refreshAccountType(user.id);
         } catch (dbError: any) {
           console.warn('[AuthContext] Error checking user registration:', dbError);
           // Si hay error verificando, cerrar sesión por seguridad y NO actualizar el estado
@@ -278,6 +303,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Para otros eventos (SIGNED_OUT, etc.), actualizar el estado normalmente
         setSession(session);
         setUser(session?.user ?? null);
+        refreshAccountType(session?.user?.id ?? null);
       }
       
       setLoading(false);
@@ -309,15 +335,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-  const signUp = async (email: string, password: string, phone?: string): Promise<{ error: AuthError | null }> => {
+  const signUp = async ({ email, phone, password }: { email?: string; phone?: string; password: string }): Promise<{ error: AuthError | null }> => {
     console.log('========================================');
     console.log('[AuthContext] ===== SIGNUP START =====');
-    console.log('[AuthContext] signUp called with email:', email, 'phone:', phone || 'none');
+    console.log('[AuthContext] signUp called with email:', email || 'none', 'phone:', phone || 'none');
     console.log('[AuthContext] Supabase configured:', isSupabaseConfigured());
     
     if (!isSupabaseConfigured()) {
       console.error('[AuthContext] Supabase not configured!');
       return { error: { name: 'AuthError', message: 'Supabase no está configurado' } as AuthError };
+    }
+    
+    if (!email && !phone) {
+      return { error: { name: 'AuthError', message: 'Debes proporcionar email o teléfono' } as AuthError };
     }
 
     // Verificar sesión actual antes de signUp
@@ -330,20 +360,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       console.log('[AuthContext] Calling supabase.auth.signUp...');
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        phone,
-        options: {
-          emailRedirectTo: `${window.location.origin}/home`,
-          // Desactivar confirmación de email - el usuario puede iniciar sesión inmediatamente
-          data: {
-            email_verified: true,
-          },
-          // Desactivar envío de email de confirmación
-          captchaToken: undefined,
+      const baseOptions = {
+        emailRedirectTo: `${window.location.origin}/home`,
+        data: {
+          email_verified: true,
         },
-      });
+        captchaToken: undefined,
+      } as any;
+
+      const { data, error } = await supabase.auth.signUp(
+        email
+          ? { email, password, options: baseOptions }
+          : { phone: phone!, password, options: baseOptions }
+      );
 
       console.log('[AuthContext] signUp response received');
       console.log('[AuthContext] signUp error:', error ? {
@@ -584,6 +613,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           await new Promise(resolve => setTimeout(resolve, 200));
           
           // Intentar signIn automático
+          // Auto sign-in solo aplica si hay email disponible (phone signup puede requerir OTP / no tener email)
+          if (!data.user.email) {
+            console.log('[AuthContext] No email available for auto sign-in (phone signup). Skipping.');
+            return { error: null };
+          }
+          
           console.log('[AuthContext] Attempting signIn with email:', data.user.email);
           const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
             email: data.user.email,
@@ -867,6 +902,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user,
         session,
         loading,
+        accountType,
         signUp,
         signIn,
         signInWithGoogle,
@@ -883,7 +919,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    // En dev/HMR puede ocurrir un render intermedio sin provider. Evitar crashear toda la app.
+    console.error('[AuthContext] useAuth called outside AuthProvider');
+    return {
+      user: null,
+      session: null,
+      loading: true,
+      accountType: 'diner',
+      signUp: async () => ({ error: { name: 'AuthError', message: 'AuthProvider no está montado' } as AuthError }),
+      signIn: async () => ({ error: { name: 'AuthError', message: 'AuthProvider no está montado' } as AuthError }),
+      signInWithGoogle: async () => ({ error: { name: 'AuthError', message: 'AuthProvider no está montado' } as AuthError }),
+      signOut: async () => {},
+      resetPassword: async () => ({ error: { name: 'AuthError', message: 'AuthProvider no está montado' } as AuthError }),
+      updatePassword: async () => ({ error: { name: 'AuthError', message: 'AuthProvider no está montado' } as AuthError }),
+    };
   }
   return context;
 };

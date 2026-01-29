@@ -5,6 +5,8 @@ import { useProducts } from '../contexts/ProductsContext';
 import TopNavbar from '../components/TopNavbar';
 import { formatPrice } from '../utils/currency';
 import { useRestaurant } from '../contexts/RestaurantContext';
+import { getProductImageUrl, createProduct, updateProduct, getCurrentUserRestaurantId, uploadImage, getRestaurantMenuSections, saveRestaurantMenuSections } from '../services/database';
+import { useAuth } from '../contexts/AuthContext';
 
 type OriginType =
   | 'mar'
@@ -43,40 +45,19 @@ type Dish = {
 
 type PicksByCategory = Record<string, number[]>;
 
-const DEFAULT_CHEF_SUGGESTIONS: PicksByCategory = {
-  Entradas: [1, 2, 5, 4],
-  'Platos Fuertes': [3, 6, 7, 8],
-  Bebidas: [9, 10, 15, 16, 17, 18, 19],
-  Postres: [11, 12, 29, 30, 31, 32, 33, 34],
-  Coctelería: [13, 14, 20, 21, 22, 23, 24],
-};
-
-const DEFAULT_HIGHLIGHTS: PicksByCategory = {
-  Entradas: [1, 2],
-  'Platos Fuertes': [3, 7],
-  Bebidas: [15],
-  Postres: [29],
-  Coctelería: [20],
-};
-
-const DEFAULT_MENU_ITEMS: PicksByCategory = {
-  Entradas: [1, 2, 4, 5],
-  'Platos Fuertes': [3, 6, 7, 8],
-  Bebidas: [9, 10, 15, 16, 17, 18, 19],
-  Postres: [11, 12, 29, 30, 31, 32, 33, 34],
-  Coctelería: [20, 21, 22, 23, 24],
-};
-
-const buildStorageKey = (selectedRestaurant: string) =>
-  `restaurant_menu_picks:${selectedRestaurant || 'default'}`;
+// Valores por defecto vacíos - ya no se usan productos hardcodeados
+const DEFAULT_CHEF_SUGGESTIONS: PicksByCategory = {};
+const DEFAULT_HIGHLIGHTS: PicksByCategory = {};
+const DEFAULT_MENU_ITEMS: PicksByCategory = {};
 
 const MenuRestaurantScreen: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
   const { language } = useLanguage();
-  const { products } = useProducts();
+  const { products, refreshProducts } = useProducts();
   const { selectedRestaurant } = useRestaurant();
+  const { user, accountType } = useAuth();
 
   const categories = useMemo(
     () => [
@@ -154,40 +135,90 @@ const MenuRestaurantScreen: React.FC = () => {
   const [newComplementPrice, setNewComplementPrice] = useState('');
   const [showSinCosto, setShowSinCosto] = useState(false);
   
-  // Productos nuevos creados localmente
-  const [newProducts, setNewProducts] = useState<Dish[]>([]);
+  // Etiquetas del producto
+  const [productTags, setProductTags] = useState<string[]>([]);
+  const [newTagName, setNewTagName] = useState('');
+  
+  // Filtro de etiquetas
+  const [selectedTag, setSelectedTag] = useState<string>('');
+  
+  // Los productos ahora se guardan en Supabase, no localmente
 
-  // Cargar picks desde localStorage por restaurante
+  // Cargar picks desde la base de datos
   useEffect(() => {
-    const key = buildStorageKey(selectedRestaurant);
-    const raw = localStorage.getItem(key);
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw) as {
-        chefSuggestionsByCategory?: PicksByCategory;
-        highlightsByCategory?: PicksByCategory;
-        menuItemsByCategory?: PicksByCategory;
-      };
-      if (parsed.chefSuggestionsByCategory) setChefSuggestionsByCategory(parsed.chefSuggestionsByCategory);
-      if (parsed.highlightsByCategory) setHighlightsByCategory(parsed.highlightsByCategory);
-      if (parsed.menuItemsByCategory) setMenuItemsByCategory(parsed.menuItemsByCategory);
-    } catch {
-      // ignore
-    }
-  }, [selectedRestaurant]);
+    const loadMenuSections = async () => {
+      if (!selectedRestaurant || accountType !== 'restaurant') {
+        // Si no hay restaurante seleccionado o no es restaurante, usar valores por defecto vacíos
+        setChefSuggestionsByCategory(DEFAULT_CHEF_SUGGESTIONS);
+        setHighlightsByCategory(DEFAULT_HIGHLIGHTS);
+        setMenuItemsByCategory(DEFAULT_MENU_ITEMS);
+        return;
+      }
 
-  // Guardar picks
+      try {
+        const restaurantId = await getCurrentUserRestaurantId();
+        if (!restaurantId) {
+          console.warn('[MenuRestaurantScreen] No se pudo obtener el restaurant_id');
+          return;
+        }
+
+        const [chefSuggestions, highlights, menuItems] = await getRestaurantMenuSections(restaurantId);
+        setChefSuggestionsByCategory(chefSuggestions);
+        setHighlightsByCategory(highlights);
+        setMenuItemsByCategory(menuItems);
+        console.log('[MenuRestaurantScreen] Menu sections loaded from database');
+      } catch (error) {
+        console.error('[MenuRestaurantScreen] Error loading menu sections:', error);
+        // En caso de error, usar valores por defecto vacíos
+        setChefSuggestionsByCategory(DEFAULT_CHEF_SUGGESTIONS);
+        setHighlightsByCategory(DEFAULT_HIGHLIGHTS);
+        setMenuItemsByCategory(DEFAULT_MENU_ITEMS);
+      }
+    };
+
+    loadMenuSections();
+  }, [selectedRestaurant, accountType]);
+
+  // Guardar picks en la base de datos (con debounce para evitar demasiadas llamadas)
   useEffect(() => {
-    const key = buildStorageKey(selectedRestaurant);
-    localStorage.setItem(
-      key,
-      JSON.stringify({
-        chefSuggestionsByCategory,
-        highlightsByCategory,
-        menuItemsByCategory,
-      })
-    );
-  }, [chefSuggestionsByCategory, highlightsByCategory, menuItemsByCategory, selectedRestaurant]);
+    if (!selectedRestaurant || accountType !== 'restaurant') return;
+
+    let timeoutId: NodeJS.Timeout;
+    const saveMenuSections = async () => {
+      try {
+        const restaurantId = await getCurrentUserRestaurantId();
+        if (!restaurantId) {
+          console.warn('[MenuRestaurantScreen] No se pudo obtener el restaurant_id para guardar');
+          return;
+        }
+
+        // Usar un timeout para debounce (guardar después de 1 segundo de inactividad)
+        timeoutId = setTimeout(async () => {
+          const success = await saveRestaurantMenuSections(
+            restaurantId,
+            chefSuggestionsByCategory,
+            highlightsByCategory,
+            menuItemsByCategory
+          );
+          if (success) {
+            console.log('[MenuRestaurantScreen] Menu sections saved to database');
+          } else {
+            console.error('[MenuRestaurantScreen] Failed to save menu sections');
+          }
+        }, 1000);
+      } catch (error) {
+        console.error('[MenuRestaurantScreen] Error saving menu sections:', error);
+      }
+    };
+
+    saveMenuSections();
+    
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [chefSuggestionsByCategory, highlightsByCategory, menuItemsByCategory, selectedRestaurant, accountType]);
 
   // Recalcular selectedCategory si cambia idioma
   useEffect(() => {
@@ -198,24 +229,53 @@ const MenuRestaurantScreen: React.FC = () => {
   }, [language]);
 
   const dishes: Dish[] = useMemo(() => {
-    const productsFromContext = (products || []).map((p) => ({
-      id: p.id,
-      name: p.name,
-      description: p.description,
-      price: p.price,
-      image: p.image,
-      badges: p.badges || [],
-      category: p.category,
-      origin: (p.origin || '') as OriginType,
-    }));
-    // Combinar productos del contexto con productos nuevos creados localmente
-    return [...productsFromContext, ...newProducts];
-  }, [products, newProducts]);
+    const productsFromContext = (products || []).map((p) => {
+      // Priorizar image_url sobre image, ya que image_url es el campo de la BD
+      // y image puede estar vacío o tener una ruta relativa incorrecta
+      let imageUrl = '';
+      if (p.image_url) {
+        // Si tenemos image_url, procesarlo para obtener la URL completa de Supabase Storage
+        imageUrl = getProductImageUrl(p.image_url);
+      } else if (p.image) {
+        // Si no hay image_url pero hay image, usar image (ya viene procesado del contexto)
+        imageUrl = p.image;
+      }
+      
+      // Debug: log para productos sin imagen
+      if (!imageUrl && p.id) {
+        console.warn(`[MenuRestaurantScreen] Product ${p.id} (${p.name}) has no image. image: "${p.image}", image_url: "${p.image_url}"`);
+      }
+      
+      return {
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        image: imageUrl,
+        badges: p.badges || [],
+        category: p.category,
+        origin: (p.origin || '') as OriginType,
+      };
+    });
+    // Los productos vienen del contexto (Supabase), no hay productos locales
+    return productsFromContext;
+  }, [products]);
 
   const originalCategory = getOriginalCategory(selectedCategory);
   const chefIds = chefSuggestionsByCategory[originalCategory] || [];
   const highlightIds = highlightsByCategory[originalCategory] || [];
   const menuIds = menuItemsByCategory[originalCategory] || [];
+
+  // Extraer todas las etiquetas únicas de los productos de la categoría actual
+  const availableTags = useMemo(() => {
+    const tagsSet = new Set<string>();
+    dishes.forEach((dish) => {
+      if (dish.category === originalCategory && dish.badges && dish.badges.length > 0) {
+        dish.badges.forEach((tag) => tagsSet.add(tag));
+      }
+    });
+    return Array.from(tagsSet).sort();
+  }, [dishes, originalCategory]);
 
   // Función para obtener los filtros según la categoría seleccionada
   const getFiltersForCategory = (category: string): Array<{ value: OriginType; icon: string }> => {
@@ -327,15 +387,47 @@ const MenuRestaurantScreen: React.FC = () => {
     setAllowSpecialInstructions(true);
     setSpecialInstructions('');
     setAllowCustomComplements(false);
-    setComplements([
-      { id: '1', name: 'Huevo Estrellado (2)', price: 35 },
-      { id: '2', name: 'Pollo Deshebrado', price: 45 },
-      { id: '3', name: 'Arrachera Grill', price: 85 },
-    ]); // Inicializar con complementos por defecto
+    
+    // Cargar complementos desde el producto si existe, o usar array vacío
+    // Necesitamos obtener el producto completo desde la base de datos para tener los complementos
+    if (product?.id) {
+      // Buscar el producto completo en la lista de productos del contexto
+      const fullProduct = products?.find(p => p.id === product.id);
+      if (fullProduct?.complements && Array.isArray(fullProduct.complements) && fullProduct.complements.length > 0) {
+        // Convertir los complementos del formato de la BD al formato del componente
+        const loadedComplements: Complement[] = fullProduct.complements.map((comp: any) => ({
+          id: comp.id || Date.now().toString() + Math.random().toString(),
+          name: comp.name || '',
+          price: typeof comp.price === 'number' ? comp.price : parseFloat(comp.price) || 0,
+        }));
+        setComplements(loadedComplements);
+        setAllowCustomComplements(fullProduct.allow_custom_complements || false);
+        setAllowSpecialInstructions(fullProduct.allow_special_instructions !== undefined ? fullProduct.allow_special_instructions : true);
+      } else {
+        // Si no hay complementos guardados, usar array vacío
+        setComplements([]);
+        setAllowCustomComplements(false);
+        setAllowSpecialInstructions(true);
+      }
+    } else {
+      // Producto nuevo, usar valores por defecto vacíos
+      setComplements([]);
+      setAllowCustomComplements(false);
+      setAllowSpecialInstructions(true);
+    }
+    
     setEditingComplementId(null);
     setNewComplementName('');
     setNewComplementPrice('');
     setShowSinCosto(false);
+    // Normalizar las etiquetas del producto (asegurar que sean strings y estén normalizadas)
+    const normalizedBadges = product?.badges 
+      ? product.badges
+          .filter((badge): badge is string => typeof badge === 'string' && badge.trim() !== '')
+          .map(badge => badge.trim().toLowerCase())
+      : [];
+    setProductTags(normalizedBadges); // Inicializar con las etiquetas del producto normalizadas
+    setNewTagName('');
     setEditProductOpen(true);
     closePicker(); // Cerrar el picker si está abierto
   };
@@ -359,6 +451,8 @@ const MenuRestaurantScreen: React.FC = () => {
     setNewComplementName('');
     setNewComplementPrice('');
     setShowSinCosto(false);
+    setProductTags([]);
+    setNewTagName('');
   };
 
   const handleSaveName = () => {
@@ -434,6 +528,30 @@ const MenuRestaurantScreen: React.FC = () => {
     setComplements(complements.filter(c => c.id !== id));
   };
 
+  // Funciones CRUD para etiquetas
+  const addTag = () => {
+    console.log('[MenuRestaurantScreen] addTag llamado, newTagName:', newTagName);
+    if (!newTagName.trim()) {
+      console.warn('[MenuRestaurantScreen] No se puede agregar etiqueta: el nombre está vacío');
+      return; // No hacer nada si no hay nombre
+    }
+    const tagName = newTagName.trim().toLowerCase();
+    // Evitar duplicados (case-insensitive)
+    if (!productTags.some(tag => tag.toLowerCase() === tagName)) {
+      console.log('[MenuRestaurantScreen] Agregando etiqueta:', tagName);
+      setProductTags([...productTags, tagName]);
+      setNewTagName('');
+    } else {
+      console.warn('[MenuRestaurantScreen] Etiqueta duplicada:', tagName);
+    }
+  };
+
+  const deleteTag = (tagToDelete: string) => {
+    // Normalizar la etiqueta a eliminar para comparación case-insensitive
+    const normalizedTagToDelete = tagToDelete.trim().toLowerCase();
+    setProductTags(productTags.filter(tag => tag.trim().toLowerCase() !== normalizedTagToDelete));
+  };
+
   // Función para manejar la selección de imagen
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -477,67 +595,177 @@ const MenuRestaurantScreen: React.FC = () => {
     }
   };
 
-  // Función para guardar el producto y agregarlo a la lista
-  const handleSaveProduct = () => {
+  // Función para guardar el producto en Supabase
+  const handleSaveProduct = async () => {
+    console.log('[MenuRestaurantScreen] handleSaveProduct llamado');
+    console.log('[MenuRestaurantScreen] editingProductName:', editingProductName);
+    console.log('[MenuRestaurantScreen] editingProduct:', editingProduct);
+    
     if (!editingProductName.trim()) {
+      console.warn('[MenuRestaurantScreen] No se puede guardar: el nombre está vacío');
+      alert('Por favor, ingresa un nombre para el producto.');
       return; // No guardar si no hay nombre
     }
 
-    if (editingProduct) {
-      // Estamos editando un producto existente
-      const updatedProduct: Dish = {
-        ...editingProduct,
+    try {
+      // Obtener el restaurant_id del usuario actual
+      const restaurantId = await getCurrentUserRestaurantId();
+      if (!restaurantId) {
+        console.error('[MenuRestaurantScreen] No se pudo obtener el restaurant_id del usuario actual');
+        console.error('[MenuRestaurantScreen] User:', user);
+        console.error('[MenuRestaurantScreen] Account type:', accountType);
+        alert('Error: No se pudo identificar el restaurante. Por favor, inicia sesión como restaurante.');
+        return;
+      }
+      
+      console.log('[MenuRestaurantScreen] Restaurant ID:', restaurantId);
+
+      // Subir imágenes a Supabase Storage si hay archivos nuevos
+      let imageUrl = '';
+      if (productImageFiles.length > 0) {
+        // Subir la primera imagen
+        const file = productImageFiles[0];
+        const fileName = `product-${Date.now()}-${file.name}`;
+        const uploadedUrl = await uploadImage('product-images', fileName, file);
+        if (uploadedUrl) {
+          // Extraer solo el path relativo de la URL completa
+          const urlParts = uploadedUrl.split('/storage/v1/object/public/product-images/');
+          imageUrl = urlParts.length > 1 ? urlParts[1] : fileName;
+        }
+      } else if (productImages.length > 0 && productImages[0]) {
+        // Si hay una imagen pero no es un archivo nuevo, usar la URL existente
+        // Si es una URL completa, extraer el path
+        const img = productImages[0];
+        if (img.startsWith('http')) {
+          const urlParts = img.split('/storage/v1/object/public/product-images/');
+          imageUrl = urlParts.length > 1 ? urlParts[1] : '';
+        } else {
+          imageUrl = img;
+        }
+      }
+
+      const priceValue = parseFloat(editingProductPrice) || 0;
+      
+      // Validar que el precio sea válido
+      if (isNaN(priceValue) || priceValue < 0) {
+        console.error('[MenuRestaurantScreen] Precio inválido:', editingProductPrice);
+        alert('Error: El precio debe ser un número válido mayor o igual a 0.');
+        return;
+      }
+      
+      // Validar que la categoría esté definida
+      if (!originalCategory || originalCategory.trim() === '') {
+        console.error('[MenuRestaurantScreen] Categoría no definida');
+        alert('Error: La categoría no está definida. Por favor, selecciona una categoría.');
+        return;
+      }
+
+      console.log('[MenuRestaurantScreen] Guardando producto:', {
+        restaurantId,
         name: editingProductName.trim(),
         description: editingProductDescription.trim(),
-        price: parseFloat(editingProductPrice) || 0,
-        image: productImages.length > 0 ? productImages[0] : editingProduct.image || '',
+        price: priceValue,
+        image_url: imageUrl || 'sin imagen',
         category: originalCategory,
-      };
-
-      // Actualizar el producto en la lista de productos nuevos (si es un producto nuevo)
-      setNewProducts((prev) => {
-        const index = prev.findIndex(p => p.id === editingProduct.id);
-        if (index !== -1) {
-          const updated = [...prev];
-          updated[index] = updatedProduct;
-          return updated;
-        }
-        return prev;
       });
 
-      // Actualizar el producto editado en el estado
-      setEditingProduct(updatedProduct);
-    } else {
-      // Estamos creando un nuevo producto
-      const maxId = Math.max(...dishes.map(d => d.id), ...products.map(p => p.id), 0);
-      const newProductId = maxId + 1;
+      if (editingProduct && editingProduct.id) {
+        // Estamos editando un producto existente
+        const updated = await updateProduct(editingProduct.id, {
+          name: editingProductName.trim(),
+          description: editingProductDescription.trim(),
+          price: priceValue,
+          image_url: imageUrl || undefined,
+          category: originalCategory,
+          origin: editingProduct.origin || '',
+          badges: productTags, // Siempre enviar el array, incluso si está vacío
+          complements: complements, // Siempre enviar el array, incluso si está vacío
+          allow_custom_complements: allowCustomComplements,
+          allow_special_instructions: allowSpecialInstructions,
+        });
 
-      const newProduct: Dish = {
-        id: newProductId,
-        name: editingProductName.trim(),
-        description: editingProductDescription.trim(),
-        price: parseFloat(editingProductPrice) || 0,
-        image: productImages.length > 0 ? productImages[0] : '',
-        badges: [],
-        category: originalCategory,
-        origin: '' as OriginType,
-      };
-
-      // Agregar el producto nuevo a la lista de productos nuevos
-      setNewProducts((prev) => [...prev, newProduct]);
-
-      // Agregar el producto a la lista de menú de la categoría actual
-      setMenuItemsByCategory((prev) => {
-        const current = prev[originalCategory] || [];
-        if (!current.includes(newProductId)) {
-          return { ...prev, [originalCategory]: [...current, newProductId] };
+        if (updated) {
+          console.log('Producto actualizado en Supabase:', updated);
+          // Refrescar los productos del contexto
+          await refreshProducts();
+        } else {
+          console.error('Error al actualizar el producto');
+          alert('Error al actualizar el producto. Por favor, intenta de nuevo.');
+          return;
         }
-        return prev;
+      } else {
+        // Estamos creando un nuevo producto
+        const created = await createProduct({
+          restaurant_id: restaurantId,
+          name: editingProductName.trim(),
+          description: editingProductDescription.trim(),
+          price: priceValue,
+          image_url: imageUrl || undefined,
+          category: originalCategory,
+          origin: '',
+          is_active: true,
+          badges: productTags, // Siempre enviar el array, incluso si está vacío
+          complements: complements, // Siempre enviar el array, incluso si está vacío
+          allow_custom_complements: allowCustomComplements,
+          allow_special_instructions: allowSpecialInstructions,
+        });
+
+        if (created) {
+          console.log('[MenuRestaurantScreen] Producto creado en Supabase:', created);
+          // Refrescar los productos del contexto
+          await refreshProducts();
+          
+          // Agregar el producto solo a la sección "Menú" (no a "Sugerencias del chef" ni "Destacados")
+          if (created.id) {
+            // Si el producto está en "Sugerencias del chef" o "Destacados" (por valores por defecto o localStorage), eliminarlo
+            setChefSuggestionsByCategory((prev) => {
+              const current = prev[originalCategory] || [];
+              if (current.includes(created.id)) {
+                console.log('[MenuRestaurantScreen] Producto removido de Sugerencias del chef (estaba presente)');
+                return { ...prev, [originalCategory]: current.filter((id) => id !== created.id) };
+              }
+              return prev;
+            });
+            
+            setHighlightsByCategory((prev) => {
+              const current = prev[originalCategory] || [];
+              if (current.includes(created.id)) {
+                console.log('[MenuRestaurantScreen] Producto removido de Destacados (estaba presente)');
+                return { ...prev, [originalCategory]: current.filter((id) => id !== created.id) };
+              }
+              return prev;
+            });
+            
+            // Agregar solo a "Menú" si no está ya presente
+            setMenuItemsByCategory((prev) => {
+              const current = prev[originalCategory] || [];
+              if (!current.includes(created.id)) {
+                console.log('[MenuRestaurantScreen] Producto agregado a Menú');
+                return { ...prev, [originalCategory]: [...current, created.id] };
+              }
+              return prev;
+            });
+          }
+        } else {
+          console.error('[MenuRestaurantScreen] Error al crear el producto - createProduct retornó null');
+          // Revisar la consola para más detalles del error
+          alert('Error al crear el producto. Revisa la consola para más detalles. Por favor, intenta de nuevo.');
+          return;
+        }
+      }
+
+      // Cerrar el modal de edición
+      closeEditProduct();
+    } catch (error: any) {
+      console.error('[MenuRestaurantScreen] Error al guardar el producto:', error);
+      console.error('[MenuRestaurantScreen] Error details:', {
+        message: error?.message,
+        code: error?.code,
+        stack: error?.stack,
       });
+      const errorMessage = error?.message || 'Error desconocido al guardar el producto';
+      alert(`Error al guardar el producto: ${errorMessage}. Revisa la consola para más detalles.`);
     }
-
-    // Cerrar el modal de edición
-    closeEditProduct();
   };
 
   const addOrReplacePick = (dishId: number) => {
@@ -598,6 +826,19 @@ const MenuRestaurantScreen: React.FC = () => {
     });
   };
 
+  // Helper para obtener el estilo de imagen con fallback
+  const getImageStyle = (imageUrl: string | undefined | null) => {
+    if (!imageUrl || imageUrl.trim() === '') {
+      return {
+        backgroundColor: '#f5f0e8',
+      };
+    }
+    // Usar la misma lógica que MenuScreen para mantener consistencia
+    return {
+      backgroundImage: `url("${imageUrl}")`,
+    };
+  };
+
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-24 bg-background-light dark:bg-background-dark">
       <TopNavbar title={selectedRestaurant || 'RESTAURANT'} showAvatar={true} />
@@ -611,6 +852,7 @@ const MenuRestaurantScreen: React.FC = () => {
               onClick={() => {
                 setSelectedCategory(category);
                 setSelectedOrigin(''); // Limpiar filtro al cambiar categoría
+                setSelectedTag(''); // Limpiar filtro de etiqueta al cambiar categoría
               }}
               className={`flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full px-5 ${
                 !searchQuery.trim() && selectedCategory === category
@@ -710,7 +952,7 @@ const MenuRestaurantScreen: React.FC = () => {
                       className={`w-full bg-center bg-no-repeat aspect-[16/10] bg-cover rounded-lg flex flex-col relative ${
                         !editMode ? 'cursor-pointer' : ''
                       }`}
-                      style={{ backgroundImage: `url("${dish.image}")` }}
+                      style={getImageStyle(dish.image)}
                     >
                       <div className="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
                         {formatPrice(dish.price, localStorage.getItem('selectedLanguage'))}
@@ -727,14 +969,6 @@ const MenuRestaurantScreen: React.FC = () => {
 
                     {editMode && (
                       <div className="absolute top-2 left-2 flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openPicker('chef', dish.id)}
-                          className="w-9 h-9 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-md flex items-center justify-center"
-                          title="Cambiar"
-                        >
-                          <span className="material-symbols-outlined text-primary">edit</span>
-                        </button>
                         <button
                           type="button"
                           onClick={() => removePick('chef', dish.id)}
@@ -757,7 +991,7 @@ const MenuRestaurantScreen: React.FC = () => {
                 >
                   <div className="flex flex-col items-center">
                     <span className="material-symbols-outlined text-3xl">add</span>
-                    <span className="text-sm font-bold">Agregar card</span>
+                    <span className="text-sm font-bold">Agregar sugerencia</span>
                   </div>
                 </button>
               )}
@@ -797,7 +1031,7 @@ const MenuRestaurantScreen: React.FC = () => {
                   <div
                     onClick={() => (!editMode ? navigateToDish(dish.id) : undefined)}
                     className={`size-16 rounded-lg bg-cover bg-center shrink-0 ${!editMode ? 'cursor-pointer' : ''}`}
-                    style={{ backgroundImage: `url("${dish.image}")` }}
+                    style={getImageStyle(dish.image)}
                   />
                   <div className="flex-1 min-w-0">
                     <p className="font-bold dark:text-white line-clamp-1">{dish.name}</p>
@@ -807,14 +1041,6 @@ const MenuRestaurantScreen: React.FC = () => {
                     <span className="material-symbols-outlined text-gray-300">chevron_right</span>
                   ) : (
                     <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openPicker('highlights', dish.id)}
-                        className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
-                        title="Cambiar"
-                      >
-                        <span className="material-symbols-outlined">edit</span>
-                      </button>
                       <button
                         type="button"
                         onClick={() => removePick('highlights', dish.id)}
@@ -837,7 +1063,7 @@ const MenuRestaurantScreen: React.FC = () => {
               >
                 <div className="flex flex-col items-center">
                   <span className="material-symbols-outlined text-3xl">add</span>
-                  <span className="text-sm font-bold">Agregar card</span>
+                  <span className="text-sm font-bold">Agregar destacado</span>
                 </div>
               </button>
             )}
@@ -900,6 +1126,43 @@ const MenuRestaurantScreen: React.FC = () => {
             )}
           </div>
 
+          {/* Tag Filters */}
+          {availableTags.length > 0 && (
+            <div className="flex gap-2 pb-4 overflow-x-auto no-scrollbar">
+              {availableTags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => setSelectedTag(selectedTag === tag ? '' : tag)}
+                  className={`flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full px-4 transition-all ${
+                    selectedTag === tag
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'bg-white dark:bg-[#322a1a] border border-[#f4f3f0] dark:border-[#3d3321] text-[#181611] dark:text-stone-300'
+                  }`}
+                >
+                  <span className={`material-symbols-outlined text-base ${
+                    selectedTag === tag ? 'text-white' : 'text-primary'
+                  }`}>
+                    label
+                  </span>
+                  <span className={`text-xs font-medium ${
+                    selectedTag === tag ? 'text-white' : 'text-[#181611] dark:text-stone-300'
+                  }`}>
+                    {tag}
+                  </span>
+                </button>
+              ))}
+              {selectedTag && (
+                <button
+                  onClick={() => setSelectedTag('')}
+                  className="flex h-9 shrink-0 items-center justify-center gap-1 rounded-full px-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  title="Limpiar filtro de etiqueta"
+                >
+                  <span className="material-symbols-outlined text-sm">close</span>
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Menu Items */}
           <div className="flex flex-col gap-4">
             {menuIds
@@ -911,6 +1174,9 @@ const MenuRestaurantScreen: React.FC = () => {
                     return dish.badges?.includes('vegano') || false;
                   }
                   return dish.origin === selectedOrigin;
+                }
+                if (selectedTag) {
+                  return dish.badges?.includes(selectedTag) || false;
                 }
                 return true;
               })
@@ -945,6 +1211,32 @@ const MenuRestaurantScreen: React.FC = () => {
                       >
                         <span className="truncate">{formatPrice(dish.price, localStorage.getItem('selectedLanguage'))}</span>
                       </button>
+                      {editMode && (
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditProduct(dish);
+                            }}
+                            className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
+                            title="Editar"
+                          >
+                            <span className="material-symbols-outlined">edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removePick('menu', dish.id);
+                            }}
+                            className="w-9 h-9 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center"
+                            title="Eliminar"
+                          >
+                            <span className="material-symbols-outlined">delete</span>
+                          </button>
+                        </div>
+                      )}
                       {!editMode && (
                         <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary transition-colors cursor-default">
                           <span className="material-symbols-outlined text-lg">note_add</span>
@@ -952,33 +1244,7 @@ const MenuRestaurantScreen: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  <div className="w-32 h-32 bg-center bg-no-repeat bg-cover rounded-xl flex-shrink-0 relative" style={{ backgroundImage: `url("${dish.image}")` }}>
-                    {editMode && (
-                      <div className="absolute top-2 left-2 flex gap-2">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditProduct(dish);
-                          }}
-                          className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
-                          title="Editar"
-                        >
-                          <span className="material-symbols-outlined">edit</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removePick('menu', dish.id);
-                          }}
-                          className="w-9 h-9 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center"
-                          title="Eliminar"
-                        >
-                          <span className="material-symbols-outlined">delete</span>
-                        </button>
-                      </div>
-                    )}
+                  <div className="w-32 h-32 bg-center bg-no-repeat bg-cover rounded-xl flex-shrink-0 relative" style={getImageStyle(dish.image)}>
                   </div>
                 </div>
               ))}
@@ -1020,15 +1286,6 @@ const MenuRestaurantScreen: React.FC = () => {
             </div>
 
             <div className="p-4 space-y-3">
-              <button
-                type="button"
-                onClick={() => openEditProduct()}
-                className="w-full flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-primary/40 text-primary bg-primary/5 hover:bg-primary/10 transition-colors"
-              >
-                <span className="material-symbols-outlined">add</span>
-                <span className="font-bold">Crear nuevo producto</span>
-              </button>
-              
               {categoryDishes.length === 0 ? (
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   No hay platillos en esta categoría para seleccionar.
@@ -1043,7 +1300,7 @@ const MenuRestaurantScreen: React.FC = () => {
                   >
                     <div
                       className="size-12 rounded-lg bg-cover bg-center shrink-0"
-                      style={{ backgroundImage: `url("${dish.image}")` }}
+                      style={getImageStyle(dish.image)}
                     />
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-sm text-[#181611] dark:text-white line-clamp-1">{dish.name}</p>
@@ -1087,14 +1344,16 @@ const MenuRestaurantScreen: React.FC = () => {
               >
                 Cancelar
               </button>
-              <div className="flex items-center gap-2">
-                <button className="w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center transition-colors bg-black/30 text-white hover:bg-black/50">
-                  <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 0' }}>favorite</span>
-                </button>
-                <button className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition-colors" title="Ver opiniones">
-                  <span className="material-symbols-outlined">reviews</span>
-                </button>
-              </div>
+              {accountType !== 'restaurant' && (
+                <div className="flex items-center gap-2">
+                  <button className="w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center transition-colors bg-black/30 text-white hover:bg-black/50">
+                    <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 0' }}>favorite</span>
+                  </button>
+                  <button className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition-colors" title="Ver opiniones">
+                    <span className="material-symbols-outlined">reviews</span>
+                  </button>
+                </div>
+              )}
             </div>
             <div className="absolute bottom-4 left-4 right-4 flex gap-2 flex-wrap">
               {editingProduct?.badges?.includes('vegano') && (
@@ -1200,6 +1459,67 @@ const MenuRestaurantScreen: React.FC = () => {
                       <span className="material-symbols-outlined text-sm">restaurant_menu</span>
                       {selectedCategory}
                     </div>
+                    {productTags.map((tag) => (
+                      <div key={tag} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs font-medium">
+                        <span className="material-symbols-outlined text-sm">label</span>
+                        <span>{tag}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            deleteTag(tag);
+                          }}
+                          className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors flex-shrink-0"
+                          title="Eliminar etiqueta"
+                        >
+                          <span className="material-symbols-outlined text-sm">close</span>
+                        </button>
+                      </div>
+                    ))}
+                    {/* Input para agregar nueva etiqueta */}
+                    <div className="flex items-center gap-1 px-2 py-1 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50">
+                      <input
+                        type="text"
+                        value={newTagName}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          const value = e.target.value;
+                          console.log('[MenuRestaurantScreen] Input onChange, value:', value);
+                          setNewTagName(value);
+                        }}
+                        onFocus={(e) => {
+                          e.stopPropagation();
+                          console.log('[MenuRestaurantScreen] Input onFocus');
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          console.log('[MenuRestaurantScreen] Input onClick');
+                        }}
+                        className="w-24 px-1 py-0.5 rounded border-0 bg-transparent text-[#181611] dark:text-white text-xs focus:outline-none focus:ring-0 placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                        placeholder="Etiqueta"
+                        onKeyDown={(e) => {
+                          e.stopPropagation();
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            console.log('[MenuRestaurantScreen] Enter presionado en input de etiqueta');
+                            addTag();
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          addTag();
+                        }}
+                        className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center hover:bg-primary-dark transition-colors"
+                        title="Agregar etiqueta"
+                      >
+                        <span className="material-symbols-outlined text-xs">add</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className="text-right">
@@ -1230,7 +1550,12 @@ const MenuRestaurantScreen: React.FC = () => {
                       onClick={() => setIsEditingPrice(true)}
                       className="text-2xl font-bold text-primary cursor-pointer hover:opacity-70 transition-opacity"
                     >
-                      {editingProductPrice ? formatPrice(parseFloat(editingProductPrice), localStorage.getItem('selectedLanguage')) : '$0.00'}
+                      {(() => {
+                        const priceValue = editingProductPrice ? parseFloat(editingProductPrice) : 0;
+                        return !isNaN(priceValue) && isFinite(priceValue) 
+                          ? formatPrice(priceValue, localStorage.getItem('selectedLanguage')) 
+                          : '$0.00';
+                      })()}
                     </p>
                   )}
                 </div>
@@ -1455,12 +1780,30 @@ const MenuRestaurantScreen: React.FC = () => {
             </div>
           </main>
 
-          {/* Botón de acción fijo */}
+          {/* Botones de acción fijos */}
           <div className="fixed left-0 right-0 w-full bg-white/95 dark:bg-background-dark/95 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 p-4 z-40" style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}>
-            <div className="max-w-md mx-auto">
+            <div className="max-w-md mx-auto flex gap-3">
               <button 
-                onClick={handleSaveProduct}
-                className="relative w-full h-14 bg-primary text-white font-bold text-lg rounded-xl shadow-lg shadow-primary/30 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  closeEditProduct();
+                }}
+                className="relative flex-1 h-14 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-bold text-lg rounded-xl shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-gray-300 dark:hover:bg-gray-600"
+              >
+                <span className="material-symbols-outlined text-xl">close</span>
+                <span>Cancelar</span>
+              </button>
+              <button 
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('[MenuRestaurantScreen] Botón Guardar clickeado');
+                  handleSaveProduct();
+                }}
+                className="relative flex-1 h-14 bg-primary text-white font-bold text-lg rounded-xl shadow-lg shadow-primary/30 flex items-center justify-center gap-2 active:scale-95 transition-all"
               >
                 <span className="material-symbols-outlined text-xl">save</span>
                 <span>Guardar</span>

@@ -2,6 +2,8 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import { validateRFC } from '../services/database';
+import { supabase } from '../config/supabase';
 
 interface RegisterScreenProps {
   onLogin: () => void;
@@ -57,6 +59,12 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
   const [confirmPasswordError, setConfirmPasswordError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
+  
+  // Campos adicionales para registro de restaurante
+  const [restaurantName, setRestaurantName] = useState('');
+  const [rfc, setRfc] = useState('');
+  const [restaurantNameError, setRestaurantNameError] = useState<string>('');
+  const [rfcError, setRfcError] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
@@ -157,8 +165,16 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
     // Validar que todas las reglas de contraseña se cumplan
     const isPasswordValid = Object.values(passwordValidations).every(valid => valid);
     
+    // Si es registro de restaurante, validar campos adicionales
+    if (registerType === 'restaurant') {
+      const isRestaurantNameValid = restaurantName.trim() !== '' && restaurantName.trim().length >= 3;
+      const isRFCValid = rfc.trim() === '' || validateRFC(rfc.trim()); // RFC es opcional pero debe ser válido si se proporciona
+      
+      return isEmailOrPhoneValid && isPasswordValid && isRestaurantNameValid && isRFCValid;
+    }
+    
     return isEmailOrPhoneValid && isPasswordValid;
-  }, [registerType, emailOrPhone, inputType, isValidEmail, isValidPhone, passwordValidations]);
+  }, [registerType, emailOrPhone, inputType, isValidEmail, isValidPhone, passwordValidations, restaurantName, rfc]);
 
   // Limpiar mensajes de error cuando el usuario corrige los campos
   useEffect(() => {
@@ -254,6 +270,24 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
       return;
     }
     
+    // Validaciones adicionales para restaurante
+    if (registerType === 'restaurant') {
+      if (!restaurantName.trim()) {
+        setRestaurantNameError('Por favor, ingresa el nombre del restaurante');
+        return;
+      }
+      
+      if (restaurantName.trim().length < 3) {
+        setRestaurantNameError('El nombre del restaurante debe tener al menos 3 caracteres');
+        return;
+      }
+      
+      if (rfc.trim() && !validateRFC(rfc.trim())) {
+        setRfcError('El RFC no tiene un formato válido. Formato: XXXX######XXX (12 o 13 caracteres)');
+        return;
+      }
+    }
+    
     // Si todas las validaciones pasan
     if (isFormValid) {
       setIsLoading(true);
@@ -280,7 +314,14 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
           phone = `${selectedCountryCode.dialCode}${onlyDigits}`;
         }
 
-        const { error: signUpError } = await signUp({ email, phone, password });
+        // Pasar datos del restaurante si es registro de restaurante
+        const { error: signUpError } = await signUp({ 
+          email, 
+          phone, 
+          password,
+          restaurantName: registerType === 'restaurant' ? restaurantName.trim() : undefined,
+          rfc: registerType === 'restaurant' && rfc.trim() ? rfc.trim() : undefined
+        });
 
         if (signUpError) {
           console.error('Registration error:', signUpError);
@@ -325,11 +366,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
             onLogin();
           }, 3000);
         } else {
-          // Registro exitoso - verificar si hay sesión antes de redirigir
-          // Esperar un momento para que la sesión se establezca (si el signIn automático funcionó)
+          // Registro exitoso - el restaurante se crea automáticamente en AuthContext si se proporcionó restaurantName
+          // Esperar un momento para que la sesión se establezca
           setTimeout(() => {
-            // Verificar si hay sesión antes de redirigir
-            // Si no hay sesión, redirigir al login
             setSuccessMessage(t('register.registrationSuccess') || '¡Registro exitoso! Redirigiendo...');
             // Intentar redirigir a home, pero si no hay sesión, onAuthStateChange manejará el login
             navigate('/home');
@@ -354,7 +393,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
       <div className="@container w-full">
         <div className="@[480px]:px-4 @[480px]:py-3">
           <div
-            className="relative w-full bg-center bg-no-repeat bg-cover flex flex-col justify-end overflow-hidden bg-white @[480px]:rounded-xl min-h-[35vh]"
+            className="relative w-full bg-center bg-no-repeat bg-cover flex flex-col justify-end overflow-hidden bg-white @[480px]:rounded-xl min-h-[15vh] max-h-[20vh]"
             style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBc2H-XYiq7VOCFCpx2cuCePgbQE7ZDrkxgLFu-itmo_MSFUGuJ4MEK9gfv4p-Lur7DUSWI21FL7WjRrLtfWx6nu7z0mjAn2bhClTodzDi-pzY6r3wzdPoDRYMS1cM7ZBlUns8GzyAI7djeA6qN2gngbm8XYIbP5M6fXO48cdOauM5hZYsfaZ6Mxl204e6c5lXbMZh9Shgmz6nScvzItmVrWwCvhFVLdRbJtmqHe_EdQndGNhwA5EeplOu2NO9sXkEhh-WocuJ1KcoU")' }}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-background-light/95 via-transparent to-transparent dark:from-background-dark/95"></div>
@@ -362,7 +401,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
         </div>
       </div>
 
-      <div className="flex flex-col items-center px-6 relative -mt-6 z-10">
+      <div className="flex flex-col items-center px-6 relative -mt-4 z-10">
         <h1 className="text-[#181411] dark:text-white tracking-tight text-[32px] font-bold leading-tight text-center pb-1">
           {t('register.title')}
         </h1>
@@ -431,6 +470,10 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
                   setEmailOrPhoneError('');
                   setPasswordError('');
                   setConfirmPasswordError('');
+                  setRestaurantName('');
+                  setRfc('');
+                  setRestaurantNameError('');
+                  setRfcError('');
                 }}
                 className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
               >
@@ -708,6 +751,70 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
               </p>
             )}
           </div>
+
+          {/* Campos adicionales para registro de restaurante */}
+          {registerType === 'restaurant' && (
+            <>
+              {/* Nombre del restaurante */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
+                  Nombre del restaurante <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={restaurantName}
+                  onChange={(e) => {
+                    setRestaurantName(e.target.value);
+                    if (restaurantNameError) setRestaurantNameError('');
+                  }}
+                  onFocus={(e) => {
+                    scrollToFocusedField(e.target);
+                  }}
+                  className="w-full h-14 px-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Ej: Donk Restaurant"
+                  maxLength={100}
+                />
+                {restaurantNameError && (
+                  <p className="text-xs text-red-500 px-1 mt-1">
+                    {restaurantNameError}
+                  </p>
+                )}
+              </div>
+
+              {/* RFC (opcional) */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
+                  RFC <span className="text-gray-500 text-xs">(Opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={rfc}
+                  onChange={(e) => {
+                    // Convertir a mayúsculas automáticamente
+                    const upperRFC = e.target.value.toUpperCase();
+                    setRfc(upperRFC);
+                    if (rfcError) setRfcError('');
+                  }}
+                  onFocus={(e) => {
+                    scrollToFocusedField(e.target);
+                  }}
+                  className="w-full h-14 px-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Ej: ABCD123456EF1"
+                  maxLength={13}
+                />
+                {rfcError && (
+                  <p className="text-xs text-red-500 px-1 mt-1">
+                    {rfcError}
+                  </p>
+                )}
+                {rfc && !rfcError && (
+                  <p className="text-xs text-green-600 dark:text-green-400 px-1 mt-1">
+                    ✓ RFC válido
+                  </p>
+                )}
+              </div>
+            </>
+          )}
             </>
           )}
         </div>

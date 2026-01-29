@@ -4,6 +4,7 @@ import { useCart } from '../contexts/CartContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useProducts } from '../contexts/ProductsContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatPrice } from '../utils/currency';
 
 const REVIEWS_STORAGE_KEY = 'user_reviews';
@@ -361,6 +362,7 @@ const DishDetailScreen: React.FC = () => {
   const { cart, addToCart } = useCart();
   const { t } = useTranslation();
   const { isFavorite: checkIsFavorite, addFavorite, removeFavorite } = useFavorites();
+  const { accountType } = useAuth();
   const [quantity, setQuantity] = useState(1);
   const [selectedProtein, setSelectedProtein] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<'portion' | 'bottle' | null>(null);
@@ -594,48 +596,50 @@ const DishDetailScreen: React.FC = () => {
           >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (dish) {
-                  if (isFavorite) {
-                    removeFavorite(dish.id);
-                  } else {
-                    addFavorite({
-                      id: dish.id,
-                      name: dish.name,
-                      description: dish.description,
-                      price: typeof dish.price === 'string' ? dish.price : `$${dish.price.toFixed(2)}`,
-                      image: dish.image,
-                      category: dish.category,
-                      origin: dish.origin,
-                      badges: dish.badges,
-                    });
+          {accountType !== 'restaurant' && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (dish) {
+                    if (isFavorite) {
+                      removeFavorite(dish.id);
+                    } else {
+                      addFavorite({
+                        id: dish.id,
+                        name: dish.name,
+                        description: dish.description,
+                        price: typeof dish.price === 'string' ? dish.price : `$${dish.price.toFixed(2)}`,
+                        image: dish.image,
+                        category: dish.category,
+                        origin: dish.origin,
+                        badges: dish.badges,
+                      });
+                    }
                   }
-                }
-              }}
-              className={`w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center transition-colors ${
-                isFavorite
-                  ? 'bg-red-500/90 text-white'
-                  : 'bg-black/30 text-white hover:bg-black/50'
-              }`}
-            >
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: isFavorite ? "'FILL' 1" : "'FILL' 0" }}>
-                favorite
-              </span>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/product-reviews/${dish?.id}`, { state: { productId: dish?.id, productName: dish?.name } });
-              }}
-              className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition-colors"
-              title={t('dishDetail.viewReviews') || 'Ver opiniones'}
-            >
-              <span className="material-symbols-outlined">reviews</span>
-            </button>
-          </div>
+                }}
+                className={`w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center transition-colors ${
+                  isFavorite
+                    ? 'bg-red-500/90 text-white'
+                    : 'bg-black/30 text-white hover:bg-black/50'
+                }`}
+              >
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: isFavorite ? "'FILL' 1" : "'FILL' 0" }}>
+                  favorite
+                </span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/product-reviews/${dish?.id}`, { state: { productId: dish?.id, productName: dish?.name } });
+                }}
+                className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition-colors"
+                title={t('dishDetail.viewReviews') || 'Ver opiniones'}
+              >
+                <span className="material-symbols-outlined">reviews</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Badges flotantes */}

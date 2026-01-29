@@ -1,13 +1,20 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../config/supabase';
+import { registerRestaurant } from '../services/database';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   accountType: 'restaurant' | 'diner';
-  signUp: (params: { email?: string; phone?: string; password: string }) => Promise<{ error: AuthError | null }>;
+  signUp: (params: { 
+    email?: string; 
+    phone?: string; 
+    password: string;
+    restaurantName?: string;
+    rfc?: string;
+  }) => Promise<{ error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signInWithGoogle: () => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
@@ -24,6 +31,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [accountType, setAccountType] = useState<'restaurant' | 'diner'>('diner');
   // Track users currently being created to avoid race conditions with onAuthStateChange
   const usersBeingCreated = React.useRef<Set<string>>(new Set());
+  // Track emails being registered to mark them before signUp completes
+  const emailsBeingRegistered = React.useRef<Set<string>>(new Set());
 
   // Cargar sesión al iniciar
   useEffect(() => {
@@ -212,42 +221,77 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (!existingUser) {
             // Verificar si el usuario se está creando actualmente (evitar race condition)
             const isBeingCreated = usersBeingCreated.current.has(user.id);
-            console.log(`[AuthContext] User not found in database. Is being created: ${isBeingCreated}`);
+            // También verificar si el email/phone está siendo registrado
+            const isEmailBeingRegistered = user.email ? emailsBeingRegistered.current.has(user.email) : false;
+            const isPhoneBeingRegistered = user.phone ? emailsBeingRegistered.current.has(user.phone) : false;
+            const isBeingRegistered = isBeingCreated || isEmailBeingRegistered || isPhoneBeingRegistered;
             
-            if (isBeingCreated) {
-              console.log(`[AuthContext] User is currently being created, waiting 3 seconds before final check...`);
+            console.log(`[AuthContext] User not found in database. Is being created: ${isBeingCreated}, email being registered: ${isEmailBeingRegistered}, phone being registered: ${isPhoneBeingRegistered}`);
+            
+            if (isBeingRegistered) {
+              console.log(`[AuthContext] User is currently being created, waiting up to 10 seconds for signUp to complete...`);
               // Esperar más tiempo para que signUp termine de crear el usuario
-              await new Promise(resolve => setTimeout(resolve, 3000));
+              // Intentar varias veces con esperas más largas
+              let foundAfterWait = false;
+              for (let waitAttempt = 0; waitAttempt < 5; waitAttempt++) {
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Esperar 2 segundos cada vez
+                
+                // Verificar si el usuario ya existe
+                const { data: finalCheck, error: finalError } = await supabase
+                  .from('users')
+                  .select('id, email, name')
+                  .eq('id', user.id)
+                  .maybeSingle();
+                
+                console.log(`[AuthContext] Wait attempt ${waitAttempt + 1}/5:`, {
+                  found: !!finalCheck,
+                  userId: finalCheck?.id || 'none',
+                  error: finalError ? {
+                    code: finalError.code,
+                    message: finalError.message
+                  } : 'none'
+                });
+                
+                if (finalCheck) {
+                  console.log(`[AuthContext] ✓ User found after waiting! User ID: ${finalCheck.id}`);
+                  existingUser = finalCheck;
+                  foundAfterWait = true;
+                  // Remover de la lista de usuarios siendo creados
+                  usersBeingCreated.current.delete(user.id);
+                  break;
+                }
+              }
               
-              // Verificar una vez más después de esperar
-              const { data: finalCheck, error: finalError } = await supabase
-                .from('users')
-                .select('id, email, name')
-                .eq('id', user.id)
-                .maybeSingle();
-              
-              console.log(`[AuthContext] Final check after waiting:`, {
-                found: !!finalCheck,
-                userId: finalCheck?.id || 'none',
-                error: finalError ? {
-                  code: finalError.code,
-                  message: finalError.message
-                } : 'none'
-              });
-              
-              if (finalCheck) {
-                console.log(`[AuthContext] ✓ User found after waiting! User ID: ${finalCheck.id}`);
-                existingUser = finalCheck;
-                // Remover de la lista de usuarios siendo creados
+              if (!foundAfterWait) {
+                console.error(`[AuthContext] ✗ User still not found after waiting 10 seconds. User ID: ${user.id}`);
+                console.error(`[AuthContext] This might indicate a problem with user creation in signUp`);
+                console.warn(`[AuthContext] However, email is still being registered, so NOT signing out - will wait for signUp to complete`);
+                // NO desloguear si el email todavía está siendo registrado
+                // El signUp puede estar todavía en proceso
+                // Remover de la lista de usuarios siendo creados pero mantener el email en el Set
                 usersBeingCreated.current.delete(user.id);
+                // NO remover del Set de emails siendo registrados todavía
+                // Esto permitirá que onAuthStateChange sepa que debe esperar más
               } else {
-                console.error(`[AuthContext] ✗ User still not found after waiting. User ID: ${user.id}`);
-                // Remover de la lista de usuarios siendo creados
-                usersBeingCreated.current.delete(user.id);
+                // Remover del Set de emails siendo registrados cuando se encuentra el usuario
+                if (user.email) emailsBeingRegistered.current.delete(user.email);
+                if (user.phone) emailsBeingRegistered.current.delete(user.phone);
               }
             }
             
             if (!existingUser) {
+              // Verificar una vez más si el email todavía está siendo registrado
+              const stillBeingRegistered = (user.email && emailsBeingRegistered.current.has(user.email)) || 
+                                          (user.phone && emailsBeingRegistered.current.has(user.phone));
+              
+              if (stillBeingRegistered) {
+                console.warn(`[AuthContext] User not found but email/phone still being registered. NOT signing out - will wait for signUp to complete.`);
+                // NO desloguear - el signUp puede estar todavía en proceso
+                // Simplemente no actualizar el estado y esperar
+                setLoading(false);
+                return;
+              }
+              
               // Si no existe y no se está creando, cerrar sesión y NO actualizar el estado
               console.error(`[AuthContext] User authenticated but not registered in database. Signing out. User ID: ${user.id}, Email: ${user.email}`);
               console.error(`[AuthContext] Final check - existingUser: ${existingUser}, checkError:`, checkError);
@@ -260,6 +304,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           } else {
             // Si encontramos al usuario, remover de la lista de usuarios siendo creados (por si acaso)
             usersBeingCreated.current.delete(user.id);
+            // Remover del Set de emails siendo registrados
+            if (user.email) emailsBeingRegistered.current.delete(user.email);
+            if (user.phone) emailsBeingRegistered.current.delete(user.phone);
           }
           
           // Solo si el usuario existe, actualizar el estado y permitir el acceso
@@ -335,7 +382,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-  const signUp = async ({ email, phone, password }: { email?: string; phone?: string; password: string }): Promise<{ error: AuthError | null }> => {
+  const signUp = async ({ email, phone, password, restaurantName, rfc }: { 
+    email?: string; 
+    phone?: string; 
+    password: string;
+    restaurantName?: string;
+    rfc?: string;
+  }): Promise<{ error: AuthError | null }> => {
     console.log('========================================');
     console.log('[AuthContext] ===== SIGNUP START =====');
     console.log('[AuthContext] signUp called with email:', email || 'none', 'phone:', phone || 'none');
@@ -359,6 +412,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     try {
+      // Marcar el email como siendo registrado ANTES de llamar a signUp
+      // Esto permite que onAuthStateChange sepa que debe esperar más tiempo
+      const identifier = email || phone;
+      if (identifier) {
+        emailsBeingRegistered.current.add(identifier);
+        console.log('[AuthContext] Marked email/phone as being registered:', identifier);
+      }
+      
       console.log('[AuthContext] Calling supabase.auth.signUp...');
       const baseOptions = {
         emailRedirectTo: `${window.location.origin}/home`,
@@ -390,11 +451,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (error) {
         console.error('[AuthContext] signUp error details:', error);
+        // Limpiar el email del Set si hay error
+        if (identifier) {
+          emailsBeingRegistered.current.delete(identifier);
+        }
         return { error };
       }
 
       if (!data.user) {
         console.error('[AuthContext] signUp returned no user!');
+        // Limpiar el email del Set si no hay usuario
+        if (identifier) {
+          emailsBeingRegistered.current.delete(identifier);
+        }
         return { error: { name: 'AuthError', message: 'Error al crear el usuario' } as AuthError };
       }
 
@@ -491,6 +560,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               } else {
                 // Cualquier otro error es crítico - el usuario no se puede registrar sin estar en la BD
                 console.error('[AuthContext] CRITICAL: Error creating user during registration:', insertError);
+                // Limpiar el email del Set
+                if (identifier) {
+                  emailsBeingRegistered.current.delete(identifier);
+                }
+                if (data.user.id) {
+                  usersBeingCreated.current.delete(data.user.id);
+                }
                 // Cerrar sesión porque el registro no se completó correctamente
                 await supabase.auth.signOut();
                 return { 
@@ -558,6 +634,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               
               if (!userCreated) {
                 console.error('[AuthContext] ✗ CRITICAL: User was not found in database after creation. User ID:', data.user.id);
+                // Limpiar el email del Set
+                if (identifier) {
+                  emailsBeingRegistered.current.delete(identifier);
+                }
+                if (data.user.id) {
+                  usersBeingCreated.current.delete(data.user.id);
+                }
                 await supabase.auth.signOut();
                 return { 
                   error: { 
@@ -569,9 +652,78 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               
               console.log('[AuthContext] ===== USER VERIFICATION SUCCESS =====');
               
+              // Si se proporcionó restaurantName, crear el restaurante
+              if (restaurantName && restaurantName.trim() !== '') {
+                console.log('[AuthContext] ===== CREATING RESTAURANT =====');
+                console.log('[AuthContext] Restaurant name:', restaurantName);
+                console.log('[AuthContext] RFC:', rfc || 'none');
+                
+                // Verificar y refrescar la sesión antes de crear el restaurante
+                let sessionForRestaurant = data.session;
+                if (!sessionForRestaurant) {
+                  console.warn('[AuthContext] No session in signUp response. Getting current session...');
+                  const { data: { session: currentSession } } = await supabase.auth.getSession();
+                  sessionForRestaurant = currentSession;
+                }
+                
+                if (!sessionForRestaurant) {
+                  console.warn('[AuthContext] No active session when trying to create restaurant. Waiting 1 second and retrying...');
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  const { data: { session: retrySession } } = await supabase.auth.getSession();
+                  sessionForRestaurant = retrySession;
+                }
+                
+                if (!sessionForRestaurant) {
+                  console.error('[AuthContext] Still no session after retry. Attempting to refresh session...');
+                  // Intentar refrescar la sesión
+                  const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+                  if (refreshError) {
+                    console.error('[AuthContext] Error refreshing session:', refreshError);
+                  } else if (refreshData.session) {
+                    sessionForRestaurant = refreshData.session;
+                    console.log('[AuthContext] Session refreshed successfully');
+                  }
+                }
+                
+                if (!sessionForRestaurant) {
+                  console.error('[AuthContext] Could not establish session. Restaurant creation will be skipped.');
+                  console.warn('[AuthContext] User can create restaurant later from their account.');
+                } else {
+                  console.log('[AuthContext] Session confirmed active. User ID:', sessionForRestaurant.user.id);
+                  console.log('[AuthContext] Access token exists:', !!sessionForRestaurant.access_token);
+                  
+                  try {
+                    const restaurantResult = await registerRestaurant(
+                      data.user.id,
+                      restaurantName.trim(),
+                      rfc?.trim() || undefined
+                    );
+                    
+                    if (restaurantResult.error) {
+                      console.error('[AuthContext] Error creating restaurant:', restaurantResult.error);
+                      // No fallar el registro completo, solo loguear el error
+                      // El usuario puede crear el restaurante más tarde
+                      console.warn('[AuthContext] Restaurant creation failed, but user registration succeeded');
+                      console.warn('[AuthContext] User can create restaurant later from their account settings');
+                    } else {
+                      console.log('[AuthContext] ✓ Restaurant created successfully:', restaurantResult.restaurant?.name);
+                      console.log('[AuthContext] Restaurant ID:', restaurantResult.restaurant?.id);
+                    }
+                  } catch (restaurantError: any) {
+                    console.error('[AuthContext] Exception creating restaurant:', restaurantError);
+                    // No fallar el registro completo
+                    console.warn('[AuthContext] Restaurant creation exception, but user registration succeeded');
+                    console.warn('[AuthContext] User can create restaurant later from their account settings');
+                  }
+                }
+              }
+              
               // Remover el usuario de la lista de usuarios siendo creados
               usersBeingCreated.current.delete(data.user.id);
               console.log('[AuthContext] Removed user from being created list:', data.user.id);
+              // Remover del Set de emails siendo registrados
+              if (data.user.email) emailsBeingRegistered.current.delete(data.user.email);
+              if (data.user.phone) emailsBeingRegistered.current.delete(data.user.phone);
             }
           }
           // Si ya existe, el usuario ya está registrado correctamente
@@ -580,9 +732,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             usersBeingCreated.current.delete(data.user.id);
             console.log('[AuthContext] Removed user from being created list (already existed):', data.user.id);
           }
+          // Remover del Set de emails siendo registrados
+          if (data.user.email) emailsBeingRegistered.current.delete(data.user.email);
+          if (data.user.phone) emailsBeingRegistered.current.delete(data.user.phone);
         } catch (dbError: any) {
           // Error crítico - el registro no se completó
           console.error('[AuthContext] Error during user registration:', dbError);
+          // Limpiar el email del Set
+          if (identifier) {
+            emailsBeingRegistered.current.delete(identifier);
+          }
+          if (data.user.id) {
+            usersBeingCreated.current.delete(data.user.id);
+          }
           // Cerrar sesión porque el registro no se completó correctamente
           await supabase.auth.signOut();
           return { 

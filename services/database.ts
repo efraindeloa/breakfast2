@@ -118,6 +118,12 @@ export interface Review {
   updated_at?: string;
 }
 
+export interface ProductComplement {
+  id: string;
+  name: string;
+  price: number;
+}
+
 export interface Product {
   id: number;
   restaurant_id: string;
@@ -132,6 +138,9 @@ export interface Product {
   is_active: boolean;
   is_featured?: boolean;
   sort_order?: number;
+  complements?: ProductComplement[]; // Array de complementos disponibles
+  allow_custom_complements?: boolean; // Permitir complementos personalizados
+  allow_special_instructions?: boolean; // Permitir instrucciones especiales
   created_at: string;
   updated_at: string;
 }
@@ -145,6 +154,64 @@ const generateUUID = (): string => {
     const v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
+};
+
+/**
+ * Genera un slug a partir de un nombre de restaurante
+ */
+export const generateRestaurantSlug = (name: string): string => {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+    .replace(/[^a-z0-9\s-]/g, '') // Eliminar caracteres especiales
+    .trim()
+    .replace(/\s+/g, '-') // Reemplazar espacios con guiones
+    .replace(/-+/g, '-') // Reemplazar múltiples guiones con uno solo
+    .substring(0, 100); // Limitar longitud
+};
+
+/**
+ * Valida un RFC mexicano
+ * Formato: 4 letras + 6 dígitos + 3 caracteres alfanuméricos (homoclave) = 13 caracteres
+ * O formato persona física: 4 letras + 6 dígitos + 2 caracteres alfanuméricos = 12 caracteres
+ */
+export const validateRFC = (rfc: string): boolean => {
+  if (!rfc || rfc.trim() === '') return true; // RFC es opcional
+  
+  const cleanRFC = rfc.trim().toUpperCase();
+  
+  // RFC debe tener 12 o 13 caracteres
+  if (cleanRFC.length !== 12 && cleanRFC.length !== 13) {
+    return false;
+  }
+  
+  // Formato: 4 letras + 6 dígitos + 2 o 3 caracteres alfanuméricos
+  const rfcRegex = /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{2,3}$/;
+  
+  if (!rfcRegex.test(cleanRFC)) {
+    return false;
+  }
+  
+  // Validar que los primeros 4 caracteres sean letras
+  const firstFour = cleanRFC.substring(0, 4);
+  if (!/^[A-ZÑ&]+$/.test(firstFour)) {
+    return false;
+  }
+  
+  // Validar que los siguientes 6 caracteres sean dígitos (fecha)
+  const datePart = cleanRFC.substring(4, 10);
+  if (!/^\d{6}$/.test(datePart)) {
+    return false;
+  }
+  
+  // Validar que los últimos 2 o 3 caracteres sean alfanuméricos (homoclave)
+  const homoclave = cleanRFC.substring(10);
+  if (!/^[A-Z0-9]{2,3}$/.test(homoclave)) {
+    return false;
+  }
+  
+  return true;
 };
 
 // Función para validar si un string es un UUID válido
@@ -1866,6 +1933,324 @@ export const getProductById = async (productId: number, restaurantId?: string, l
   }
 };
 
+/**
+ * Crea un nuevo producto en Supabase
+ */
+export const createProduct = async (product: {
+  restaurant_id: string;
+  name: string;
+  description?: string;
+  price: number;
+  image_url?: string;
+  badges?: string[];
+  category: string;
+  origin?: string;
+  is_active?: boolean;
+  is_featured?: boolean;
+  sort_order?: number;
+  complements?: ProductComplement[];
+  allow_custom_complements?: boolean;
+  allow_special_instructions?: boolean;
+}): Promise<Product | null> => {
+  if (!isSupabaseConfigured()) {
+    console.error('Supabase no está configurado. No se puede crear el producto.');
+    return null;
+  }
+
+  try {
+    // Validar que el precio sea un número válido
+    const priceValue = typeof product.price === 'number' ? product.price : parseFloat(product.price.toString());
+    if (isNaN(priceValue) || priceValue < 0) {
+      throw new Error(`Precio inválido: ${product.price}`);
+    }
+
+    const insertData: any = {
+      restaurant_id: product.restaurant_id,
+      name: product.name,
+      description: product.description || '',
+      price: priceValue,
+      image_url: product.image_url || null,
+      badges: product.badges || [],
+      category: product.category,
+      origin: product.origin || '',
+      is_active: product.is_active !== undefined ? product.is_active : true,
+      is_featured: product.is_featured || false,
+      sort_order: product.sort_order || 0,
+      complements: product.complements || [],
+      allow_custom_complements: product.allow_custom_complements || false,
+      allow_special_instructions: product.allow_special_instructions !== undefined ? product.allow_special_instructions : true,
+    };
+
+    console.log('[createProduct] Inserting product:', insertData);
+
+    const { data, error } = await supabase
+      .from('products')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[createProduct] Supabase error:', error);
+      throw error;
+    }
+    
+    if (!data) {
+      console.error('[createProduct] No data returned from insert');
+      return null;
+    }
+    
+    console.log('[createProduct] Product created successfully:', data);
+    
+    return {
+      ...data,
+      image: data.image_url ? getProductImageUrl(data.image_url) : '',
+    };
+  } catch (error: any) {
+    console.error('[createProduct] Error creating product:', error);
+    console.error('[createProduct] Error details:', {
+      message: error?.message,
+      code: error?.code,
+      details: error?.details,
+      hint: error?.hint,
+    });
+    return null;
+  }
+};
+
+/**
+ * Actualiza un producto existente en Supabase
+ */
+export const updateProduct = async (
+  productId: number,
+  updates: {
+    name?: string;
+    description?: string;
+    price?: number;
+    image_url?: string;
+    badges?: string[];
+    category?: string;
+    origin?: string;
+    is_active?: boolean;
+    is_featured?: boolean;
+    sort_order?: number;
+    complements?: ProductComplement[];
+    allow_custom_complements?: boolean;
+    allow_special_instructions?: boolean;
+  }
+): Promise<Product | null> => {
+  if (!isSupabaseConfigured()) {
+    console.error('Supabase no está configurado. No se puede actualizar el producto.');
+    return null;
+  }
+
+  try {
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (updates.name !== undefined) updateData.name = updates.name;
+    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.price !== undefined) updateData.price = updates.price.toString();
+    if (updates.image_url !== undefined) updateData.image_url = updates.image_url || null;
+    if (updates.badges !== undefined) updateData.badges = updates.badges;
+    if (updates.category !== undefined) updateData.category = updates.category;
+    if (updates.origin !== undefined) updateData.origin = updates.origin;
+    if (updates.is_active !== undefined) updateData.is_active = updates.is_active;
+    if (updates.is_featured !== undefined) updateData.is_featured = updates.is_featured;
+    if (updates.sort_order !== undefined) updateData.sort_order = updates.sort_order;
+    // Siempre enviar los complementos, incluso si es un array vacío
+    if (updates.complements !== undefined) updateData.complements = updates.complements;
+    if (updates.allow_custom_complements !== undefined) updateData.allow_custom_complements = updates.allow_custom_complements;
+    if (updates.allow_special_instructions !== undefined) updateData.allow_special_instructions = updates.allow_special_instructions;
+
+    const { data, error } = await supabase
+      .from('products')
+      .update(updateData)
+      .eq('id', productId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    
+    if (!data) return null;
+    
+    return {
+      ...data,
+      image: data.image_url ? getProductImageUrl(data.image_url) : '',
+    };
+  } catch (error) {
+    console.error('Error updating product:', error);
+    return null;
+  }
+};
+
+/**
+ * Elimina un producto (soft delete: marca is_active como false)
+ */
+export const deleteProduct = async (productId: number): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    console.error('Supabase no está configurado. No se puede eliminar el producto.');
+    return false;
+  }
+
+  try {
+    const { error } = await supabase
+      .from('products')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('id', productId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    return false;
+  }
+};
+
+/**
+ * Obtiene el restaurant_id del usuario actual (si es un restaurante)
+ */
+export const getCurrentUserRestaurantId = async (): Promise<string | null> => {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data: staffRow, error } = await supabase
+      .from('restaurant_staff')
+      .select('restaurant_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return staffRow?.restaurant_id || null;
+  } catch (error) {
+    console.error('Error getting current user restaurant ID:', error);
+    return null;
+  }
+};
+
+/**
+ * Registra un restaurante completo y asocia al usuario como owner
+ * Esta función debe ser llamada después de que el usuario se haya registrado en auth
+ */
+export const registerRestaurant = async (
+  userId: string,
+  restaurantName: string,
+  rfc?: string
+): Promise<{ restaurant: Restaurant | null; staff: RestaurantStaff | null; error: string | null }> => {
+  if (!isSupabaseConfigured()) {
+    return { restaurant: null, staff: null, error: 'Supabase no está configurado' };
+  }
+
+  try {
+    // Verificar que el usuario no tenga ya un restaurante asociado
+    const existingStaff = await supabase
+      .from('restaurant_staff')
+      .select('restaurant_id')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (existingStaff?.restaurant_id) {
+      return { 
+        restaurant: null, 
+        staff: null, 
+        error: 'El usuario ya tiene un restaurante asociado' 
+      };
+    }
+
+    // Generar slug único
+    let slug = generateRestaurantSlug(restaurantName);
+    let slugCounter = 1;
+    let finalSlug = slug;
+
+    // Verificar que el slug sea único
+    while (true) {
+      const { data: existing } = await supabase
+        .from('restaurants')
+        .select('id')
+        .eq('slug', finalSlug)
+        .maybeSingle();
+
+      if (!existing) break;
+      finalSlug = `${slug}-${slugCounter}`;
+      slugCounter++;
+    }
+
+    // Crear el restaurante
+    const { data: restaurant, error: restaurantError } = await supabase
+      .from('restaurants')
+      .insert({
+        name: restaurantName.trim(),
+        slug: finalSlug,
+        city: 'Ciudad', // Valores por defecto, se pueden actualizar después
+        country: 'México',
+        is_active: true,
+        is_verified: false,
+        rating: 0.0,
+        total_reviews: 0,
+        timezone: 'America/Mexico_City',
+      })
+      .select()
+      .single();
+
+    if (restaurantError) throw restaurantError;
+    if (!restaurant) {
+      return { restaurant: null, staff: null, error: 'No se pudo crear el restaurante' };
+    }
+
+    // Si se proporcionó RFC, actualizar el restaurante con datos fiscales
+    if (rfc && rfc.trim() !== '') {
+      // Aquí se podría actualizar una tabla de datos fiscales si existe
+      // Por ahora, solo logueamos el RFC
+      console.log(`[registerRestaurant] RFC proporcionado: ${rfc}`);
+    }
+
+    // Asociar al usuario como owner del restaurante
+    const { data: staff, error: staffError } = await supabase
+      .from('restaurant_staff')
+      .insert({
+        restaurant_id: restaurant.id,
+        user_id: userId,
+        role: 'owner',
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (staffError) {
+      // Si falla la asociación, eliminar el restaurante creado
+      await supabase.from('restaurants').delete().eq('id', restaurant.id);
+      throw staffError;
+    }
+
+    console.log(`[registerRestaurant] Restaurante creado: ${restaurant.name} (ID: ${restaurant.id})`);
+    console.log(`[registerRestaurant] Usuario asociado como owner: ${userId}`);
+
+    return { 
+      restaurant: {
+        ...restaurant,
+        image: restaurant.logo_url ? getRestaurantImageUrl(restaurant.logo_url, 'logo') : undefined,
+      }, 
+      staff, 
+      error: null 
+    };
+  } catch (error: any) {
+    console.error('[registerRestaurant] Error:', error);
+    return { 
+      restaurant: null, 
+      staff: null, 
+      error: error?.message || 'Error al registrar el restaurante' 
+    };
+  }
+};
+
 // ==================== RESTAURANTES ====================
 
 export interface Restaurant {
@@ -3438,5 +3823,145 @@ export const getRestaurantFullProfile = async (restaurantId: string): Promise<{
   } catch (error) {
     console.error('[getRestaurantFullProfile] Error fetching restaurant full profile:', error);
     return null;
+  }
+};
+
+// ==================== RESTAURANT MENU SECTIONS ====================
+
+export interface RestaurantMenuSection {
+  id: string;
+  restaurant_id: string;
+  section_type: 'chef_suggestions' | 'highlights' | 'menu_items';
+  category: string;
+  product_ids: number[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type PicksByCategory = Record<string, number[]>;
+
+/**
+ * Obtiene todas las configuraciones de secciones del menú para un restaurante
+ */
+export const getRestaurantMenuSections = async (restaurantId: string): Promise<PicksByCategory[]> => {
+  if (!isSupabaseConfigured()) {
+    return [{}, {}, {}]; // Retornar objetos vacíos para chef_suggestions, highlights, menu_items
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_menu_sections')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .order('category', { ascending: true });
+
+    if (error) throw error;
+
+    // Convertir los datos a formato PicksByCategory
+    const chefSuggestions: PicksByCategory = {};
+    const highlights: PicksByCategory = {};
+    const menuItems: PicksByCategory = {};
+
+    (data || []).forEach((section: RestaurantMenuSection) => {
+      const category = section.category;
+      const productIds = section.product_ids || [];
+
+      if (section.section_type === 'chef_suggestions') {
+        chefSuggestions[category] = productIds;
+      } else if (section.section_type === 'highlights') {
+        highlights[category] = productIds;
+      } else if (section.section_type === 'menu_items') {
+        menuItems[category] = productIds;
+      }
+    });
+
+    return [chefSuggestions, highlights, menuItems];
+  } catch (error) {
+    console.error('[getRestaurantMenuSections] Error fetching menu sections:', error);
+    return [{}, {}, {}];
+  }
+};
+
+/**
+ * Guarda las configuraciones de secciones del menú para un restaurante
+ */
+export const saveRestaurantMenuSections = async (
+  restaurantId: string,
+  chefSuggestions: PicksByCategory,
+  highlights: PicksByCategory,
+  menuItems: PicksByCategory
+): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    console.warn('[saveRestaurantMenuSections] Supabase no está configurado');
+    return false;
+  }
+
+  try {
+    // Obtener todas las categorías únicas
+    const allCategories = new Set<string>();
+    Object.keys(chefSuggestions).forEach(cat => allCategories.add(cat));
+    Object.keys(highlights).forEach(cat => allCategories.add(cat));
+    Object.keys(menuItems).forEach(cat => allCategories.add(cat));
+
+    // Preparar todos los registros para upsert
+    const records: Omit<RestaurantMenuSection, 'id' | 'created_at' | 'updated_at'>[] = [];
+
+    allCategories.forEach(category => {
+      // Chef suggestions
+      if (chefSuggestions[category] && chefSuggestions[category].length > 0) {
+        records.push({
+          restaurant_id: restaurantId,
+          section_type: 'chef_suggestions',
+          category,
+          product_ids: chefSuggestions[category],
+        });
+      }
+
+      // Highlights
+      if (highlights[category] && highlights[category].length > 0) {
+        records.push({
+          restaurant_id: restaurantId,
+          section_type: 'highlights',
+          category,
+          product_ids: highlights[category],
+        });
+      }
+
+      // Menu items
+      if (menuItems[category] && menuItems[category].length > 0) {
+        records.push({
+          restaurant_id: restaurantId,
+          section_type: 'menu_items',
+          category,
+          product_ids: menuItems[category],
+        });
+      }
+    });
+
+    // Eliminar todas las configuraciones existentes para este restaurante
+    const { error: deleteError } = await supabase
+      .from('restaurant_menu_sections')
+      .delete()
+      .eq('restaurant_id', restaurantId);
+
+    if (deleteError) {
+      console.warn('[saveRestaurantMenuSections] Error deleting existing sections:', deleteError);
+      // Continuar de todas formas, el upsert puede manejar duplicados
+    }
+
+    // Insertar las nuevas configuraciones
+    if (records.length > 0) {
+      const { error: insertError } = await supabase
+        .from('restaurant_menu_sections')
+        .insert(records);
+
+      if (insertError) throw insertError;
+    }
+
+    console.log(`[saveRestaurantMenuSections] Saved ${records.length} menu section configurations for restaurant ${restaurantId}`);
+    return true;
+  } catch (error) {
+    console.error('[saveRestaurantMenuSections] Error saving menu sections:', error);
+    return false;
   }
 };

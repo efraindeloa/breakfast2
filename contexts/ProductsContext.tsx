@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getProducts, getProductById, Product } from '../services/database';
+import { getProducts, getProductById, Product, getCurrentUserRestaurantId } from '../services/database';
 import { allDishes } from '../screens/DishDetailScreen';
 import { useRestaurant } from './RestaurantContext';
 import { useLanguage } from './LanguageContext';
+import { useAuth } from './AuthContext';
 
 interface ProductsContextType {
   products: Product[];
@@ -20,6 +21,7 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [isLoading, setIsLoading] = useState(true);
   const { selectedRestaurant } = useRestaurant();
   const { language } = useLanguage(); // Escuchar cambios de idioma
+  const { accountType } = useAuth(); // Para saber si es restaurante o comensal
 
   // Función para convertir allDishes a formato Product
   const convertDishesToProducts = (): Product[] => {
@@ -44,21 +46,55 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const loadProducts = async () => {
     try {
       setIsLoading(true);
-      const supabaseProducts = await getProducts({ isActive: true });
+      
+      // Si el usuario es un restaurante, cargar solo sus productos
+      // Si es un comensal, cargar todos los productos activos
+      let restaurantId: string | undefined = undefined;
+      if (accountType === 'restaurant') {
+        restaurantId = await getCurrentUserRestaurantId() || undefined;
+        if (restaurantId) {
+          console.log('[ProductsContext] Loading products for restaurant:', restaurantId);
+        }
+      }
+      
+      const supabaseProducts = await getProducts({ 
+        isActive: true,
+        restaurantId: restaurantId,
+      });
+      
+      // Debug: verificar qué productos se están cargando
+      console.log('[ProductsContext] Products loaded:', supabaseProducts.length, accountType === 'restaurant' ? `(for restaurant ${restaurantId})` : '(all restaurants)');
+      if (supabaseProducts.length > 0) {
+        console.log('[ProductsContext] First product sample:', {
+          id: supabaseProducts[0].id,
+          name: supabaseProducts[0].name,
+          image: supabaseProducts[0].image,
+          image_url: supabaseProducts[0].image_url,
+        });
+      }
       
       if (supabaseProducts.length > 0) {
         // Si hay productos en Supabase, usarlos
         setProducts(supabaseProducts);
       } else {
         // Si no hay productos en Supabase, usar los hardcodeados como fallback
-        const fallbackProducts = convertDishesToProducts();
-        setProducts(fallbackProducts);
+        // Solo para comensales, los restaurantes no deberían ver productos hardcodeados
+        if (accountType === 'diner') {
+          const fallbackProducts = convertDishesToProducts();
+          setProducts(fallbackProducts);
+        } else {
+          setProducts([]);
+        }
       }
     } catch (error) {
-      console.error('Error loading products:', error);
-      // En caso de error, usar fallback
-      const fallbackProducts = convertDishesToProducts();
-      setProducts(fallbackProducts);
+      console.error('[ProductsContext] Error loading products:', error);
+      // En caso de error, usar fallback solo para comensales
+      if (accountType === 'diner') {
+        const fallbackProducts = convertDishesToProducts();
+        setProducts(fallbackProducts);
+      } else {
+        setProducts([]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -66,7 +102,7 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   useEffect(() => {
     loadProducts();
-  }, [language, selectedRestaurant]); // Recargar cuando cambie el idioma o el restaurante
+  }, [language, selectedRestaurant, accountType]); // Recargar cuando cambie el idioma, el restaurante o el tipo de cuenta
 
   const getProduct = (id: number): Product | undefined => {
     return products.find(p => p.id === id);

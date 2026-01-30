@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import TopNavbar from '../components/TopNavbar';
-
-type FilterType = 'breakfast' | 'seasonal' | 'vip';
 
 interface Promotion {
   id: string;
@@ -31,7 +29,6 @@ const PromotionsScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { addFavoritePromotion, removeFavoritePromotion, isPromotionFavorite } = useFavorites();
-  const [selectedFilter, setSelectedFilter] = useState<FilterType>('breakfast');
 
   // Promociones principales (carousel)
   const mainPromotions: Promotion[] = [
@@ -118,28 +115,6 @@ const PromotionsScreen: React.FC = () => {
     buttonText: t('promotions.claimNow')
   };
 
-  const filters = [
-    { id: 'breakfast' as FilterType, label: t('promotions.breakfast'), icon: 'wb_sunny' },
-    { id: 'seasonal' as FilterType, label: t('promotions.seasonal'), icon: 'calendar_today' },
-    { id: 'vip' as FilterType, label: t('promotions.vipExclusive'), icon: 'stars' }
-  ];
-
-  const filteredMainPromotions = mainPromotions.filter(p => {
-    if (selectedFilter === 'breakfast') return p.category === 'breakfast';
-    if (selectedFilter === 'seasonal') return p.category === 'seasonal';
-    if (selectedFilter === 'vip') return p.category === 'vip';
-    return true;
-  });
-
-  const filteredSeasonalPromotions = seasonalPromotions.filter(p => {
-    if (selectedFilter === 'breakfast') {
-      // Cuando el filtro es breakfast, mostrar todas las promociones de temporada
-      return true;
-    }
-    if (selectedFilter === 'seasonal') return p.category === 'seasonal';
-    if (selectedFilter === 'vip') return p.category === 'vip';
-    return true;
-  });
 
   const handleClaimAIGift = () => {
     // TODO: Implementar lógica para reclamar el regalo de IA
@@ -155,32 +130,10 @@ const PromotionsScreen: React.FC = () => {
         showAvatar={true}
       />
 
-      {/* Chips / Filters */}
-      <div className="flex gap-3 p-4 flex-wrap overflow-x-auto whitespace-nowrap scrollbar-hide [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {filters.map((filter) => (
-          <button
-            key={filter.id}
-            onClick={() => setSelectedFilter(filter.id)}
-            className={`flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full px-5 shadow-sm transition-colors ${
-              selectedFilter === filter.id
-                ? 'bg-primary text-white'
-                : 'bg-white dark:bg-[#32281d] border border-gray-100 dark:border-none text-[#181411] dark:text-gray-200'
-            }`}
-          >
-            <span className={`material-symbols-outlined text-[18px] ${selectedFilter === filter.id ? 'text-white' : 'text-primary'}`}>
-              {filter.icon}
-            </span>
-            <p className={`text-sm ${selectedFilter === filter.id ? 'font-semibold' : 'font-medium'}`}>
-              {filter.label}
-            </p>
-          </button>
-        ))}
-      </div>
-
       {/* Carousel: Main Offers */}
       <div className="flex overflow-x-auto scroll-smooth [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex items-stretch p-4 gap-4">
-          {filteredMainPromotions.map((promotion) => {
+          {mainPromotions.map((promotion) => {
             const isFavorite = isPromotionFavorite(promotion.id);
             return (
               <button
@@ -281,7 +234,7 @@ const PromotionsScreen: React.FC = () => {
 
       {/* Simple Grid for more items */}
       <div className="px-4 grid grid-cols-2 gap-4 pb-24">
-        {filteredSeasonalPromotions.map((promotion) => {
+        {seasonalPromotions.map((promotion) => {
           const isFavorite = isPromotionFavorite(promotion.id);
           return (
             <button

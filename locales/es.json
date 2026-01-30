@@ -2,6 +2,7 @@
   "common": {
     "welcome": "Bienvenido",
     "save": "Guardar",
+    "saving": "Guardando...",
     "saved": "Guardado",
     "cancel": "Cancelar",
     "confirm": "Confirmar",
@@ -106,6 +107,7 @@
     "noDishesFound": "No se encontraron platos con los filtros aplicados",
     "noDishesInCategory": "No hay platos disponibles en esta categoría",
     "clearFilters": "Limpiar filtros",
+    "searchResults": "Resultados de búsqueda",
     "filtersLabel": "Filtros",
     "proteinOrigin": "Origen de la Proteína",
     "clear": "Limpiar",
@@ -755,7 +757,7 @@
     "fromAir": "Aire",
     "vegetarian": "Vegetariano",
     "inCart": "en carrito",
-    "addProtein": "Agrega tu proteína",
+    "addProtein": "Complementos",
     "optional": "Opcional",
     "specialInstructions": "Instrucciones especiales",
     "specialInstructionsPlaceholder": "Ej. Sin cebolla, salsa aparte, bien cocido...",
@@ -1330,6 +1332,40 @@
         "friday": "Viernes",
         "saturday": "Sábado",
         "sunday": "Domingo"
+      }
+    },
+    "promotions": {
+      "addPromotion": "Agregar Promoción",
+      "editPromotion": "Editar Promoción",
+      "newPromotion": "Nueva Promoción",
+      "title": "Título",
+      "titlePlaceholder": "Ej: 2x1 en Cappuccinos",
+      "description": "Descripción",
+      "descriptionPlaceholder": "Descripción de la promoción",
+      "category": "Categoría",
+      "discountType": "Tipo de Descuento",
+      "percentage": "Porcentaje",
+      "fixed": "Cantidad Fija",
+      "combo": "Combo",
+      "discountValue": "Valor del Descuento (%)",
+      "originalPrice": "Precio Original",
+      "finalPrice": "Precio Final",
+      "validFrom": "Válido Desde",
+      "validUntil": "Válido Hasta",
+      "image": "Imagen",
+      "badges": "Etiquetas (Opcional)",
+      "badgePlaceholder": "Ej: Desayuno, Temporada, VIP",
+      "featured": "Promoción Destacada",
+      "confirmDelete": "¿Estás seguro de que deseas eliminar esta promoción?",
+      "errors": {
+        "titleRequired": "El título es requerido",
+        "saveFailed": "Error al guardar la promoción",
+        "deleteFailed": "Error al eliminar la promoción"
+      },
+      "success": {
+        "created": "Promoción creada correctamente",
+        "updated": "Promoción actualizada correctamente",
+        "deleted": "Promoción eliminada correctamente"
       }
     }
   }

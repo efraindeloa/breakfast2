@@ -24,7 +24,7 @@
 }
 
 .dotted-border {
-  border: 2px dashed #f48c2555;
+  border: 2px dashed #EB994755;
   border-radius: 24px;
 }
 
@@ -76,12 +76,12 @@
 }
 
 .breakfast-gradient {
-  background: radial-gradient(circle at top right, rgba(244, 140, 37, 0.15) 0%, transparent 60%),
+  background: radial-gradient(circle at top right, rgba(235, 153, 71, 0.15) 0%, transparent 60%),
               radial-gradient(circle at bottom left, rgba(255, 214, 0, 0.1) 0%, transparent 40%);
 }
 
 .toggle-checkbox:checked + .toggle-label {
-  background-color: #f48c25;
+  background-color: #EB9947;
 }
 
 .toggle-checkbox:checked + .toggle-label .toggle-dot {

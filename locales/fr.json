@@ -2,6 +2,7 @@
   "common": {
     "welcome": "Bienvenue",
     "save": "Enregistrer",
+    "saving": "Enregistrement...",
     "saved": "Enregistré",
     "cancel": "Annuler",
     "confirm": "Confirmer",
@@ -105,6 +106,7 @@
     "noDishesFound": "Aucun plat trouvé avec les filtres appliqués",
     "noDishesInCategory": "Aucun plat disponible dans cette catégorie",
     "clearFilters": "Effacer les filtres",
+    "searchResults": "Résultats de recherche",
     "filtersLabel": "Filtres",
     "proteinOrigin": "Origine de la Protéine",
     "clear": "Effacer",
@@ -774,7 +776,7 @@
     "fromAir": "Air",
     "vegetarian": "Végétarien",
     "inCart": "dans le panier",
-    "addProtein": "Ajoutez votre protéine",
+    "addProtein": "Compléments",
     "optional": "Optionnel",
     "specialInstructions": "Instructions spéciales",
     "specialInstructionsPlaceholder": "Ex. Sans oignon, sauce à part, bien cuit...",
@@ -1319,6 +1321,40 @@
         "friday": "Vendredi",
         "saturday": "Samedi",
         "sunday": "Dimanche"
+      }
+    },
+    "promotions": {
+      "addPromotion": "Ajouter une Promotion",
+      "editPromotion": "Modifier la Promotion",
+      "newPromotion": "Nouvelle Promotion",
+      "title": "Titre",
+      "titlePlaceholder": "Ex. : 2x1 sur Cappuccinos",
+      "description": "Description",
+      "descriptionPlaceholder": "Description de la promotion",
+      "category": "Catégorie",
+      "discountType": "Type de Réduction",
+      "percentage": "Pourcentage",
+      "fixed": "Montant Fixe",
+      "combo": "Combo",
+      "discountValue": "Valeur de la Réduction (%)",
+      "originalPrice": "Prix Original",
+      "finalPrice": "Prix Final",
+      "validFrom": "Valide À Partir De",
+      "validUntil": "Valide Jusqu'à",
+      "image": "Image",
+      "badges": "Étiquettes (Optionnel)",
+      "badgePlaceholder": "Ex. : Petit-déjeuner, Saisonnier, VIP",
+      "featured": "Promotion en Vedette",
+      "confirmDelete": "Êtes-vous sûr de vouloir supprimer cette promotion ?",
+      "errors": {
+        "titleRequired": "Le titre est requis",
+        "saveFailed": "Erreur lors de l'enregistrement de la promotion",
+        "deleteFailed": "Erreur lors de la suppression de la promotion"
+      },
+      "success": {
+        "created": "Promotion créée avec succès",
+        "updated": "Promotion mise à jour avec succès",
+        "deleted": "Promotion supprimée avec succès"
       }
     }
   }

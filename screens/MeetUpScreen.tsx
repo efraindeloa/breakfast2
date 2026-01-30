@@ -157,7 +157,7 @@ const MeetUpScreen: React.FC = () => {
     const meetupIcon = L.divIcon({
       className: 'custom-meetup-marker',
       html: `
-        <div style="width: 56px; height: 56px; border-radius: 50%; background: #f48c25; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); color: white; font-size: 28px;">
+        <div style="width: 56px; height: 56px; border-radius: 50%; background: #EB9947; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); color: white; font-size: 28px;">
           🍽️
         </div>
       `,

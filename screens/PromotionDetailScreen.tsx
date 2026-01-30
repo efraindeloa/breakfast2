@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useCart } from '../contexts/CartContext';
 import { useFavorites } from '../contexts/FavoritesContext';
+import { getPromotionById, type Promotion } from '../services/database';
+import { getImageUrl } from '../services/database';
 
 interface PromotionDetail {
   id: string;
@@ -33,39 +35,47 @@ const PromotionDetailScreen: React.FC = () => {
   const { t } = useTranslation();
   const { addToCart } = useCart();
   const { addFavoritePromotion, removeFavoritePromotion, isPromotionFavorite } = useFavorites();
-  const [timeRemaining, setTimeRemaining] = useState(2712); // 45 minutos y 12 segundos en segundos
+  const [promotionData, setPromotionData] = useState<Promotion | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [timeRemaining, setTimeRemaining] = useState(0);
 
-  // Datos de ejemplo - en producción esto vendría de una API o contexto
-  const promotion: PromotionDetail = {
-    id: id || '1',
-    title: 'Combo de Temporada',
-    subtitle: 'Desayuno Completo + Café Americano Grande',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAPk8W1qWt9rmnBnMMPleJ0Vei-6cL4RyFmBsbpQmvYY2qokykJB8OwnD4jsCHtdoH7995WbQJPoPcgHOIYrGGpFSi52EA22IWUHKSJTFRt04q2-4G03w7CNQhgtrkTcHgLe9FfIu7eBUQPmRXjRgczjVY9qTL7CpB6W1Bw9K6xOmx3Ac-TPQ5WCKmc5mJ946V5hpQroEcdXU6v-G7P5URUKtbvTM3_3BY5vHM4yrkqrtTuv0r44_VB61LdgosQcZT5OPgPyPkHZbmC',
-    badge: {
-      text: 'MODO DESAYUNO',
-      icon: 'wb_sunny'
-    },
-    originalPrice: 20.00,
-    currentPrice: 15.00,
-    savings: 5.00,
-    discountPercent: 25,
-    flashOffer: true,
-    timeRemaining: 2712,
-    conditions: {
-      schedule: '7:00 AM - 11:00 AM',
-      days: 'Lunes a Viernes'
-    },
-    includes: [
-      'Dos huevos al gusto (revueltos o estrellados)',
-      'Porción de frijoles refritos y plátanos fritos',
-      'Café americano de especialidad (12oz)',
-      'Pan tostado artesanal (2 rodajas)'
-    ],
-    category: 'breakfast'
-  };
-
-  // Contador regresivo
+  // Obtener promoción desde la base de datos
   useEffect(() => {
+    const loadPromotion = async () => {
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const promo = await getPromotionById(id);
+        if (promo) {
+          setPromotionData(promo);
+          
+          // Calcular tiempo restante si flash_counter está activado
+          if (promo.flash_counter) {
+            const now = new Date().getTime();
+            const validUntil = new Date(promo.valid_until).getTime();
+            const remaining = Math.max(0, Math.floor((validUntil - now) / 1000));
+            setTimeRemaining(remaining);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading promotion:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPromotion();
+  }, [id]);
+
+  // Contador regresivo (solo si flash_counter está activado)
+  useEffect(() => {
+    if (!promotionData?.flash_counter || timeRemaining <= 0) {
+      return;
+    }
+
     const interval = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 0) {
@@ -77,7 +87,43 @@ const PromotionDetailScreen: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [promotionData?.flash_counter, timeRemaining]);
+
+  // Convertir datos de BD al formato esperado por el componente
+  const promotion: PromotionDetail | null = promotionData ? {
+    id: promotionData.id,
+    title: promotionData.title,
+    subtitle: promotionData.description || '',
+    image: promotionData.image_url ? getImageUrl('promotion-images', promotionData.image_url) : '',
+    badge: {
+      text: promotionData.badges && promotionData.badges.length > 0 
+        ? promotionData.badges[0].toUpperCase()
+        : promotionData.category?.toUpperCase() || 'PROMOCIÓN',
+      icon: promotionData.applicable_hours ? 'wb_sunny' : 'local_offer'
+    },
+    originalPrice: promotionData.original_price || 0,
+    currentPrice: promotionData.final_price || promotionData.original_price || 0,
+    savings: (promotionData.original_price || 0) - (promotionData.final_price || promotionData.original_price || 0),
+    discountPercent: promotionData.discount_type === 'percentage' && promotionData.discount_value
+      ? promotionData.discount_value
+      : promotionData.original_price && promotionData.final_price
+        ? Math.round(((promotionData.original_price - promotionData.final_price) / promotionData.original_price) * 100)
+        : 0,
+    flashOffer: promotionData.flash_counter || false,
+    timeRemaining: timeRemaining,
+    conditions: {
+      schedule: promotionData.applicable_hours
+        ? `${promotionData.applicable_hours.start} - ${promotionData.applicable_hours.end}`
+        : 'Todo el día',
+      days: promotionData.applicable_days && promotionData.applicable_days.length > 0
+        ? promotionData.applicable_days.join(', ')
+        : 'Todos los días'
+    },
+    includes: Array.isArray(promotionData.included_items) 
+      ? promotionData.included_items 
+      : [],
+    category: promotionData.category || 'general'
+  } : null;
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -90,7 +136,27 @@ const PromotionDetailScreen: React.FC = () => {
     };
   };
 
+  // Verificar si la promoción existe antes de continuar
+  if (!promotion) {
+    return (
+      <div className="relative w-full max-w-[430px] bg-background-light dark:bg-background-dark min-h-screen flex items-center justify-center mx-auto">
+        <div className="text-center px-4">
+          <p className="text-[#181411] dark:text-white text-lg mb-4">{t('common.notFound') || 'Promoción no encontrada'}</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="bg-primary text-white px-6 py-2 rounded-full"
+          >
+            {t('common.goBack') || 'Volver'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Funciones que usan promotion (solo se ejecutan si promotion existe)
   const handleApplyToOrder = () => {
+    if (!promotion) return;
+    
     try {
       // Agregar la promoción como un item especial de combo al carrito
       // Usamos un ID especial muy alto (10000 + id de promoción) para identificar combos
@@ -126,6 +192,8 @@ const PromotionDetailScreen: React.FC = () => {
   };
 
   const handleShare = () => {
+    if (!promotion) return;
+    
     if (navigator.share) {
       navigator.share({
         title: promotion.title,
@@ -243,22 +311,24 @@ const PromotionDetailScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Countdown Section */}
-      <div className="px-4 py-2">
-        <div className="bg-background-dark text-white rounded-xl p-4 flex items-center justify-between shadow-xl">
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-primary">timer</span>
-            <h3 className="text-sm font-bold uppercase tracking-tight">
-              {t('promotions.offerEndsIn')}:
-            </h3>
-          </div>
-          <div className="flex gap-2 text-xl font-black font-mono">
-            <span className="bg-white/10 px-2 py-1 rounded">{time.hours}</span>:
-            <span className="bg-white/10 px-2 py-1 rounded">{time.minutes}</span>:
-            <span className="bg-white/10 px-2 py-1 rounded text-primary">{time.seconds}</span>
+      {/* Countdown Section - Solo mostrar si flash_counter está activado */}
+      {promotion.flashOffer && timeRemaining > 0 && (
+        <div className="px-4 py-2">
+          <div className="bg-background-dark text-white rounded-xl p-4 flex items-center justify-between shadow-xl">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary">timer</span>
+              <h3 className="text-sm font-bold uppercase tracking-tight">
+                {t('promotions.offerEndsIn')}:
+              </h3>
+            </div>
+            <div className="flex gap-2 text-xl font-black font-mono">
+              <span className="bg-white/10 px-2 py-1 rounded">{time.hours}</span>:
+              <span className="bg-white/10 px-2 py-1 rounded">{time.minutes}</span>:
+              <span className="bg-white/10 px-2 py-1 rounded text-primary">{time.seconds}</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Conditions & Schedule */}
       <div className="mt-4">

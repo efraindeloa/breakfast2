@@ -1981,7 +1981,7 @@ export const createProduct = async (product: {
       price: priceValue,
       image_url: firstImageUrl,
       image_urls: imageUrls.length > 0 ? imageUrls : [],
-      badges: product.badges || [],
+      badges: Array.isArray(product.badges) ? product.badges : [],
       category: product.category,
       origin: product.origin || '',
       is_active: product.is_active !== undefined ? product.is_active : true,
@@ -1993,6 +1993,7 @@ export const createProduct = async (product: {
     };
 
     console.log('[createProduct] Inserting product:', insertData);
+    console.log('[createProduct] Badges being saved:', insertData.badges);
 
     const { data, error } = await supabase
       .from('products')
@@ -2056,11 +2057,67 @@ export const updateProduct = async (
   }
 
   try {
+    // Primero, obtener el producto actual para comparar
+    const { data: currentProduct, error: fetchError } = await supabase
+      .from('products')
+      .select('name, restaurant_id')
+      .eq('id', productId)
+      .single();
+
+    if (fetchError) {
+      console.error('[updateProduct] Error al obtener producto actual:', fetchError);
+      throw fetchError;
+    }
+
     const updateData: any = {
       updated_at: new Date().toISOString(),
     };
 
-    if (updates.name !== undefined) updateData.name = updates.name;
+    // Actualizar el nombre si cambió (permitir cambios de capitalización)
+    if (updates.name !== undefined) {
+      const currentName = currentProduct?.name || '';
+      const newName = updates.name.trim();
+      
+      // Si el nombre cambió (incluso solo capitalización), verificar duplicados
+      if (currentName !== newName) {
+        console.log('[updateProduct] Nombre cambió de:', currentName, 'a:', newName);
+        
+        // Si solo cambió la capitalización, usar actualización en dos pasos para evitar conflicto con la restricción única
+        if (currentName.toLowerCase() === newName.toLowerCase()) {
+          console.log('[updateProduct] Solo cambió capitalización, se usará actualización en dos pasos');
+          // Marcar que necesitamos actualización en dos pasos
+          // No agregar el nombre al updateData todavía, se hará después
+          updateData._needsTwoStepUpdate = true;
+          updateData._newName = newName;
+          updateData._currentName = currentName;
+        } else {
+          // Si el nombre cambió realmente (no solo capitalización), verificar duplicados
+          console.log('[updateProduct] Nombre cambió realmente, verificando duplicados...');
+          const { data: existingProduct, error: checkError } = await supabase
+            .from('products')
+            .select('id')
+            .eq('restaurant_id', currentProduct.restaurant_id)
+            .eq('name', newName)
+            .neq('id', productId)
+            .maybeSingle();
+
+          if (checkError) {
+            console.error('[updateProduct] Error al verificar nombre duplicado:', checkError);
+            throw checkError;
+          }
+
+          if (existingProduct) {
+            console.error('[updateProduct] Ya existe un producto con el nombre:', newName);
+            throw new Error(`Ya existe un producto con el nombre "${newName}" en este restaurante`);
+          }
+
+          console.log('[updateProduct] No hay duplicados, permitiendo actualización del nombre');
+          updateData.name = newName;
+        }
+      } else {
+        console.log('[updateProduct] Nombre no cambió, no se actualizará');
+      }
+    }
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.price !== undefined) updateData.price = updates.price.toString();
     
@@ -2075,7 +2132,11 @@ export const updateProduct = async (
       // No actualizar image_urls si no se proporciona explícitamente
     }
     
-    if (updates.badges !== undefined) updateData.badges = updates.badges;
+    if (updates.badges !== undefined) {
+      // Asegurar que badges sea siempre un array, incluso si está vacío
+      updateData.badges = Array.isArray(updates.badges) ? updates.badges : [];
+      console.log('[updateProduct] Guardando badges:', updateData.badges);
+    }
     if (updates.category !== undefined) updateData.category = updates.category;
     if (updates.origin !== undefined) updateData.origin = updates.origin;
     if (updates.is_active !== undefined) updateData.is_active = updates.is_active;
@@ -2086,6 +2147,101 @@ export const updateProduct = async (
     if (updates.allow_custom_complements !== undefined) updateData.allow_custom_complements = updates.allow_custom_complements;
     if (updates.allow_special_instructions !== undefined) updateData.allow_special_instructions = updates.allow_special_instructions;
 
+    // Si solo cambió la capitalización, usar actualización en dos pasos
+    let originalNameForRollback: string | null = null;
+    if (updateData._needsTwoStepUpdate) {
+      console.log('[updateProduct] Solo cambió capitalización, usando actualización en dos pasos...');
+      const newName = updateData._newName;
+      originalNameForRollback = updateData._currentName;
+      
+      // Eliminar las propiedades temporales del updateData
+      delete updateData._needsTwoStepUpdate;
+      delete updateData._newName;
+      delete updateData._currentName;
+      
+      // Paso 1: Cambiar temporalmente a un nombre único
+      const uniqueTempName = `${newName}_temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      console.log('[updateProduct] Paso 1: Cambiando a nombre temporal:', uniqueTempName);
+      
+      const { error: tempError } = await supabase
+        .from('products')
+        .update({ name: uniqueTempName })
+        .eq('id', productId);
+      
+      if (tempError) {
+        console.error('[updateProduct] Error en paso temporal:', tempError);
+        throw tempError;
+      }
+      
+      console.log('[updateProduct] Paso 1 completado');
+      
+      // Verificar si realmente existe otro producto con el nombre final antes de intentar cambiarlo
+      const { data: existingProduct, error: checkError } = await supabase
+        .from('products')
+        .select('id, name, category, description')
+        .eq('restaurant_id', currentProduct.restaurant_id)
+        .eq('name', newName)
+        .neq('id', productId) // Excluir el producto actual (que ahora tiene el nombre temporal)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('[updateProduct] Error al verificar nombre duplicado antes del paso 2:', checkError);
+        // Intentar restaurar el nombre original
+        await supabase
+          .from('products')
+          .update({ name: originalNameForRollback })
+          .eq('id', productId);
+        throw checkError;
+      }
+
+      if (existingProduct) {
+        console.log('[updateProduct] Detectado producto con nombre similar:', existingProduct);
+        console.log('[updateProduct] El nombre actual es:', currentName, 'y el nuevo es:', newName);
+        console.log('[updateProduct] Ambos son iguales (case-insensitive):', currentName.toLowerCase() === newName.toLowerCase());
+        
+        // Si el otro producto tiene el mismo nombre (case-insensitive), es un duplicado
+        // En este caso, permitimos la actualización y eliminamos el duplicado
+        if (existingProduct.name.toLowerCase() === currentName.toLowerCase()) {
+          console.log('[updateProduct] Es un duplicado (mismo nombre case-insensitive), eliminando el duplicado y permitiendo actualización');
+          
+          // Eliminar el producto duplicado (soft delete)
+          const { error: deleteError } = await supabase
+            .from('products')
+            .update({ is_active: false, updated_at: new Date().toISOString() })
+            .eq('id', existingProduct.id);
+          
+          if (deleteError) {
+            console.error('[updateProduct] Error al eliminar producto duplicado:', deleteError);
+            // Intentar restaurar el nombre original
+            await supabase
+              .from('products')
+              .update({ name: originalNameForRollback })
+              .eq('id', productId);
+            throw new Error(`No se pudo eliminar el producto duplicado: ${deleteError.message}`);
+          }
+          
+          console.log('[updateProduct] Producto duplicado eliminado, procediendo con actualización');
+        } else {
+          // Si el otro producto tiene un nombre diferente (no es duplicado), no permitir la actualización
+          console.error('[updateProduct] Ya existe otro producto con el nombre:', newName, 'ID:', existingProduct.id);
+          // Restaurar el nombre original
+          await supabase
+            .from('products')
+            .update({ name: originalNameForRollback })
+            .eq('id', productId);
+          throw new Error(`Ya existe otro producto con el nombre "${newName}" en este restaurante (ID: ${existingProduct.id})`);
+        }
+      } else {
+        console.log('[updateProduct] No hay otro producto con ese nombre, procediendo con paso 2');
+      }
+      
+      // Paso 2: Cambiar al nombre final y aplicar otros cambios
+      updateData.name = newName;
+      console.log('[updateProduct] Paso 2: Aplicando cambios finales, incluyendo nombre:', newName);
+    }
+    
+    console.log('[updateProduct] updateData completo:', JSON.stringify(updateData, null, 2));
+    
     const { data, error } = await supabase
       .from('products')
       .update(updateData)
@@ -2093,7 +2249,20 @@ export const updateProduct = async (
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[updateProduct] Error al actualizar:', error);
+      // Si falló y usamos actualización en dos pasos, intentar restaurar el nombre original
+      if (originalNameForRollback) {
+        console.error('[updateProduct] Intentando restaurar nombre original:', originalNameForRollback);
+        await supabase
+          .from('products')
+          .update({ name: originalNameForRollback })
+          .eq('id', productId);
+      }
+      throw error;
+    }
+    
+    console.log('[updateProduct] Producto actualizado correctamente, badges guardados:', data?.badges);
     
     if (!data) return null;
     
@@ -4131,6 +4300,201 @@ export const saveRestaurantMenuSections = async (
     return true;
   } catch (error) {
     console.error('[saveRestaurantMenuSections] Error saving menu sections:', error);
+    return false;
+  }
+};
+
+// ==================== PROMOCIONES ====================
+
+export interface Promotion {
+  id: string;
+  restaurant_id: string;
+  title: string;
+  description?: string;
+  image_url?: string;
+  category: string;
+  discount_type: string;
+  discount_value?: number;
+  original_price?: number;
+  final_price?: number;
+  valid_from: string;
+  valid_until: string;
+  applicable_hours?: any;
+  applicable_days?: string[];
+  included_items?: any;
+  max_uses_per_user?: number;
+  total_uses: number;
+  is_active: boolean;
+  is_featured: boolean;
+  badges?: string[];
+  client_segmentation?: string; // 'all', 'new', 'vip'
+  flash_counter?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Obtiene todas las promociones activas de un restaurante
+ */
+export const getPromotions = async (restaurantId?: string): Promise<Promotion[]> => {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase no está configurado. No se pueden obtener promociones.');
+    return [];
+  }
+
+  try {
+    const now = new Date().toISOString();
+    let query = supabase
+      .from('promotions')
+      .select('*')
+      .eq('is_active', true)
+      .gte('valid_until', now) // Solo promociones que aún no han expirado
+      .lte('valid_from', now) // Solo promociones que ya han comenzado
+      .order('is_featured', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (restaurantId) {
+      query = query.eq('restaurant_id', restaurantId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    return (data || []).map((promo) => ({
+      ...promo,
+      badges: Array.isArray(promo.badges) ? promo.badges : [],
+    }));
+  } catch (error) {
+    console.error('Error fetching promotions:', error);
+    return [];
+  }
+};
+
+/**
+ * Obtiene una promoción por ID
+ */
+export const getPromotionById = async (promotionId: string): Promise<Promotion | null> => {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase no está configurado. No se puede obtener la promoción.');
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('promotions')
+      .select('*')
+      .eq('id', promotionId)
+      .single();
+
+    if (error) throw error;
+
+    if (!data) return null;
+
+    return {
+      ...data,
+      badges: Array.isArray(data.badges) ? data.badges : [],
+    };
+  } catch (error) {
+    console.error('Error fetching promotion by ID:', error);
+    return null;
+  }
+};
+
+/**
+ * Crea una nueva promoción
+ */
+export const createPromotion = async (
+  promotion: Omit<Promotion, 'id' | 'created_at' | 'updated_at' | 'total_uses'>
+): Promise<Promotion | null> => {
+  if (!isSupabaseConfigured()) {
+    console.error('Supabase no está configurado. No se puede crear la promoción.');
+    return null;
+  }
+
+  try {
+    const restaurantId = await getCurrentUserRestaurantId();
+    if (!restaurantId) {
+      throw new Error('No se pudo obtener el ID del restaurante');
+    }
+
+    const insertData: any = {
+      ...promotion,
+      restaurant_id: restaurantId,
+      total_uses: 0,
+      badges: Array.isArray(promotion.badges) ? promotion.badges : [],
+    };
+
+    const { data, error } = await supabase
+      .from('promotions')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating promotion:', error);
+    return null;
+  }
+};
+
+/**
+ * Actualiza una promoción existente
+ */
+export const updatePromotion = async (
+  promotionId: string,
+  updates: Partial<Omit<Promotion, 'id' | 'restaurant_id' | 'created_at' | 'updated_at'>>
+): Promise<Promotion | null> => {
+  if (!isSupabaseConfigured()) {
+    console.error('Supabase no está configurado. No se puede actualizar la promoción.');
+    return null;
+  }
+
+  try {
+    const updateData: any = {
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (updates.badges !== undefined) {
+      updateData.badges = Array.isArray(updates.badges) ? updates.badges : [];
+    }
+
+    const { data, error } = await supabase
+      .from('promotions')
+      .update(updateData)
+      .eq('id', promotionId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating promotion:', error);
+    return null;
+  }
+};
+
+/**
+ * Elimina una promoción (soft delete: marca is_active como false)
+ */
+export const deletePromotion = async (promotionId: string): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    console.error('Supabase no está configurado. No se puede eliminar la promoción.');
+    return false;
+  }
+
+  try {
+    const { error } = await supabase
+      .from('promotions')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('id', promotionId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting promotion:', error);
     return false;
   }
 };

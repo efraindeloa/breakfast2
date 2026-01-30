@@ -14,7 +14,7 @@ const AdminControlPanelScreen: React.FC = () => {
   // Estados para los switches
   const [acceptCards, setAcceptCards] = useState(true);
   const [selectedTip, setSelectedTip] = useState(15);
-  const [selectedColor, setSelectedColor] = useState('#f48c25');
+  const [selectedColor, setSelectedColor] = useState('#EB9947');
   const [selectedMode, setSelectedMode] = useState<'light' | 'dark'>('light');
 
   // Datos fiscales

@@ -95,6 +95,7 @@ const MenuRestaurantScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [selectedOrigin, setSelectedOrigin] = useState<OriginType>('');
+  const [selectedTag, setSelectedTag] = useState<string>('');
 
   const [chefSuggestionsByCategory, setChefSuggestionsByCategory] =
     useState<PicksByCategory>(DEFAULT_CHEF_SUGGESTIONS);
@@ -139,13 +140,13 @@ const MenuRestaurantScreen: React.FC = () => {
   const [productTags, setProductTags] = useState<string[]>([]);
   const [newTagName, setNewTagName] = useState('');
   
-  // Filtro de etiquetas
-  const [selectedTag, setSelectedTag] = useState<string>('');
-  
   // Modal de confirmación
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmModalMessage, setConfirmModalMessage] = useState('');
   const [confirmModalCallback, setConfirmModalCallback] = useState<(() => void) | null>(null);
+  
+  // Estado para prevenir múltiples guardados simultáneos
+  const [isSaving, setIsSaving] = useState(false);
   
   // Los productos ahora se guardan en Supabase, no localmente
 
@@ -381,6 +382,126 @@ const MenuRestaurantScreen: React.FC = () => {
     // Para el modal, limitar a la categoría actual
     return dishes.filter((d) => (d.category || '').trim().toLowerCase() === originalCategory.trim().toLowerCase());
   }, [dishes, originalCategory]);
+
+  // Función de búsqueda fuzzy (igual que en MenuScreen)
+  const fuzzyMatch = (text: string, query: string): boolean => {
+    if (!text || !query) return false;
+    
+    const normalizedText = text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+    const normalizedQuery = query
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+
+    if (!normalizedText || !normalizedQuery) return false;
+
+    // Coincidencia exacta
+    if (normalizedText === normalizedQuery) return true;
+
+    // Coincidencia de subcadena (esta debería encontrar "torta" en "torta ahogada")
+    if (normalizedText.includes(normalizedQuery)) return true;
+
+    // Coincidencia por palabras (todas las palabras del query deben aparecer)
+    const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length > 0);
+    if (queryWords.length > 1) {
+      const allWordsMatch = queryWords.every(word => normalizedText.includes(word));
+      if (allWordsMatch) return true;
+    }
+
+    // Coincidencia parcial de caracteres (≥70% de caracteres coinciden en orden)
+    if (normalizedQuery.length >= 3) {
+      let textIndex = 0;
+      let queryIndex = 0;
+      let matches = 0;
+
+      while (textIndex < normalizedText.length && queryIndex < normalizedQuery.length) {
+        if (normalizedText[textIndex] === normalizedQuery[queryIndex]) {
+          matches++;
+          queryIndex++;
+        }
+        textIndex++;
+      }
+
+      const matchRatio = matches / normalizedQuery.length;
+      if (matchRatio >= 0.7) return true;
+    }
+
+    // Buscar caracteres del query en cualquier orden (pero juntos)
+    if (query.length >= 3) {
+      const textChars = normalizedText.split('');
+      const queryChars = normalizedQuery.split('');
+      let consecutiveMatches = 0;
+      let maxConsecutive = 0;
+
+      for (let i = 0; i < textChars.length; i++) {
+        let queryIdx = 0;
+        for (let j = i; j < textChars.length && queryIdx < queryChars.length; j++) {
+          if (textChars[j] === queryChars[queryIdx]) {
+            consecutiveMatches++;
+            queryIdx++;
+          } else {
+            consecutiveMatches = 0;
+          }
+        }
+        maxConsecutive = Math.max(maxConsecutive, consecutiveMatches);
+      }
+
+      if (maxConsecutive >= Math.min(3, normalizedQuery.length)) return true;
+    }
+
+    return false;
+  };
+
+  // Filtrar productos por búsqueda (buscar en todas las categorías cuando hay búsqueda)
+  const filteredDishes = useMemo(() => {
+    const hasSearchQuery = searchQuery.trim().length > 0;
+    
+    if (!hasSearchQuery) {
+      // Sin búsqueda, retornar todos los productos (se filtrarán por categoría en la renderización)
+      return dishes;
+    }
+
+    // Con búsqueda, buscar en todos los productos de todas las categorías
+    const query = searchQuery.trim().toLowerCase();
+    const filtered = dishes.filter((dish) => {
+      const productName = (dish.name || '').toLowerCase();
+      const productDescription = (dish.description || '').toLowerCase();
+      
+      const matchesName = fuzzyMatch(productName, query);
+      const matchesDescription = fuzzyMatch(productDescription, query);
+      
+      // Debug en desarrollo
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[MenuRestaurantScreen] Filtering dish:', {
+          dishName: dish.name,
+          productName,
+          query,
+          matchesName,
+          matchesDescription,
+          result: matchesName || matchesDescription
+        });
+      }
+      
+      return matchesName || matchesDescription;
+    });
+    
+    // Debug en desarrollo
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[MenuRestaurantScreen] Filtered dishes:', {
+        totalDishes: dishes.length,
+        query,
+        filteredCount: filtered.length,
+        filteredNames: filtered.map(d => d.name)
+      });
+    }
+    
+    return filtered;
+  }, [dishes, searchQuery]);
 
   const openPicker = (section: 'chef' | 'highlights' | 'menu', editingId?: number) => {
     setPickerSection(section);
@@ -632,9 +753,17 @@ const MenuRestaurantScreen: React.FC = () => {
 
   // Función para guardar el producto en Supabase
   const handleSaveProduct = async () => {
+    console.log('[MenuRestaurantScreen] ===== handleSaveProduct INICIADO =====');
     console.log('[MenuRestaurantScreen] handleSaveProduct llamado');
     console.log('[MenuRestaurantScreen] editingProductName:', editingProductName);
     console.log('[MenuRestaurantScreen] editingProduct:', editingProduct);
+    console.log('[MenuRestaurantScreen] isSaving:', isSaving);
+    
+    // Prevenir múltiples ejecuciones simultáneas
+    if (isSaving) {
+      console.warn('[MenuRestaurantScreen] Ya se está guardando, ignorando click duplicado');
+      return;
+    }
     
     if (!editingProductName.trim()) {
       console.warn('[MenuRestaurantScreen] No se puede guardar: el nombre está vacío');
@@ -642,9 +771,15 @@ const MenuRestaurantScreen: React.FC = () => {
       return; // No guardar si no hay nombre
     }
 
+    setIsSaving(true);
+    console.log('[MenuRestaurantScreen] isSaving establecido a true');
+
     try {
+      console.log('[MenuRestaurantScreen] Iniciando guardado de producto...');
       // Obtener el restaurant_id del usuario actual
+      console.log('[MenuRestaurantScreen] Obteniendo restaurant_id...');
       const restaurantId = await getCurrentUserRestaurantId();
+      console.log('[MenuRestaurantScreen] restaurantId obtenido:', restaurantId);
       if (!restaurantId) {
         console.error('[MenuRestaurantScreen] No se pudo obtener el restaurant_id del usuario actual');
         console.error('[MenuRestaurantScreen] User:', user);
@@ -656,9 +791,13 @@ const MenuRestaurantScreen: React.FC = () => {
       console.log('[MenuRestaurantScreen] Restaurant ID:', restaurantId);
 
       // Subir todas las imágenes a Supabase Storage si hay archivos nuevos
+      console.log('[MenuRestaurantScreen] Procesando imágenes...');
+      console.log('[MenuRestaurantScreen] productImageFiles.length:', productImageFiles.length);
+      console.log('[MenuRestaurantScreen] productImages.length:', productImages.length);
       const uploadedImageUrls: string[] = [];
       
       if (productImageFiles.length > 0) {
+        console.log('[MenuRestaurantScreen] Subiendo', productImageFiles.length, 'imágenes...');
         // Subir todas las imágenes nuevas
         for (const file of productImageFiles) {
           const fileName = `product-${Date.now()}-${Math.random().toString(36).substring(7)}-${file.name}`;
@@ -740,6 +879,7 @@ const MenuRestaurantScreen: React.FC = () => {
       }
       
       // Validar que la categoría esté definida
+      console.log('[MenuRestaurantScreen] Validando categoría:', originalCategory);
       if (!originalCategory || originalCategory.trim() === '') {
         console.error('[MenuRestaurantScreen] Categoría no definida');
         alert(t('restaurant.menu.errors.invalidCategory'));
@@ -753,10 +893,18 @@ const MenuRestaurantScreen: React.FC = () => {
         price: priceValue,
         image_url: imageUrl || 'sin imagen',
         category: originalCategory,
+        badges: productTags,
+        complements: complements,
       });
 
+      console.log('[MenuRestaurantScreen] Verificando si es edición o creación...');
+      console.log('[MenuRestaurantScreen] editingProduct:', editingProduct);
+      console.log('[MenuRestaurantScreen] editingProduct?.id:', editingProduct?.id);
+      
       if (editingProduct && editingProduct.id) {
+        console.log('[MenuRestaurantScreen] Modo: EDITAR producto existente');
         // Estamos editando un producto existente
+        console.log('[MenuRestaurantScreen] Guardando producto con badges:', productTags);
         const updated = await updateProduct(editingProduct.id, {
           name: editingProductName.trim(),
           description: editingProductDescription.trim(),
@@ -765,7 +913,7 @@ const MenuRestaurantScreen: React.FC = () => {
           image_urls: allImageUrls, // Enviar todas las URLs de imágenes
           category: originalCategory,
           origin: editingProduct.origin || '',
-          badges: productTags, // Siempre enviar el array, incluso si está vacío
+          badges: productTags || [], // Siempre enviar el array, incluso si está vacío
           complements: complements, // Siempre enviar el array, incluso si está vacío
           allow_custom_complements: allowCustomComplements,
           allow_special_instructions: allowSpecialInstructions,
@@ -782,6 +930,23 @@ const MenuRestaurantScreen: React.FC = () => {
         }
       } else {
         // Estamos creando un nuevo producto
+        console.log('[MenuRestaurantScreen] Modo: CREAR nuevo producto');
+        console.log('[MenuRestaurantScreen] Creando producto con badges:', productTags);
+        console.log('[MenuRestaurantScreen] Datos del producto a crear:', {
+          restaurant_id: restaurantId,
+          name: editingProductName.trim(),
+          description: editingProductDescription.trim(),
+          price: priceValue,
+          image_url: imageUrl || undefined,
+          image_urls: allImageUrls,
+          category: originalCategory,
+          origin: '',
+          is_active: true,
+          badges: productTags || [],
+          complements: complements || [],
+          allow_custom_complements: allowCustomComplements,
+          allow_special_instructions: allowSpecialInstructions,
+        });
         const created = await createProduct({
           restaurant_id: restaurantId,
           name: editingProductName.trim(),
@@ -792,7 +957,7 @@ const MenuRestaurantScreen: React.FC = () => {
           category: originalCategory,
           origin: '',
           is_active: true,
-          badges: productTags, // Siempre enviar el array, incluso si está vacío
+          badges: productTags || [], // Siempre enviar el array, incluso si está vacío
           complements: complements, // Siempre enviar el array, incluso si está vacío
           allow_custom_complements: allowCustomComplements,
           allow_special_instructions: allowSpecialInstructions,
@@ -843,8 +1008,10 @@ const MenuRestaurantScreen: React.FC = () => {
       }
 
       // Cerrar el modal de edición
+      console.log('[MenuRestaurantScreen] ===== GUARDADO EXITOSO, cerrando modal =====');
       closeEditProduct();
     } catch (error: any) {
+      console.error('[MenuRestaurantScreen] ===== ERROR AL GUARDAR =====');
       console.error('[MenuRestaurantScreen] Error al guardar el producto:', error);
       console.error('[MenuRestaurantScreen] Error details:', {
         message: error?.message,
@@ -853,6 +1020,10 @@ const MenuRestaurantScreen: React.FC = () => {
       });
       const errorMessage = error?.message || t('restaurant.menu.errors.saveFailed').replace('{message}', '');
       alert(t('restaurant.menu.errors.saveFailed').replace('{message}', errorMessage));
+    } finally {
+      console.log('[MenuRestaurantScreen] ===== FINALIZANDO handleSaveProduct =====');
+      setIsSaving(false);
+      console.log('[MenuRestaurantScreen] isSaving establecido a false');
     }
   };
 
@@ -1241,28 +1412,28 @@ const MenuRestaurantScreen: React.FC = () => {
         </section>
       )}
 
-      {/* Menú (editable) */}
-      {!searchQuery.trim() && (
-        <section className="px-4 pb-4">
-          <div className="flex items-center gap-2 pb-3">
-            <span className="material-symbols-outlined text-[#181611] dark:text-white text-xl">restaurant_menu</span>
-            <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">
-              {t('navigation.menu')}
-            </h3>
-            {editMode && (
-              <button
-                type="button"
-                onClick={() => openPicker('menu')}
-                className="text-primary font-bold text-sm flex items-center gap-1 ml-auto"
-              >
-                <span className="material-symbols-outlined text-base">add</span>
-                {t('restaurant.menu.add')}
-              </button>
-            )}
-          </div>
+      {/* Menú (editable) - Siempre mostrar, pero con contenido diferente según búsqueda */}
+      <section className="px-4 pb-4">
+        <div className="flex items-center gap-2 pb-3">
+          <span className="material-symbols-outlined text-[#181611] dark:text-white text-xl">restaurant_menu</span>
+          <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">
+            {searchQuery.trim() ? t('menu.searchResults') || 'Resultados de búsqueda' : t('navigation.menu')}
+          </h3>
+          {editMode && !searchQuery.trim() && (
+            <button
+              type="button"
+              onClick={() => openPicker('menu')}
+              className="text-primary font-bold text-sm flex items-center gap-1 ml-auto"
+            >
+              <span className="material-symbols-outlined text-base">add</span>
+              {t('restaurant.menu.add')}
+            </button>
+          )}
+        </div>
 
-          {/* Origin Filters */}
-          <div className="flex gap-2 pb-4 overflow-x-auto no-scrollbar">
+          {/* Origin Filters - Ocultar cuando hay búsqueda activa */}
+          {!searchQuery.trim() && (
+            <div className="flex gap-2 pb-4 overflow-x-auto no-scrollbar">
             {getFiltersForCategory(selectedCategory).map((filter) => (
               <button
                 key={filter.value}
@@ -1294,7 +1465,8 @@ const MenuRestaurantScreen: React.FC = () => {
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
             )}
-          </div>
+            </div>
+          )}
 
           {/* Tag Filters */}
           {availableTags.length > 0 && (
@@ -1335,22 +1507,40 @@ const MenuRestaurantScreen: React.FC = () => {
 
           {/* Menu Items */}
           <div className="flex flex-col gap-4">
-            {menuIds
-              .map((dishId) => dishes.find((d) => d.id === dishId))
-              .filter((dish): dish is Dish => {
-                if (!dish || dish.category !== originalCategory) return false;
-                if (selectedOrigin) {
-                  if (selectedOrigin === 'vegano') {
-                    return dish.badges?.includes('vegano') || false;
-                  }
-                  return dish.origin === selectedOrigin;
-                }
-                if (selectedTag) {
-                  return dish.badges?.includes(selectedTag) || false;
-                }
-                return true;
-              })
-              .map((dish) => (
+            {(searchQuery.trim() 
+              ? filteredDishes 
+              : (menuIds.length > 0
+                  ? menuIds
+                      .map((dishId) => dishes.find((d) => d.id === dishId))
+                      .filter((dish): dish is Dish => {
+                        if (!dish || dish.category !== originalCategory) return false;
+                        if (selectedOrigin) {
+                          if (selectedOrigin === 'vegano') {
+                            return dish.badges?.includes('vegano') || false;
+                          }
+                          return dish.origin === selectedOrigin;
+                        }
+                        if (selectedTag) {
+                          return dish.badges?.includes(selectedTag) || false;
+                        }
+                        return true;
+                      })
+                  : dishes.filter((dish) => {
+                      // Si no hay productos en menuItemsByCategory, mostrar todos los de la categoría
+                      if (dish.category !== originalCategory) return false;
+                      if (selectedOrigin) {
+                        if (selectedOrigin === 'vegano') {
+                          return dish.badges?.includes('vegano') || false;
+                        }
+                        return dish.origin === selectedOrigin;
+                      }
+                      if (selectedTag) {
+                        return dish.badges?.includes(selectedTag) || false;
+                      }
+                      return true;
+                    })
+                )
+            ).map((dish) => (
                 <div
                   key={dish.id}
                   onClick={() => (!editMode ? navigateToDish(dish.id) : undefined)}
@@ -1419,7 +1609,20 @@ const MenuRestaurantScreen: React.FC = () => {
                 </div>
               ))}
             
-            {editMode && (
+            {searchQuery.trim() && filteredDishes.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
+                <span className="material-symbols-outlined text-4xl mb-2">search_off</span>
+                <p className="text-sm text-center">{t('menu.noDishesFound')}</p>
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="mt-4 px-4 py-2 bg-primary text-white rounded-xl font-semibold text-sm"
+                >
+                  {t('menu.clearFilters')}
+                </button>
+              </div>
+            )}
+            
+            {editMode && !searchQuery.trim() && (
               <button
                 type="button"
                 onClick={() => openEditProduct()}
@@ -1433,7 +1636,6 @@ const MenuRestaurantScreen: React.FC = () => {
             )}
           </div>
         </section>
-      )}
 
       {/* Modal: seleccionar dish */}
       {pickerOpen && (

@@ -251,7 +251,7 @@ const DiscoverRestaurantsScreen: React.FC = () => {
     const userIcon = L.divIcon({
       className: 'custom-user-marker',
       html: `
-        <div style="width: 24px; height: 24px; border-radius: 50%; background: #f48c25; border: 4px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;">
+        <div style="width: 24px; height: 24px; border-radius: 50%; background: #EB9947; border: 4px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;">
           <div style="width: 8px; height: 8px; border-radius: 50%; background: white;"></div>
         </div>
       `,

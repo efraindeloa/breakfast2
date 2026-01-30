@@ -6,6 +6,7 @@ import { useFavorites } from '../contexts/FavoritesContext';
 import { useProducts } from '../contexts/ProductsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatPrice } from '../utils/currency';
+import { getProductImageUrl } from '../services/database';
 
 const REVIEWS_STORAGE_KEY = 'user_reviews';
 
@@ -368,12 +369,40 @@ const DishDetailScreen: React.FC = () => {
   const [selectedSize, setSelectedSize] = useState<'portion' | 'bottle' | null>(null);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [showAddedFeedback, setShowAddedFeedback] = useState(false);
+  const [showFullscreenImage, setShowFullscreenImage] = useState(false);
 
   // Obtener el idioma seleccionado para formatear precios
   const selectedLanguage = localStorage.getItem('selectedLanguage');
   
   const productFromDB = getProduct(parseInt(id || '0'));
   const dishFromCode = allDishes.find(d => d.id === parseInt(id || '0'));
+  
+  // Obtener todas las imágenes del producto
+  const productImages = useMemo(() => {
+    if (productFromDB) {
+      // Si tiene image_urls, usar todas esas imágenes
+      if (productFromDB.image_urls && productFromDB.image_urls.length > 0) {
+        return productFromDB.image_urls.map(url => getProductImageUrl(url));
+      }
+      // Si solo tiene image_url o image, usar esa
+      const singleImage = productFromDB.image || productFromDB.image_url;
+      return singleImage ? [getProductImageUrl(singleImage)] : [];
+    }
+    // Si es un platillo hardcodeado, usar su imagen
+    if (dishFromCode) {
+      return dishFromCode.image ? [dishFromCode.image] : [];
+    }
+    return [];
+  }, [productFromDB, dishFromCode]);
+  
+  // Estado para el índice de la imagen actual en el carrusel
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  // Reiniciar el índice cuando cambie el producto
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [id, productImages.length]);
+  
   // Usar producto de Supabase si existe, sino usar el hardcodeado
   const dish = productFromDB ? {
     id: productFromDB.id,
@@ -382,7 +411,7 @@ const DishDetailScreen: React.FC = () => {
     price: typeof productFromDB.price === 'number' 
       ? formatPrice(productFromDB.price, selectedLanguage)
       : productFromDB.price,
-    image: productFromDB.image || productFromDB.image_url || '',
+    image: productImages[0] || productFromDB.image || productFromDB.image_url || '',
     badges: productFromDB.badges,
     category: productFromDB.category,
     origin: productFromDB.origin as OriginType,
@@ -480,11 +509,17 @@ const DishDetailScreen: React.FC = () => {
     }
   }, [sizeOptions.hasSizes, selectedSize]);
 
-  const proteins = [
-    { id: 'huevo', name: 'Huevo Estrellado (2)', price: 35 },
-    { id: 'pollo', name: 'Pollo Deshebrado', price: 45 },
-    { id: 'arrachera', name: 'Arrachera Grill', price: 85 },
-  ];
+  // Obtener complementos del producto desde la base de datos
+  const productComplements = useMemo(() => {
+    if (productFromDB && productFromDB.complements && Array.isArray(productFromDB.complements) && productFromDB.complements.length > 0) {
+      return productFromDB.complements.map((complement: any) => ({
+        id: complement.id || complement.name,
+        name: complement.name,
+        price: typeof complement.price === 'number' ? complement.price : parseFloat(complement.price) || 0,
+      }));
+    }
+    return [];
+  }, [productFromDB]);
 
   // Función helper para convertir precio a número (maneja tanto string como number)
   const getPriceAsNumber = (price: string | number): number => {
@@ -505,7 +540,7 @@ const DishDetailScreen: React.FC = () => {
     }
   }
   
-  const proteinPrice = selectedProtein ? proteins.find(p => p.id === selectedProtein)?.price || 0 : 0;
+  const proteinPrice = selectedProtein ? productComplements.find(p => p.id === selectedProtein)?.price || 0 : 0;
   const totalPrice = (basePrice + proteinPrice) * quantity;
 
   const handleQuantityChange = (delta: number) => {
@@ -525,7 +560,7 @@ const DishDetailScreen: React.FC = () => {
       }
     }
     
-    const proteinPrice = selectedProtein ? proteins.find(p => p.id === selectedProtein)?.price || 0 : 0;
+    const proteinPrice = selectedProtein ? productComplements.find(p => p.id === selectedProtein)?.price || 0 : 0;
     const finalPrice = basePrice + proteinPrice;
     
     // Construir notas con tamaño, proteína e instrucciones especiales
@@ -541,7 +576,7 @@ const DishDetailScreen: React.FC = () => {
     }
     
     if (selectedProtein) {
-      const proteinName = proteins.find(p => p.id === selectedProtein)?.name || '';
+      const proteinName = productComplements.find(p => p.id === selectedProtein)?.name || '';
       if (notes) notes += '. ';
       notes += proteinName;
     }
@@ -577,16 +612,109 @@ const DishDetailScreen: React.FC = () => {
     }
   };
 
+  // Funciones para navegar el carrusel
+  const goToPreviousImage = () => {
+    setCurrentImageIndex((prev) => (prev === 0 ? productImages.length - 1 : prev - 1));
+  };
+
+  const goToNextImage = () => {
+    setCurrentImageIndex((prev) => (prev === productImages.length - 1 ? 0 : prev + 1));
+  };
+
+  const goToImage = (index: number) => {
+    setCurrentImageIndex(index);
+  };
+
   return (
     <div className="bg-background-light dark:bg-background-dark min-h-screen flex flex-col pb-32">
-      {/* Header con imagen */}
+      {/* Header con imagen o carrusel */}
       <div className="relative w-full aspect-[4/3] overflow-hidden">
-        <div
-          className="absolute inset-0 bg-center bg-cover bg-no-repeat"
-          style={{ backgroundImage: `url("${dish.image}")` }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60"></div>
-        </div>
+        {productImages.length > 1 ? (
+          // Carrusel de imágenes
+          <div className="relative w-full h-full">
+            <div className="flex overflow-hidden h-full">
+              {productImages.map((imageUrl, index) => (
+                <div
+                  key={index}
+                  className="min-w-full h-full transition-transform duration-300 ease-in-out cursor-pointer"
+                  style={{
+                    transform: `translateX(-${currentImageIndex * 100}%)`,
+                  }}
+                  onClick={() => {
+                    setCurrentImageIndex(index);
+                    setShowFullscreenImage(true);
+                  }}
+                >
+                  <div
+                    className="absolute inset-0 bg-center bg-cover bg-no-repeat pointer-events-none"
+                    style={{ backgroundImage: `url("${imageUrl}")` }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60 pointer-events-none"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Botones de navegación del carrusel */}
+            {productImages.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goToPreviousImage();
+                  }}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition-colors"
+                  aria-label="Imagen anterior"
+                >
+                  <span className="material-symbols-outlined">chevron_left</span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goToNextImage();
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition-colors"
+                  aria-label="Imagen siguiente"
+                >
+                  <span className="material-symbols-outlined">chevron_right</span>
+                </button>
+                
+                {/* Indicadores de posición (dots) */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+                  {productImages.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        goToImage(index);
+                      }}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        index === currentImageIndex
+                          ? 'bg-white w-6'
+                          : 'bg-white/50 hover:bg-white/75'
+                      }`}
+                      aria-label={`Ir a imagen ${index + 1}`}
+                    />
+                  ))}
+                </div>
+                
+                {/* Contador de imágenes */}
+                <div className="absolute top-4 right-4 z-20 px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-md text-white text-xs font-medium">
+                  {currentImageIndex + 1} / {productImages.length}
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          // Imagen única (comportamiento original)
+          <div
+            className="absolute inset-0 bg-center bg-cover bg-no-repeat cursor-pointer"
+            style={{ backgroundImage: `url("${dish.image}")` }}
+            onClick={() => setShowFullscreenImage(true)}
+          >
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60"></div>
+          </div>
+        )}
         
         {/* Top Bar */}
         <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4">
@@ -811,8 +939,8 @@ const DishDetailScreen: React.FC = () => {
               </div>
             )}
 
-            {/* Selección de Proteína - Solo para Platos Fuertes y Entradas */}
-            {(dish.category === 'Platos Fuertes' || dish.category === 'Entradas') && (
+            {/* Selección de Complementos - Solo mostrar si el producto tiene complementos */}
+            {productComplements.length > 0 && (
               <div>
                 <h3 className="text-lg font-bold text-[#181611] dark:text-white mb-3 flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary">restaurant</span>
@@ -820,7 +948,7 @@ const DishDetailScreen: React.FC = () => {
                   <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({t('dishDetail.optional')})</span>
                 </h3>
                 <div className="space-y-2">
-                  {proteins.map((protein) => (
+                  {productComplements.map((protein) => (
                     <label
                       key={protein.id}
                       onClick={() => setSelectedProtein(selectedProtein === protein.id ? null : protein.id)}
@@ -842,7 +970,7 @@ const DishDetailScreen: React.FC = () => {
                         </div>
                         <span className="font-medium text-[#181611] dark:text-white">{protein.name}</span>
                       </div>
-                      <span className="text-sm font-semibold text-primary">+${protein.price}.00</span>
+                      <span className="text-sm font-semibold text-primary">+{formatPrice(protein.price, selectedLanguage)}</span>
                     </label>
                   ))}
                 </div>
@@ -914,6 +1042,93 @@ const DishDetailScreen: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Modal de imagen en pantalla completa */}
+      {showFullscreenImage && productImages.length > 0 && (
+        <div 
+          className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center"
+          onClick={() => setShowFullscreenImage(false)}
+        >
+          {/* Botón cerrar */}
+          <button
+            onClick={() => setShowFullscreenImage(false)}
+            className="absolute top-4 right-4 z-30 w-12 h-12 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+            aria-label="Cerrar"
+          >
+            <span className="material-symbols-outlined text-2xl">close</span>
+          </button>
+
+          {/* Contenedor de imagen con navegación */}
+          <div 
+            className="relative w-full h-full flex items-center justify-center p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Botón anterior */}
+            {productImages.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToPreviousImage();
+                }}
+                className="absolute left-4 z-30 w-12 h-12 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+                aria-label="Imagen anterior"
+              >
+                <span className="material-symbols-outlined text-2xl">chevron_left</span>
+              </button>
+            )}
+
+            {/* Imagen en pantalla completa */}
+            <div className="w-full h-full flex items-center justify-center">
+              <img
+                src={productImages[currentImageIndex]}
+                alt={`${dish?.name || 'Producto'} - Imagen ${currentImageIndex + 1}`}
+                className="max-w-full max-h-full object-contain"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+
+            {/* Botón siguiente */}
+            {productImages.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToNextImage();
+                }}
+                className="absolute right-4 z-30 w-12 h-12 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+                aria-label="Imagen siguiente"
+              >
+                <span className="material-symbols-outlined text-2xl">chevron_right</span>
+              </button>
+            )}
+
+            {/* Indicadores y contador en pantalla completa */}
+            {productImages.length > 1 && (
+              <>
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
+                  {productImages.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        goToImage(index);
+                      }}
+                      className={`h-2 rounded-full transition-all ${
+                        index === currentImageIndex
+                          ? 'bg-white w-8'
+                          : 'bg-white/50 hover:bg-white/75 w-2'
+                      }`}
+                      aria-label={`Ir a imagen ${index + 1}`}
+                    />
+                  ))}
+                </div>
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-full bg-black/50 backdrop-blur-md text-white text-sm font-medium">
+                  {currentImageIndex + 1} / {productImages.length}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

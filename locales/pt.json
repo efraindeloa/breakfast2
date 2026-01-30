@@ -2,6 +2,7 @@
   "common": {
     "welcome": "Bem-vindo",
     "save": "Salvar",
+    "saving": "Salvando...",
     "saved": "Salvo",
     "cancel": "Cancelar",
     "confirm": "Confirmar",
@@ -105,6 +106,7 @@
     "noDishesFound": "Nenhum prato encontrado com os filtros aplicados",
     "noDishesInCategory": "Nenhum prato disponível nesta categoria",
     "clearFilters": "Limpar filtros",
+    "searchResults": "Resultados da pesquisa",
     "filtersLabel": "Filtros",
     "proteinOrigin": "Origem da Proteína",
     "clear": "Limpar",
@@ -774,7 +776,7 @@
     "fromAir": "Ar",
     "vegetarian": "Vegetariano",
     "inCart": "no carrinho",
-    "addProtein": "Adicione sua proteína",
+    "addProtein": "Complementos",
     "optional": "Opcional",
     "specialInstructions": "Instruções especiais",
     "specialInstructionsPlaceholder": "Ex. Sem cebola, molho à parte, bem passado...",
@@ -1319,6 +1321,40 @@
         "friday": "Sexta-feira",
         "saturday": "Sábado",
         "sunday": "Domingo"
+      }
+    },
+    "promotions": {
+      "addPromotion": "Adicionar Promoção",
+      "editPromotion": "Editar Promoção",
+      "newPromotion": "Nova Promoção",
+      "title": "Título",
+      "titlePlaceholder": "Ex.: 2x1 em Cappuccinos",
+      "description": "Descrição",
+      "descriptionPlaceholder": "Descrição da promoção",
+      "category": "Categoria",
+      "discountType": "Tipo de Desconto",
+      "percentage": "Porcentagem",
+      "fixed": "Valor Fixo",
+      "combo": "Combo",
+      "discountValue": "Valor do Desconto (%)",
+      "originalPrice": "Preço Original",
+      "finalPrice": "Preço Final",
+      "validFrom": "Válido De",
+      "validUntil": "Válido Até",
+      "image": "Imagem",
+      "badges": "Etiquetas (Opcional)",
+      "badgePlaceholder": "Ex.: Café da Manhã, Temporada, VIP",
+      "featured": "Promoção em Destaque",
+      "confirmDelete": "Tem certeza de que deseja excluir esta promoção?",
+      "errors": {
+        "titleRequired": "O título é obrigatório",
+        "saveFailed": "Erro ao salvar a promoção",
+        "deleteFailed": "Erro ao excluir a promoção"
+      },
+      "success": {
+        "created": "Promoção criada com sucesso",
+        "updated": "Promoção atualizada com sucesso",
+        "deleted": "Promoção excluída com sucesso"
       }
     }
   }

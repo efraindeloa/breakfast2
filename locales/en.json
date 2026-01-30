@@ -2,6 +2,7 @@
   "common": {
     "welcome": "Welcome",
     "save": "Save",
+    "saving": "Saving...",
     "saved": "Saved",
     "cancel": "Cancel",
     "confirm": "Confirm",
@@ -105,6 +106,7 @@
     "noDishesFound": "No dishes found with the applied filters",
     "noDishesInCategory": "No dishes available in this category",
     "clearFilters": "Clear filters",
+    "searchResults": "Search results",
     "filtersLabel": "Filters",
     "proteinOrigin": "Protein Origin",
     "clear": "Clear",
@@ -743,7 +745,7 @@
     "fromAir": "Air",
     "vegetarian": "Vegetarian",
     "inCart": "in cart",
-    "addProtein": "Add your protein",
+    "addProtein": "Complements",
     "optional": "Optional",
     "specialInstructions": "Special instructions",
     "specialInstructionsPlaceholder": "E.g. No onion, sauce on the side, well done...",
@@ -1320,6 +1322,40 @@
         "friday": "Friday",
         "saturday": "Saturday",
         "sunday": "Sunday"
+      }
+    },
+    "promotions": {
+      "addPromotion": "Add Promotion",
+      "editPromotion": "Edit Promotion",
+      "newPromotion": "New Promotion",
+      "title": "Title",
+      "titlePlaceholder": "E.g.: 2x1 on Cappuccinos",
+      "description": "Description",
+      "descriptionPlaceholder": "Promotion description",
+      "category": "Category",
+      "discountType": "Discount Type",
+      "percentage": "Percentage",
+      "fixed": "Fixed Amount",
+      "combo": "Combo",
+      "discountValue": "Discount Value (%)",
+      "originalPrice": "Original Price",
+      "finalPrice": "Final Price",
+      "validFrom": "Valid From",
+      "validUntil": "Valid Until",
+      "image": "Image",
+      "badges": "Tags (Optional)",
+      "badgePlaceholder": "E.g.: Breakfast, Seasonal, VIP",
+      "featured": "Featured Promotion",
+      "confirmDelete": "Are you sure you want to delete this promotion?",
+      "errors": {
+        "titleRequired": "Title is required",
+        "saveFailed": "Error saving promotion",
+        "deleteFailed": "Error deleting promotion"
+      },
+      "success": {
+        "created": "Promotion created successfully",
+        "updated": "Promotion updated successfully",
+        "deleted": "Promotion deleted successfully"
       }
     }
   }

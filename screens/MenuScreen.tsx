@@ -722,18 +722,21 @@ const MenuScreen: React.FC = () => {
   // Filtrar platos por categoría, búsqueda y origen
   const filteredDishes = useMemo(() => {
     const originalCategory = getOriginalCategory(selectedCategory);
-    const hasSearchQuery = searchQuery.trim();
+    const hasSearchQuery = searchQuery.trim().length > 0;
     
     // Debug: verificar qué categoría está seleccionada
     if (process.env.NODE_ENV === 'development') {
       console.log('Selected category (translated):', selectedCategory);
       console.log('Original category:', originalCategory);
+      console.log('Has search query:', hasSearchQuery);
+      console.log('Search query:', searchQuery);
       console.log('Total dishes:', dishes.length);
       console.log('Dish categories:', [...new Set(dishes.map(d => d.category))]);
     }
     
     return dishes.filter(dish => {
-      // Si hay búsqueda, ignorar el filtro de categoría (buscar en todas las categorías)
+      // IMPORTANTE: Si hay búsqueda, buscar en TODAS las categorías (ignorar filtro de categoría)
+      // Si NO hay búsqueda, filtrar por la categoría seleccionada
       if (!hasSearchQuery) {
         // Filtro por categoría solo si NO hay búsqueda
         // Normalizar categorías (trim y comparar sin case sensitivity)
@@ -745,18 +748,24 @@ const MenuScreen: React.FC = () => {
         }
       }
       
-      // Filtro por búsqueda fuzzy (usando nombres y descripciones reales de los productos)
+      // Filtro por búsqueda fuzzy (buscar en TODAS las categorías cuando hay búsqueda)
       if (hasSearchQuery) {
-        const query = searchQuery.trim();
-        // Usar nombres y descripciones reales de los productos, no traducciones hardcodeadas
-        const productName = dish.name || '';
-        const productDescription = dish.description || '';
+        const query = searchQuery.trim().toLowerCase();
+        // Usar nombres y descripciones reales de los productos
+        const productName = (dish.name || '').toLowerCase();
+        const productDescription = (dish.description || '').toLowerCase();
+        
+        // Buscar coincidencias en nombre y descripción
         const matchesName = fuzzyMatch(productName, query);
         const matchesDescription = fuzzyMatch(productDescription, query);
-        if (!matchesName && !matchesDescription) return false;
+        
+        // Si no hay coincidencias, excluir el producto
+        if (!matchesName && !matchesDescription) {
+          return false;
+        }
       }
       
-      // Filtro por origen
+      // Filtro por origen (aplicar solo si no hay búsqueda o si hay búsqueda y el producto coincide)
       if (selectedOrigin) {
         if (selectedOrigin === 'vegano') {
           // Para vegano, verificar si tiene el badge 'vegano'
@@ -914,9 +923,10 @@ const MenuScreen: React.FC = () => {
           <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">{t('navigation.menu')}</h3>
         </div>
         
-        {/* Origin Filters Chips */}
-        <div className="flex gap-2 pb-4 overflow-x-auto no-scrollbar">
-          {getFiltersForCategory(selectedCategory).map((filter) => (
+        {/* Origin Filters Chips - Ocultar cuando hay búsqueda activa */}
+        {!searchQuery.trim() && (
+          <div className="flex gap-2 pb-4 overflow-x-auto no-scrollbar">
+            {getFiltersForCategory(selectedCategory).map((filter) => (
             <button
               key={filter.value}
               onClick={() => setSelectedOrigin(selectedOrigin === filter.value ? '' : filter.value)}
@@ -948,6 +958,7 @@ const MenuScreen: React.FC = () => {
             </button>
           )}
         </div>
+        )}
 
         <div className="flex flex-col gap-4">
           {filteredDishes.length > 0 ? (

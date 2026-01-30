@@ -58,7 +58,7 @@ CREATE POLICY "Restaurants can insert their own menu sections"
       WHERE restaurant_staff.restaurant_id = restaurant_menu_sections.restaurant_id
       AND restaurant_staff.user_id = auth.uid()
       AND restaurant_staff.is_active = true
-      AND restaurant_staff.role = 'owner'
+      AND restaurant_staff.role IN ('owner', 'admin', 'manager')
     )
   );
 
@@ -71,7 +71,7 @@ CREATE POLICY "Restaurants can update their own menu sections"
       WHERE restaurant_staff.restaurant_id = restaurant_menu_sections.restaurant_id
       AND restaurant_staff.user_id = auth.uid()
       AND restaurant_staff.is_active = true
-      AND restaurant_staff.role = 'owner'
+      AND restaurant_staff.role IN ('owner', 'admin', 'manager')
     )
   )
   WITH CHECK (
@@ -80,7 +80,7 @@ CREATE POLICY "Restaurants can update their own menu sections"
       WHERE restaurant_staff.restaurant_id = restaurant_menu_sections.restaurant_id
       AND restaurant_staff.user_id = auth.uid()
       AND restaurant_staff.is_active = true
-      AND restaurant_staff.role = 'owner'
+      AND restaurant_staff.role IN ('owner', 'admin', 'manager')
     )
   );
 
@@ -93,7 +93,7 @@ CREATE POLICY "Restaurants can delete their own menu sections"
       WHERE restaurant_staff.restaurant_id = restaurant_menu_sections.restaurant_id
       AND restaurant_staff.user_id = auth.uid()
       AND restaurant_staff.is_active = true
-      AND restaurant_staff.role = 'owner'
+      AND restaurant_staff.role IN ('owner', 'admin', 'manager')
     )
   );
 

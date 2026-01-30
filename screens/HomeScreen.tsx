@@ -135,8 +135,8 @@ const HomeScreen: React.FC = () => {
                   <span className="material-symbols-outlined text-purple-600 dark:text-purple-400 group-hover:text-white">store</span>
                 </div>
                 <div className="flex flex-col gap-1.5 flex-1 min-h-0 min-w-0">
-                  <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight line-clamp-2">Perfil del Restaurante</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">Gestiona tu restaurante</p>
+                  <h2 className="text-[#111813] dark:text-white text-base font-bold leading-tight line-clamp-2">{t('restaurant.profile.title')}</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{t('restaurant.profile.manage')}</p>
                 </div>
               </div>
             </div>

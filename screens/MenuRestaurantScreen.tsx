@@ -5,7 +5,7 @@ import { useProducts } from '../contexts/ProductsContext';
 import TopNavbar from '../components/TopNavbar';
 import { formatPrice } from '../utils/currency';
 import { useRestaurant } from '../contexts/RestaurantContext';
-import { getProductImageUrl, createProduct, updateProduct, getCurrentUserRestaurantId, uploadImage, getRestaurantMenuSections, saveRestaurantMenuSections } from '../services/database';
+import { getProductImageUrl, createProduct, updateProduct, deleteProduct, getCurrentUserRestaurantId, uploadImage, getRestaurantMenuSections, saveRestaurantMenuSections } from '../services/database';
 import { useAuth } from '../contexts/AuthContext';
 
 type OriginType =
@@ -142,6 +142,11 @@ const MenuRestaurantScreen: React.FC = () => {
   // Filtro de etiquetas
   const [selectedTag, setSelectedTag] = useState<string>('');
   
+  // Modal de confirmación
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [confirmModalMessage, setConfirmModalMessage] = useState('');
+  const [confirmModalCallback, setConfirmModalCallback] = useState<(() => void) | null>(null);
+  
   // Los productos ahora se guardan en Supabase, no localmente
 
   // Cargar picks desde la base de datos
@@ -266,6 +271,20 @@ const MenuRestaurantScreen: React.FC = () => {
   const highlightIds = highlightsByCategory[originalCategory] || [];
   const menuIds = menuItemsByCategory[originalCategory] || [];
 
+  // Función para obtener el texto del botón según la categoría seleccionada
+  const getAddButtonText = useMemo(() => {
+    return (category: string): string => {
+      const categoryMap: Record<string, string> = {
+        [t('menu.categories.appetizers')]: t('restaurant.menu.addEntry'),
+        [t('menu.categories.mains')]: t('restaurant.menu.addMain'),
+        [t('menu.categories.drinks')]: t('restaurant.menu.addDrink'),
+        [t('menu.categories.desserts')]: t('restaurant.menu.addDessert'),
+        [t('menu.categories.cocktails')]: t('restaurant.menu.addCocktail'),
+      };
+      return categoryMap[category] || t('restaurant.menu.addProduct');
+    };
+  }, [t]);
+
   // Extraer todas las etiquetas únicas de los productos de la categoría actual
   const availableTags = useMemo(() => {
     const tagsSet = new Set<string>();
@@ -379,7 +398,23 @@ const MenuRestaurantScreen: React.FC = () => {
     setEditingProductName(product?.name || '');
     setEditingProductPrice(product?.price ? product.price.toString() : '0');
     setEditingProductDescription(product?.description || '');
-    setProductImages(product?.image ? [product.image] : []);
+    
+    // Cargar todas las imágenes del producto
+    if (product?.id) {
+      const fullProduct = products?.find(p => p.id === product.id);
+      if (fullProduct?.image_urls && fullProduct.image_urls.length > 0) {
+        // Si hay image_urls, convertir cada path a URL completa para mostrar
+        const imageUrls = fullProduct.image_urls.map(path => getProductImageUrl(path));
+        setProductImages(imageUrls);
+      } else if (product?.image) {
+        // Fallback: usar image si no hay image_urls
+        setProductImages([product.image]);
+      } else {
+        setProductImages([]);
+      }
+    } else {
+      setProductImages([]);
+    }
     setProductImageFiles([]);
     setIsEditingName(false);
     setIsEditingPrice(false);
@@ -603,7 +638,7 @@ const MenuRestaurantScreen: React.FC = () => {
     
     if (!editingProductName.trim()) {
       console.warn('[MenuRestaurantScreen] No se puede guardar: el nombre está vacío');
-      alert('Por favor, ingresa un nombre para el producto.');
+      alert(t('restaurant.menu.errors.emptyName'));
       return; // No guardar si no hay nombre
     }
 
@@ -614,49 +649,100 @@ const MenuRestaurantScreen: React.FC = () => {
         console.error('[MenuRestaurantScreen] No se pudo obtener el restaurant_id del usuario actual');
         console.error('[MenuRestaurantScreen] User:', user);
         console.error('[MenuRestaurantScreen] Account type:', accountType);
-        alert('Error: No se pudo identificar el restaurante. Por favor, inicia sesión como restaurante.');
+        alert(t('restaurant.menu.errors.invalidRestaurant'));
         return;
       }
       
       console.log('[MenuRestaurantScreen] Restaurant ID:', restaurantId);
 
-      // Subir imágenes a Supabase Storage si hay archivos nuevos
-      let imageUrl = '';
+      // Subir todas las imágenes a Supabase Storage si hay archivos nuevos
+      const uploadedImageUrls: string[] = [];
+      
       if (productImageFiles.length > 0) {
-        // Subir la primera imagen
-        const file = productImageFiles[0];
-        const fileName = `product-${Date.now()}-${file.name}`;
-        const uploadedUrl = await uploadImage('product-images', fileName, file);
-        if (uploadedUrl) {
-          // Extraer solo el path relativo de la URL completa
-          const urlParts = uploadedUrl.split('/storage/v1/object/public/product-images/');
-          imageUrl = urlParts.length > 1 ? urlParts[1] : fileName;
-        }
-      } else if (productImages.length > 0 && productImages[0]) {
-        // Si hay una imagen pero no es un archivo nuevo, usar la URL existente
-        // Si es una URL completa, extraer el path
-        const img = productImages[0];
-        if (img.startsWith('http')) {
-          const urlParts = img.split('/storage/v1/object/public/product-images/');
-          imageUrl = urlParts.length > 1 ? urlParts[1] : '';
-        } else {
-          imageUrl = img;
+        // Subir todas las imágenes nuevas
+        for (const file of productImageFiles) {
+          const fileName = `product-${Date.now()}-${Math.random().toString(36).substring(7)}-${file.name}`;
+          const uploadedUrl = await uploadImage('product-images', fileName, file);
+          if (uploadedUrl) {
+            // Extraer solo el path relativo de la URL completa
+            const urlParts = uploadedUrl.split('/storage/v1/object/public/product-images/');
+            const imagePath = urlParts.length > 1 ? urlParts[1] : fileName;
+            uploadedImageUrls.push(imagePath);
+          }
         }
       }
+      
+      // Combinar imágenes: si estamos editando, combinar las existentes con las nuevas
+      let allImageUrls: string[] = [];
+      
+      if (editingProduct && editingProduct.id) {
+        // Al editar: obtener imágenes existentes del producto
+        const existingProduct = products?.find(p => p.id === editingProduct.id);
+        const existingImageUrls = existingProduct?.image_urls || [];
+        
+        // Filtrar las imágenes que no fueron eliminadas (las que están en productImages)
+        // productImages contiene las imágenes que el usuario quiere mantener (nuevas + existentes no eliminadas)
+        const existingImagesToKeep: string[] = [];
+        
+        // Crear un mapa de paths a URLs completas para comparación
+        const pathToFullUrl = new Map<string, string>();
+        existingImageUrls.forEach(path => {
+          pathToFullUrl.set(path, getProductImageUrl(path));
+        });
+        
+        productImages.forEach((img) => {
+          // Si la imagen es una URL completa de Supabase, extraer el path y verificar si está en las existentes
+          if (img.startsWith('http')) {
+            const urlParts = img.split('/storage/v1/object/public/product-images/');
+            const imagePath = urlParts.length > 1 ? urlParts[1] : '';
+            if (imagePath && existingImageUrls.includes(imagePath)) {
+              existingImagesToKeep.push(imagePath);
+            }
+          } else if (img && !img.startsWith('data:')) {
+            // Si es un path relativo (no base64), verificar si está en las existentes
+            if (existingImageUrls.includes(img)) {
+              existingImagesToKeep.push(img);
+            }
+          }
+          // Si es base64 (data:), es una imagen nueva que se subirá, no la agregamos aquí
+        });
+        
+        // Combinar: primero las existentes que se mantienen, luego las nuevas
+        allImageUrls = [...existingImagesToKeep, ...uploadedImageUrls];
+      } else {
+        // Al crear: solo usar las imágenes nuevas subidas
+        allImageUrls = uploadedImageUrls;
+      }
+      
+      // Si no hay imágenes nuevas pero hay imágenes en productImages que no son archivos (URLs existentes)
+      if (allImageUrls.length === 0 && productImages.length > 0) {
+        productImages.forEach((img) => {
+          if (img.startsWith('http')) {
+            const urlParts = img.split('/storage/v1/object/public/product-images/');
+            const imagePath = urlParts.length > 1 ? urlParts[1] : '';
+            if (imagePath) allImageUrls.push(imagePath);
+          } else if (img) {
+            allImageUrls.push(img);
+          }
+        });
+      }
+      
+      // image_url es la primera imagen para compatibilidad
+      const imageUrl = allImageUrls.length > 0 ? allImageUrls[0] : '';
 
       const priceValue = parseFloat(editingProductPrice) || 0;
       
       // Validar que el precio sea válido
       if (isNaN(priceValue) || priceValue < 0) {
         console.error('[MenuRestaurantScreen] Precio inválido:', editingProductPrice);
-        alert('Error: El precio debe ser un número válido mayor o igual a 0.');
+        alert(t('restaurant.menu.errors.invalidPrice'));
         return;
       }
       
       // Validar que la categoría esté definida
       if (!originalCategory || originalCategory.trim() === '') {
         console.error('[MenuRestaurantScreen] Categoría no definida');
-        alert('Error: La categoría no está definida. Por favor, selecciona una categoría.');
+        alert(t('restaurant.menu.errors.invalidCategory'));
         return;
       }
 
@@ -676,6 +762,7 @@ const MenuRestaurantScreen: React.FC = () => {
           description: editingProductDescription.trim(),
           price: priceValue,
           image_url: imageUrl || undefined,
+          image_urls: allImageUrls, // Enviar todas las URLs de imágenes
           category: originalCategory,
           origin: editingProduct.origin || '',
           badges: productTags, // Siempre enviar el array, incluso si está vacío
@@ -690,7 +777,7 @@ const MenuRestaurantScreen: React.FC = () => {
           await refreshProducts();
         } else {
           console.error('Error al actualizar el producto');
-          alert('Error al actualizar el producto. Por favor, intenta de nuevo.');
+          alert(t('restaurant.menu.errors.updateFailed'));
           return;
         }
       } else {
@@ -701,6 +788,7 @@ const MenuRestaurantScreen: React.FC = () => {
           description: editingProductDescription.trim(),
           price: priceValue,
           image_url: imageUrl || undefined,
+          image_urls: allImageUrls, // Enviar todas las URLs de imágenes
           category: originalCategory,
           origin: '',
           is_active: true,
@@ -749,7 +837,7 @@ const MenuRestaurantScreen: React.FC = () => {
         } else {
           console.error('[MenuRestaurantScreen] Error al crear el producto - createProduct retornó null');
           // Revisar la consola para más detalles del error
-          alert('Error al crear el producto. Revisa la consola para más detalles. Por favor, intenta de nuevo.');
+          alert(t('restaurant.menu.errors.createFailed'));
           return;
         }
       }
@@ -763,8 +851,8 @@ const MenuRestaurantScreen: React.FC = () => {
         code: error?.code,
         stack: error?.stack,
       });
-      const errorMessage = error?.message || 'Error desconocido al guardar el producto';
-      alert(`Error al guardar el producto: ${errorMessage}. Revisa la consola para más detalles.`);
+      const errorMessage = error?.message || t('restaurant.menu.errors.saveFailed').replace('{message}', '');
+      alert(t('restaurant.menu.errors.saveFailed').replace('{message}', errorMessage));
     }
   };
 
@@ -801,22 +889,78 @@ const MenuRestaurantScreen: React.FC = () => {
     closePicker();
   };
 
-  const removePick = (section: 'chef' | 'highlights' | 'menu', dishId: number) => {
-    if (section === 'chef') {
-      setChefSuggestionsByCategory((prev) => {
-        const current = prev[originalCategory] || [];
-        return { ...prev, [originalCategory]: current.filter((id) => id !== dishId) };
-      });
-    } else if (section === 'highlights') {
-      setHighlightsByCategory((prev) => {
-        const current = prev[originalCategory] || [];
-        return { ...prev, [originalCategory]: current.filter((id) => id !== dishId) };
-      });
-    } else {
-      setMenuItemsByCategory((prev) => {
-        const current = prev[originalCategory] || [];
-        return { ...prev, [originalCategory]: current.filter((id) => id !== dishId) };
-      });
+  const removePick = async (section: 'chef' | 'highlights' | 'menu', dishId: number) => {
+    try {
+      if (section === 'menu') {
+        // Si se elimina desde "Menú": eliminar de todas las secciones Y de la base de datos
+        showConfirmModal(
+          t('restaurant.menu.deleteProductConfirm'),
+          async () => {
+            try {
+              // Eliminar el producto de la base de datos (soft delete)
+              const deleted = await deleteProduct(dishId);
+              if (!deleted) {
+                console.error('[MenuRestaurantScreen] Error al eliminar el producto de la base de datos');
+                alert(t('restaurant.menu.errors.deleteFailed'));
+                return;
+              }
+
+              // Eliminar de todas las secciones del menú (chef, highlights, menu)
+              setChefSuggestionsByCategory((prev) => {
+                const updated: PicksByCategory = {};
+                Object.keys(prev).forEach((category) => {
+                  updated[category] = (prev[category] || []).filter((id) => id !== dishId);
+                });
+                return updated;
+              });
+              
+              setHighlightsByCategory((prev) => {
+                const updated: PicksByCategory = {};
+                Object.keys(prev).forEach((category) => {
+                  updated[category] = (prev[category] || []).filter((id) => id !== dishId);
+                });
+                return updated;
+              });
+              
+              setMenuItemsByCategory((prev) => {
+                const updated: PicksByCategory = {};
+                Object.keys(prev).forEach((category) => {
+                  updated[category] = (prev[category] || []).filter((id) => id !== dishId);
+                });
+                return updated;
+              });
+
+              // Refrescar los productos para actualizar la lista
+              await refreshProducts();
+              
+              console.log('[MenuRestaurantScreen] Producto eliminado completamente de todas las secciones');
+            } catch (error) {
+              console.error('[MenuRestaurantScreen] Error al eliminar el producto:', error);
+              alert(t('restaurant.menu.errors.deleteFailed'));
+            }
+          }
+        );
+        return;
+      } else {
+        // Si se elimina desde "chef" o "highlights": solo remover de esa sección específica
+        // NO eliminar de la base de datos ni de "menu"
+        if (section === 'chef') {
+          setChefSuggestionsByCategory((prev) => {
+            const current = prev[originalCategory] || [];
+            return { ...prev, [originalCategory]: current.filter((id) => id !== dishId) };
+          });
+          console.log('[MenuRestaurantScreen] Producto removido de Sugerencias del chef');
+        } else if (section === 'highlights') {
+          setHighlightsByCategory((prev) => {
+            const current = prev[originalCategory] || [];
+            return { ...prev, [originalCategory]: current.filter((id) => id !== dishId) };
+          });
+          console.log('[MenuRestaurantScreen] Producto removido de Destacados');
+        }
+      }
+    } catch (error) {
+      console.error('[MenuRestaurantScreen] Error al eliminar el producto:', error);
+      alert(t('restaurant.menu.errors.deleteFailed'));
     }
   };
 
@@ -837,6 +981,30 @@ const MenuRestaurantScreen: React.FC = () => {
     return {
       backgroundImage: `url("${imageUrl}")`,
     };
+  };
+
+  // Función helper para mostrar el modal de confirmación
+  const showConfirmModal = (message: string, onConfirm: () => void) => {
+    setConfirmModalMessage(message);
+    setConfirmModalCallback(() => onConfirm);
+    setConfirmModalOpen(true);
+  };
+
+  // Función para confirmar la acción
+  const handleConfirm = () => {
+    if (confirmModalCallback) {
+      confirmModalCallback();
+    }
+    setConfirmModalOpen(false);
+    setConfirmModalMessage('');
+    setConfirmModalCallback(null);
+  };
+
+  // Función para cancelar la acción
+  const handleCancel = () => {
+    setConfirmModalOpen(false);
+    setConfirmModalMessage('');
+    setConfirmModalCallback(null);
   };
 
   return (
@@ -875,28 +1043,30 @@ const MenuRestaurantScreen: React.FC = () => {
       </div>
 
       {/* Search */}
-      <div className="px-4 pt-4 pb-2">
-        <div className="relative">
-          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-xl">
-            search
-          </span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('menu.searchPlaceholder') || 'Buscar productos...'}
-            className="w-full h-12 pl-12 pr-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#322a1a] focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500 text-[#181511] dark:text-white"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            >
-              <span className="material-symbols-outlined text-xl">close</span>
-            </button>
-          )}
+      {!editMode && (
+        <div className="px-4 pt-4 pb-2">
+          <div className="relative">
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-xl">
+              search
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t('menu.searchPlaceholder') || 'Buscar productos...'}
+              className="w-full h-12 pl-12 pr-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#322a1a] focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500 text-[#181511] dark:text-white"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                <span className="material-symbols-outlined text-xl">close</span>
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Toggle edit mode */}
       <div className="px-4 pt-2">
@@ -912,7 +1082,7 @@ const MenuRestaurantScreen: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined">{editMode ? 'edit_off' : 'edit'}</span>
             <span className="text-sm font-bold">
-              {editMode ? 'Modo edición activado' : 'Cambiar a modo de edición'}
+              {editMode ? t('restaurant.menu.editModeActive') : t('restaurant.menu.switchToEditMode')}
             </span>
           </div>
         </button>
@@ -923,7 +1093,7 @@ const MenuRestaurantScreen: React.FC = () => {
         <section className="px-4 pt-6 pb-4">
           <div className="flex justify-between items-end mb-4">
             <h3 className="text-[#181611] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">
-              {t('menu.chefSuggestions')}
+              {t('restaurant.menu.chefSuggestions')}
             </h3>
             {editMode && (
               <button
@@ -932,7 +1102,7 @@ const MenuRestaurantScreen: React.FC = () => {
                 className="text-primary font-bold text-sm flex items-center gap-1"
               >
                 <span className="material-symbols-outlined text-base">add</span>
-                Agregar
+                {t('restaurant.menu.add')}
               </button>
             )}
           </div>
@@ -973,7 +1143,7 @@ const MenuRestaurantScreen: React.FC = () => {
                           type="button"
                           onClick={() => removePick('chef', dish.id)}
                           className="w-9 h-9 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-md flex items-center justify-center"
-                          title="Eliminar"
+                          title={t('restaurant.menu.delete')}
                         >
                           <span className="material-symbols-outlined text-red-500">delete</span>
                         </button>
@@ -991,7 +1161,7 @@ const MenuRestaurantScreen: React.FC = () => {
                 >
                   <div className="flex flex-col items-center">
                     <span className="material-symbols-outlined text-3xl">add</span>
-                    <span className="text-sm font-bold">Agregar sugerencia</span>
+                    <span className="text-sm font-bold">{t('restaurant.menu.addSuggestion')}</span>
                   </div>
                 </button>
               )}
@@ -1005,7 +1175,7 @@ const MenuRestaurantScreen: React.FC = () => {
         <section className="px-4 pb-4">
           <div className="flex items-end justify-between">
             <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-2">
-              {t('menu.highlights')}
+              {t('restaurant.menu.highlights')}
             </h3>
             {editMode && (
               <button
@@ -1014,7 +1184,7 @@ const MenuRestaurantScreen: React.FC = () => {
                 className="text-primary font-bold text-sm flex items-center gap-1 pb-2"
               >
                 <span className="material-symbols-outlined text-base">add</span>
-                Agregar
+                {t('restaurant.menu.add')}
               </button>
             )}
           </div>
@@ -1063,7 +1233,7 @@ const MenuRestaurantScreen: React.FC = () => {
               >
                 <div className="flex flex-col items-center">
                   <span className="material-symbols-outlined text-3xl">add</span>
-                  <span className="text-sm font-bold">Agregar destacado</span>
+                  <span className="text-sm font-bold">{t('restaurant.menu.addHighlight')}</span>
                 </div>
               </button>
             )}
@@ -1086,7 +1256,7 @@ const MenuRestaurantScreen: React.FC = () => {
                 className="text-primary font-bold text-sm flex items-center gap-1 ml-auto"
               >
                 <span className="material-symbols-outlined text-base">add</span>
-                Agregar
+                {t('restaurant.menu.add')}
               </button>
             )}
           </div>
@@ -1155,7 +1325,7 @@ const MenuRestaurantScreen: React.FC = () => {
                 <button
                   onClick={() => setSelectedTag('')}
                   className="flex h-9 shrink-0 items-center justify-center gap-1 rounded-full px-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                  title="Limpiar filtro de etiqueta"
+                  title={t('restaurant.menu.clearTagFilter')}
                 >
                   <span className="material-symbols-outlined text-sm">close</span>
                 </button>
@@ -1220,7 +1390,7 @@ const MenuRestaurantScreen: React.FC = () => {
                               openEditProduct(dish);
                             }}
                             className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
-                            title="Editar"
+                            title={t('restaurant.menu.edit')}
                           >
                             <span className="material-symbols-outlined">edit</span>
                           </button>
@@ -1231,7 +1401,7 @@ const MenuRestaurantScreen: React.FC = () => {
                               removePick('menu', dish.id);
                             }}
                             className="w-9 h-9 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center"
-                            title="Eliminar"
+                            title={t('restaurant.menu.delete')}
                           >
                             <span className="material-symbols-outlined">delete</span>
                           </button>
@@ -1257,7 +1427,7 @@ const MenuRestaurantScreen: React.FC = () => {
               >
                 <div className="flex flex-col items-center">
                   <span className="material-symbols-outlined text-3xl">add</span>
-                  <span className="text-sm font-bold">Agregar Entrada</span>
+                  <span className="text-sm font-bold">{getAddButtonText(selectedCategory)}</span>
                 </div>
               </button>
             )}
@@ -1272,10 +1442,10 @@ const MenuRestaurantScreen: React.FC = () => {
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
               <h3 className="text-xl font-bold text-[#181611] dark:text-white">
                 {pickerSection === 'chef' 
-                  ? 'Sugerencias del chef' 
+                  ? t('restaurant.menu.chefSuggestions')
                   : pickerSection === 'highlights' 
-                  ? 'Destacados' 
-                  : 'Menú'} • {originalCategory}
+                  ? t('restaurant.menu.highlights')
+                  : t('restaurant.menu.menu')} • {originalCategory}
               </h3>
               <button
                 onClick={closePicker}
@@ -1349,7 +1519,7 @@ const MenuRestaurantScreen: React.FC = () => {
                   <button className="w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center transition-colors bg-black/30 text-white hover:bg-black/50">
                     <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 0' }}>favorite</span>
                   </button>
-                  <button className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition-colors" title="Ver opiniones">
+                  <button className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition-colors" title={t('restaurant.menu.viewReviews')}>
                     <span className="material-symbols-outlined">reviews</span>
                   </button>
                 </div>
@@ -1387,7 +1557,7 @@ const MenuRestaurantScreen: React.FC = () => {
                     <button
                       onClick={() => handleRemoveImage(index, isOriginalImage)}
                       className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-md"
-                      title="Eliminar imagen"
+                      title={t('restaurant.menu.deleteImage')}
                     >
                       <span className="material-symbols-outlined text-sm">close</span>
                     </button>
@@ -1407,7 +1577,7 @@ const MenuRestaurantScreen: React.FC = () => {
                 />
                 <div className="flex flex-col items-center gap-1">
                   <span className="material-symbols-outlined text-primary text-2xl">add</span>
-                  <span className="text-xs font-bold text-primary">Agregar</span>
+                  <span className="text-xs font-bold text-primary">{t('restaurant.menu.add')}</span>
                 </div>
               </label>
             </div>
@@ -1443,7 +1613,7 @@ const MenuRestaurantScreen: React.FC = () => {
                       onClick={() => setIsEditingName(true)}
                       className="text-2xl font-bold text-[#181611] dark:text-white leading-tight mb-2 cursor-pointer hover:opacity-70 transition-opacity"
                     >
-                      {editingProductName || 'Nuevo producto'}
+                      {editingProductName || t('restaurant.menu.newProduct')}
                     </h1>
                   )}
                   <div className="flex items-center gap-2 flex-wrap">
@@ -1471,7 +1641,7 @@ const MenuRestaurantScreen: React.FC = () => {
                             deleteTag(tag);
                           }}
                           className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors flex-shrink-0"
-                          title="Eliminar etiqueta"
+                          title={t('restaurant.menu.deleteTag')}
                         >
                           <span className="material-symbols-outlined text-sm">close</span>
                         </button>
@@ -1497,7 +1667,7 @@ const MenuRestaurantScreen: React.FC = () => {
                           console.log('[MenuRestaurantScreen] Input onClick');
                         }}
                         className="w-24 px-1 py-0.5 rounded border-0 bg-transparent text-[#181611] dark:text-white text-xs focus:outline-none focus:ring-0 placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                        placeholder="Etiqueta"
+                        placeholder={t('restaurant.menu.tag')}
                         onKeyDown={(e) => {
                           e.stopPropagation();
                           if (e.key === 'Enter') {
@@ -1515,7 +1685,7 @@ const MenuRestaurantScreen: React.FC = () => {
                           addTag();
                         }}
                         className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center hover:bg-primary-dark transition-colors"
-                        title="Agregar etiqueta"
+                        title={t('restaurant.menu.addTag')}
                       >
                         <span className="material-symbols-outlined text-xs">add</span>
                       </button>
@@ -1584,7 +1754,7 @@ const MenuRestaurantScreen: React.FC = () => {
                   onClick={() => setIsEditingDescription(true)}
                   className="text-base text-gray-600 dark:text-gray-300 leading-relaxed mb-6 cursor-pointer hover:opacity-70 transition-opacity"
                 >
-                  {editingProductDescription || 'Descripción del producto'}
+                  {editingProductDescription || t('restaurant.menu.productDescription')}
                 </p>
               )}
 
@@ -1607,7 +1777,7 @@ const MenuRestaurantScreen: React.FC = () => {
                               value={newComplementName}
                               onChange={(e) => setNewComplementName(e.target.value)}
                               className="flex-1 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#181611] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                              placeholder="Nombre del complemento"
+                              placeholder={t('restaurant.menu.complementName')}
                             />
                             <div className="flex items-center gap-1">
                               <span className="text-sm font-semibold text-primary">+$</span>
@@ -1624,14 +1794,14 @@ const MenuRestaurantScreen: React.FC = () => {
                             <button
                               onClick={saveEditComplement}
                               className="w-8 h-8 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center hover:bg-green-500/20 transition-colors"
-                              title="Guardar"
+                              title={t('restaurant.menu.save')}
                             >
                               <span className="material-symbols-outlined text-sm">check</span>
                             </button>
                             <button
                               onClick={cancelEditComplement}
                               className="w-8 h-8 rounded-full bg-gray-500/10 text-gray-500 flex items-center justify-center hover:bg-gray-500/20 transition-colors"
-                              title="Cancelar"
+                              title={t('restaurant.menu.cancel')}
                             >
                               <span className="material-symbols-outlined text-sm">close</span>
                             </button>
@@ -1645,20 +1815,20 @@ const MenuRestaurantScreen: React.FC = () => {
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-semibold text-primary">
                                 {complement.price === 0 || complement.price === null || complement.price === undefined
-                                  ? 'Sin costo'
+                                  ? t('restaurant.menu.noCost')
                                   : `+${formatPrice(complement.price, localStorage.getItem('selectedLanguage'))}`}
                               </span>
                               <button
                                 onClick={() => startEditComplement(complement)}
                                 className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors"
-                                title="Editar"
+                                title={t('restaurant.menu.edit')}
                               >
                                 <span className="material-symbols-outlined text-sm">edit</span>
                               </button>
                               <button
                                 onClick={() => deleteComplement(complement.id)}
                                 className="w-8 h-8 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center hover:bg-red-500/20 transition-colors"
-                                title="Eliminar"
+                                title={t('restaurant.menu.delete')}
                               >
                                 <span className="material-symbols-outlined text-sm">delete</span>
                               </button>
@@ -1692,7 +1862,7 @@ const MenuRestaurantScreen: React.FC = () => {
                               }}
                               className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-[#181611] dark:text-white text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                             >
-                              Sin costo
+                              {t('restaurant.menu.noCost')}
                             </div>
                           ) : (
                             <>
@@ -1717,7 +1887,7 @@ const MenuRestaurantScreen: React.FC = () => {
                         <button
                           onClick={addComplement}
                           className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center hover:bg-primary-dark transition-colors"
-                          title="Agregar"
+                          title={t('restaurant.menu.add')}
                         >
                           <span className="material-symbols-outlined text-sm">add</span>
                         </button>
@@ -1793,7 +1963,7 @@ const MenuRestaurantScreen: React.FC = () => {
                 className="relative flex-1 h-14 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-bold text-lg rounded-xl shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-gray-300 dark:hover:bg-gray-600"
               >
                 <span className="material-symbols-outlined text-xl">close</span>
-                <span>Cancelar</span>
+                <span>{t('restaurant.menu.cancel')}</span>
               </button>
               <button 
                 type="button"
@@ -1806,8 +1976,47 @@ const MenuRestaurantScreen: React.FC = () => {
                 className="relative flex-1 h-14 bg-primary text-white font-bold text-lg rounded-xl shadow-lg shadow-primary/30 flex items-center justify-center gap-2 active:scale-95 transition-all"
               >
                 <span className="material-symbols-outlined text-xl">save</span>
-                <span>Guardar</span>
+                <span>{t('restaurant.menu.save')}</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación */}
+      {confirmModalOpen && (
+        <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white dark:bg-[#322a1a] rounded-2xl shadow-xl overflow-hidden">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                  <span className="material-symbols-outlined text-red-500 text-2xl">warning</span>
+                </div>
+                <h3 className="text-xl font-bold text-[#181611] dark:text-white">
+                  {t('restaurant.menu.confirmDeletion')}
+                </h3>
+              </div>
+              <p className="text-base text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
+                {confirmModalMessage}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="flex-1 h-12 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-bold rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg">close</span>
+                  <span>{t('restaurant.menu.cancel')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirm}
+                  className="flex-1 h-12 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg">delete</span>
+                  <span>{t('restaurant.menu.delete')}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

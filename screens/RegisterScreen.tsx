@@ -807,7 +807,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
                     {rfcError}
                   </p>
                 )}
-                {rfc && !rfcError && (
+                {rfc && !rfcError && validateRFC(rfc.trim()) && (
                   <p className="text-xs text-green-600 dark:text-green-400 px-1 mt-1">
                     ✓ RFC válido
                   </p>

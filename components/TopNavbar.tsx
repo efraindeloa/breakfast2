@@ -27,7 +27,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, accountType } = useAuth();
   const [userName, setUserName] = useState<string>(propUserName || '');
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const [userInitials, setUserInitials] = useState<string>('');
@@ -183,7 +183,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
             <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">notifications</span>
           </button>
           
-          {showFavorites && (
+          {showFavorites && accountType !== 'restaurant' && (
             <button 
               onClick={() => navigate('/favorites')}
               className={`flex size-10 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm border transition-colors ${

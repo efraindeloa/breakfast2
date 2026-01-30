@@ -19,6 +19,7 @@
     "remove": "Remove",
     "yes": "Yes",
     "no": "No",
+    "retry": "Retry",
     "languageNames": {
       "es": "Español",
       "en": "English",
@@ -48,9 +49,14 @@
     "joinTable": "Join Table",
     "joinTableDescription": "Join a group order",
     "scanQR": "Scan QR",
-    "scanQRDescription": "Order directly from your table",
+    "scanQRDescription": "To select restaurant and table",
     "requestAssistanceDescription": "Request help from staff",
-    "inviteDescription": "Invite people to your table"
+    "inviteDescription": "Invite people to your table",
+    "currentRestaurant": "Current Restaurant",
+    "selectRestaurant": "Select Restaurant",
+    "searchRestaurant": "Search restaurant...",
+    "noRestaurantsFound": "No restaurants found",
+    "noRestaurants": "No restaurants available"
   },
   "menu": {
     "categories": {
@@ -1221,6 +1227,99 @@
       "premiumCoffee": {
         "title": "Premium Special Coffee",
         "description": "Limited edition"
+      }
+    }
+  },
+  "restaurant": {
+    "navigation": {
+      "home": "Home",
+      "promotions": "Promotions",
+      "menu": "Menu",
+      "reservations": "Reservations",
+      "statistics": "Statistics"
+    },
+    "menu": {
+      "chefSuggestions": "Chef Suggestions",
+      "highlights": "Highlights",
+      "menu": "Menu",
+      "addSuggestion": "Add suggestion",
+      "addHighlight": "Add highlight",
+      "addProduct": "Add Product",
+      "addEntry": "Add Appetizer",
+      "addMain": "Add Main Course",
+      "addDrink": "Add Drink",
+      "addDessert": "Add Dessert",
+      "addCocktail": "Add Cocktail",
+      "newProduct": "New product",
+      "productDescription": "Product description",
+      "tag": "Tag",
+      "complementName": "Complement name",
+      "noCost": "No cost",
+      "editModeActive": "Edit mode activated",
+      "switchToEditMode": "Switch to edit mode",
+      "add": "Add",
+      "delete": "Delete",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "deleteImage": "Delete image",
+      "deleteTag": "Delete tag",
+      "addTag": "Add tag",
+      "clearTagFilter": "Clear tag filter",
+      "viewReviews": "View reviews",
+      "deleteProduct": "Delete",
+      "deleteProductConfirm": "Are you sure you want to delete this product? This action will completely remove the product and cannot be undone.",
+      "confirmDeletion": "Confirm Deletion",
+      "errors": {
+        "emptyName": "Please enter a name for the product.",
+        "invalidRestaurant": "Error: Could not identify the restaurant. Please log in as a restaurant.",
+        "invalidPrice": "Error: Price must be a valid number greater than or equal to 0.",
+        "invalidCategory": "Error: Category is not defined. Please select a category.",
+        "updateFailed": "Error updating the product. Please try again.",
+        "createFailed": "Error creating the product. Check the console for more details. Please try again.",
+        "saveFailed": "Error saving the product: {message}. Check the console for more details.",
+        "deleteFailed": "Error deleting the product. Please try again.",
+        "deleteFromDbFailed": "Error deleting the product from the database"
+      }
+    },
+    "profile": {
+      "title": "Restaurant Profile",
+      "manage": "Manage your restaurant",
+      "saving": "Saving...",
+      "changesSaved": "Changes saved successfully",
+      "invalidRestaurantId": "Error: Invalid restaurant ID. Please run the SQL script to create the restaurant correctly.",
+      "saveError": "Error saving changes",
+      "notFound": "Restaurant not found or you do not have permission to update it. Verify that you are associated as owner.",
+      "tagExists": "This tag already exists",
+      "editName": "Edit name",
+      "editCuisine": "Edit cuisine type",
+      "editDescription": "Edit description",
+      "deleteTag": "Eliminar tag",
+      "saveTag": "Save tag",
+      "cancel": "Cancel",
+      "addTag": "Add tag"
+    },
+    "details": {
+      "onlineReservation": "Online Reservation",
+      "delivery": "Delivery",
+      "digitalPayment": "Digital Payment",
+      "freeWifi": "Free WiFi",
+      "saveAddress": "Save address",
+      "cancel": "Cancel",
+      "editAddress": "Edit address",
+      "addService": "Add service",
+      "cancelReservation": "Cancel",
+      "save": "Save",
+      "cancelReservationInfo": "You can cancel your reservation at no cost up to",
+      "hoursBefore": "hours before",
+      "days": {
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday"
       }
     }
   }

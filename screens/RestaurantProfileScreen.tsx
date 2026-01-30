@@ -115,7 +115,7 @@ const RestaurantProfileScreen: React.FC = () => {
 
     // Validar que el restaurantId no sea un UUID de ejemplo
     if (restaurantId === '00000000-0000-0000-0000-000000000001') {
-      alert('Error: ID de restaurante inválido. Por favor, ejecuta el script SQL para crear el restaurante correctamente.');
+      alert(t('restaurant.profile.invalidRestaurantId'));
       return;
     }
 
@@ -134,7 +134,7 @@ const RestaurantProfileScreen: React.FC = () => {
         // Mostrar mensaje de éxito
         const successMsg = document.createElement('div');
         successMsg.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-lg shadow-lg bg-green-500 text-white';
-        successMsg.textContent = 'Cambios guardados correctamente';
+        successMsg.textContent = t('restaurant.profile.changesSaved');
         document.body.appendChild(successMsg);
         setTimeout(() => {
           document.body.removeChild(successMsg);
@@ -144,9 +144,9 @@ const RestaurantProfileScreen: React.FC = () => {
       }
     } catch (error: any) {
       console.error('[saveEdit] Error saving:', error);
-      let errorMessage = 'Error al guardar los cambios';
+      let errorMessage = t('restaurant.profile.saveError');
       if (error.code === 'PGRST116') {
-        errorMessage = 'No se encontró el restaurante o no tienes permisos para actualizarlo. Verifica que estés asociado como owner.';
+        errorMessage = t('restaurant.profile.notFound');
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -170,7 +170,7 @@ const RestaurantProfileScreen: React.FC = () => {
 
     // Validar que el restaurantId no sea un UUID de ejemplo
     if (restaurantId === '00000000-0000-0000-0000-000000000001') {
-      alert('Error: ID de restaurante inválido. Por favor, ejecuta el script SQL para crear el restaurante correctamente.');
+      alert(t('restaurant.profile.invalidRestaurantId'));
       return;
     }
 
@@ -179,7 +179,7 @@ const RestaurantProfileScreen: React.FC = () => {
 
     // Verificar que el tag no exista ya
     if (currentTags.includes(tagToAdd)) {
-      alert('Este tag ya existe');
+      alert(t('restaurant.profile.tagExists'));
       setNewTagValue('');
       return;
     }
@@ -226,7 +226,7 @@ const RestaurantProfileScreen: React.FC = () => {
 
     // Validar que el restaurantId no sea un UUID de ejemplo
     if (restaurantId === '00000000-0000-0000-0000-000000000001') {
-      alert('Error: ID de restaurante inválido. Por favor, ejecuta el script SQL para crear el restaurante correctamente.');
+      alert(t('restaurant.profile.invalidRestaurantId'));
       return;
     }
 
@@ -274,7 +274,7 @@ const RestaurantProfileScreen: React.FC = () => {
 
     // Validar que el restaurantId no sea un UUID de ejemplo
     if (restaurantId === '00000000-0000-0000-0000-000000000001') {
-      alert('Error: ID de restaurante inválido. Por favor, ejecuta el script SQL para crear el restaurante correctamente.');
+      alert(t('restaurant.profile.invalidRestaurantId'));
       return;
     }
 
@@ -631,7 +631,7 @@ const RestaurantProfileScreen: React.FC = () => {
                   <button
                     onClick={() => startEdit('nombre_comercial', restaurant.nombre_comercial || '')}
                     className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors"
-                    title="Editar nombre"
+                    title={t('restaurant.profile.editName')}
                   >
                     <span className="material-symbols-outlined text-sm">add</span>
                   </button>
@@ -668,7 +668,7 @@ const RestaurantProfileScreen: React.FC = () => {
                   <button
                     onClick={() => startEdit('tipo_cocina', restaurant.tipo_cocina || '')}
                     className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors"
-                    title="Editar tipo de cocina"
+                    title={t('restaurant.profile.editCuisine')}
                   >
                     <span className="material-symbols-outlined text-xs">add</span>
                   </button>
@@ -739,13 +739,13 @@ const RestaurantProfileScreen: React.FC = () => {
                   disabled={isSaving}
                   className="px-4 py-2 bg-primary text-white rounded-lg font-bold text-sm disabled:opacity-50"
                 >
-                  {isSaving ? 'Guardando...' : 'Guardar'}
+                  {isSaving ? t('restaurant.profile.saving') : t('restaurant.profile.save')}
                 </button>
                 <button 
                   onClick={cancelEdit} 
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-bold text-sm"
                 >
-                  Cancelar
+                  {t('restaurant.profile.cancel')}
                 </button>
               </div>
             </div>
@@ -757,7 +757,7 @@ const RestaurantProfileScreen: React.FC = () => {
               <button
                 onClick={() => startEdit('descripcion_corta', restaurant.descripcion_corta || '')}
                 className="absolute top-0 right-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors"
-                title="Editar descripción"
+                title={t('restaurant.profile.editDescription')}
               >
                 <span className="material-symbols-outlined text-sm">add</span>
               </button>
@@ -785,7 +785,7 @@ const RestaurantProfileScreen: React.FC = () => {
                 onClick={() => handleRemoveTag(tag)}
                 disabled={isSaving}
                 className="ml-1 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
-                title="Eliminar tag"
+                title={t('restaurant.profile.deleteTag')}
               >
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
@@ -812,7 +812,7 @@ const RestaurantProfileScreen: React.FC = () => {
                 onClick={handleAddTag}
                 disabled={isSaving || !newTagValue.trim()}
                 className="text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Guardar tag"
+                title={t('restaurant.profile.saveTag')}
               >
                 <span className="material-symbols-outlined text-sm">check</span>
               </button>
@@ -822,7 +822,7 @@ const RestaurantProfileScreen: React.FC = () => {
                   setNewTagValue('');
                 }}
                 className="text-gray-400"
-                title="Cancelar"
+                title={t('restaurant.profile.cancel')}
               >
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
@@ -833,7 +833,7 @@ const RestaurantProfileScreen: React.FC = () => {
               className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 rounded-full border border-primary/30 hover:bg-primary/20 transition-colors"
             >
               <span className="material-symbols-outlined text-sm text-primary">add</span>
-              <span className="text-sm font-medium text-primary">Agregar tag</span>
+              <span className="text-sm font-medium text-primary">{t('restaurant.profile.addTag')}</span>
             </button>
           )}
         </div>

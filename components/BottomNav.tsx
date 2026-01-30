@@ -245,11 +245,11 @@ const BottomNav: React.FC = () => {
   const navItems =
     accountType === 'restaurant'
       ? [
-          { label: 'Inicio', icon: 'home', path: '/home-restaurant' },
-          { label: 'Promociones', icon: 'local_offer', path: '/promotions-restaurant', showBadge: true },
-          { label: 'Menú', icon: 'restaurant_menu', path: '/menu-restaurant' },
-          { label: 'Reservaciones', icon: 'calendar_today', path: '/reservaciones-restaurant' },
-          { label: 'Estadísticas', icon: 'bar_chart', path: '/estadisticas-restaurant' },
+          { label: t('restaurant.navigation.home'), icon: 'home', path: '/home-restaurant' },
+          { label: t('restaurant.navigation.promotions'), icon: 'local_offer', path: '/promotions-restaurant', showBadge: true },
+          { label: t('restaurant.navigation.menu'), icon: 'restaurant_menu', path: '/menu-restaurant' },
+          { label: t('restaurant.navigation.reservations'), icon: 'calendar_today', path: '/reservaciones-restaurant' },
+          { label: t('restaurant.navigation.statistics'), icon: 'bar_chart', path: '/estadisticas-restaurant' },
         ]
       : [
           { label: t('navigation.home'), icon: 'home', path: '/home' },
@@ -289,8 +289,8 @@ const BottomNav: React.FC = () => {
               >
                 {item.icon}
               </span>
-              {/* Badge para promociones (punto rojo) */}
-              {item.showBadge && (
+              {/* Badge para promociones (punto rojo) - solo para cuentas que no sean restaurant */}
+              {item.showBadge && accountType !== 'restaurant' && (
                 <span className="absolute -top-1 -right-1 size-2 bg-red-500 rounded-full border-2 border-background-dark dark:border-background-light"></span>
               )}
               {/* Solo mostrar badge si hay items pendientes en el carrito (orden complementaria pendiente) */}

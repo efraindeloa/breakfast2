@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 const RestaurantDetailsScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { restaurant } = useRestaurant();
 
@@ -27,10 +29,10 @@ const RestaurantDetailsScreen: React.FC = () => {
   const [services, setServices] = useState<
     Array<{ id: string; label: string; icon: string; enabled: boolean }>
   >([
-    { id: 'reserva_online', label: 'Reserva Online', icon: 'event_available', enabled: true },
-    { id: 'domicilio', label: 'Domicilio', icon: 'delivery_dining', enabled: true },
-    { id: 'pago_digital', label: 'Pago Digital', icon: 'credit_card', enabled: true },
-    { id: 'wifi', label: 'WiFi Gratis', icon: 'wifi', enabled: true },
+    { id: 'reserva_online', label: t('restaurant.details.onlineReservation'), icon: 'event_available', enabled: true },
+    { id: 'domicilio', label: t('restaurant.details.delivery'), icon: 'delivery_dining', enabled: true },
+    { id: 'pago_digital', label: t('restaurant.details.digitalPayment'), icon: 'credit_card', enabled: true },
+    { id: 'wifi', label: t('restaurant.details.freeWifi'), icon: 'wifi', enabled: true },
   ]);
   const [isAddingService, setIsAddingService] = useState(false);
   const [newServiceLabel, setNewServiceLabel] = useState('');
@@ -462,7 +464,7 @@ const RestaurantDetailsScreen: React.FC = () => {
                     <button
                       onClick={() => setIsEditingAddress(false)}
                       className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                      title="Cancelar"
+                      title={t('restaurant.details.cancel')}
                     >
                       <span className="material-symbols-outlined">close</span>
                     </button>
@@ -479,7 +481,7 @@ const RestaurantDetailsScreen: React.FC = () => {
                       <button
                         onClick={handleEditAddress}
                         className="flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-primary/10 dark:bg-primary/20 text-primary transition-all hover:bg-primary hover:text-white"
-                        title="Editar dirección"
+                        title={t('restaurant.details.editAddress')}
                       >
                         <span className="material-symbols-outlined">edit</span>
                       </button>
@@ -642,7 +644,7 @@ const RestaurantDetailsScreen: React.FC = () => {
                   className="col-span-2 flex items-center justify-center gap-2 p-3 rounded-xl border border-primary/30 bg-primary/10 text-primary font-bold"
                 >
                   <span className="material-symbols-outlined">add</span>
-                  Agregar servicio
+                  {t('restaurant.details.addService')}
                 </button>
               )}
             </div>
@@ -706,7 +708,7 @@ const RestaurantDetailsScreen: React.FC = () => {
                   Cancelación
                 </p>
                 <p className="text-sm text-[#181411] dark:text-white/80 leading-relaxed">
-                  Puedes cancelar tu reserva sin costo hasta <span className="font-bold">2 horas antes</span> de la
+                  {t('restaurant.details.cancelReservationInfo')} <span className="font-bold">2 {t('restaurant.details.hoursBefore')}</span> de la
                   cita. Las cancelaciones tardías pueden incurrir en un cargo del 20%.
                 </p>
               </div>
@@ -749,13 +751,13 @@ const RestaurantDetailsScreen: React.FC = () => {
                 onClick={() => setShowPhoneModal(false)}
                 className="flex-1 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                Cancelar
+                {t('restaurant.details.cancel')}
               </button>
               <button
                 onClick={handleSavePhone}
                 className="flex-1 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors"
               >
-                Guardar
+                {t('restaurant.details.save')}
               </button>
             </div>
           </div>
@@ -787,13 +789,13 @@ const RestaurantDetailsScreen: React.FC = () => {
                 onClick={() => setShowWebModal(false)}
                 className="flex-1 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                Cancelar
+                {t('restaurant.details.cancel')}
               </button>
               <button
                 onClick={handleSaveWebsite}
                 className="flex-1 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors"
               >
-                Guardar
+                {t('restaurant.details.save')}
               </button>
             </div>
           </div>
@@ -825,13 +827,13 @@ const RestaurantDetailsScreen: React.FC = () => {
                 onClick={() => setShowWhatsAppModal(false)}
                 className="flex-1 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                Cancelar
+                {t('restaurant.details.cancel')}
               </button>
               <button
                 onClick={handleSaveWhatsApp}
                 className="flex-1 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors"
               >
-                Guardar
+                {t('restaurant.details.save')}
               </button>
             </div>
           </div>

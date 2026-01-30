@@ -131,6 +131,7 @@ export interface Product {
   description: string;
   price: string;
   image_url?: string;
+  image_urls?: string[]; // Array de URLs de imágenes
   image?: string; // Para compatibilidad
   badges?: string[];
   category: string;
@@ -1942,6 +1943,7 @@ export const createProduct = async (product: {
   description?: string;
   price: number;
   image_url?: string;
+  image_urls?: string[];
   badges?: string[];
   category: string;
   origin?: string;
@@ -1964,12 +1966,21 @@ export const createProduct = async (product: {
       throw new Error(`Precio inválido: ${product.price}`);
     }
 
+    // Procesar imágenes: si hay image_urls, usarlas; si no, usar image_url
+    const imageUrls = product.image_urls && product.image_urls.length > 0 
+      ? product.image_urls 
+      : (product.image_url ? [product.image_url] : []);
+    
+    // image_url debe tener la primera imagen para compatibilidad
+    const firstImageUrl = imageUrls.length > 0 ? imageUrls[0] : null;
+
     const insertData: any = {
       restaurant_id: product.restaurant_id,
       name: product.name,
       description: product.description || '',
       price: priceValue,
-      image_url: product.image_url || null,
+      image_url: firstImageUrl,
+      image_urls: imageUrls.length > 0 ? imageUrls : [],
       badges: product.badges || [],
       category: product.category,
       origin: product.origin || '',
@@ -2027,6 +2038,7 @@ export const updateProduct = async (
     description?: string;
     price?: number;
     image_url?: string;
+    image_urls?: string[];
     badges?: string[];
     category?: string;
     origin?: string;
@@ -2051,7 +2063,18 @@ export const updateProduct = async (
     if (updates.name !== undefined) updateData.name = updates.name;
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.price !== undefined) updateData.price = updates.price.toString();
-    if (updates.image_url !== undefined) updateData.image_url = updates.image_url || null;
+    
+    // Procesar imágenes: si hay image_urls, usarlas; si no, usar image_url
+    if (updates.image_urls !== undefined) {
+      updateData.image_urls = updates.image_urls.length > 0 ? updates.image_urls : [];
+      // image_url debe tener la primera imagen para compatibilidad
+      updateData.image_url = updates.image_urls.length > 0 ? updates.image_urls[0] : null;
+    } else if (updates.image_url !== undefined) {
+      // Si solo se actualiza image_url, mantener image_urls si existe, o crear array con image_url
+      updateData.image_url = updates.image_url || null;
+      // No actualizar image_urls si no se proporciona explícitamente
+    }
+    
     if (updates.badges !== undefined) updateData.badges = updates.badges;
     if (updates.category !== undefined) updateData.category = updates.category;
     if (updates.origin !== undefined) updateData.origin = updates.origin;
@@ -2086,6 +2109,7 @@ export const updateProduct = async (
 
 /**
  * Elimina un producto (soft delete: marca is_active como false)
+ * También elimina todas las referencias del producto en restaurant_menu_sections
  */
 export const deleteProduct = async (productId: number): Promise<boolean> => {
   if (!isSupabaseConfigured()) {
@@ -2094,12 +2118,74 @@ export const deleteProduct = async (productId: number): Promise<boolean> => {
   }
 
   try {
-    const { error } = await supabase
+    // 1. Eliminar el producto (soft delete)
+    const { error: productError } = await supabase
       .from('products')
       .update({ is_active: false, updated_at: new Date().toISOString() })
       .eq('id', productId);
 
-    if (error) throw error;
+    if (productError) throw productError;
+
+    // 2. Eliminar todas las referencias del producto en restaurant_menu_sections
+    // Primero, obtener el restaurant_id del producto para buscar solo sus secciones
+    const { data: productData } = await supabase
+      .from('products')
+      .select('restaurant_id')
+      .eq('id', productId)
+      .single();
+
+    if (productData?.restaurant_id) {
+      // Obtener todas las secciones del restaurante
+      const { data: allSections, error: sectionsError } = await supabase
+        .from('restaurant_menu_sections')
+        .select('*')
+        .eq('restaurant_id', productData.restaurant_id);
+
+      if (sectionsError && sectionsError.code !== 'PGRST116') {
+        console.warn('[deleteProduct] Error al buscar referencias en restaurant_menu_sections:', sectionsError);
+        // Continuar de todas formas, el producto ya fue eliminado
+      } else if (allSections && allSections.length > 0) {
+        // Filtrar las secciones que contienen este producto
+        const sectionsWithProduct = allSections.filter((section: RestaurantMenuSection) => 
+          (section.product_ids || []).includes(productId)
+        );
+
+        if (sectionsWithProduct.length > 0) {
+          // Actualizar cada sección para remover el productId del array
+          const updatePromises = sectionsWithProduct.map(async (section: RestaurantMenuSection) => {
+            const updatedProductIds = (section.product_ids || []).filter((id: number) => id !== productId);
+            
+            // Si la sección queda vacía, eliminarla; si no, actualizarla
+            if (updatedProductIds.length === 0) {
+              const { error: deleteError } = await supabase
+                .from('restaurant_menu_sections')
+                .delete()
+                .eq('id', section.id);
+              
+              if (deleteError) {
+                console.warn(`[deleteProduct] Error al eliminar sección vacía ${section.id}:`, deleteError);
+              }
+            } else {
+              const { error: updateError } = await supabase
+                .from('restaurant_menu_sections')
+                .update({ 
+                  product_ids: updatedProductIds,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', section.id);
+              
+              if (updateError) {
+                console.warn(`[deleteProduct] Error al actualizar sección ${section.id}:`, updateError);
+              }
+            }
+          });
+
+          await Promise.all(updatePromises);
+          console.log(`[deleteProduct] Eliminadas ${sectionsWithProduct.length} referencias del producto ${productId} en restaurant_menu_sections`);
+        }
+      }
+    }
+
     return true;
   } catch (error) {
     console.error('Error deleting product:', error);
@@ -3938,24 +4024,107 @@ export const saveRestaurantMenuSections = async (
       }
     });
 
-    // Eliminar todas las configuraciones existentes para este restaurante
-    const { error: deleteError } = await supabase
+    // Obtener todas las secciones existentes para este restaurante
+    const { data: existingSections } = await supabase
       .from('restaurant_menu_sections')
-      .delete()
+      .select('id, restaurant_id, section_type, category, product_ids')
       .eq('restaurant_id', restaurantId);
 
-    if (deleteError) {
-      console.warn('[saveRestaurantMenuSections] Error deleting existing sections:', deleteError);
-      // Continuar de todas formas, el upsert puede manejar duplicados
+    // Crear un mapa de secciones existentes para búsqueda rápida
+    const existingSectionsMap = new Map<string, RestaurantMenuSection>();
+    if (existingSections) {
+      existingSections.forEach(section => {
+        const key = `${section.restaurant_id}-${section.section_type}-${section.category}`;
+        existingSectionsMap.set(key, section);
+      });
     }
 
-    // Insertar las nuevas configuraciones
-    if (records.length > 0) {
-      const { error: insertError } = await supabase
-        .from('restaurant_menu_sections')
-        .insert(records);
+    // Crear un Set de las secciones que queremos mantener
+    const sectionsToKeep = new Set<string>();
+    records.forEach(record => {
+      sectionsToKeep.add(`${record.restaurant_id}-${record.section_type}-${record.category}`);
+    });
 
-      if (insertError) throw insertError;
+    // Eliminar las secciones que ya no están en los nuevos datos
+    if (existingSections && existingSections.length > 0) {
+      const sectionsToDelete = existingSections.filter(section => {
+        const key = `${section.restaurant_id}-${section.section_type}-${section.category}`;
+        return !sectionsToKeep.has(key);
+      });
+
+      if (sectionsToDelete.length > 0) {
+        for (const section of sectionsToDelete) {
+          const { error: deleteError } = await supabase
+            .from('restaurant_menu_sections')
+            .delete()
+            .eq('id', section.id);
+
+          if (deleteError) {
+            console.warn(`[saveRestaurantMenuSections] Error deleting section ${section.section_type}-${section.category}:`, deleteError);
+          }
+        }
+      }
+    }
+
+    // Procesar cada registro: actualizar si existe, insertar si no existe
+    if (records.length > 0) {
+      const updatePromises: Promise<any>[] = [];
+      const insertRecords: typeof records = [];
+
+      for (const record of records) {
+        const key = `${record.restaurant_id}-${record.section_type}-${record.category}`;
+        const existing = existingSectionsMap.get(key);
+
+        if (existing) {
+          // Actualizar registro existente
+          updatePromises.push(
+            supabase
+              .from('restaurant_menu_sections')
+              .update({
+                product_ids: record.product_ids,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', existing.id)
+          );
+        } else {
+          // Insertar nuevo registro
+          insertRecords.push(record);
+        }
+      }
+
+      // Ejecutar todas las actualizaciones en paralelo
+      if (updatePromises.length > 0) {
+        const updateResults = await Promise.all(updatePromises);
+        const updateErrors = updateResults.filter(result => result.error);
+        if (updateErrors.length > 0) {
+          console.error('[saveRestaurantMenuSections] Some updates failed:', updateErrors);
+          throw new Error(`Failed to update ${updateErrors.length} menu sections`);
+        }
+      }
+
+      // Insertar nuevos registros
+      if (insertRecords.length > 0) {
+        const { error: insertError } = await supabase
+          .from('restaurant_menu_sections')
+          .insert(insertRecords);
+
+        if (insertError) {
+          console.error('[saveRestaurantMenuSections] Insert error:', insertError);
+          throw insertError;
+        }
+      }
+    } else {
+      // Si no hay registros, eliminar todas las secciones del restaurante
+      if (existingSections && existingSections.length > 0) {
+        const { error: deleteAllError } = await supabase
+          .from('restaurant_menu_sections')
+          .delete()
+          .eq('restaurant_id', restaurantId);
+
+        if (deleteAllError) {
+          console.warn('[saveRestaurantMenuSections] Error deleting all sections:', deleteAllError);
+        }
+      }
     }
 
     console.log(`[saveRestaurantMenuSections] Saved ${records.length} menu section configurations for restaurant ${restaurantId}`);

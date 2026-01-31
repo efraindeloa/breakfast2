@@ -26,6 +26,20 @@
       "en": "English",
       "pt": "Português",
       "fr": "Français"
+    },
+    "months": {
+      "january": "Enero",
+      "february": "Febrero",
+      "march": "Marzo",
+      "april": "Abril",
+      "may": "Mayo",
+      "june": "Junio",
+      "july": "Julio",
+      "august": "Agosto",
+      "september": "Septiembre",
+      "october": "Octubre",
+      "november": "Noviembre",
+      "december": "Diciembre"
     }
   },
   "navigation": {
@@ -53,6 +67,8 @@
     "scanQRDescription": "Para seleccionar restaurant y mesa",
     "requestAssistanceDescription": "Solicita ayuda del personal",
     "inviteDescription": "Invita personas a tu mesa",
+    "makeReservation": "Hacer Reservación",
+    "makeReservationDescription": "Reserva tu mesa con anticipación",
     "currentRestaurant": "Restaurante actual",
     "selectRestaurant": "Seleccionar restaurante",
     "searchRestaurant": "Buscar restaurante...",
@@ -1332,6 +1348,32 @@
         "friday": "Viernes",
         "saturday": "Sábado",
         "sunday": "Domingo"
+      }
+    },
+    "reservations": {
+      "details": "Detalles de Reservación",
+      "selectDate": "Selecciona la Fecha",
+      "arrivalTime": "¿A qué hora llegas?",
+      "numberOfPeople": "¿Cuántas personas?",
+      "selectZone": "Selecciona la Zona",
+      "specialOccasion": "¿Es una ocasión especial?",
+      "tablePreferences": "Preferencias de Mesa",
+      "tablePreferencesPlaceholder": "Ej. Cerca de la ventana, zona tranquila, trona para bebé...",
+      "advanceOrder": "Pedido Anticipado",
+      "advanceOrderDescription": "Ahorra tiempo al llegar. Selecciona tus platillos favoritos ahora.",
+      "viewFullMenu": "Ver el menú completo",
+      "totalReservation": "Total Reservación",
+      "guests": "Comensales",
+      "zones": {
+        "interior": "Interior",
+        "terraza": "Terraza",
+        "jardin": "Jardín"
+      },
+      "occasions": {
+        "birthday": "Cumpleaños",
+        "anniversary": "Aniversario",
+        "business": "Negocios",
+        "date": "Cita"
       }
     },
     "promotions": {

@@ -26,6 +26,20 @@
       "en": "English",
       "pt": "Português",
       "fr": "Français"
+    },
+    "months": {
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December"
     }
   },
   "navigation": {
@@ -53,6 +67,8 @@
     "scanQRDescription": "To select restaurant and table",
     "requestAssistanceDescription": "Request help from staff",
     "inviteDescription": "Invite people to your table",
+    "makeReservation": "Make Reservation",
+    "makeReservationDescription": "Reserve your table in advance",
     "currentRestaurant": "Current Restaurant",
     "selectRestaurant": "Select Restaurant",
     "searchRestaurant": "Search restaurant...",
@@ -1322,6 +1338,32 @@
         "friday": "Friday",
         "saturday": "Saturday",
         "sunday": "Sunday"
+      }
+    },
+    "reservations": {
+      "details": "Reservation Details",
+      "selectDate": "Select Date",
+      "arrivalTime": "What time will you arrive?",
+      "numberOfPeople": "How many people?",
+      "selectZone": "Select Zone",
+      "specialOccasion": "Is it a special occasion?",
+      "tablePreferences": "Table Preferences",
+      "tablePreferencesPlaceholder": "E.g. Near the window, quiet area, high chair for baby...",
+      "advanceOrder": "Advance Order",
+      "advanceOrderDescription": "Save time when you arrive. Select your favorite dishes now.",
+      "viewFullMenu": "View full menu",
+      "totalReservation": "Total Reservation",
+      "guests": "Guests",
+      "zones": {
+        "interior": "Interior",
+        "terraza": "Terrace",
+        "jardin": "Garden"
+      },
+      "occasions": {
+        "birthday": "Birthday",
+        "anniversary": "Anniversary",
+        "business": "Business",
+        "date": "Date"
       }
     },
     "promotions": {

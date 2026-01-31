@@ -26,6 +26,20 @@
       "en": "English",
       "pt": "Português",
       "fr": "Français"
+    },
+    "months": {
+      "january": "Janvier",
+      "february": "Février",
+      "march": "Mars",
+      "april": "Avril",
+      "may": "Mai",
+      "june": "Juin",
+      "july": "Juillet",
+      "august": "Août",
+      "september": "Septembre",
+      "october": "Octobre",
+      "november": "Novembre",
+      "december": "Décembre"
     }
   },
   "navigation": {
@@ -53,6 +67,8 @@
     "scanQRDescription": "Pour sélectionner le restaurant et la table",
     "requestAssistanceDescription": "Demandez l'aide du personnel",
     "inviteDescription": "Invitez des personnes à votre table",
+    "makeReservation": "Faire une Réservation",
+    "makeReservationDescription": "Réservez votre table à l'avance",
     "currentRestaurant": "Restaurant Actuel",
     "selectRestaurant": "Sélectionner un Restaurant",
     "searchRestaurant": "Rechercher un restaurant...",
@@ -1321,6 +1337,32 @@
         "friday": "Vendredi",
         "saturday": "Samedi",
         "sunday": "Dimanche"
+      }
+    },
+    "reservations": {
+      "details": "Détails de la Réservation",
+      "selectDate": "Sélectionnez la Date",
+      "arrivalTime": "À quelle heure arriverez-vous ?",
+      "numberOfPeople": "Combien de personnes ?",
+      "selectZone": "Sélectionnez la Zone",
+      "specialOccasion": "Est-ce une occasion spéciale ?",
+      "tablePreferences": "Préférences de Table",
+      "tablePreferencesPlaceholder": "Ex. Près de la fenêtre, zone calme, chaise haute pour bébé...",
+      "advanceOrder": "Commande à l'Avance",
+      "advanceOrderDescription": "Gagnez du temps à votre arrivée. Sélectionnez vos plats favoris maintenant.",
+      "viewFullMenu": "Voir le menu complet",
+      "totalReservation": "Total de la Réservation",
+      "guests": "Invités",
+      "zones": {
+        "interior": "Intérieur",
+        "terraza": "Terrasse",
+        "jardin": "Jardin"
+      },
+      "occasions": {
+        "birthday": "Anniversaire",
+        "anniversary": "Anniversaire",
+        "business": "Affaires",
+        "date": "Rendez-vous"
       }
     },
     "promotions": {

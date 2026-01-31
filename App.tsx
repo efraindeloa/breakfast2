@@ -155,6 +155,7 @@ const AppContent: React.FC = () => {
           <Route path="/promotions" element={isAuthenticated ? <PromotionsScreen /> : <Navigate to="/" />} />
           <Route path="/promotion-detail/:id" element={isAuthenticated ? <PromotionDetailScreen /> : <Navigate to="/" />} />
           <Route path="/table-ready" element={isAuthenticated ? <TableReadyScreen /> : <Navigate to="/" />} />
+          <Route path="/reservations" element={isAuthenticated ? <ReservationsRestaurantScreen /> : <Navigate to="/" />} />
           <Route path="/restaurant-profile" element={isAuthenticated ? <RestaurantProfileScreen /> : <Navigate to="/" />} />
           <Route path="/restaurant-details" element={isAuthenticated ? <RestaurantDetailsScreen /> : <Navigate to="/" />} />
           <Route path="/admin-control-panel" element={isAuthenticated ? <AdminControlPanelScreen /> : <Navigate to="/" />} />

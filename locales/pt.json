@@ -26,6 +26,20 @@
       "en": "English",
       "pt": "Português",
       "fr": "Français"
+    },
+    "months": {
+      "january": "Janeiro",
+      "february": "Fevereiro",
+      "march": "Março",
+      "april": "Abril",
+      "may": "Maio",
+      "june": "Junho",
+      "july": "Julho",
+      "august": "Agosto",
+      "september": "Setembro",
+      "october": "Outubro",
+      "november": "Novembro",
+      "december": "Dezembro"
     }
   },
   "navigation": {
@@ -53,6 +67,8 @@
     "scanQRDescription": "Para selecionar restaurante e mesa",
     "requestAssistanceDescription": "Solicite ajuda da equipe",
     "inviteDescription": "Convide pessoas para sua mesa",
+    "makeReservation": "Fazer Reserva",
+    "makeReservationDescription": "Reserve sua mesa com antecedência",
     "currentRestaurant": "Restaurante Atual",
     "selectRestaurant": "Selecionar Restaurante",
     "searchRestaurant": "Buscar restaurante...",
@@ -1321,6 +1337,32 @@
         "friday": "Sexta-feira",
         "saturday": "Sábado",
         "sunday": "Domingo"
+      }
+    },
+    "reservations": {
+      "details": "Detalhes da Reserva",
+      "selectDate": "Selecione a Data",
+      "arrivalTime": "Que horas você chegará?",
+      "numberOfPeople": "Quantas pessoas?",
+      "selectZone": "Selecione a Zona",
+      "specialOccasion": "É uma ocasião especial?",
+      "tablePreferences": "Preferências de Mesa",
+      "tablePreferencesPlaceholder": "Ex. Perto da janela, área tranquila, cadeira alta para bebê...",
+      "advanceOrder": "Pedido Antecipado",
+      "advanceOrderDescription": "Economize tempo ao chegar. Selecione seus pratos favoritos agora.",
+      "viewFullMenu": "Ver cardápio completo",
+      "totalReservation": "Total da Reserva",
+      "guests": "Convidados",
+      "zones": {
+        "interior": "Interior",
+        "terraza": "Terraço",
+        "jardin": "Jardim"
+      },
+      "occasions": {
+        "birthday": "Aniversário",
+        "anniversary": "Aniversário",
+        "business": "Negócios",
+        "date": "Encontro"
       }
     },
     "promotions": {

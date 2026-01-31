@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useGroupOrder } from '../contexts/GroupOrderContext';
 import { Order } from '../types/order';
-import { getOrders } from '../services/database';
+import { getOrders } from '../services/api';
 
 interface SelectableOrderItem {
   id: string; // ID único para este item (orderId-itemId-index)
@@ -29,8 +29,12 @@ const SplitPaymentSelectionScreen: React.FC = () => {
     const loadOrders = async () => {
       try {
         setIsLoadingOrders(true);
-        const loadedOrders = await getOrders();
-        setOrders(loadedOrders);
+        const ordersResult = await getOrders();
+        if (ordersResult.success && ordersResult.data) {
+          setOrders(ordersResult.data);
+        } else {
+          console.error('Error loading orders:', ordersResult.error);
+        }
       } catch (error) {
         console.error('Error loading orders:', error);
         setOrders([]);

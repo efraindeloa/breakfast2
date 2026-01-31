@@ -77,7 +77,51 @@ duplicate key value violates unique constraint "re..._sections_restaurant_id_sec
 
 ## 🟡 Importantes
 
-_(Agregar otros issues importantes aquí cuando surjan)_
+### 3. Página se queda cargando permanentemente después de hacer refresh (F5) cuando el usuario está autenticado
+**Fecha:** 2026-01-30  
+**Estado:** Pendiente  
+**Prioridad:** Alta
+
+**Descripción:**
+Cuando un usuario está autenticado y hace refresh (F5) en la página, la aplicación se queda permanentemente en estado de carga. Después de esto, el usuario no puede continuar y tiene que borrar el cache del navegador para poder usar la aplicación nuevamente.
+
+**Comportamiento actual:**
+- Usuario está autenticado
+- Usuario hace refresh (F5)
+- La página muestra la animación de carga indefinidamente
+- El usuario no puede interactuar con la aplicación
+- Solo funciona después de borrar el cache del navegador
+
+**Causa identificada:**
+El problema parece estar relacionado con:
+1. El `safetyTimeout` que fuerza `setLoading(false)` después de 5 segundos puede estar interfiriendo con el proceso de autenticación
+2. El `onAuthStateChange` con eventos `INITIAL_SESSION` o `TOKEN_REFRESHED` puede estar bloqueándose en verificaciones de la base de datos
+3. Posible condición de carrera entre `getSession()` inicial y `onAuthStateChange`
+4. El flag `isAuthenticating` puede no estar funcionando correctamente para prevenir que el `safetyTimeout` interfiera
+
+**Archivos afectados:**
+- `contexts/AuthContext.tsx` - Función `useEffect` de carga inicial y `onAuthStateChange`
+- `App.tsx` - Manejo del estado `loading` del AuthContext
+
+**Intentos de solución:**
+1. ✅ Agregado timeout de seguridad de 5 segundos
+2. ✅ Simplificado el manejo de `INITIAL_SESSION` y `TOKEN_REFRESHED` para evitar verificaciones estrictas
+3. ✅ Agregado flag `isAuthenticating` para evitar que el `safetyTimeout` interfiera durante el inicio de sesión
+4. ✅ Agregado timeout en `refreshAccountType` para evitar bloqueos
+5. ❌ El problema persiste
+
+**Solución propuesta:**
+1. **Investigación adicional:** Revisar si hay problemas de RLS en las tablas `users` o `restaurant_staff` que estén bloqueando las consultas
+2. **Mejorar el manejo de eventos:** Separar completamente la lógica de carga inicial de la lógica de autenticación activa
+3. **Agregar más logging:** Para identificar exactamente dónde se está bloqueando el proceso
+4. **Considerar deshabilitar temporalmente el `safetyTimeout`** durante el proceso de autenticación activa
+5. **Revisar el orden de ejecución:** Asegurar que `getSession()` y `onAuthStateChange` no compitan entre sí
+
+**Notas:**
+- El problema también afecta el inicio de sesión: cuando el `safetyTimeout` se activa, el botón de "Iniciando sesión..." se queda atascado
+- Se ha intentado usar el flag `isAuthenticating` pero el problema persiste
+
+---
 
 ---
 

@@ -7,7 +7,8 @@ import { useCart } from '../contexts/CartContext';
 import { useGroupOrder } from '../contexts/GroupOrderContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Order, OrderStatus } from '../types/order';
-import { getOrders, getProductById, getUserPaymentMethods, UserPaymentMethod } from '../services/database';
+import { getOrders } from '../services/api';
+import { getProductById, getUserPaymentMethods, UserPaymentMethod } from '../services/database';
 import TopNavbar from '../components/TopNavbar';
 
 interface Card {
@@ -97,8 +98,12 @@ const PaymentMethodsScreen: React.FC = () => {
     const loadOrders = async () => {
       try {
         setIsLoadingOrders(true);
-        const loadedOrders = await getOrders();
-        setOrders(loadedOrders);
+        const ordersResult = await getOrders();
+        if (ordersResult.success && ordersResult.data) {
+          setOrders(ordersResult.data);
+        } else {
+          console.error('Error loading orders:', ordersResult.error);
+        }
       } catch (error) {
         console.error('Error loading orders:', error);
         setOrders([]);

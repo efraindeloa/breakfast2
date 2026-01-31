@@ -5,7 +5,16 @@ import { useProducts } from '../contexts/ProductsContext';
 import TopNavbar from '../components/TopNavbar';
 import { formatPrice } from '../utils/currency';
 import { useRestaurant } from '../contexts/RestaurantContext';
-import { getProductImageUrl, createProduct, updateProduct, deleteProduct, getCurrentUserRestaurantId, uploadImage, getRestaurantMenuSections, saveRestaurantMenuSections } from '../services/database';
+import { 
+  createProduct, 
+  updateProduct, 
+  deleteProduct, 
+  getCurrentUserRestaurantId, 
+  uploadProductImage,
+  getMenuSections,
+  saveMenuSections as saveMenuSectionsAPI
+} from '../services/api';
+import { getProductImageUrl, uploadImage } from '../services/database';
 import { useAuth } from '../contexts/AuthContext';
 
 type OriginType =
@@ -162,16 +171,22 @@ const MenuRestaurantScreen: React.FC = () => {
       }
 
       try {
-        const restaurantId = await getCurrentUserRestaurantId();
-        if (!restaurantId) {
+        const restaurantIdResult = await getCurrentUserRestaurantId();
+        if (!restaurantIdResult.success || !restaurantIdResult.data) {
           console.warn('[MenuRestaurantScreen] No se pudo obtener el restaurant_id');
           return;
         }
 
-        const [chefSuggestions, highlights, menuItems] = await getRestaurantMenuSections(restaurantId);
-        setChefSuggestionsByCategory(chefSuggestions);
-        setHighlightsByCategory(highlights);
-        setMenuItemsByCategory(menuItems);
+        const restaurantId = restaurantIdResult.data;
+        const sectionsResult = await getMenuSections(restaurantId);
+        if (sectionsResult.success && sectionsResult.data) {
+          const [chefSuggestions, highlights, menuItems] = sectionsResult.data;
+          setChefSuggestionsByCategory(chefSuggestions);
+          setHighlightsByCategory(highlights);
+          setMenuItemsByCategory(menuItems);
+        } else {
+          console.error('[MenuRestaurantScreen] Error loading menu sections:', sectionsResult.error);
+        }
         console.log('[MenuRestaurantScreen] Menu sections loaded from database');
       } catch (error) {
         console.error('[MenuRestaurantScreen] Error loading menu sections:', error);
@@ -190,26 +205,28 @@ const MenuRestaurantScreen: React.FC = () => {
     if (!selectedRestaurant || accountType !== 'restaurant') return;
 
     let timeoutId: NodeJS.Timeout;
-    const saveMenuSections = async () => {
+    const saveMenuSectionsToDB = async () => {
       try {
-        const restaurantId = await getCurrentUserRestaurantId();
-        if (!restaurantId) {
+        const restaurantIdResult = await getCurrentUserRestaurantId();
+        if (!restaurantIdResult.success || !restaurantIdResult.data) {
           console.warn('[MenuRestaurantScreen] No se pudo obtener el restaurant_id para guardar');
           return;
         }
 
+        const restaurantId = restaurantIdResult.data;
         // Usar un timeout para debounce (guardar después de 1 segundo de inactividad)
         timeoutId = setTimeout(async () => {
-          const success = await saveRestaurantMenuSections(
+          const saveResult = await saveMenuSectionsAPI(
             restaurantId,
             chefSuggestionsByCategory,
             highlightsByCategory,
             menuItemsByCategory
           );
+          const success = saveResult.success && saveResult.data;
           if (success) {
             console.log('[MenuRestaurantScreen] Menu sections saved to database');
           } else {
-            console.error('[MenuRestaurantScreen] Failed to save menu sections');
+            console.error('[MenuRestaurantScreen] Failed to save menu sections:', saveResult.error);
           }
         }, 1000);
       } catch (error) {
@@ -217,7 +234,7 @@ const MenuRestaurantScreen: React.FC = () => {
       }
     };
 
-    saveMenuSections();
+    saveMenuSectionsToDB();
     
     return () => {
       if (timeoutId) {
@@ -778,16 +795,17 @@ const MenuRestaurantScreen: React.FC = () => {
       console.log('[MenuRestaurantScreen] Iniciando guardado de producto...');
       // Obtener el restaurant_id del usuario actual
       console.log('[MenuRestaurantScreen] Obteniendo restaurant_id...');
-      const restaurantId = await getCurrentUserRestaurantId();
-      console.log('[MenuRestaurantScreen] restaurantId obtenido:', restaurantId);
-      if (!restaurantId) {
-        console.error('[MenuRestaurantScreen] No se pudo obtener el restaurant_id del usuario actual');
+      const restaurantIdResult = await getCurrentUserRestaurantId();
+      console.log('[MenuRestaurantScreen] restaurantId obtenido:', restaurantIdResult);
+      if (!restaurantIdResult.success || !restaurantIdResult.data) {
+        console.error('[MenuRestaurantScreen] No se pudo obtener el restaurant_id del usuario actual:', restaurantIdResult.error);
         console.error('[MenuRestaurantScreen] User:', user);
         console.error('[MenuRestaurantScreen] Account type:', accountType);
         alert(t('restaurant.menu.errors.invalidRestaurant'));
         return;
       }
       
+      const restaurantId = restaurantIdResult.data;
       console.log('[MenuRestaurantScreen] Restaurant ID:', restaurantId);
 
       // Subir todas las imágenes a Supabase Storage si hay archivos nuevos
@@ -801,12 +819,15 @@ const MenuRestaurantScreen: React.FC = () => {
         // Subir todas las imágenes nuevas
         for (const file of productImageFiles) {
           const fileName = `product-${Date.now()}-${Math.random().toString(36).substring(7)}-${file.name}`;
-          const uploadedUrl = await uploadImage('product-images', fileName, file);
-          if (uploadedUrl) {
+          const uploadResult = await uploadProductImage(file, file.name);
+          if (uploadResult.success && uploadResult.data) {
+            const uploadedUrl = uploadResult.data;
             // Extraer solo el path relativo de la URL completa
             const urlParts = uploadedUrl.split('/storage/v1/object/public/product-images/');
-            const imagePath = urlParts.length > 1 ? urlParts[1] : fileName;
+            const imagePath = urlParts.length > 1 ? urlParts[1] : file.name;
             uploadedImageUrls.push(imagePath);
+          } else {
+            console.error('[MenuRestaurantScreen] Error uploading image:', uploadResult.error);
           }
         }
       }
@@ -905,7 +926,7 @@ const MenuRestaurantScreen: React.FC = () => {
         console.log('[MenuRestaurantScreen] Modo: EDITAR producto existente');
         // Estamos editando un producto existente
         console.log('[MenuRestaurantScreen] Guardando producto con badges:', productTags);
-        const updated = await updateProduct(editingProduct.id, {
+        const updateResult = await updateProduct(editingProduct.id, {
           name: editingProductName.trim(),
           description: editingProductDescription.trim(),
           price: priceValue,
@@ -919,12 +940,12 @@ const MenuRestaurantScreen: React.FC = () => {
           allow_special_instructions: allowSpecialInstructions,
         });
 
-        if (updated) {
-          console.log('Producto actualizado en Supabase:', updated);
+        if (updateResult.success && updateResult.data) {
+          console.log('Producto actualizado en Supabase:', updateResult.data);
           // Refrescar los productos del contexto
           await refreshProducts();
         } else {
-          console.error('Error al actualizar el producto');
+          console.error('Error al actualizar el producto:', updateResult.error);
           alert(t('restaurant.menu.errors.updateFailed'));
           return;
         }
@@ -947,7 +968,7 @@ const MenuRestaurantScreen: React.FC = () => {
           allow_custom_complements: allowCustomComplements,
           allow_special_instructions: allowSpecialInstructions,
         });
-        const created = await createProduct({
+        const createResult = await createProduct({
           restaurant_id: restaurantId,
           name: editingProductName.trim(),
           description: editingProductDescription.trim(),
@@ -956,14 +977,14 @@ const MenuRestaurantScreen: React.FC = () => {
           image_urls: allImageUrls, // Enviar todas las URLs de imágenes
           category: originalCategory,
           origin: '',
-          is_active: true,
           badges: productTags || [], // Siempre enviar el array, incluso si está vacío
           complements: complements, // Siempre enviar el array, incluso si está vacío
           allow_custom_complements: allowCustomComplements,
           allow_special_instructions: allowSpecialInstructions,
         });
 
-        if (created) {
+        if (createResult.success && createResult.data) {
+          const created = createResult.data;
           console.log('[MenuRestaurantScreen] Producto creado en Supabase:', created);
           // Refrescar los productos del contexto
           await refreshProducts();
@@ -1000,7 +1021,7 @@ const MenuRestaurantScreen: React.FC = () => {
             });
           }
         } else {
-          console.error('[MenuRestaurantScreen] Error al crear el producto - createProduct retornó null');
+          console.error('[MenuRestaurantScreen] Error al crear el producto:', createResult.error);
           // Revisar la consola para más detalles del error
           alert(t('restaurant.menu.errors.createFailed'));
           return;
@@ -1069,9 +1090,9 @@ const MenuRestaurantScreen: React.FC = () => {
           async () => {
             try {
               // Eliminar el producto de la base de datos (soft delete)
-              const deleted = await deleteProduct(dishId);
-              if (!deleted) {
-                console.error('[MenuRestaurantScreen] Error al eliminar el producto de la base de datos');
+              const deleteResult = await deleteProduct(dishId);
+              if (!deleteResult.success || !deleteResult.data) {
+                console.error('[MenuRestaurantScreen] Error al eliminar el producto de la base de datos:', deleteResult.error);
                 alert(t('restaurant.menu.errors.deleteFailed'));
                 return;
               }

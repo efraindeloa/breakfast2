@@ -5,7 +5,7 @@ import { useGroupOrder } from '../contexts/GroupOrderContext';
 import { useTranslation, useLanguage } from '../contexts/LanguageContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { Order, OrderStatus } from '../types/order';
-import { getOrders, updateOrder } from '../services/database';
+import { getOrders, updateOrder } from '../services/api';
 import { formatPrice } from '../utils/currency';
 
 interface StatusHistory {
@@ -45,8 +45,15 @@ const OrderDetailScreen: React.FC = () => {
         if (showLoading) {
           setIsLoadingOrders(true);
         }
-        const loadedOrders = await getOrders();
+        const ordersResult = await getOrders();
+        if (!ordersResult.success || !ordersResult.data) {
+          console.error('Error loading orders:', ordersResult.error);
+          if (!isMounted) return;
+          setOrders([]);
+          return;
+        }
         
+        const loadedOrders = ordersResult.data;
         if (!isMounted) return;
         
         setOrders(loadedOrders);
@@ -167,22 +174,25 @@ const OrderDetailScreen: React.FC = () => {
 
       // Actualizar la orden original en Supabase
       try {
-        const { updateOrder } = await import('../services/database');
-        const updatedOrder = await updateOrder(sentOrder.orderId, {
+        const updateResult = await updateOrder(sentOrder.orderId, {
           items: updatedItems,
           total: newTotal,
-          notes: complementaryOrderInstructions.trim() || sentOrder.notes || undefined,
-        } as any);
+          special_instructions: complementaryOrderInstructions.trim() || sentOrder.notes || undefined,
+        });
 
-        if (updatedOrder) {
+        if (updateResult.success && updateResult.data) {
           // Recargar órdenes desde Supabase inmediatamente para ver el estado actualizado
-          const loadedOrders = await getOrders();
-          setOrders(loadedOrders);
+          const ordersResult = await getOrders();
+          if (ordersResult.success && ordersResult.data) {
+            setOrders(ordersResult.data);
+          }
           
           // Recargar una vez más después de un pequeño delay para asegurar que cualquier cambio de estado se refleje
           setTimeout(async () => {
-            const refreshedOrders = await getOrders();
-            setOrders(refreshedOrders);
+            const refreshedResult = await getOrders();
+            if (refreshedResult.success && refreshedResult.data) {
+              setOrders(refreshedResult.data);
+            }
           }, 500);
           
           clearCart();
@@ -229,24 +239,27 @@ const OrderDetailScreen: React.FC = () => {
       try {
         const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         
-        const { createOrder } = await import('../services/database');
-        const newOrder = await createOrder({
+        const createResult = await createOrder({
           restaurant_id: '00000000-0000-0000-0000-000000000001',
           status: 'orden_enviada',
           total: total,
           items: orderItems,
-          notes: complementaryOrderInstructions.trim() || undefined,
-        } as any);
+          special_instructions: complementaryOrderInstructions.trim() || undefined,
+        });
 
-        if (newOrder) {
+        if (createResult.success && createResult.data) {
           // Recargar órdenes desde Supabase inmediatamente para ver el estado actualizado
-          const loadedOrders = await getOrders();
-          setOrders(loadedOrders);
+          const ordersResult = await getOrders();
+          if (ordersResult.success && ordersResult.data) {
+            setOrders(ordersResult.data);
+          }
           
           // Recargar una vez más después de un pequeño delay para asegurar que cualquier cambio de estado se refleje
           setTimeout(async () => {
-            const refreshedOrders = await getOrders();
-            setOrders(refreshedOrders);
+            const refreshedResult = await getOrders();
+            if (refreshedResult.success && refreshedResult.data) {
+              setOrders(refreshedResult.data);
+            }
           }, 500);
           
           clearCart();
@@ -453,22 +466,25 @@ const OrderDetailScreen: React.FC = () => {
     }, 0);
 
     try {
-      const { updateOrder } = await import('../services/database');
-      const updatedOrder = await updateOrder(mainOrder.orderId, {
+      const updateResult = await updateOrder(mainOrder.orderId, {
         items: updatedItems,
         total: newTotal,
-        notes: mainOrder.notes || undefined,
-      } as any);
+        special_instructions: mainOrder.notes || undefined,
+      });
 
-      if (updatedOrder) {
+      if (updateResult.success && updateResult.data) {
         // Recargar órdenes desde Supabase inmediatamente para ver el estado actualizado
-        const loadedOrders = await getOrders();
-        setOrders(loadedOrders);
+        const ordersResult = await getOrders();
+        if (ordersResult.success && ordersResult.data) {
+          setOrders(ordersResult.data);
+        }
         
         // Recargar una vez más después de un pequeño delay para asegurar que cualquier cambio de estado se refleje
         setTimeout(async () => {
-          const refreshedOrders = await getOrders();
-          setOrders(refreshedOrders);
+          const refreshedResult = await getOrders();
+          if (refreshedResult.success && refreshedResult.data) {
+            setOrders(refreshedResult.data);
+          }
         }, 500);
         
         if (id) {
@@ -782,11 +798,13 @@ const OrderDetailScreen: React.FC = () => {
                 const pendingOrder = orders.find(order => order.status === 'pending');
                 if (pendingOrder) {
                   try {
-                    const updatedOrder = await updateOrder(pendingOrder.orderId, { status: 'orden_enviada' });
-                    if (updatedOrder) {
+                    const updateResult = await updateOrder(pendingOrder.orderId, { status: 'orden_enviada' });
+                    if (updateResult.success && updateResult.data) {
                       // Recargar órdenes
-                      const loadedOrders = await getOrders();
-                      setOrders(loadedOrders);
+                      const ordersResult = await getOrders();
+                      if (ordersResult.success && ordersResult.data) {
+                        setOrders(ordersResult.data);
+                      }
                       // Navegar a order-confirmed después de enviar
                       navigate('/order-confirmed');
                     }

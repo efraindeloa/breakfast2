@@ -10,11 +10,11 @@ import {
   createPromotion, 
   updatePromotion, 
   deletePromotion,
-  Promotion as DBPromotion,
-  getImageUrl,
-  uploadImage,
-  getCurrentUserRestaurantId
-} from '../services/database';
+  uploadPromotionImage,
+  getCurrentUserRestaurantId,
+  type Promotion as DBPromotion
+} from '../services/api';
+import { getImageUrl } from '../services/database';
 import { formatPrice } from '../utils/currency';
 
 interface Promotion {
@@ -93,9 +93,22 @@ const PromotionsRestaurantScreen: React.FC = () => {
     const loadPromotions = async () => {
       setIsLoading(true);
       try {
-        const restaurantId = selectedRestaurant?.id || await getCurrentUserRestaurantId();
-        const loadedPromotions = await getPromotions(restaurantId);
-        setPromotions(loadedPromotions);
+        const restaurantIdResult = selectedRestaurant?.id 
+          ? { success: true, data: selectedRestaurant.id }
+          : await getCurrentUserRestaurantId();
+        
+        if (!restaurantIdResult.success || !restaurantIdResult.data) {
+          console.error('No se pudo obtener el ID del restaurante');
+          setIsLoading(false);
+          return;
+        }
+
+        const promotionsResult = await getPromotions(restaurantIdResult.data);
+        if (promotionsResult.success && promotionsResult.data) {
+          setPromotions(promotionsResult.data);
+        } else {
+          console.error('Error loading promotions:', promotionsResult.error);
+        }
       } catch (error) {
         console.error('Error loading promotions:', error);
       } finally {
@@ -334,30 +347,32 @@ const PromotionsRestaurantScreen: React.FC = () => {
     setIsSaving(true);
 
     try {
-      const restaurantId = selectedRestaurant?.id || await getCurrentUserRestaurantId();
-      if (!restaurantId) {
-        throw new Error('No se pudo obtener el ID del restaurante');
+      const restaurantIdResult = selectedRestaurant?.id 
+        ? { success: true, data: selectedRestaurant.id }
+        : await getCurrentUserRestaurantId();
+      
+      if (!restaurantIdResult.success || !restaurantIdResult.data) {
+        throw new Error(restaurantIdResult.error || 'No se pudo obtener el ID del restaurante');
       }
+      
+      const restaurantId = restaurantIdResult.data;
 
       // Subir imagen si hay una nueva
       let imageUrl = editingPromotion?.image_url || '';
       if (promotionImageFile) {
-        // Generar nombre único para el archivo
-        const timestamp = Date.now();
-        const randomStr = Math.random().toString(36).substring(2, 9);
-        const fileName = `${timestamp}-${randomStr}-${promotionImageFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-        const filePath = `promotion-${fileName}`;
-        
-        const uploadedUrl = await uploadImage('promotion-images', filePath, promotionImageFile);
-        if (!uploadedUrl) {
+        const uploadResult = await uploadPromotionImage(
+          promotionImageFile,
+          promotionImageFile.name
+        );
+        if (!uploadResult.success || !uploadResult.data) {
           const errorMsg = promotionImageFile.type === 'image/avif' 
             ? 'Error: El formato AVIF no está permitido. Por favor, ejecuta el script SQL fix-promotion-images-avif.sql en Supabase o convierte la imagen a otro formato (JPEG, PNG, WebP).'
-            : 'Error al subir la imagen. Por favor, intenta de nuevo.';
+            : uploadResult.error || 'Error al subir la imagen. Por favor, intenta de nuevo.';
           showNotification(errorMsg, 'error');
           setIsSaving(false);
           return;
         }
-        imageUrl = uploadedUrl;
+        imageUrl = uploadResult.data;
       }
 
       // Determinar discount_type: el dropdown "Tipo de Descuento" tiene prioridad
@@ -406,27 +421,31 @@ const PromotionsRestaurantScreen: React.FC = () => {
 
       if (editingPromotion) {
         // Actualizar promoción existente
-        const updated = await updatePromotion(editingPromotion.id, promotionData);
-        if (updated) {
+        const updateResult = await updatePromotion(editingPromotion.id, promotionData);
+        if (updateResult.success && updateResult.data) {
           // Recargar promociones
-          const loadedPromotions = await getPromotions(restaurantId);
-          setPromotions(loadedPromotions);
+          const promotionsResult = await getPromotions(restaurantId);
+          if (promotionsResult.success && promotionsResult.data) {
+            setPromotions(promotionsResult.data);
+          }
           closeEditPromotion();
           showNotification(t('restaurant.promotions.success.updated') || 'Promoción actualizada correctamente', 'success');
         } else {
-          throw new Error('Error al actualizar la promoción');
+          throw new Error(updateResult.error || 'Error al actualizar la promoción');
         }
       } else {
         // Crear nueva promoción
-        const created = await createPromotion(promotionData);
-        if (created) {
+        const createResult = await createPromotion(promotionData);
+        if (createResult.success && createResult.data) {
           // Recargar promociones
-          const loadedPromotions = await getPromotions(restaurantId);
-          setPromotions(loadedPromotions);
+          const promotionsResult = await getPromotions(restaurantId);
+          if (promotionsResult.success && promotionsResult.data) {
+            setPromotions(promotionsResult.data);
+          }
           closeEditPromotion();
           showNotification(t('restaurant.promotions.success.created') || 'Promoción creada correctamente', 'success');
         } else {
-          throw new Error('Error al crear la promoción');
+          throw new Error(createResult.error || 'Error al crear la promoción');
         }
       }
     } catch (error) {

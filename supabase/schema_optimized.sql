@@ -52,7 +52,6 @@ CREATE TABLE IF NOT EXISTS users (
   phone TEXT,
   name TEXT NOT NULL,
   avatar_url TEXT,
-  date_of_birth DATE,
   preferred_language TEXT DEFAULT 'es',
   is_active BOOLEAN NOT NULL DEFAULT true,
   email_verified BOOLEAN NOT NULL DEFAULT false,

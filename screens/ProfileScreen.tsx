@@ -7,13 +7,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { supabase, isSupabaseConfigured } from '../config/supabase';
 import { 
-  getUserProfile, 
-  upsertUserProfile, 
   getUserSettings, 
   upsertUserSettings,
   getUserPaymentMethods,
   UserPaymentMethod
 } from '../services/database';
+import { getUserProfile, updateUserProfile } from '../services/api';
 
 interface Card {
   id: string; // Cambiar a string para usar UUID de la BD
@@ -142,9 +141,9 @@ const ProfileScreen: React.FC = () => {
 
       try {
         // Cargar perfil de usuario
-        const profile = await getUserProfile(user.id);
-        if (profile?.avatar_url) {
-          setProfileImage(profile.avatar_url);
+        const profileResult = await getUserProfile(user.id);
+        if (profileResult.success && profileResult.data?.avatar_url) {
+          setProfileImage(profileResult.data.avatar_url);
         } else {
           // Fallback a localStorage si no hay avatar en BD
           const savedImage = localStorage.getItem('profileImage');
@@ -208,7 +207,7 @@ const ProfileScreen: React.FC = () => {
 
       try {
         // Guardar avatar_url en user_profiles
-        await upsertUserProfile(user.id, { avatar_url: profileImage });
+        await updateUserProfile({ avatar_url: profileImage }, user.id);
         // También guardar en localStorage como backup
         localStorage.setItem('profileImage', profileImage);
       } catch (error) {
@@ -533,7 +532,7 @@ const ProfileScreen: React.FC = () => {
     // Eliminar de la base de datos
     if (user?.id && isSupabaseConfigured()) {
       try {
-        await upsertUserProfile(user.id, { avatar_url: null });
+        await updateUserProfile({ avatar_url: null }, user.id);
       } catch (error) {
         console.error('[ProfileScreen] Error deleting profile image:', error);
       }

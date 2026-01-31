@@ -145,7 +145,7 @@ const PromotionsScreen: React.FC = () => {
                   className="relative w-full aspect-[16/9] bg-center bg-no-repeat bg-cover rounded-xl shadow-lg"
                   style={{ backgroundImage: `url("${promotion.image}")` }}
                 >
-                  <button
+                  <div
                     onClick={(e) => {
                       e.stopPropagation();
                       if (isFavorite) {
@@ -154,7 +154,7 @@ const PromotionsScreen: React.FC = () => {
                         addFavoritePromotion(promotion);
                       }
                     }}
-                    className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 dark:bg-gray-800/90 flex items-center justify-center hover:bg-white dark:hover:bg-gray-800 transition-colors shadow-sm"
+                    className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 dark:bg-gray-800/90 flex items-center justify-center hover:bg-white dark:hover:bg-gray-800 transition-colors shadow-sm cursor-pointer"
                   >
                     <span 
                       className={`material-symbols-outlined text-sm ${isFavorite ? 'text-red-500' : 'text-gray-400'}`}
@@ -162,7 +162,7 @@ const PromotionsScreen: React.FC = () => {
                     >
                       favorite
                     </span>
-                  </button>
+                  </div>
                   <div className={`absolute top-3 left-3 ${promotion.badge.color} text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider`}>
                     {promotion.badge.text}
                   </div>
@@ -246,7 +246,7 @@ const PromotionsScreen: React.FC = () => {
                 className="relative w-full aspect-square bg-cover bg-center rounded-xl mb-2"
                 style={{ backgroundImage: `url('${promotion.image}')` }}
               >
-                <button
+                <div
                   onClick={(e) => {
                     e.stopPropagation();
                     if (isFavorite) {
@@ -255,7 +255,7 @@ const PromotionsScreen: React.FC = () => {
                       addFavoritePromotion(promotion);
                     }
                   }}
-                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 dark:bg-gray-800/90 flex items-center justify-center hover:bg-white dark:hover:bg-gray-800 transition-colors shadow-sm"
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 dark:bg-gray-800/90 flex items-center justify-center hover:bg-white dark:hover:bg-gray-800 transition-colors shadow-sm cursor-pointer"
                 >
                   <span 
                     className={`material-symbols-outlined text-xs ${isFavorite ? 'text-red-500' : 'text-gray-400'}`}
@@ -263,7 +263,7 @@ const PromotionsScreen: React.FC = () => {
                   >
                     favorite
                   </span>
-                </button>
+                </div>
               </div>
             <p className={`text-xs font-bold mb-1 ${promotion.badge.color === 'bg-primary' ? 'text-primary' : 'text-primary'}`}>
               {promotion.discount || promotion.badge.text}

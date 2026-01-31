@@ -781,8 +781,6 @@ export const getCart = async (): Promise<CartItem[]> => {
     
     if (session?.user?.id) {
       userId = session.user.id;
-      console.log('[getCart] Using authenticated user ID:', userId);
-      console.log('[getCart] Session user email:', session.user.email);
     }
     
     if (!userId) {
@@ -791,7 +789,6 @@ export const getCart = async (): Promise<CartItem[]> => {
     }
     
     // Obtener cart_items primero (sin JOIN para evitar problemas de RLS)
-    console.log('[getCart] Fetching cart_items for user_id:', userId);
     const { data: cartItemsData, error: cartError } = await supabase
       .from('cart_items')
       .select('*')
@@ -802,7 +799,6 @@ export const getCart = async (): Promise<CartItem[]> => {
       throw cartError;
     }
     
-    console.log('[getCart] Found cart_items:', cartItemsData?.length || 0);
     
     if (!cartItemsData || cartItemsData.length === 0) {
       return [];
@@ -810,7 +806,6 @@ export const getCart = async (): Promise<CartItem[]> => {
     
     // Obtener los productos por separado para evitar problemas de RLS con JOINs
     const productIds = [...new Set(cartItemsData.map((item: any) => item.product_id).filter((id: any) => id != null))];
-    console.log('[getCart] Fetching products for IDs:', productIds);
     
     let productsMap: Record<number, any> = {};
     if (productIds.length > 0) {
@@ -825,7 +820,6 @@ export const getCart = async (): Promise<CartItem[]> => {
         productsData.forEach((p: any) => {
           productsMap[p.id] = p;
         });
-        console.log('[getCart] Fetched products:', productsData.length);
       }
     }
     
@@ -842,7 +836,6 @@ export const getCart = async (): Promise<CartItem[]> => {
       };
     });
     
-    console.log('[getCart] Mapped cart items:', mappedCart.length);
     return mappedCart;
   } catch (error) {
     console.error('[getCart] Error fetching cart:', error);
@@ -3094,12 +3087,17 @@ export const updateRestaurantImageFromBase64 = async (
 
 export interface UserProfile {
   user_id: string;
-  display_name?: string;
+  name?: string;
+  phone?: string;
   bio?: string;
   gender?: string;
   country?: string;
   city?: string;
+  state?: string;
+  address?: string;
+  postal_code?: string;
   avatar_url?: string;
+  date_of_birth?: string;
   created_at: string;
   updated_at: string;
 }

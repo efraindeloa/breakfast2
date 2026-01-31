@@ -48,9 +48,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const loadCart = async () => {
       try {
         setIsLoading(true);
-        console.log('[CartContext] Loading cart for user:', user.id);
         const cartData = await getCart();
-        console.log('[CartContext] Cart loaded:', cartData.length, 'items');
         setCart(cartData);
       } catch (error) {
         console.error('[CartContext] Error loading cart:', error);

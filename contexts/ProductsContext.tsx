@@ -52,26 +52,12 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
       let restaurantId: string | undefined = undefined;
       if (accountType === 'restaurant') {
         restaurantId = await getCurrentUserRestaurantId() || undefined;
-        if (restaurantId) {
-          console.log('[ProductsContext] Loading products for restaurant:', restaurantId);
-        }
       }
       
       const supabaseProducts = await getProducts({ 
         isActive: true,
         restaurantId: restaurantId,
       });
-      
-      // Debug: verificar qué productos se están cargando
-      console.log('[ProductsContext] Products loaded:', supabaseProducts.length, accountType === 'restaurant' ? `(for restaurant ${restaurantId})` : '(all restaurants)');
-      if (supabaseProducts.length > 0) {
-        console.log('[ProductsContext] First product sample:', {
-          id: supabaseProducts[0].id,
-          name: supabaseProducts[0].name,
-          image: supabaseProducts[0].image,
-          image_url: supabaseProducts[0].image_url,
-        });
-      }
       
       if (supabaseProducts.length > 0) {
         // Si hay productos en Supabase, usarlos

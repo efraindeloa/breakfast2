@@ -50,7 +50,6 @@ CREATE TABLE users (
   phone TEXT,
   name TEXT NOT NULL,
   avatar_url TEXT,
-  date_of_birth DATE,
   preferred_language TEXT DEFAULT 'es',
   is_active BOOLEAN NOT NULL DEFAULT true,
   email_verified BOOLEAN NOT NULL DEFAULT false,
@@ -64,12 +63,18 @@ CREATE TABLE users (
 -- Información extendida del usuario
 CREATE TABLE IF NOT EXISTS user_profiles (
   user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-  display_name TEXT,
+  name TEXT,
+  phone TEXT,
   bio TEXT,
   gender TEXT,
   country TEXT,
   city TEXT,
+  state TEXT,
+  address TEXT,
+  postal_code TEXT,
   avatar_url TEXT,
+  date_of_birth DATE,
+  preferences JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

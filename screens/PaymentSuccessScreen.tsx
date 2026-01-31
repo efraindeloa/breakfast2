@@ -59,9 +59,13 @@ const PaymentSuccessScreen: React.FC = () => {
   useEffect(() => {
     const loadOrders = async () => {
       try {
-        const { getOrders } = await import('../services/database');
-        const orders = await getOrders();
-        setCurrentOrders(orders);
+        const { getOrders } = await import('../services/api');
+        const ordersResult = await getOrders();
+        if (ordersResult.success && ordersResult.data) {
+          setCurrentOrders(ordersResult.data);
+        } else {
+          console.error('Error loading orders:', ordersResult.error);
+        }
       } catch (error) {
         console.error('Error loading orders:', error);
         setCurrentOrders([]);

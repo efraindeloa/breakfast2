@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useCart } from '../contexts/CartContext';
 import { useFavorites } from '../contexts/FavoritesContext';
-import { getPromotionById, type Promotion } from '../services/database';
+import { getPromotionById } from '../services/api';
+import { type Promotion } from '../services/database';
 import { getImageUrl } from '../services/database';
 
 interface PromotionDetail {
@@ -29,6 +30,12 @@ interface PromotionDetail {
   category: string;
 }
 
+// Función para validar si un string es un UUID válido
+const isValidUUID = (str: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
 const PromotionDetailScreen: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -47,9 +54,17 @@ const PromotionDetailScreen: React.FC = () => {
         return;
       }
 
+      // Validar que el ID sea un UUID válido antes de intentar cargarlo desde la BD
+      if (!isValidUUID(id)) {
+        console.warn(`Promotion ID "${id}" is not a valid UUID. This might be a hardcoded promotion.`);
+        setLoading(false);
+        return;
+      }
+
       try {
-        const promo = await getPromotionById(id);
-        if (promo) {
+        const promoResult = await getPromotionById(id);
+        if (promoResult.success && promoResult.data) {
+          const promo = promoResult.data;
           setPromotionData(promo);
           
           // Calcular tiempo restante si flash_counter está activado
@@ -137,16 +152,31 @@ const PromotionDetailScreen: React.FC = () => {
   };
 
   // Verificar si la promoción existe antes de continuar
+  if (loading) {
+    return (
+      <div className="relative w-full max-w-[430px] bg-background-light dark:bg-background-dark min-h-screen flex items-center justify-center mx-auto">
+        <div className="text-center px-4">
+          <p className="text-[#181411] dark:text-white text-lg mb-4">{t('common.loading') || 'Cargando...'}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!promotion) {
     return (
       <div className="relative w-full max-w-[430px] bg-background-light dark:bg-background-dark min-h-screen flex items-center justify-center mx-auto">
         <div className="text-center px-4">
           <p className="text-[#181411] dark:text-white text-lg mb-4">{t('common.notFound') || 'Promoción no encontrada'}</p>
+          <p className="text-[#181411]/60 dark:text-white/60 text-sm mb-4">
+            {id && !isValidUUID(id) 
+              ? 'Esta promoción no está disponible en este momento.'
+              : 'La promoción que buscas no existe o ha sido eliminada.'}
+          </p>
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/promotions')}
             className="bg-primary text-white px-6 py-2 rounded-full"
           >
-            {t('common.goBack') || 'Volver'}
+            {t('common.goBack') || 'Volver a Promociones'}
           </button>
         </div>
       </div>

@@ -6,7 +6,7 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { Order, OrderStatus } from '../types/order';
-import { getOrders, createOrder as createOrderDB, updateOrder } from '../services/database';
+import { getOrders, createOrder as createOrderAPI, updateOrder } from '../services/api';
 import { formatPrice } from '../utils/currency';
 import TopNavbar from '../components/TopNavbar';
 
@@ -64,8 +64,15 @@ const OrderScreen: React.FC = () => {
     const loadOrders = async () => {
       try {
         setIsLoadingOrders(true);
-        const loadedOrders = await getOrders();
+        const ordersResult = await getOrders();
+        if (!ordersResult.success || !ordersResult.data) {
+          console.error('Error loading orders:', ordersResult.error);
+          if (!isMounted) return;
+          setOrders([]);
+          return;
+        }
         
+        const loadedOrders = ordersResult.data;
         if (!isMounted) return;
         
         setOrders(loadedOrders);
@@ -156,7 +163,7 @@ const OrderScreen: React.FC = () => {
         const orderNumber = getNextOrderNumber();
         const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         
-        const newOrder = await createOrderDB({
+        const createResult = await createOrderAPI({
           restaurant_id: '00000000-0000-0000-0000-000000000001', // ID del restaurante por defecto
           status: 'pending',
           total: total,
@@ -167,20 +174,22 @@ const OrderScreen: React.FC = () => {
             notes: item.notes || '',
             quantity: item.quantity,
           })),
-          notes: orderSpecialInstructions || undefined,
-        } as any);
+          special_instructions: orderSpecialInstructions || undefined,
+        });
         
-        if (newOrder) {
+        if (createResult.success && createResult.data) {
           // Recargar órdenes desde Supabase inmediatamente
-          const loadedOrders = await getOrders();
-          setOrders(loadedOrders);
+          const ordersResult = await getOrders();
+          if (ordersResult.success && ordersResult.data) {
+            setOrders(ordersResult.data);
+          }
           // Limpiar carrito después de crear la orden
           await clearCart();
           // La orden se crea con status 'pending', el usuario puede enviarla a cocina después
           // Se queda en la pantalla de órdenes y se actualiza automáticamente cada 5 segundos
         } else {
-          console.error('Failed to create order: createOrderDB returned null');
-          alert('Error al crear la orden. Por favor, intenta de nuevo.');
+          console.error('Failed to create order:', createResult.error);
+          alert(createResult.error || 'Error al crear la orden. Por favor, intenta de nuevo.');
         }
       } catch (error) {
         console.error('Error creating order:', error);
@@ -904,17 +913,19 @@ const OrderScreen: React.FC = () => {
                       notes: item.notes || '',
                       quantity: item.quantity,
                     })),
-                    notes: orderSpecialInstructions || undefined,
-                  } as any);
+                    special_instructions: orderSpecialInstructions || undefined,
+                  });
                   
-                  if (newOrder) {
+                  if (createResult.success && createResult.data) {
                     // Recargar órdenes desde Supabase inmediatamente
-                    const loadedOrders = await getOrders();
-                    setOrders(loadedOrders);
+                    const ordersResult = await getOrders();
+                    if (ordersResult.success && ordersResult.data) {
+                      setOrders(ordersResult.data);
+                    }
                     await clearCart();
                   } else {
-                    console.error('Failed to create order: createOrderDB returned null');
-                    alert('Error al crear la orden. Por favor, intenta de nuevo.');
+                    console.error('Failed to create order:', createResult.error);
+                    alert(createResult.error || 'Error al crear la orden. Por favor, intenta de nuevo.');
                   }
                 } catch (error) {
                   console.error('Error creating order:', error);

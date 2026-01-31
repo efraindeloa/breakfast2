@@ -7,12 +7,18 @@
 -- Información extendida del usuario (complementa la tabla users)
 CREATE TABLE IF NOT EXISTS user_profiles (
   user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-  display_name TEXT,
+  name TEXT,
+  phone TEXT,
   bio TEXT,
   gender TEXT,
   country TEXT,
   city TEXT,
+  state TEXT,
+  address TEXT,
+  postal_code TEXT,
   avatar_url TEXT,
+  date_of_birth DATE,
+  preferences JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

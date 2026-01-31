@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useCart, CartItem } from '../contexts/CartContext';
 import { Order } from '../types/order';
-import { getOrders, updateOrder as updateOrderDB } from '../services/database';
+import { getOrders, updateOrder } from '../services/api';
 import { allDishes } from './DishDetailScreen';
 import { useProducts } from '../contexts/ProductsContext';
 
@@ -47,55 +47,57 @@ const EditOrderScreen: React.FC = () => {
       // Cargar todas las órdenes desde Supabase
       const loadOrders = async () => {
         try {
-          const loadedOrders = await getOrders();
-          setOrders(loadedOrders);
-          const order = loadedOrders.find((o: Order) => o.orderId === id);
-          
-          if (order && !itemsLoadedRef.current) {
-            // Si la orden ya está enviada, NO cargar los items en el carrito
-            // Solo se deben agregar items nuevos al carrito para crear una orden complementaria
-            const isOrderSent = ['orden_enviada', 'orden_recibida', 'en_preparacion', 'lista_para_entregar', 'en_entrega'].includes(order.status);
+          const ordersResult = await getOrders();
+          if (ordersResult.success && ordersResult.data) {
+            setOrders(ordersResult.data);
+            const order = ordersResult.data.find((o: Order) => o.orderId === id);
             
-            if (!isOrderSent) {
-              // Solo cargar items en el carrito si la orden NO está enviada (pendiente)
-              // Primero, agrupar items por ID y notas para calcular cantidades totales
-              const groupedItems = order.items.reduce((acc: CartItem[], item) => {
-                const existing = acc.find(i => i.id === item.id && i.notes === (item.notes || ''));
-                if (existing) {
-                  existing.quantity += item.quantity;
-                } else {
-                  acc.push({
-                    id: item.id,
-                    name: item.name,
-                    price: item.price,
-                    notes: item.notes || '',
-                    quantity: item.quantity,
-                  });
-                }
-                return acc;
-              }, [] as CartItem[]);
+            if (order && !itemsLoadedRef.current) {
+              // Si la orden ya está enviada, NO cargar los items en el carrito
+              // Solo se deben agregar items nuevos al carrito para crear una orden complementaria
+              const isOrderSent = ['orden_enviada', 'orden_recibida', 'en_preparacion', 'lista_para_entregar', 'en_entrega'].includes(order.status);
               
-              // setCartItems ya maneja la limpieza y el manejo de errores internamente
-              // Solo establecer los items (setCart elimina los existentes antes de insertar)
-              try {
-                await setCartItems(groupedItems);
-                itemsLoadedRef.current = true;
-              } catch (error) {
-                console.error('Error setting cart items:', error);
-                // Si falla, marcar como cargado para evitar loops infinitos
+              if (!isOrderSent) {
+                // Solo cargar items en el carrito si la orden NO está enviada (pendiente)
+                // Primero, agrupar items por ID y notas para calcular cantidades totales
+                const groupedItems = order.items.reduce((acc: CartItem[], item) => {
+                  const existing = acc.find(i => i.id === item.id && i.notes === (item.notes || ''));
+                  if (existing) {
+                    existing.quantity += item.quantity;
+                  } else {
+                    acc.push({
+                      id: item.id,
+                      name: item.name,
+                      price: item.price,
+                      notes: item.notes || '',
+                      quantity: item.quantity,
+                    });
+                  }
+                  return acc;
+                }, [] as CartItem[]);
+                
+                // setCartItems ya maneja la limpieza y el manejo de errores internamente
+                // Solo establecer los items (setCart elimina los existentes antes de insertar)
+                try {
+                  await setCartItems(groupedItems);
+                  itemsLoadedRef.current = true;
+                } catch (error) {
+                  console.error('Error setting cart items:', error);
+                  // Si falla, marcar como cargado para evitar loops infinitos
+                  itemsLoadedRef.current = true;
+                }
+              } else {
+                // Si la orden está enviada, limpiar el carrito y marcar como cargado
+                // El usuario solo podrá agregar items nuevos que se crearán como orden complementaria
+                await clearCart();
                 itemsLoadedRef.current = true;
               }
-            } else {
-              // Si la orden está enviada, limpiar el carrito y marcar como cargado
-              // El usuario solo podrá agregar items nuevos que se crearán como orden complementaria
-              await clearCart();
-              itemsLoadedRef.current = true;
             }
-          }
-          
-          // Resetear el flag si el orderId cambia
-          if (id && orderId !== id) {
-            itemsLoadedRef.current = false;
+            
+            // Resetear el flag si el orderId cambia
+            if (id && orderId !== id) {
+              itemsLoadedRef.current = false;
+            }
           }
         } catch (error) {
           console.error('Error loading order:', error);
@@ -175,19 +177,21 @@ const EditOrderScreen: React.FC = () => {
         }, 0);
 
         // Actualizar la orden en Supabase
-        const updatedOrder = await updateOrderDB(orderId, {
+        const updateResult = await updateOrder(orderId, {
           items: updatedItems,
           total: newTotal,
-        } as any);
+        });
 
-        if (updatedOrder) {
+        if (updateResult.success && updateResult.data) {
           // Recargar órdenes desde Supabase
-          const loadedOrders = await getOrders();
-          setOrders(loadedOrders);
+          const ordersResult = await getOrders();
+          if (ordersResult.success && ordersResult.data) {
+            setOrders(ordersResult.data);
+          }
           clearCart();
           navigate('/order-detail');
         } else {
-          alert('Error al actualizar la orden. Por favor, intenta de nuevo.');
+          alert(updateResult.error || 'Error al actualizar la orden. Por favor, intenta de nuevo.');
         }
       } else {
         // Si la orden está pendiente, actualizar normalmente con los items del carrito
@@ -202,19 +206,21 @@ const EditOrderScreen: React.FC = () => {
         const newTotal = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
         // Actualizar la orden en Supabase
-        const updatedOrder = await updateOrderDB(orderId, {
+        const updateResult = await updateOrder(orderId, {
           items: orderItems,
           total: newTotal,
-        } as any);
+        });
 
-        if (updatedOrder) {
+        if (updateResult.success && updateResult.data) {
           // Recargar órdenes desde Supabase
-          const loadedOrders = await getOrders();
-          setOrders(loadedOrders);
+          const ordersResult = await getOrders();
+          if (ordersResult.success && ordersResult.data) {
+            setOrders(ordersResult.data);
+          }
           clearCart();
           navigate('/order-detail');
         } else {
-          alert('Error al actualizar la orden. Por favor, intenta de nuevo.');
+          alert(updateResult.error || 'Error al actualizar la orden. Por favor, intenta de nuevo.');
         }
       }
     } catch (error) {

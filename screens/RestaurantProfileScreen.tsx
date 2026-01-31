@@ -5,11 +5,11 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   getRestaurantFullProfile,
   getRestaurantStaffByUser,
-  updateRestaurant,
   getRestaurantImageUrl,
   updateRestaurantImageFromBase64,
   Restaurant,
 } from '../services/database';
+import { updateRestaurant } from '../services/api';
 import { supabase, isSupabaseConfigured } from '../config/supabase';
 
 const RestaurantProfileScreen: React.FC = () => {
@@ -126,9 +126,9 @@ const RestaurantProfileScreen: React.FC = () => {
       
       console.log('[saveEdit] Saving updates:', { restaurantId, updates });
       
-      const updated = await updateRestaurant(restaurantId, updates);
-      if (updated) {
-        setRestaurant(updated);
+      const updateResult = await updateRestaurant(restaurantId, updates);
+      if (updateResult.success && updateResult.data) {
+        setRestaurant(updateResult.data);
         setEditingField(null);
         setEditValue('');
         // Mostrar mensaje de éxito
@@ -140,7 +140,7 @@ const RestaurantProfileScreen: React.FC = () => {
           document.body.removeChild(successMsg);
         }, 3000);
       } else {
-        throw new Error('No se pudo actualizar el restaurante');
+        throw new Error(updateResult.error || 'No se pudo actualizar el restaurante');
       }
     } catch (error: any) {
       console.error('[saveEdit] Error saving:', error);
@@ -187,10 +187,10 @@ const RestaurantProfileScreen: React.FC = () => {
     setIsSaving(true);
     try {
       const updatedTags = [...currentTags, tagToAdd];
-      const updated = await updateRestaurant(restaurantId, { tags: updatedTags });
+      const updateResult = await updateRestaurant(restaurantId, { tags: updatedTags });
       
-      if (updated) {
-        setRestaurant(updated);
+      if (updateResult.success && updateResult.data) {
+        setRestaurant(updateResult.data);
         setNewTagValue('');
         setIsAddingTag(false);
         // Mostrar mensaje de éxito
@@ -202,7 +202,7 @@ const RestaurantProfileScreen: React.FC = () => {
           document.body.removeChild(successMsg);
         }, 3000);
       } else {
-        throw new Error('No se pudo actualizar el restaurante');
+        throw new Error(updateResult.error || 'No se pudo actualizar el restaurante');
       }
     } catch (error: any) {
       console.error('[handleAddTag] Error adding tag:', error);
@@ -235,10 +235,10 @@ const RestaurantProfileScreen: React.FC = () => {
 
     setIsSaving(true);
     try {
-      const updated = await updateRestaurant(restaurantId, { tags: updatedTags });
+      const updateResult = await updateRestaurant(restaurantId, { tags: updatedTags });
       
-      if (updated) {
-        setRestaurant(updated);
+      if (updateResult.success && updateResult.data) {
+        setRestaurant(updateResult.data);
         // Mostrar mensaje de éxito
         const successMsg = document.createElement('div');
         successMsg.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-lg shadow-lg bg-green-500 text-white';
@@ -248,7 +248,7 @@ const RestaurantProfileScreen: React.FC = () => {
           document.body.removeChild(successMsg);
         }, 3000);
       } else {
-        throw new Error('No se pudo actualizar el restaurante');
+        throw new Error(updateResult.error || 'No se pudo actualizar el restaurante');
       }
     } catch (error: any) {
       console.error('[handleRemoveTag] Error removing tag:', error);

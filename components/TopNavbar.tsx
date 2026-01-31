@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, isSupabaseConfigured } from '../config/supabase';
-import { getUserProfile } from '../services/database';
+import { getUserProfile } from '../services/api';
 
 interface TopNavbarProps {
   showAvatar?: boolean;
@@ -79,9 +79,9 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
 
         // Cargar avatar del usuario
         if (showAvatar) {
-          const profile = await getUserProfile(user.id);
-          if (profile?.avatar_url) {
-            setUserAvatar(profile.avatar_url);
+          const profileResult = await getUserProfile(user.id);
+          if (profileResult.success && profileResult.data?.avatar_url) {
+            setUserAvatar(profileResult.data.avatar_url);
           } else {
             setUserAvatar(null);
           }

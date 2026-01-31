@@ -724,16 +724,6 @@ const MenuScreen: React.FC = () => {
     const originalCategory = getOriginalCategory(selectedCategory);
     const hasSearchQuery = searchQuery.trim().length > 0;
     
-    // Debug: verificar qué categoría está seleccionada
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Selected category (translated):', selectedCategory);
-      console.log('Original category:', originalCategory);
-      console.log('Has search query:', hasSearchQuery);
-      console.log('Search query:', searchQuery);
-      console.log('Total dishes:', dishes.length);
-      console.log('Dish categories:', [...new Set(dishes.map(d => d.category))]);
-    }
-    
     return dishes.filter(dish => {
       // IMPORTANTE: Si hay búsqueda, buscar en TODAS las categorías (ignorar filtro de categoría)
       // Si NO hay búsqueda, filtrar por la categoría seleccionada

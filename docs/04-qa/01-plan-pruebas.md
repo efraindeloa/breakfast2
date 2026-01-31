@@ -22,11 +22,15 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 ### 1. Funcionalidad
 
 #### Autenticación y Registro
-- ✅ Registro de nuevos usuarios
-- ✅ Inicio de sesión
+- ✅ Registro de nuevos usuarios (consumer y restaurant)
+- ✅ Inicio de sesión con Supabase Auth
 - ✅ Validación de campos
 - ✅ Manejo de errores de autenticación
 - ✅ Persistencia de sesión
+- ✅ Detección automática de tipo de cuenta
+- ✅ Redirección según tipo de cuenta
+- ✅ Verificación de email
+- ✅ Recuperación de contraseña
 
 #### Menú y Productos
 - ✅ Visualización del menú completo
@@ -146,6 +150,22 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 - ✅ Especiales de temporada
 - ✅ Detalle de promoción con contador
 - ✅ Aplicar promoción a orden
+- ✅ Carga de promociones desde base de datos
+- ✅ Validación de UUID en IDs de promociones
+
+#### Funcionalidades de Restaurante
+- ✅ Acceso a pantallas de restaurante (solo con accountType === 'restaurant')
+- ✅ Gestión de productos (crear, editar, eliminar)
+- ✅ Subida de múltiples imágenes de productos
+- ✅ Gestión de etiquetas (badges) de productos
+- ✅ Gestión de secciones de menú (Menú, Sugerencias, Destacados)
+- ✅ Búsqueda global en menú de restaurante
+- ✅ Gestión de promociones (crear, editar, eliminar)
+- ✅ Subida de imágenes de promociones
+- ✅ Configuración de modo desayuno en promociones
+- ✅ Configuración de contador flash
+- ✅ Validación de RLS en todas las operaciones
+- ✅ Manejo de errores 403/406/409
 
 #### Mesa Lista
 - ✅ Detección automática cuando mesa está lista
@@ -237,11 +257,10 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 ## 🚫 Qué NO se Prueba
 
 ### Funcionalidades Futuras
-- ❌ Backend real (actualmente no existe)
 - ❌ Notificaciones push
 - ❌ Integraciones con pasarelas de pago reales
 - ❌ Sistema de reservas
-- ❌ Dashboard administrativo
+- ❌ Dashboard administrativo completo
 
 ### Áreas No Implementadas
 - ❌ Tests unitarios automatizados (pendiente)
@@ -492,6 +511,13 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 **Responsable**: QA Team
 
 ### Cambios Recientes (Enero 2025)
+- ✅ **Agregadas pruebas completas para Funcionalidades de Restaurante**
+- ✅ Agregadas pruebas para autenticación con Supabase
+- ✅ Agregadas pruebas para gestión de productos (CRUD)
+- ✅ Agregadas pruebas para gestión de promociones (CRUD)
+- ✅ Agregadas pruebas para subida de imágenes a Supabase Storage
+- ✅ Agregadas pruebas para validación de RLS
+- ✅ Agregadas pruebas para manejo de errores de base de datos
 - ✅ Agregadas pruebas para Descubrir Restaurantes
 - ✅ Agregadas pruebas para Punto de Encuentro
 - ✅ Agregadas pruebas para Gestión de Contactos

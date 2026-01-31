@@ -2,7 +2,9 @@
 
 ## Visión General
 
-Este documento describe las estructuras de datos utilizadas en **Breakfast App**, incluyendo interfaces TypeScript, tipos y cómo se almacenan los datos.
+Este documento describe las estructuras de datos utilizadas en **Breakfast App**, incluyendo interfaces TypeScript, tipos y cómo se almacenan los datos en Supabase PostgreSQL.
+
+**Nota**: Todos los datos persistentes se almacenan en Supabase PostgreSQL. localStorage solo se usa para preferencias de UI.
 
 ---
 
@@ -591,25 +593,166 @@ interface SplitPaymentData {
 
 ---
 
-## Claves de localStorage
+## Base de Datos Supabase
+
+### Tablas Principales
+
+#### `users` (Información Esencial)
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  phone TEXT,
+  name TEXT NOT NULL,
+  avatar_url TEXT,
+  preferred_language TEXT DEFAULT 'es',
+  is_active BOOLEAN DEFAULT true,
+  email_verified BOOLEAN DEFAULT false,
+  phone_verified BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE,
+  last_login_at TIMESTAMP WITH TIME ZONE
+);
+```
+
+**Propósito**: Datos esenciales para autenticación y operaciones básicas.
+
+#### `user_profiles` (Información Extendida)
+```sql
+CREATE TABLE user_profiles (
+  user_id UUID PRIMARY KEY REFERENCES users(id),
+  name TEXT,
+  phone TEXT,
+  bio TEXT,
+  gender TEXT,
+  country TEXT,
+  city TEXT,
+  state TEXT,
+  address TEXT,
+  postal_code TEXT,
+  avatar_url TEXT,
+  date_of_birth DATE,
+  preferences JSONB,
+  created_at TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE
+);
+```
+
+**Propósito**: Información extendida y opcional del perfil del usuario.
+
+**Relación**: 1:1 con `users` (un usuario puede tener 0 o 1 perfil extendido).
+
+#### `restaurants`
+```sql
+CREATE TABLE restaurants (
+  id UUID PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  description TEXT,
+  address TEXT,
+  city TEXT NOT NULL,
+  country TEXT NOT NULL,
+  -- ... más campos
+);
+```
+
+#### `products`
+```sql
+CREATE TABLE products (
+  id SERIAL PRIMARY KEY,
+  restaurant_id UUID REFERENCES restaurants(id),
+  name TEXT NOT NULL,
+  description TEXT,
+  price DECIMAL(10, 2) NOT NULL,
+  image_url TEXT,
+  image_urls TEXT[], -- Array de URLs para múltiples imágenes
+  badges TEXT[], -- Array de etiquetas
+  category TEXT NOT NULL,
+  origin TEXT,
+  is_active BOOLEAN DEFAULT true,
+  is_featured BOOLEAN DEFAULT false,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE,
+  CONSTRAINT products_restaurant_name_unique UNIQUE (restaurant_id, name)
+);
+```
+
+#### `promotions`
+```sql
+CREATE TABLE promotions (
+  id UUID PRIMARY KEY,
+  restaurant_id UUID REFERENCES restaurants(id),
+  title TEXT NOT NULL,
+  description TEXT,
+  image_url TEXT,
+  category TEXT NOT NULL,
+  discount_type TEXT NOT NULL,
+  discount_value DECIMAL(10, 2),
+  original_price DECIMAL(10, 2),
+  final_price DECIMAL(10, 2),
+  valid_from TIMESTAMP WITH TIME ZONE,
+  valid_until TIMESTAMP WITH TIME ZONE,
+  applicable_hours JSONB,
+  applicable_days TEXT[],
+  included_items JSONB,
+  badges TEXT[],
+  client_segmentation TEXT[],
+  flash_counter BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  is_featured BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE
+);
+```
+
+#### `orders`
+```sql
+CREATE TABLE orders (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES users(id),
+  restaurant_id UUID REFERENCES restaurants(id),
+  order_number TEXT NOT NULL,
+  status TEXT NOT NULL,
+  total DECIMAL(10, 2) NOT NULL,
+  subtotal DECIMAL(10, 2) NOT NULL,
+  tax DECIMAL(10, 2) DEFAULT 0,
+  tip DECIMAL(10, 2) DEFAULT 0,
+  items JSONB NOT NULL,
+  notes TEXT,
+  payment_method TEXT,
+  payment_status TEXT DEFAULT 'pending',
+  table_number TEXT,
+  created_at TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE,
+  completed_at TIMESTAMP WITH TIME ZONE,
+  is_active BOOLEAN DEFAULT true
+);
+```
+
+#### `restaurant_menu_sections`
+```sql
+CREATE TABLE restaurant_menu_sections (
+  id UUID PRIMARY KEY,
+  restaurant_id UUID REFERENCES restaurants(id),
+  section_type TEXT NOT NULL, -- 'menu', 'suggestions', 'highlights'
+  category TEXT NOT NULL,
+  product_ids INTEGER[],
+  created_at TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE,
+  CONSTRAINT unique_section UNIQUE (restaurant_id, section_type, category)
+);
+```
+
+**Propósito**: Define qué productos aparecen en cada sección del menú (Menú, Sugerencias del chef, Destacados).
+
+### Claves de localStorage (Solo UI)
 
 | Clave | Tipo | Descripción |
 |-------|------|-------------|
 | `selectedLanguage` | string | Idioma seleccionado |
 | `theme` | string | Tema (light/dark) |
-| `favorites` | number[] | IDs de platillos favoritos |
-| `favoritePromotions` | FavoritePromotion[] | Promociones favoritas |
-| `orders_list` | Order[] | Órdenes activas |
-| `order_history` | HistoricalOrder[] | Historial de órdenes completadas |
-| `transactions` | Transaction[] | Historial de transacciones |
-| `group_order` | GroupOrder \| null | Orden grupal activa |
-| `assistance_history` | AssistanceHistoryItem[] | Historial de solicitudes de asistencia |
-| `waitlist_entries` | WaitlistEntry[] | Lista de espera activa |
-| `loyalty_data` | LoyaltyUser | Datos del programa de lealtad |
-| `user_contacts` | Contact[] | Contactos del usuario |
-| `tableReadyData` | TableReadyData | Datos de mesa lista |
-| `splitPaymentData` | SplitPaymentData | Datos de pago dividido |
-| `selectedRestaurant` | Restaurant \| null | Restaurante seleccionado |
+| `supabase.auth.token` | string | Token de autenticación de Supabase (gestionado automáticamente) |
 
 ---
 
@@ -790,17 +933,15 @@ interface Review {
 ---
 
 ### Cambios Recientes (Enero 2025)
-- ✅ Agregado modelo de datos para contactos del usuario (`Contact`)
-- ✅ Agregada clave `user_contacts` en localStorage
-- ✅ Documentación de estructura de contactos (nombre, teléfono, email)
-- ✅ Agregado modelo de datos para restaurantes (`Restaurant`)
-- ✅ Documentación de estructura de restaurantes (id, nombre, ubicación, rating)
-- ✅ Agregado modelo de datos para datos de lealtad (`LoyaltyUser`)
-- ✅ Agregada clave `loyalty_data` en localStorage
-- ✅ Documentación de niveles de lealtad (Bronze, Silver, Gold, Platinum)
-- ✅ Agregado modelo de datos para promociones favoritas (`FavoritePromotion`)
-- ✅ Agregada clave `favoritePromotions` en localStorage
-- ✅ Documentación de estructura de promociones favoritas
+- ✅ **Migración a Supabase**: Todos los datos persistentes ahora están en Supabase PostgreSQL
+- ✅ **Separación users/user_profiles**: Arquitectura mejorada con separación de datos esenciales y extendidos
+- ✅ **Estructura de Base de Datos**: Documentación completa de todas las tablas principales
+- ✅ **Múltiples Imágenes**: Campo `image_urls` (array) para productos con múltiples imágenes
+- ✅ **Etiquetas de Productos**: Campo `badges` (array) para etiquetas de productos
+- ✅ **Promociones Avanzadas**: Campos `client_segmentation`, `flash_counter`, `applicable_hours`, `applicable_days`
+- ✅ **Secciones de Menú**: Tabla `restaurant_menu_sections` para gestionar Sugerencias, Destacados y Menú
+- ✅ **Row Level Security**: Todas las tablas tienen políticas RLS configuradas
+- ✅ **Capa de API**: Nueva estructura `services/api/` para abstraer operaciones de base de datos
 
 ### Cambios Recientes (Diciembre 2024)
 - ✅ Agregado modelo de datos para solicitudes de asistencia (`AssistanceHistoryItem`)

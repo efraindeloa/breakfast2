@@ -56,14 +56,15 @@ Esta es la documentación completa de **Breakfast App**, una aplicación móvil 
 
 #### [🏗️ Arquitectura del Sistema](./03-tecnica/01-arquitectura.md)
 - Frontend: React, TypeScript, Vite
-- Backend: Estado actual y planificado
+- Backend: Supabase (PostgreSQL, Auth, Storage)
+- API Layer: Capa de abstracción en `services/api/`
 - Mobile: Capacitor, Android
 - Estructura del proyecto
 - Gestión de estado
 - Navegación
 - Internacionalización
 - Persistencia de datos
-- Seguridad
+- Seguridad (RLS, Supabase Auth)
 - Build y deployment
 
 #### 📡 API Documentation (Futuro)
@@ -72,16 +73,30 @@ Esta es la documentación completa de **Breakfast App**, una aplicación móvil 
 - Errores
 - Autenticación
 
-#### 🗄️ Modelo de Datos (Futuro)
-- Entidades
-- Relaciones
-- Diagramas ER
+#### [🗄️ Modelo de Datos](./03-tecnica/02-modelo-datos.md)
+- Estructura de base de datos Supabase
+- Tablas principales (users, user_profiles, products, promotions, orders, etc.)
+- Relaciones entre entidades
+- Separación users vs user_profiles
+- Storage buckets
 
-#### 🔐 Seguridad (Futuro)
-- Autenticación
-- Roles
-- Permisos
-- Manejo de datos sensibles
+#### [🌍 Sistema de Traducciones](./03-tecnica/03-sistema-traducciones.md)
+- Estructura de archivos de traducción
+- Uso de useTranslation
+- Agregar nuevos idiomas
+
+#### [📚 Lecciones Aprendidas](./03-tecnica/04-lecciones-aprendidas.md)
+- Arquitectura de base de datos
+- Patrones de API
+- Manejo de errores comunes
+- Optimizaciones de rendimiento
+- Errores comunes y soluciones
+
+#### [🔄 Patrones Reutilizables](./03-tecnica/05-patrones-reutilizables.md)
+- Plantillas de código
+- Scripts SQL reutilizables
+- Estructura de carpetas base
+- Componentes base
 
 ---
 
@@ -187,8 +202,10 @@ Esta es la documentación completa de **Breakfast App**, una aplicación móvil 
 ### Para Desarrolladores
 
 1. **Arquitectura**: Empieza por [Arquitectura del Sistema](./03-tecnica/01-arquitectura.md)
-2. **Funcionalidades**: Revisa [Especificaciones Funcionales](./01-producto/02-especificaciones-funcionales.md)
-3. **Casos de Uso**: Entiende los [User Stories](./01-producto/03-user-stories.md)
+2. **Lecciones Aprendidas**: Revisa [Lecciones Aprendidas](./03-tecnica/04-lecciones-aprendidas.md) para evitar errores comunes
+3. **Patrones Reutilizables**: Consulta [Patrones Reutilizables](./03-tecnica/05-patrones-reutilizables.md) para código base
+4. **Funcionalidades**: Revisa [Especificaciones Funcionales](./01-producto/02-especificaciones-funcionales.md)
+5. **Casos de Uso**: Entiende los [User Stories](./01-producto/03-user-stories.md)
 
 ### Para Product Managers
 
@@ -257,6 +274,16 @@ Este proyecto es propietario. Todos los derechos reservados.
 ---
 
 **Última actualización**: Enero 2025  
+**Versión**: 2.0 (Migración a Supabase completada)
+
+### Cambios Recientes (Enero 2025)
+- ✅ **Migración completa a Supabase**: Backend real con PostgreSQL, Auth y Storage
+- ✅ **Capa de API**: Nueva arquitectura con abstracción en `services/api/`
+- ✅ **Funcionalidades de Restaurante**: CRUD completo de productos y promociones
+- ✅ **Autenticación Real**: Supabase Auth con email/contraseña
+- ✅ **Row Level Security**: Políticas de seguridad configuradas
+- ✅ **Múltiples Imágenes**: Soporte para múltiples imágenes por producto
+- ✅ **Documentación Actualizada**: Todos los documentos actualizados con información actual  
 **Versión del documento**: 1.5  
 **Responsable**: Equipo de desarrollo
 

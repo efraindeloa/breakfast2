@@ -72,8 +72,7 @@
 ### Limitaciones actuales
 - ❌ **NO es un sistema POS completo**: No reemplaza completamente el sistema de punto de venta del restaurante
 - ❌ **NO incluye gestión de inventario**: No gestiona stock de ingredientes
-- ❌ **NO tiene backend propio**: Actualmente utiliza almacenamiento local (localStorage)
-- ❌ **NO incluye app para meseros**: Solo está orientada a comensales
+- ❌ **NO incluye app para meseros**: Solo está orientada a comensales y propietarios de restaurantes
 - ❌ **NO tiene integración con delivery**: Enfoque en servicio en restaurante
 - ❌ **NO es una app de reservaciones**: Se enfoca en el servicio durante la visita
 
@@ -86,21 +85,28 @@
 
 ## Alcance del proyecto
 
-### Fase actual (v0.0.0)
-- ✅ Funcionalidad básica de menú y carrito
-- ✅ Sistema de autenticación simple
-- ✅ Gestión de órdenes básica
-- ✅ Sistema de pagos simulado
-- ✅ Soporte multiidioma básico
+### Fase actual (v1.0.0)
+- ✅ Backend Supabase con PostgreSQL
+- ✅ Autenticación real con Supabase Auth
+- ✅ Gestión completa de productos (CRUD)
+- ✅ Gestión completa de promociones (CRUD)
+- ✅ Gestión de perfiles de usuario y restaurante
+- ✅ Sistema de órdenes con base de datos
+- ✅ Storage de imágenes en Supabase
+- ✅ Row Level Security (RLS) configurado
+- ✅ Capa de API para abstracción
+- ✅ Soporte multiidioma completo
 - ✅ Diseño responsive
+- ✅ Pantallas para restaurantes (gestión de menú, promociones, perfil)
 
 ### Próximas fases (Planificadas)
-- Integración con backend real
-- Notificaciones en tiempo real
+- Notificaciones push en tiempo real
 - Sistema de reservas
-- Programa de lealtad
-- Dashboard administrativo
+- Dashboard administrativo completo
 - Integración con sistemas POS existentes
+- Integración con pasarelas de pago reales
+- App para meseros
+- Sistema de delivery
 
 ## Valores fundamentales
 
@@ -129,6 +135,17 @@
 **Responsable**: Equipo de desarrollo
 
 ### Cambios Recientes (Enero 2025)
+- ✅ **Backend Supabase**: Migración completa a Supabase como backend
+- ✅ **Autenticación Real**: Implementación de Supabase Auth
+- ✅ **Gestión de Productos**: CRUD completo desde `MenuRestaurantScreen`
+- ✅ **Gestión de Promociones**: CRUD completo desde `PromotionsRestaurantScreen`
+- ✅ **Múltiples Imágenes**: Soporte para múltiples imágenes por producto
+- ✅ **Etiquetas de Productos**: Sistema de badges/etiquetas
+- ✅ **Búsqueda Global**: Búsqueda en todo el menú, no solo categoría actual
+- ✅ **Pantallas de Restaurante**: Gestión completa para propietarios
+- ✅ **Capa de API**: Nueva arquitectura con abstracción de base de datos
+- ✅ **Row Level Security**: Políticas de seguridad configuradas
+- ✅ **Separación users/user_profiles**: Arquitectura mejorada
 - ✅ Programa de lealtad con puntos y niveles
 - ✅ Cupones y recompensas con referidos
 - ✅ Módulo de promociones con sugerencias de IA

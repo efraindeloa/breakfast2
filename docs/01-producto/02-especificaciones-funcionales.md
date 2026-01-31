@@ -1181,9 +1181,187 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 - Manejo robusto de errores y permisos denegados
 - Los resultados se insertan automáticamente en el campo de texto
 
+## 26. Funcionalidades para Restaurantes
+
+### 26.1 Autenticación y Tipos de Cuenta
+
+#### Tipos de Cuenta
+- **`consumer`**: Cuenta de comensal (usuario final)
+- **`restaurant`**: Cuenta de restaurante (propietario/administrador)
+
+#### Detección de Tipo de Cuenta
+- Se determina automáticamente al iniciar sesión
+- Basado en la tabla `restaurant_staff` en Supabase
+- Si el usuario está asociado a un restaurante, `accountType = 'restaurant'`
+- Si no, `accountType = 'consumer'`
+
+#### Redirección Automática
+- Usuarios con `accountType === 'restaurant'` son redirigidos a pantallas específicas:
+  - `/home` → `/home-restaurant`
+  - `/menu` → `/menu-restaurant`
+  - `/promotions` → `/promotions-restaurant`
+
+### 26.2 Gestión de Menú (`MenuRestaurantScreen`)
+**Ruta**: `/menu-restaurant`
+
+#### Funcionalidades Principales
+
+##### Visualización del Menú
+- Lista de productos organizados por categorías
+- Filtros por categoría (Entradas, Platos Fuertes, Bebidas, Postres, Coctelería)
+- Filtro por etiquetas (badges)
+- Búsqueda global en todo el menú
+- Modo de edición para gestionar productos
+
+##### Crear Producto
+- Formulario completo con:
+  - Nombre del producto
+  - Descripción
+  - Precio
+  - Categoría
+  - Origen (Tierra, Mar, Aire)
+  - Múltiples imágenes (hasta 5)
+  - Etiquetas (badges)
+  - Complementos (proteínas, tamaños, etc.)
+- Subida de imágenes a Supabase Storage
+- Validación de campos obligatorios
+
+##### Editar Producto
+- Carga datos existentes del producto
+- Permite modificar todos los campos
+- Actualiza imágenes (agregar o reemplazar)
+- Manejo de cambios de capitalización en nombre (evita conflictos de unique constraint)
+
+##### Eliminar Producto
+- Eliminación desde sección "Menú": Elimina completamente de BD y todas las secciones
+- Eliminación desde "Sugerencias" o "Destacados": Solo remueve de esa sección
+- Modal de confirmación personalizado (no `window.confirm`)
+- Notificaciones temporales in-app
+
+##### Gestión de Secciones
+- **Menú**: Productos disponibles en el menú principal
+- **Sugerencias del Chef**: Productos destacados como sugerencias
+- **Destacados**: Productos destacados del día
+- Agregar/remover productos de cada sección
+- Guardado automático con debouncing
+
+##### Búsqueda
+- Búsqueda en tiempo real
+- Busca en todo el menú, no solo categoría actual
+- Filtra por nombre y descripción
+- Oculta filtros de origen cuando hay búsqueda activa
+
+#### Reglas de Negocio
+- Solo usuarios con `accountType === 'restaurant'` pueden acceder
+- Solo pueden gestionar productos de su propio restaurante
+- Validación de unique constraint: `(restaurant_id, name)`
+- Soft delete: `is_active = false` en lugar de eliminar físicamente
+- Imágenes se almacenan en bucket `product-images` de Supabase Storage
+
+### 26.3 Gestión de Promociones (`PromotionsRestaurantScreen`)
+**Ruta**: `/promotions-restaurant`
+
+#### Funcionalidades Principales
+
+##### Visualización de Promociones
+- Lista de todas las promociones del restaurante
+- Filtros por estado (activas, inactivas)
+- Búsqueda de promociones
+- Modo de edición para gestionar promociones
+
+##### Crear Promoción
+- Formulario completo con:
+  - Nombre de la promoción
+  - Descripción
+  - Imagen (banner promocional 16:9)
+  - Tipo de descuento (Porcentaje, Monto Fijo, Precio Final, 2x1, Combo)
+  - Valor de descuento
+  - Modo Desayuno (toggle):
+    - Hora inicio/fin
+    - Días de la semana
+  - Segmentación de clientes (Todos, Nuevos Usuarios, VIP)
+  - Tipo de oferta (2x1, Combo, Regalo)
+  - Vigencia (fecha inicio/fin)
+  - Activar Contador Flash (toggle)
+- Subida de imagen a Supabase Storage
+- Validación de campos
+
+##### Editar Promoción
+- Carga datos existentes
+- Permite modificar todos los campos
+- Actualiza imagen si se cambia
+- Sincroniza tipo de descuento con tipo de oferta
+
+##### Eliminar Promoción
+- Modal de confirmación personalizado
+- Notificaciones temporales in-app
+- Soft delete: `is_active = false`
+
+##### Contador Flash
+- Si está activado, muestra contador regresivo en `PromotionDetailScreen`
+- Basado en `valid_until` de la promoción
+- Actualización en tiempo real
+
+#### Reglas de Negocio
+- Solo usuarios con `accountType === 'restaurant'` pueden acceder
+- Solo pueden gestionar promociones de su propio restaurante
+- Validación de RLS en todas las operaciones
+- Imágenes se almacenan en bucket `promotion-images` de Supabase Storage
+
+### 26.4 Perfil del Restaurante (`RestaurantProfileScreen`)
+**Ruta**: `/restaurant-profile`
+
+#### Funcionalidades
+- Visualización de información del restaurante
+- Edición de datos del restaurante
+- Subida de logo y portada
+- Configuración de horarios
+- Información de contacto
+
+### 26.5 Home de Restaurante (`HomeRestaurantScreen`)
+**Ruta**: `/home-restaurant`
+
+#### Funcionalidades
+- Acceso rápido a:
+  - Gestión de menú
+  - Gestión de promociones
+  - Perfil del restaurante
+  - Estadísticas
+  - Panel de control
+- Resumen de actividad reciente
+- Métricas básicas
+
+### 26.6 Estadísticas (`StatisticsRestaurantScreen`)
+**Ruta**: `/estadisticas-restaurant`
+
+#### Funcionalidades
+- Métricas de ventas
+- Productos más vendidos
+- Promociones más efectivas
+- Análisis de clientes
+- Reportes por período
+
+### 26.7 Panel de Control (`AdminControlPanelScreen`)
+**Ruta**: `/admin-control-panel`
+
+#### Funcionalidades
+- Gestión de personal del restaurante
+- Asignación de roles (owner, admin, manager, staff)
+- Configuración avanzada
+- Integraciones
+
+#### Reglas de Negocio
+- Solo usuarios con rol `owner` o `admin` pueden acceder
+- Los roles se gestionan en la tabla `restaurant_staff`
+
 ---
 
 ### Cambios Recientes (Enero 2025)
+- ✅ **Agregada sección completa de Funcionalidades para Restaurantes (26)**
+- ✅ Documentadas todas las pantallas de restaurante (Menú, Promociones, Perfil, Home, Estadísticas, Panel de Control)
+- ✅ Documentado sistema de tipos de cuenta (consumer vs restaurant)
+- ✅ Documentado CRUD completo de productos y promociones
+- ✅ Documentado sistema de secciones de menú (Menú, Sugerencias, Destacados)
 - ✅ Agregada sección completa de Programa de Lealtad (20)
 - ✅ Agregada sección completa de Cupones y Recompensas (21)
 - ✅ Agregada sección completa de Módulo de Promociones (22)

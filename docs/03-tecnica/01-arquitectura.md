@@ -22,38 +22,51 @@
 
 #### Estado y Contexto
 - **React Context API**: Gestión de estado global
+  - `AuthContext`: Autenticación y sesión de usuario
   - `CartContext`: Estado del carrito
   - `RestaurantContext`: Configuración del restaurante
+  - `ProductsContext`: Productos del menú
   - `GroupOrderContext`: Estado de pedidos grupales
   - `LanguageContext`: Internacionalización
   - `FavoritesContext`: Gestión de favoritos
+  - `LoyaltyContext`: Programa de lealtad
 
-#### Almacenamiento Local
-- **localStorage**: Persistencia de datos en el cliente
+#### Almacenamiento
+- **Supabase PostgreSQL**: Datos persistentes (usuarios, productos, promociones, órdenes, etc.)
+- **Supabase Storage**: Imágenes y archivos multimedia
+- **localStorage**: Solo para preferencias de UI
   - Configuración del usuario (idioma, tema)
-  - Carrito de compras
-  - Favoritos (platillos y promociones)
-  - Historial de órdenes
-  - Opiniones de usuarios (`user_reviews`)
-  - Historial de solicitudes de asistencia (`assistance_history`)
-  - Datos de programa de lealtad (`loyalty_data`)
-  - Contactos del usuario (`user_contacts`)
-  - Datos de mesa lista (`tableReadyData`)
-  - Datos de pago dividido (`splitPaymentData`)
-  - Restaurante seleccionado (`selectedRestaurant`)
+  - Caché temporal de sesión
 
 ### Backend
 
-#### Estado Actual
-- **No hay backend propio**: La aplicación utiliza almacenamiento local (localStorage)
-- **Datos estáticos**: Los platillos están hardcodeados en el frontend
-- **Simulación de servicios**: Los pagos y órdenes se simulan
+#### Supabase (Backend-as-a-Service)
+- **Base de datos**: PostgreSQL en Supabase
+- **Autenticación**: Supabase Auth con email/contraseña y OAuth
+- **Storage**: Supabase Storage para imágenes de productos y promociones
+- **Row Level Security (RLS)**: Políticas de seguridad a nivel de fila
+- **API REST**: PostgREST API automática generada desde PostgreSQL
 
-#### Futuro Backend (Planificado)
-- **API REST**: Servicios backend para gestión de órdenes, usuarios, pagos
-- **Base de datos**: PostgreSQL o MongoDB para almacenar datos
-- **Autenticación**: Sistema de autenticación con JWT
-- **Notificaciones**: Servicio de notificaciones push
+#### Capa de API (`services/api/`)
+- **Abstracción**: Capa que encapsula llamadas directas a Supabase
+- **Estructura**:
+  - `types.ts`: Tipos comunes (`ApiResponse<T>`, `ApiError`)
+  - `base.ts`: Funciones base (`handleSupabaseError`, `requireAuth`)
+  - `products.ts`: API de productos
+  - `promotions.ts`: API de promociones
+  - `user.ts`: API de usuarios
+  - `restaurant.ts`: API de restaurantes
+  - `orders.ts`: API de órdenes
+  - `menu-sections.ts`: API de secciones de menú
+  - `index.ts`: Exportaciones centralizadas
+
+#### Almacenamiento
+- **Base de datos**: Todos los datos persistentes en Supabase PostgreSQL
+- **Storage**: Imágenes en Supabase Storage buckets:
+  - `product-images`: Imágenes de productos
+  - `promotion-images`: Imágenes de promociones
+  - `restaurant-images`: Logos y portadas de restaurantes
+- **localStorage**: Solo para preferencias de UI (idioma, tema) y caché temporal
 
 ### Mobile (Capacitor)
 
@@ -95,7 +108,20 @@ breakfast2/
 │   ├── BottomNav.tsx
 │   └── TopNavbar.tsx
 ├── config/                  # Configuración
-│   └── restaurantConfig.ts
+│   ├── restaurantConfig.ts
+│   └── supabase.ts         # Configuración de Supabase
+├── services/                # Servicios y API
+│   ├── api/                # Capa de API
+│   │   ├── types.ts        # Tipos comunes
+│   │   ├── base.ts         # Funciones base
+│   │   ├── products.ts     # API de productos
+│   │   ├── promotions.ts   # API de promociones
+│   │   ├── user.ts         # API de usuarios
+│   │   ├── restaurant.ts   # API de restaurantes
+│   │   ├── orders.ts       # API de órdenes
+│   │   ├── menu-sections.ts # API de secciones
+│   │   └── index.ts        # Exportaciones
+│   └── database.ts         # Funciones legacy (en migración)
 ├── contexts/                # Contextos de React
 │   ├── CartContext.tsx
 │   ├── FavoritesContext.tsx
@@ -112,33 +138,56 @@ breakfast2/
 │   └── pt.json
 ├── screens/                 # Pantallas principales
 │   ├── AddCardScreen.tsx
+│   ├── AdminControlPanelScreen.tsx
 │   ├── BillingDataScreen.tsx
-│   ├── ProductReviewsScreen.tsx
 │   ├── ConfirmationScreen.tsx
+│   ├── ContactsScreen.tsx
+│   ├── CouponDetailScreen.tsx
+│   ├── CouponsScreen.tsx
+│   ├── DiscoverRestaurantsScreen.tsx
 │   ├── DishDetailScreen.tsx
+│   ├── EditOrderScreen.tsx
 │   ├── EmailConfigScreen.tsx
 │   ├── FavoritesScreen.tsx
+│   ├── ForgotPasswordScreen.tsx
 │   ├── GroupOrderManagementScreen.tsx
+│   ├── HomeRestaurantScreen.tsx
 │   ├── HomeScreen.tsx
 │   ├── InviteUsersScreen.tsx
 │   ├── JoinTableScreen.tsx
+│   ├── LoyaltyScreen.tsx
+│   ├── MenuRestaurantScreen.tsx
 │   ├── MenuScreen.tsx
+│   ├── MeetUpScreen.tsx
 │   ├── OrderConfirmedScreen.tsx
 │   ├── OrderDetailScreen.tsx
 │   ├── OrderHistoryScreen.tsx
 │   ├── OrderScreen.tsx
 │   ├── PaymentMethodsScreen.tsx
 │   ├── PaymentSuccessScreen.tsx
+│   ├── ProductReviewsScreen.tsx
 │   ├── ProfileScreen.tsx
+│   ├── PromotionDetailScreen.tsx
+│   ├── PromotionsRestaurantScreen.tsx
+│   ├── PromotionsScreen.tsx
 │   ├── QRScannerScreen.tsx
 │   ├── RegisterScreen.tsx
+│   ├── RequestAssistanceScreen.tsx
+│   ├── ReservationsRestaurantScreen.tsx
+│   ├── ResetPasswordScreen.tsx
+│   ├── RestaurantDetailsScreen.tsx
+│   ├── RestaurantProfileScreen.tsx
 │   ├── ReviewScreen.tsx
 │   ├── SettingsScreen.tsx
+│   ├── SplitPaymentSelectionScreen.tsx
+│   ├── SplitPaymentSummaryScreen.tsx
+│   ├── StatisticsRestaurantScreen.tsx
+│   ├── TableReadyScreen.tsx
 │   ├── TransactionDetailScreen.tsx
 │   ├── TransactionsScreen.tsx
+│   ├── UpdateRestaurantImageScreen.tsx
 │   ├── UploadConstanciaScreen.tsx
 │   ├── WaitlistScreen.tsx
-│   ├── EditOrderScreen.tsx
 │   └── WelcomeScreen.tsx
 ├── public/                  # Archivos estáticos (imágenes de productos)
 │   ├── baileys.webp
@@ -165,6 +214,11 @@ breakfast2/
 │   ├── tarta-chocolate.jpg
 │   ├── te.webp
 │   └── volcan.jpg
+├── supabase/                  # Scripts SQL y migraciones
+│   ├── MASTER_SETUP.sql
+│   ├── schema_optimized.sql
+│   ├── fix-*.sql
+│   └── ...
 ├── types/                   # Definiciones de tipos TypeScript
 │   └── order.ts
 ├── App.tsx                  # Componente raíz
@@ -651,50 +705,112 @@ import L from 'leaflet';
 
 ## Persistencia de Datos
 
-### localStorage
+### Base de Datos Supabase
+
+#### Tablas Principales
+- **`users`**: Información esencial de usuarios (autenticación)
+- **`user_profiles`**: Información extendida de perfiles
+- **`restaurants`**: Información de restaurantes
+- **`restaurant_staff`**: Asociación usuarios-restaurantes con roles
+- **`products`**: Productos del menú
+- **`promotions`**: Promociones activas
+- **`orders`**: Órdenes de usuarios
+- **`order_items`**: Items de cada orden
+- **`restaurant_menu_sections`**: Secciones del menú (Sugerencias, Destacados, Menú)
+- **`cart_items`**: Items en carrito (sincronizado con BD)
+- **`reviews`**: Opiniones de productos
+- **`user_payment_methods`**: Métodos de pago guardados
+- **`user_addresses`**: Direcciones de usuarios
+- **`user_settings`**: Configuración de usuarios
+
+#### Storage Buckets
+- **`product-images`**: Imágenes de productos
+- **`promotion-images`**: Imágenes de promociones
+- **`restaurant-images`**: Logos y portadas de restaurantes
+
+### localStorage (Solo UI)
 
 #### Datos Persistidos
 1. **Configuración del usuario**:
    - `selectedLanguage`: Idioma seleccionado
    - `theme`: Modo oscuro/claro
-   - `favorites`: Lista de IDs de platillos favoritos
 
-2. **Carrito** (durante sesión):
-   - Se limpia al confirmar orden o cerrar sesión
-
-3. **Historial**:
-   - `orders_list`: Órdenes activas
-   - `order_history`: Historial de órdenes completadas
-   - `transactions`: Historial de transacciones
-   - `assistance_history`: Historial de solicitudes de asistencia (se limpia al pagar)
-  - `waitlist_entries`: Lista de espera activa (se limpia al cancelar o ser atendido)
+2. **Caché temporal**:
+   - Datos de sesión de Supabase Auth
+   - Caché de preferencias de UI
 
 ### Estructura de Datos
 
-#### Órdenes
+#### Órdenes (Base de Datos)
 ```typescript
 interface Order {
-  orderId: string;
-  orderNumber: number;
-  items: OrderItem[];
+  id: string; // UUID
+  user_id: string; // UUID
+  restaurant_id: string; // UUID
+  order_number: string;
   status: OrderStatus;
-  timestamp: string;
+  total: number;
+  subtotal: number;
+  tax: number;
+  tip: number;
+  items: OrderItem[]; // JSONB
+  notes?: string;
+  payment_method?: string;
+  payment_status: string;
+  table_number?: string;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string;
+  is_active: boolean;
 }
 ```
 
-#### Historial
+#### Productos (Base de Datos)
 ```typescript
-interface HistoricalOrder {
-  id: string;
-  restaurantName: string;
-  date: string;
-  time: string;
-  total: number;
-  status: 'completada' | 'cancelada';
-  items: HistoricalOrderItem[];
-  logo: string;
-  transactionId?: number;
-  timestamp: string;
+interface Product {
+  id: number;
+  restaurant_id: string; // UUID
+  name: string;
+  description?: string;
+  price: number;
+  image_url?: string;
+  image_urls?: string[]; // Array de URLs para múltiples imágenes
+  badges?: string[]; // Array de etiquetas
+  category: string;
+  origin?: string;
+  is_active: boolean;
+  is_featured: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+#### Promociones (Base de Datos)
+```typescript
+interface Promotion {
+  id: string; // UUID
+  restaurant_id: string; // UUID
+  title: string;
+  description?: string;
+  image_url?: string;
+  category: string;
+  discount_type: 'percentage' | 'fixed' | '2x1' | 'combo' | 'final';
+  discount_value?: number;
+  original_price?: number;
+  final_price?: number;
+  valid_from: string;
+  valid_until: string;
+  applicable_hours?: { start: string; end: string };
+  applicable_days?: string[];
+  included_items?: any[];
+  badges?: string[];
+  client_segmentation?: string[];
+  flash_counter?: boolean;
+  is_active: boolean;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
 }
 ```
 
@@ -704,16 +820,19 @@ interface HistoricalOrder {
 
 ### Autenticación
 
-#### Estado Actual
-- **Simulado**: `isAuthenticated` es un estado de React
-- No hay validación real de credenciales
-- No hay tokens JWT ni sesiones
+#### Supabase Auth
+- **Email/Contraseña**: Autenticación con Supabase Auth
+- **OAuth**: Soporte para Google y otros proveedores (futuro)
+- **Tokens JWT**: Tokens automáticos gestionados por Supabase
+- **Refresh Tokens**: Renovación automática de tokens
+- **Verificación de Email**: Verificación automática de emails
+- **Persistencia de Sesión**: Sesiones persisten entre recargas
 
-#### Futuro (Planificado)
-- Autenticación con email/contraseña
-- Tokens JWT para sesiones
-- Refresh tokens para renovación automática
-- Verificación de email
+#### Row Level Security (RLS)
+- **Políticas de Seguridad**: Cada tabla tiene políticas RLS configuradas
+- **Acceso por Usuario**: Los usuarios solo pueden acceder a sus propios datos
+- **Acceso por Rol**: Restaurantes solo pueden gestionar sus propios productos/promociones
+- **Políticas por Operación**: SELECT, INSERT, UPDATE, DELETE tienen políticas separadas
 
 ### Datos Sensibles
 
@@ -723,8 +842,9 @@ interface HistoricalOrder {
 - Solo se guardan los últimos 4 dígitos para visualización
 
 #### Datos Personales
-- Se almacenan en localStorage localmente
-- No se envían a servidores externos (actualmente)
+- **Almacenamiento**: Base de datos Supabase con RLS
+- **Encriptación**: Encriptación en tránsito (HTTPS) y reposo (Supabase)
+- **Acceso**: Solo el usuario autenticado puede acceder a sus datos
 
 ---
 
@@ -1060,7 +1180,25 @@ Intervalo actualiza posiciones y tiempos estimados
 ---
 
 ### Cambios Recientes (Enero 2025)
-- ✅ Agregado componente `TopNavbar` reutilizable para navegación superior
+- ✅ **Backend Supabase**: Migración completa a Supabase como backend
+- ✅ **Capa de API**: Nueva capa de abstracción en `services/api/` para todas las operaciones CRUD
+- ✅ **Autenticación Real**: Implementación de Supabase Auth con email/contraseña
+- ✅ **Gestión de Productos**: CRUD completo de productos desde `MenuRestaurantScreen`
+- ✅ **Gestión de Promociones**: CRUD completo de promociones desde `PromotionsRestaurantScreen`
+- ✅ **Múltiples Imágenes**: Soporte para múltiples imágenes por producto
+- ✅ **Etiquetas de Productos**: Sistema de badges/etiquetas para productos
+- ✅ **Búsqueda Global**: Búsqueda de productos en todo el menú (no solo categoría actual)
+- ✅ **Pantallas de Restaurante**: 
+  - `MenuRestaurantScreen`: Gestión de menú
+  - `PromotionsRestaurantScreen`: Gestión de promociones
+  - `RestaurantProfileScreen`: Perfil del restaurante
+  - `HomeRestaurantScreen`: Home para restaurantes
+  - `StatisticsRestaurantScreen`: Estadísticas
+  - `AdminControlPanelScreen`: Panel de control
+- ✅ **Separación users/user_profiles**: Arquitectura mejorada de base de datos
+- ✅ **Row Level Security**: Políticas RLS configuradas para todas las tablas
+- ✅ **Color Primario Actualizado**: Cambio de `#F48C25` a `#EB9947`
+- ✅ **Agregado componente `TopNavbar` reutilizable para navegación superior
 - ✅ Sistema de favoritos extendido para incluir promociones
 - ✅ Integración de `TopNavbar` en pantallas principales (Home, Menu, Order, Transactions, Promotions)
 - ✅ Opción para ocultar botón de favoritos en `TopNavbar` mediante prop `showFavorites`

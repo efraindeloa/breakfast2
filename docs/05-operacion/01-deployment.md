@@ -15,6 +15,29 @@ Este documento describe el proceso de deployment y release de **Breakfast App** 
 - **npm**: 9.x o superior
 - **Java**: 17 (para build de Android)
 - **Android SDK**: Para build de Android
+- **Cuenta de Supabase**: Para backend y base de datos
+
+#### Configuración de Supabase
+
+1. **Crear proyecto en Supabase**:
+   - Ir a [supabase.com](https://supabase.com)
+   - Crear nuevo proyecto
+   - Anotar URL y Anon Key
+
+2. **Configurar variables de entorno**:
+   ```bash
+   # Crear archivo .env en la raíz del proyecto
+   VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
+   VITE_SUPABASE_ANON_KEY=tu-anon-key
+   ```
+
+3. **Ejecutar scripts SQL**:
+   - Ejecutar `supabase/MASTER_SETUP.sql` en Supabase SQL Editor
+   - Configurar RLS policies según scripts en `supabase/fix-*.sql`
+   - Configurar Storage buckets:
+     - `product-images`
+     - `promotion-images`
+     - `restaurant-images`
 
 #### Instalación de Dependencias
 ```bash
@@ -478,5 +501,10 @@ jobs:
 **Responsable**: Equipo de DevOps
 
 ### Cambios Recientes (Enero 2025)
+- ✅ **Agregada sección de configuración de Supabase**
+- ✅ Documentado proceso de setup de backend
+- ✅ Documentada configuración de variables de entorno
+- ✅ Documentada ejecución de scripts SQL
+- ✅ Documentada configuración de Storage buckets
 - ✅ Actualizado con nuevas dependencias (leaflet, speech-recognition, contacts, geolocation)
 - ✅ Documentados nuevos permisos de Android (RECORD_AUDIO, READ_CONTACTS, WRITE_CONTACTS)

@@ -11,13 +11,13 @@ Este documento describe el sistema de diseño de **Breakfast App**, incluyendo c
 ### Paleta Principal
 
 #### Color Primario
-- **Código**: `#8B4513` (Brown/Dark Brown)
+- **Código**: `#EB9947` (Orange)
 - **Uso**: Botones principales, enlaces activos, acentos
 - **Variaciones**:
-  - **Primary Dark**: `#654321` (Hover states)
-  - **Primary Light**: `#D2B48C` (Backgrounds suaves)
-  - **Primary/10**: `rgba(139, 69, 19, 0.1)` (Backgrounds sutiles)
-  - **Primary/20**: `rgba(139, 69, 19, 0.2)` (Hover backgrounds)
+  - **Primary Dark**: `#D6892F` (Hover states)
+  - **Primary Light**: `#F5C97A` (Backgrounds suaves)
+  - **Primary/10**: `rgba(235, 153, 71, 0.1)` (Backgrounds sutiles)
+  - **Primary/20**: `rgba(235, 153, 71, 0.2)` (Hover backgrounds)
 
 #### Color de Fondo
 - **Claro**: `#FFFFFF` (White)

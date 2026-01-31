@@ -2,12 +2,20 @@
 
 ## Arquitectura
 
-El sistema de traducciones utiliza una **tabla separada** (`product_translations`) para almacenar traducciones de productos. Esta arquitectura es escalable y permite:
+El sistema de traducciones utiliza **archivos JSON locales** (`locales/*.json`) para todas las traducciones de la interfaz. Los productos y otros datos dinámicos se pueden traducir usando una tabla separada (`product_translations`) en el futuro.
 
-- ✅ Agregar nuevos idiomas sin modificar el esquema
-- ✅ Traducciones parciales (si falta una traducción, se usa fallback)
-- ✅ Personalización por restaurante
-- ✅ Actualizaciones sin deploy de código
+### Archivos de Traducción
+
+- **Ubicación**: `locales/`
+- **Idiomas soportados**: Español (es), Inglés (en), Portugués (pt), Francés (fr)
+- **Estructura**: Objetos JSON anidados por sección (common, menu, orders, etc.)
+
+### Ventajas
+
+- ✅ Fácil de mantener y actualizar
+- ✅ No requiere consultas a base de datos para UI
+- ✅ Carga rápida de traducciones
+- ✅ Versionado en Git
 
 ## Estructura de Base de Datos
 

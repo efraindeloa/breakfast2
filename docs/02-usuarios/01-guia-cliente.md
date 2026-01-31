@@ -800,8 +800,67 @@ Sí, la app está diseñada para funcionar en teléfonos y tablets, con diseño 
 
 ---
 
+---
+
+## 🏢 Para Restaurantes
+
+### Gestión de Menú
+
+1. **Acceder a Gestión de Menú**:
+   - Inicia sesión con cuenta de restaurante
+   - Navega a "Menú" desde el menú inferior
+   - Se abrirá la pantalla de gestión de menú
+
+2. **Agregar Producto**:
+   - Haz click en "Agregar [Categoría]" (ej: "Agregar Entrada")
+   - Completa el formulario:
+     - Nombre del producto
+     - Descripción
+     - Precio
+     - Categoría
+     - Origen (Tierra, Mar, Aire)
+     - Imágenes (hasta 5)
+     - Etiquetas (badges)
+   - Haz click en "Guardar"
+
+3. **Editar Producto**:
+   - Haz click en el producto que deseas editar
+   - Modifica los campos necesarios
+   - Haz click en "Guardar"
+
+4. **Eliminar Producto**:
+   - Desde la sección "Menú": Elimina completamente el producto
+   - Desde "Sugerencias" o "Destacados": Solo lo remueve de esa sección
+
+5. **Gestionar Secciones**:
+   - Agrega productos a "Sugerencias del Chef" o "Destacados"
+   - Los cambios se guardan automáticamente
+
+### Gestión de Promociones
+
+1. **Acceder a Gestión de Promociones**:
+   - Navega a "Promociones" desde el menú inferior
+   - Se abrirá la pantalla de gestión de promociones
+
+2. **Crear Promoción**:
+   - Haz click en "Nueva Promoción"
+   - Completa el formulario:
+     - Nombre y descripción
+     - Imagen (banner 16:9)
+     - Tipo de descuento
+     - Modo Desayuno (opcional)
+     - Vigencia
+     - Contador Flash (opcional)
+   - Haz click en "Guardar"
+
+3. **Editar/Eliminar Promoción**:
+   - Similar a la gestión de productos
+   - Usa los botones de edición/eliminación
+
+---
+
 **Última actualización**: Enero 2025  
-**Versión del documento**: 1.5
+**Versión del documento**: 1.6
 
 ### Cambios Recientes (Enero 2025)
 - ✅ Agregada sección completa de Programa de Lealtad

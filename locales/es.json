@@ -1352,6 +1352,8 @@
     },
     "reservations": {
       "details": "Detalles de Reservación",
+      "welcomeTitle": "Hacer una reservación",
+      "welcomeMessage": "Por favor completa las preguntas que irán apareciendo",
       "selectDate": "Selecciona la Fecha",
       "arrivalTime": "¿A qué hora llegas?",
       "numberOfPeople": "¿Cuántas personas?",
@@ -1363,7 +1365,7 @@
       "advanceOrderDescription": "Ahorra tiempo al llegar. Selecciona tus platillos favoritos ahora.",
       "viewFullMenu": "Ver el menú completo",
       "totalReservation": "Total Reservación",
-      "guests": "Comensales",
+      "guests": "Personas",
       "zones": {
         "interior": "Interior",
         "terraza": "Terraza",

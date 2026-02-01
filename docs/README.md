@@ -494,3 +494,21 @@ Este proyecto es propietario. Todos los derechos reservados.
 - ✅ Tab de "Promociones" en pantalla de favoritos
 - ✅ Botones de favoritos en `PromotionsScreen` y `PromotionDetailScreen`
 - ✅ Mejoras en traducciones de nombres y descripciones de platillos favoritos
+
+#### Nueva Funcionalidad: Reservaciones
+- ✅ Pantalla de reservaciones (`/reservations`)
+- ✅ Modal de bienvenida con instrucciones
+- ✅ Selección de fecha con calendario interactivo
+- ✅ Selector de hora personalizado con diseño de reloj
+- ✅ Selector de número de personas
+- ✅ Selección de zona (Interior, Terraza, Jardín)
+- ✅ Ocasión especial opcional (Cumpleaños, Aniversario, Negocios, Cita)
+- ✅ Preferencias de mesa opcionales
+- ✅ Pedido anticipado opcional con productos destacados
+- ✅ Validación de campos obligatorios
+- ✅ Botón de confirmación que aparece solo cuando se completan campos obligatorios
+- ✅ Guardado de reservaciones en base de datos (tabla `reservations`)
+- ✅ Políticas RLS para seguridad de datos
+- ✅ Agregado automático de items del pedido anticipado al carrito
+- ✅ Manejo de errores y estados de carga
+- ✅ Traducciones completas en 4 idiomas

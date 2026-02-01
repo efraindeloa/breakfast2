@@ -9,10 +9,26 @@ interface WelcomeScreenProps {
   onLogin: () => void;
 }
 
+// Traducciones de "Seleccionar idioma" en cada idioma
+const selectLanguageTranslations = [
+  'Seleccionar Idioma', // Español
+  'Select Language',     // Inglés
+  'Sélectionner la langue', // Francés
+  'Selecionar Idioma'    // Portugués
+];
+
+// Mapeo de códigos de idioma a índices
+const languageCodeToIndex: Record<string, number> = {
+  'es': 0, // Español
+  'en': 1, // Inglés
+  'fr': 2, // Francés
+  'pt': 3  // Portugués
+};
+
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { setLanguage } = useLanguage();
+  const { setLanguage, language: currentLanguage } = useLanguage();
   const { signIn } = useAuth();
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -23,6 +39,35 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const languageSelectorRef = useRef<HTMLDivElement>(null);
+  const [showSubtitle, setShowSubtitle] = useState<boolean>(true);
+  const [subtitleOpacity, setSubtitleOpacity] = useState<number>(1);
+  const [rotatingLanguageIndex, setRotatingLanguageIndex] = useState<number>(0);
+  const [languageButtonOpacity, setLanguageButtonOpacity] = useState<number>(1);
+  const [rotationCount, setRotationCount] = useState<number>(1); // Comienza en 1 porque ya estamos mostrando el primer idioma
+  const [isRotationComplete, setIsRotationComplete] = useState<boolean>(false);
+  const [showLabels, setShowLabels] = useState<boolean>(true);
+  const [labelsOpacity, setLabelsOpacity] = useState<number>(1);
+  
+  // Mapeo de índices a nombres de idiomas en español (para obtener las banderas)
+  const rotatingLanguageNames = ['Español', 'Inglés', 'Francés', 'Portugués'];
+  
+  // Mapeo de banderas específico para los idiomas rotativos
+  // Español -> México, Inglés -> USA
+  const rotatingLanguageFlags = [
+    'https://flagcdn.com/w40/mx.png', // México para Español
+    'https://flagcdn.com/w40/us.png', // USA para Inglés
+    'https://flagcdn.com/w40/fr.png', // Francia para Francés
+    'https://flagcdn.com/w40/pt.png'  // Portugal para Portugués
+  ];
+  
+  // Obtener el índice final basado en el idioma actual de la página o el índice rotativo
+  const finalLanguageIndex = isRotationComplete 
+    ? (languageCodeToIndex[currentLanguage] ?? 0)
+    : rotatingLanguageIndex;
+  
+  // Obtener la bandera del idioma actual
+  const currentLanguageName = rotatingLanguageNames[finalLanguageIndex];
+  const currentFlagUrl = rotatingLanguageFlags[finalLanguageIndex];
 
   // Idiomas disponibles (solo los que tienen traducciones completas)
   const availableLanguages = [
@@ -127,6 +172,88 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
     };
   }, [showLanguageSelector]);
 
+  // Ocultar subtítulo después de 5 segundos con efecto de desvanecimiento
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Primero desvanecer (cambiar opacidad a 0)
+      setSubtitleOpacity(0);
+      // Después de la transición, ocultar completamente
+      setTimeout(() => {
+        setShowSubtitle(false);
+      }, 500); // Duración de la transición
+    }, 5000); // 5 segundos
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Ocultar etiquetas después de 10 segundos con efecto de desvanecimiento
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Primero desvanecer (cambiar opacidad a 0)
+      setLabelsOpacity(0);
+      // Después de la transición, ocultar completamente
+      setTimeout(() => {
+        setShowLabels(false);
+      }, 500); // Duración de la transición
+    }, 10000); // 10 segundos
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Rotar el idioma del botón cada 5 segundos con efecto de desvanecimiento
+  // Después de mostrar los 4 idiomas, se fija en el idioma actual de la página
+  useEffect(() => {
+    // Si ya se completó la rotación, fijar en el idioma actual
+    if (isRotationComplete) {
+      const currentIndex = languageCodeToIndex[currentLanguage] ?? 0;
+      setRotatingLanguageIndex(currentIndex);
+      setLanguageButtonOpacity(1);
+      return;
+    }
+
+    const rotateLanguage = () => {
+      // Primero desvanecer (cambiar opacidad a 0)
+      setLanguageButtonOpacity(0);
+      
+      // Después de la transición, cambiar el idioma y volver a aparecer
+      setTimeout(() => {
+        setRotatingLanguageIndex((prevIndex) => {
+          const nextIndex = (prevIndex + 1) % selectLanguageTranslations.length;
+          return nextIndex;
+        });
+        
+        // Incrementar contador después de cambiar el idioma y volver a aparecer
+        setTimeout(() => {
+          setLanguageButtonOpacity(1);
+          
+          setRotationCount((prevCount) => {
+            const newCount = prevCount + 1;
+            
+            // Si ya se mostraron los 4 idiomas (una vuelta completa), detener
+            if (newCount >= 4) {
+              setIsRotationComplete(true);
+              // Fijar en el idioma actual de la página
+              const finalIndex = languageCodeToIndex[currentLanguage] ?? 0;
+              setTimeout(() => {
+                setRotatingLanguageIndex(finalIndex);
+                setLanguageButtonOpacity(1);
+              }, 50);
+            }
+            
+            return newCount;
+          });
+        }, 50); // Pequeño delay para asegurar que el cambio se vea
+      }, 500); // Duración de la transición de desvanecimiento
+    };
+
+    // Iniciar el intervalo
+    const intervalId = setInterval(rotateLanguage, 5000); // Cambiar cada 5 segundos
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isRotationComplete, currentLanguage]);
+
   const handleLogin = async () => {
     // Validar campos
     if (!emailOrPhone.trim()) {
@@ -210,13 +337,22 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
       <div ref={languageSelectorRef} className="absolute right-4 z-20 safe-top" style={{ top: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
         <button
           onClick={() => setShowLanguageSelector(!showLanguageSelector)}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800 transition-colors"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/20 dark:bg-gray-800/20 transition-all duration-500 ease-out"
+          style={{ opacity: languageButtonOpacity }}
         >
-          <span className="material-symbols-outlined text-lg text-gray-600 dark:text-gray-300">
-            language
-          </span>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">
-            {t('settings.selectLanguage')}
+          {currentFlagUrl ? (
+            <img 
+              src={currentFlagUrl} 
+              alt={currentLanguageName}
+              className="w-5 h-5 rounded object-cover"
+            />
+          ) : (
+            <span className="material-symbols-outlined text-lg text-gray-600 dark:text-gray-300">
+              language
+            </span>
+          )}
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            {selectLanguageTranslations[finalLanguageIndex]}
           </span>
         </button>
         
@@ -274,9 +410,14 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
         <h1 className="text-[#181411] dark:text-white tracking-tight text-[32px] font-bold leading-tight text-center pb-1">
           {t('welcome.goodDay')}
         </h1>
-        <p className="text-[#181411]/60 dark:text-white/60 text-base font-normal leading-normal pb-6 text-center">
-          {t('welcome.subtitleMessage')}
-        </p>
+        {showSubtitle && (
+          <p 
+            className="text-[#181411]/60 dark:text-white/60 text-base font-normal leading-normal pb-6 text-center transition-opacity duration-500 ease-out"
+            style={{ opacity: subtitleOpacity }}
+          >
+            {t('welcome.subtitleMessage')}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col flex-1 px-6">
@@ -292,9 +433,14 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
           )}
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
-              {t('welcome.emailOrPhone')}
-            </label>
+            {showLabels && (
+              <label 
+                className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1 transition-opacity duration-500 ease-out"
+                style={{ opacity: labelsOpacity }}
+              >
+                {t('welcome.emailOrPhone')}
+              </label>
+            )}
             <div className="relative">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">
                 person
@@ -320,9 +466,14 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
-              {t('welcome.password')}
-            </label>
+            {showLabels && (
+              <label 
+                className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1 transition-opacity duration-500 ease-out"
+                style={{ opacity: labelsOpacity }}
+              >
+                {t('welcome.password')}
+              </label>
+            )}
             <div className="relative">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">
                 lock

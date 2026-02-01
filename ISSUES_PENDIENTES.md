@@ -127,7 +127,46 @@ El problema parece estar relacionado con:
 
 ## 🟢 Menores
 
-_(Agregar issues menores aquí cuando surjan)_
+### 4. Efecto fade-in no se muestra en los botones del HomeScreen
+**Fecha:** 2026-01-30  
+**Estado:** Pendiente  
+**Prioridad:** Baja
+
+**Descripción:**
+Los botones del HomeScreen no muestran el efecto de fade-in (aparición gradual) al cargar la página. A pesar de que se ha implementado la lógica con estados de opacidad y transiciones CSS, el efecto no es visible.
+
+**Comportamiento actual:**
+- Los botones se muestran inmediatamente con opacidad 1
+- No se observa la transición de opacidad 0 a 1
+- El efecto debería ser similar al del botón "Seleccionar idioma" en WelcomeScreen
+
+**Archivos afectados:**
+- `screens/HomeScreen.tsx` - Estados `buttonOpacities` y `useEffect` para fade-in
+
+**Intentos de solución:**
+1. ✅ Implementado estados de opacidad inicial en 0
+2. ✅ Agregado `useEffect` con delay de 50ms
+3. ✅ Aumentado delay a 100ms y luego a 200ms
+4. ✅ Usado `requestAnimationFrame` doble para asegurar renderizado inicial
+5. ✅ Aplicado transiciones CSS `duration-500 ease-out`
+6. ❌ El problema persiste - los botones aparecen inmediatamente
+
+**Causa posible:**
+- El navegador puede estar renderizando los botones con opacidad 1 antes de que el estado inicial (opacidad 0) se procese
+- React puede estar batching los updates de estado de manera que la transición no se vea
+- El componente puede estar re-renderizándose antes de que la transición CSS se active
+
+**Solución propuesta:**
+1. **Investigar:** Revisar si hay algún CSS global que esté sobrescribiendo la opacidad
+2. **Alternativa:** Usar animaciones CSS con `@keyframes` en lugar de transiciones de opacidad
+3. **Alternativa:** Usar una librería de animaciones como Framer Motion
+4. **Alternativa:** Aplicar el efecto solo después de que la página esté completamente cargada usando eventos del DOM
+
+**Notas:**
+- El mismo patrón funciona correctamente en WelcomeScreen para el botón "Seleccionar idioma"
+- El problema afecta a todos los botones del HomeScreen (QR, Menú, Asistencia, Lista de Espera, Unirse a Mesa, Invitar, Descubrir, Reservaciones, Perfil del Restaurante)
+
+---
 
 ---
 

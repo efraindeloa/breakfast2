@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useProducts } from '../contexts/ProductsContext';
 import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../contexts/AuthContext';
+import { createReservation } from '../services/api/reservations';
 
 interface ReservationItem {
   id: number;
@@ -17,18 +19,41 @@ const ReservationsRestaurantScreen: React.FC = () => {
   const { t } = useTranslation();
   const { products } = useProducts();
   const { addToCart } = useCart();
+  const { user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Estado de la reservación
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedTime, setSelectedTime] = useState<string>('09:00');
-  const [numberOfPeople, setNumberOfPeople] = useState<number>(4);
-  const [selectedZone, setSelectedZone] = useState<string>('interior');
+  const [selectedTime, setSelectedTime] = useState<string>('00:00');
+  const [numberOfPeople, setNumberOfPeople] = useState<number>(0);
+  const [selectedZone, setSelectedZone] = useState<string>('');
   const [specialOccasion, setSpecialOccasion] = useState<string | null>(null);
   const [tablePreferences, setTablePreferences] = useState<string>('');
   const [reservationItems, setReservationItems] = useState<ReservationItem[]>([]);
   const [isTimePickerOpen, setIsTimePickerOpen] = useState<boolean>(false);
   const [showSubtitle, setShowSubtitle] = useState<boolean>(true);
   const [subtitleOpacity, setSubtitleOpacity] = useState<number>(1);
+  const [showWelcomeModal, setShowWelcomeModal] = useState<boolean>(true);
+  
+  // Estados para controlar la visibilidad progresiva de secciones
+  const [showTimeSection, setShowTimeSection] = useState<boolean>(false);
+  const [timeSectionOpacity, setTimeSectionOpacity] = useState<number>(0);
+  const [showPeopleSection, setShowPeopleSection] = useState<boolean>(false);
+  const [peopleSectionOpacity, setPeopleSectionOpacity] = useState<number>(0);
+  const [showZoneSection, setShowZoneSection] = useState<boolean>(false);
+  const [zoneSectionOpacity, setZoneSectionOpacity] = useState<number>(0);
+  const [showOccasionSection, setShowOccasionSection] = useState<boolean>(false);
+  const [occasionSectionOpacity, setOccasionSectionOpacity] = useState<number>(0);
+  const [showPreferencesSection, setShowPreferencesSection] = useState<boolean>(false);
+  const [preferencesSectionOpacity, setPreferencesSectionOpacity] = useState<number>(0);
+  const [showAdvanceOrderSection, setShowAdvanceOrderSection] = useState<boolean>(false);
+  const [advanceOrderSectionOpacity, setAdvanceOrderSectionOpacity] = useState<number>(0);
+  
+  // Estado para rastrear si la fecha ha sido seleccionada (no solo inicializada)
+  const [dateSelected, setDateSelected] = useState<boolean>(false);
+
+  // Verificar si todas las preguntas obligatorias están completadas
+  const allRequiredFieldsCompleted = dateSelected && selectedTime !== '00:00' && numberOfPeople > 0 && selectedZone !== '';
   
   // Estado para el wheel picker
   const [pickerHour, setPickerHour] = useState<number>(9);
@@ -59,6 +84,9 @@ const ReservationsRestaurantScreen: React.FC = () => {
 
   // Convertir hora 24h a formato 12h para mostrar
   const formatTime12h = (time24: string): string => {
+    if (time24 === '00:00') {
+      return '00:00';
+    }
     const [hours, minutes] = time24.split(':').map(Number);
     const period = hours >= 12 ? 'PM' : 'AM';
     const hours12 = hours % 12 || 12;
@@ -89,6 +117,18 @@ const ReservationsRestaurantScreen: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Función helper para mostrar la siguiente sección con fade in
+  const showNextSection = (
+    setShow: React.Dispatch<React.SetStateAction<boolean>>,
+    setOpacity: React.Dispatch<React.SetStateAction<number>>
+  ) => {
+    setTimeout(() => {
+      setShow(true);
+      setTimeout(() => setOpacity(1), 10);
+    }, 300);
+  };
+
 
   // Inicializar picker cuando se abre y hacer scroll a la posición correcta
   useEffect(() => {
@@ -133,10 +173,10 @@ const ReservationsRestaurantScreen: React.FC = () => {
 
   // Ocasiones especiales
   const occasions = [
-    { id: 'birthday', name: t('restaurant.reservations.occasions.birthday') || 'Cumpleaños', emoji: '🎂' },
-    { id: 'anniversary', name: t('restaurant.reservations.occasions.anniversary') || 'Aniversario', emoji: '🥂' },
-    { id: 'business', name: t('restaurant.reservations.occasions.business') || 'Negocios', emoji: '💼' },
-    { id: 'date', name: t('restaurant.reservations.occasions.date') || 'Cita', emoji: '🧡' }
+    { id: 'birthday', name: t('restaurant.reservations.occasions.birthday') || 'Cumpleaños' },
+    { id: 'anniversary', name: t('restaurant.reservations.occasions.anniversary') || 'Aniversario' },
+    { id: 'business', name: t('restaurant.reservations.occasions.business') || 'Negocios' },
+    { id: 'date', name: t('restaurant.reservations.occasions.date') || 'Cita' }
   ];
 
   // Calendario
@@ -208,15 +248,30 @@ const ReservationsRestaurantScreen: React.FC = () => {
   // Seleccionar día
   const selectDay = (date: Date) => {
     setSelectedDate(new Date(date));
+    if (!dateSelected) {
+      setDateSelected(true);
+      // Mostrar sección de hora después de seleccionar fecha
+      setTimeout(() => {
+        setShowTimeSection(true);
+        setTimeout(() => setTimeSectionOpacity(1), 10);
+      }, 100);
+    }
   };
 
   // Incrementar/decrementar número de personas
   const incrementPeople = () => {
-    setNumberOfPeople(prev => Math.min(prev + 1, 20));
+    setNumberOfPeople(prev => {
+      const newValue = Math.min(prev + 1, 20);
+      // Mostrar sección de zona cuando se incrementa por primera vez
+      if (!showZoneSection && newValue > 0) {
+        showNextSection(setShowZoneSection, setZoneSectionOpacity);
+      }
+      return newValue;
+    });
   };
 
   const decrementPeople = () => {
-    setNumberOfPeople(prev => Math.max(prev - 1, 1));
+    setNumberOfPeople(prev => Math.max(prev - 1, 0));
   };
 
   // Agregar producto al pedido anticipado
@@ -272,44 +327,99 @@ const ReservationsRestaurantScreen: React.FC = () => {
   }, [products]);
 
   // Confirmar reservación
-  const handleConfirm = () => {
-    // Aquí se guardaría la reservación en la base de datos
-    console.log('Reservación confirmada:', {
-      date: selectedDate,
-      time: selectedTime,
-      numberOfPeople,
-      zone: selectedZone,
-      specialOccasion,
-      tablePreferences,
-      items: reservationItems
-    });
-
-    // Agregar items al carrito si hay pedido anticipado
-    if (reservationItems.length > 0) {
-      reservationItems.forEach(item => {
-        for (let i = 0; i < item.quantity; i++) {
-          const itemPrice = typeof item.price === 'number' ? item.price : parseFloat(item.price.toString() || '0');
-          addToCart({
-            id: item.id,
-            name: item.name,
-            price: itemPrice,
-            notes: 'Pedido anticipado - Reservación'
-          });
-        }
-      });
-    }
-
-    // TODO: Guardar reservación en base de datos
-    // Por ahora, solo mostrar mensaje y navegar
-    // En el futuro, esto debería guardar en una tabla `reservations` en Supabase
+  const handleConfirm = async () => {
+    if (isSubmitting) return;
     
-    // Navegar a confirmación (o mostrar mensaje de éxito)
-    // Por ahora, solo navegar de vuelta
-    navigate('/home-restaurant');
+    setIsSubmitting(true);
+
+    try {
+      // Obtener restaurant_id (por ahora usar el ID por defecto, en el futuro se puede obtener del contexto)
+      // TODO: Obtener restaurant_id del contexto o de localStorage cuando se selecciona el restaurante
+      const restaurantId = '00000000-0000-0000-0000-000000000001'; // ID por defecto
+
+      // Formatear fecha como YYYY-MM-DD
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+      
+      // Preparar items del pedido anticipado
+      const advanceOrderItems = reservationItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: typeof item.price === 'number' ? item.price : parseFloat(item.price.toString() || '0'),
+        quantity: item.quantity
+      }));
+
+      // Guardar reservación en la base de datos
+      const { data: reservation, error } = await createReservation({
+        restaurant_id: restaurantId,
+        reservation_date: formattedDate,
+        reservation_time: selectedTime,
+        number_of_people: numberOfPeople,
+        zone: selectedZone,
+        special_occasion: specialOccasion,
+        table_preferences: tablePreferences || null,
+        advance_order_items: advanceOrderItems,
+        notes: null
+      });
+
+      if (error) {
+        console.error('Error al crear reservación:', error);
+        alert('Error al crear la reservación. Por favor, intenta de nuevo.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      console.log('Reservación creada exitosamente:', reservation);
+
+      // Agregar items al carrito si hay pedido anticipado
+      if (reservationItems.length > 0) {
+        reservationItems.forEach(item => {
+          for (let i = 0; i < item.quantity; i++) {
+            const itemPrice = typeof item.price === 'number' ? item.price : parseFloat(item.price.toString() || '0');
+            addToCart({
+              id: item.id,
+              name: item.name,
+              price: itemPrice,
+              notes: 'Pedido anticipado - Reservación'
+            });
+          }
+        });
+      }
+
+      // Navegar a confirmación o mostrar mensaje de éxito
+      // Por ahora, navegar de vuelta al home
+      navigate('/home');
+    } catch (error) {
+      console.error('Error inesperado al crear reservación:', error);
+      alert('Error inesperado al crear la reservación. Por favor, intenta de nuevo.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="bg-background-light dark:bg-background-dark min-h-screen pb-48">
+      {/* Modal de bienvenida */}
+      {showWelcomeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 mx-4 max-w-sm w-full shadow-2xl">
+            <div className="text-center mb-6">
+              <h2 className="text-[#181511] dark:text-white text-xl font-bold mb-3">
+                {t('restaurant.reservations.welcomeTitle')}
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                {t('restaurant.reservations.welcomeMessage')}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowWelcomeModal(false)}
+              className="w-full h-14 bg-primary hover:bg-primary/90 text-white text-lg font-bold rounded-xl transition-colors shadow-lg shadow-primary/20 flex items-center justify-center"
+            >
+              {t('common.continue')}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 safe-top">
         <div className="flex items-center p-4 justify-between max-w-md mx-auto">
@@ -331,27 +441,18 @@ const ReservationsRestaurantScreen: React.FC = () => {
       </header>
 
       <main className="max-w-md mx-auto px-4 py-6">
-        {/* Saludo */}
-        <div className="mb-6">
-          <h1 className="text-[#181511] dark:text-white text-2xl font-bold tracking-tight">
-            ¡Buenos días!
-          </h1>
-          {showSubtitle && (
-            <p 
-              className="text-gray-500 dark:text-gray-400 text-sm mt-1 transition-opacity duration-500 ease-out"
-              style={{ opacity: subtitleOpacity }}
-            >
-              Personaliza tu experiencia de desayuno.
-            </p>
-          )}
-        </div>
-
-        {/* Calendario */}
-        <section className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm border border-orange-50 dark:border-gray-800 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[#181511] dark:text-white text-base font-bold">
-              {t('restaurant.reservations.selectDate')}
+        {!showWelcomeModal && (
+          <>
+            {/* Calendario */}
+            <h3 className="text-[#181511] dark:text-white text-base font-bold mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">calendar_month</span>
+              ¿Qué día quieres reservar?
             </h3>
+            <section className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm border border-orange-50 dark:border-gray-800 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+              {monthNames[currentMonth]} {currentYear}
+            </p>
             <div className="flex gap-2">
               <button
                 onClick={goToPreviousMonth}
@@ -366,11 +467,6 @@ const ReservationsRestaurantScreen: React.FC = () => {
                 <span className="material-symbols-outlined text-sm">chevron_right</span>
               </button>
             </div>
-          </div>
-          <div className="flex justify-between items-center mb-2">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-              {monthNames[currentMonth]} {currentYear}
-            </p>
           </div>
           <div className="grid grid-cols-7 gap-1 text-center mb-2">
             {dayNames.map((day, index) => (
@@ -401,19 +497,23 @@ const ReservationsRestaurantScreen: React.FC = () => {
         </section>
 
         {/* Hora */}
-        <section className="mb-8">
-          <h3 className="text-[#181511] dark:text-white text-base font-bold mb-4 flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary">schedule</span>
-            {t('restaurant.reservations.arrivalTime')}
-          </h3>
-          <div
-            onClick={() => setIsTimePickerOpen(true)}
-            className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm hover:border-primary/50 transition-colors cursor-pointer"
+        {showTimeSection && (
+          <section 
+            className="mb-8 transition-opacity duration-500 ease-out"
+            style={{ opacity: timeSectionOpacity }}
           >
-            <span className="text-lg text-[#181511] dark:text-white font-semibold">
-              {formatTime12h(selectedTime)}
-            </span>
-          </div>
+            <h3 className="text-[#181511] dark:text-white text-base font-bold mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">schedule</span>
+              {t('restaurant.reservations.arrivalTime')}
+            </h3>
+            <div
+              onClick={() => setIsTimePickerOpen(true)}
+              className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm hover:border-primary/50 transition-colors cursor-pointer"
+            >
+              <span className="text-lg text-[#181511] dark:text-white font-semibold">
+                {formatTime12h(selectedTime)}
+              </span>
+            </div>
 
           {/* Modal del selector de horario (Clock Design) */}
           {isTimePickerOpen && (
@@ -542,13 +642,17 @@ const ReservationsRestaurantScreen: React.FC = () => {
                 </div>
 
                 {/* Button Group */}
-                <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50">
+                <div className="p-4 pb-safe bg-zinc-50 dark:bg-zinc-900/50" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
                   <div className="flex flex-col gap-3">
                     <button
                       onClick={() => {
                         const newTime = convert12hTo24h(pickerHour, pickerMinute, pickerMeridiem);
                         setSelectedTime(newTime);
                         setIsTimePickerOpen(false);
+                        // Mostrar sección de número de personas después de confirmar hora
+                        if (!showPeopleSection) {
+                          showNextSection(setShowPeopleSection, setPeopleSectionOpacity);
+                        }
                       }}
                       className="w-full h-14 bg-primary hover:bg-primary/90 text-white text-lg font-bold rounded-xl transition-colors shadow-lg shadow-primary/20 flex items-center justify-center"
                     >
@@ -561,16 +665,19 @@ const ReservationsRestaurantScreen: React.FC = () => {
                       {t('common.cancel')}
                     </button>
                   </div>
-                  {/* iOS Safe Area Spacer */}
-                  <div className="h-6"></div>
                 </div>
               </div>
             </div>
           )}
-        </section>
+          </section>
+        )}
 
         {/* Número de personas */}
-        <section className="mb-8">
+        {showPeopleSection && (
+          <section 
+            className="mb-8 transition-opacity duration-500 ease-out"
+            style={{ opacity: peopleSectionOpacity }}
+          >
           <h3 className="text-[#181511] dark:text-white text-base font-bold mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">groups</span>
             {t('restaurant.reservations.numberOfPeople')}
@@ -597,10 +704,15 @@ const ReservationsRestaurantScreen: React.FC = () => {
               <span className="material-symbols-outlined font-bold">add</span>
             </button>
           </div>
-        </section>
+          </section>
+        )}
 
         {/* Zona */}
-        <section className="mb-8">
+        {showZoneSection && (
+          <section 
+            className="mb-8 transition-opacity duration-500 ease-out"
+            style={{ opacity: zoneSectionOpacity }}
+          >
           <h3 className="text-[#181511] dark:text-white text-base font-bold mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">location_on</span>
             {t('restaurant.reservations.selectZone')}
@@ -609,7 +721,23 @@ const ReservationsRestaurantScreen: React.FC = () => {
             {zones.map((zone) => (
               <button
                 key={zone.id}
-                onClick={() => setSelectedZone(zone.id)}
+                onClick={() => {
+                  setSelectedZone(zone.id);
+                  // Mostrar todas las secciones restantes cuando se selecciona una zona
+                  if (!showOccasionSection) {
+                    showNextSection(setShowOccasionSection, setOccasionSectionOpacity);
+                  }
+                  if (!showPreferencesSection) {
+                    setTimeout(() => {
+                      showNextSection(setShowPreferencesSection, setPreferencesSectionOpacity);
+                    }, 600);
+                  }
+                  if (!showAdvanceOrderSection) {
+                    setTimeout(() => {
+                      showNextSection(setShowAdvanceOrderSection, setAdvanceOrderSectionOpacity);
+                    }, 1200);
+                  }
+                }}
                 className={`flex flex-col items-center gap-2 p-4 rounded-2xl transition-all ${
                   selectedZone === zone.id
                     ? 'bg-white dark:bg-gray-900 border-2 border-primary bg-primary/5 text-primary'
@@ -621,55 +749,102 @@ const ReservationsRestaurantScreen: React.FC = () => {
               </button>
             ))}
           </div>
-        </section>
+          </section>
+        )}
 
         {/* Ocasión especial */}
-        <section className="mb-8">
+        {showOccasionSection && (
+          <section 
+            className="mb-8 transition-opacity duration-500 ease-out"
+            style={{ opacity: occasionSectionOpacity }}
+          >
           <h3 className="text-[#181511] dark:text-white text-base font-bold mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">celebration</span>
-            {t('restaurant.reservations.specialOccasion')}
+            {t('restaurant.reservations.specialOccasion')} <span className="text-gray-400 dark:text-gray-500 font-normal text-sm">(opcional)</span>
           </h3>
           <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {occasions.map((occasion) => (
               <button
                 key={occasion.id}
-                onClick={() => setSpecialOccasion(specialOccasion === occasion.id ? null : occasion.id)}
+                onClick={() => {
+                  const newValue = specialOccasion === occasion.id ? null : occasion.id;
+                  setSpecialOccasion(newValue);
+                  // Mostrar sección de preferencias cuando se selecciona una ocasión (o se deselecciona)
+                  if (!showPreferencesSection) {
+                    showNextSection(setShowPreferencesSection, setPreferencesSectionOpacity);
+                  }
+                }}
                 className={`px-4 py-2 rounded-full border text-sm font-medium whitespace-nowrap transition-all ${
                   specialOccasion === occasion.id
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900'
                 }`}
               >
-                {occasion.name} {occasion.emoji}
+                {occasion.name}
               </button>
             ))}
           </div>
-        </section>
+          </section>
+        )}
 
         {/* Preferencias de mesa */}
-        <section className="mb-8">
+        {showPreferencesSection && (
+          <section 
+            className="mb-8 transition-opacity duration-500 ease-out"
+            style={{ opacity: preferencesSectionOpacity }}
+          >
           <h3 className="text-[#181511] dark:text-white text-base font-bold mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">edit_note</span>
-            {t('restaurant.reservations.tablePreferences')}
+            {t('restaurant.reservations.tablePreferences')} <span className="text-gray-400 dark:text-gray-500 font-normal text-sm">(opcional)</span>
           </h3>
           <div className="bg-white dark:bg-gray-900 rounded-2xl p-1 border border-gray-100 dark:border-gray-800 shadow-sm focus-within:border-primary/50 transition-colors">
             <textarea
               value={tablePreferences}
-              onChange={(e) => setTablePreferences(e.target.value)}
+              onChange={(e) => {
+                setTablePreferences(e.target.value);
+                // Mostrar sección de pedido anticipado cuando se empieza a escribir
+                if (!showAdvanceOrderSection && e.target.value.length > 0) {
+                  showNextSection(setShowAdvanceOrderSection, setAdvanceOrderSectionOpacity);
+                }
+              }}
+              onFocus={() => {
+                // También mostrar cuando se enfoca el textarea
+                if (!showAdvanceOrderSection) {
+                  showNextSection(setShowAdvanceOrderSection, setAdvanceOrderSectionOpacity);
+                }
+              }}
               className="w-full bg-transparent border-none focus:ring-0 text-sm text-[#181511] dark:text-white p-3 min-h-[100px] resize-none outline-none"
               placeholder={t('restaurant.reservations.tablePreferencesPlaceholder')}
             />
           </div>
-        </section>
+          </section>
+        )}
+
+        {/* Botón Solicitar Reservación */}
+        {allRequiredFieldsCompleted && (
+          <div className="px-4 py-6 mb-8">
+            <button
+              onClick={handleConfirm}
+              disabled={isSubmitting}
+              className="w-full h-14 bg-primary hover:bg-primary/90 disabled:bg-primary/50 disabled:cursor-not-allowed text-white text-lg font-bold rounded-xl transition-colors shadow-lg shadow-primary/20 flex items-center justify-center"
+            >
+              {isSubmitting ? 'Guardando...' : 'Solicitar reservación'}
+            </button>
+          </div>
+        )}
 
         {/* Pedido Anticipado */}
-        <section className="mb-8">
+        {showAdvanceOrderSection && (
+          <section 
+            className="mb-8 transition-opacity duration-500 ease-out"
+            style={{ opacity: advanceOrderSectionOpacity }}
+          >
           <div className="bg-primary/10 dark:bg-primary/5 border border-primary/20 rounded-2xl p-5 mb-6 relative overflow-hidden">
             <div className="absolute -right-4 -top-4 opacity-10">
               <span className="material-symbols-outlined text-8xl text-primary">restaurant_menu</span>
             </div>
             <h2 className="text-[#181511] dark:text-white text-xl font-bold mb-2">
-              {t('restaurant.reservations.advanceOrder')}
+              {t('restaurant.reservations.advanceOrder')} <span className="text-gray-400 dark:text-gray-500 font-normal text-base">(opcional)</span>
             </h2>
             <p className="text-[#181511]/70 dark:text-gray-400 text-sm leading-relaxed mb-4">
               {t('restaurant.reservations.advanceOrderDescription')}
@@ -737,14 +912,11 @@ const ReservationsRestaurantScreen: React.FC = () => {
               );
               })}
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
-                No hay productos disponibles para pedido anticipado
-              </p>
-            </div>
-          )}
-        </section>
+          ) : null}
+          </section>
+        )}
+          </>
+        )}
       </main>
 
     </div>

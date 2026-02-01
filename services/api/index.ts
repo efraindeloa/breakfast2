@@ -15,3 +15,4 @@ export * from './restaurant';
 export * from './user';
 export * from './menu-sections';
 export * from './orders';
+export * from './reservations';

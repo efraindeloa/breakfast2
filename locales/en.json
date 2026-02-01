@@ -1342,6 +1342,8 @@
     },
     "reservations": {
       "details": "Reservation Details",
+      "welcomeTitle": "Make a reservation",
+      "welcomeMessage": "Please complete the questions that will appear",
       "selectDate": "Select Date",
       "arrivalTime": "What time will you arrive?",
       "numberOfPeople": "How many people?",

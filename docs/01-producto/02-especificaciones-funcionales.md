@@ -951,7 +951,115 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 
 ---
 
-## 17. Restricciones y Validaciones
+## 17. Reservaciones (Reservations)
+
+### 17.1 Pantalla de Reservaciones (`ReservationsRestaurantScreen`)
+**Ruta**: `/reservations`
+
+#### Funcionalidades
+
+##### Modal de Bienvenida
+- Aparece al entrar a la pantalla
+- Título: "Hacer una reservación"
+- Mensaje explicativo sobre completar las preguntas
+- Botón "Continuar" para cerrar el modal
+
+##### Selección de Fecha (Obligatorio)
+- Calendario mensual interactivo
+- Navegación entre meses (anterior/siguiente)
+- Indicador visual del día seleccionado
+- Indicador del día actual
+- Pregunta: "¿Qué día quieres reservar?"
+
+##### Selección de Hora (Obligatorio)
+- Selector de hora personalizado con diseño de reloj
+- Incremento/decremento de horas (1-12)
+- Incremento/decremento de minutos (00, 15, 30, 45)
+- Selector AM/PM
+- Formato de visualización: 12 horas (AM/PM)
+- Valor por defecto: 00:00
+- Pregunta: "¿A qué hora llegas?"
+
+##### Número de Personas (Obligatorio)
+- Selector con botones de incremento/decremento
+- Rango: 0 a 20 personas
+- Valor por defecto: 0
+- Etiqueta: "Personas"
+
+##### Selección de Zona (Obligatorio)
+- Opciones: Interior, Terraza, Jardín
+- Grid de 3 columnas con iconos
+- Ninguna zona seleccionada por defecto
+- Pregunta: "Selecciona la Zona"
+
+##### Ocasión Especial (Opcional)
+- Botones de selección: Cumpleaños, Aniversario, Negocios, Cita
+- Se puede seleccionar/deseleccionar
+- Etiqueta: "(opcional)"
+
+##### Preferencias de Mesa (Opcional)
+- Textarea para escribir preferencias
+- Placeholder con ejemplos
+- Etiqueta: "(opcional)"
+
+##### Pedido Anticipado (Opcional)
+- Lista de productos destacados
+- Botón para agregar productos al pedido anticipado
+- Contador de cantidad por producto
+- Botón "Ver el menú completo"
+- Etiqueta: "(opcional)"
+
+##### Botón de Confirmación
+- Aparece solo cuando se completan los campos obligatorios:
+  - Fecha seleccionada
+  - Hora seleccionada (diferente de 00:00)
+  - Número de personas > 0
+  - Zona seleccionada
+- Texto: "Solicitar reservación"
+- Estado de carga mientras se guarda
+- Ubicado antes de la sección de Pedido Anticipado
+
+##### Visualización Progresiva
+- Las secciones aparecen progresivamente según se completan las anteriores
+- Animación de fade-in (500ms) al mostrar cada sección
+- Después de seleccionar zona, se muestran todas las secciones opcionales
+
+#### Reglas de negocio
+- Los campos obligatorios deben completarse antes de mostrar el botón de confirmación
+- La fecha debe ser seleccionada explícitamente (no solo inicializada)
+- La hora debe ser diferente de 00:00
+- El número de personas debe ser mayor que 0
+- La zona debe estar seleccionada
+- Los campos opcionales no bloquean la creación de la reservación
+- Al confirmar, se guarda la reservación en la base de datos
+- Los items del pedido anticipado se agregan al carrito después de crear la reservación
+- La reservación se crea con estado `pending` por defecto
+- Se navega al home después de crear la reservación exitosamente
+
+#### Estados de Reservación
+- `pending`: Pendiente de confirmación por el restaurante
+- `confirmed`: Confirmada por el restaurante
+- `cancelled`: Cancelada
+- `completed`: Completada (el comensal asistió)
+- `no_show`: El comensal no asistió
+
+#### Almacenamiento
+- **Base de datos**: Tabla `reservations` en Supabase PostgreSQL
+- **Campos guardados**:
+  - `user_id`: ID del usuario que hace la reservación
+  - `restaurant_id`: ID del restaurante
+  - `reservation_date`: Fecha de la reservación (DATE)
+  - `reservation_time`: Hora de la reservación (TIME)
+  - `number_of_people`: Número de personas
+  - `zone`: Zona seleccionada
+  - `special_occasion`: Ocasión especial (opcional)
+  - `table_preferences`: Preferencias de mesa (opcional)
+  - `advance_order_items`: Items del pedido anticipado (JSONB)
+  - `status`: Estado de la reservación
+
+---
+
+## 18. Restricciones y Validaciones
 
 ### 17.1 Autenticación
 - Todas las pantallas principales requieren autenticación
@@ -1357,6 +1465,11 @@ Este documento describe todas las funcionalidades del sistema Breakfast App, inc
 ---
 
 ### Cambios Recientes (Enero 2025)
+- ✅ **Agregada sección completa de Reservaciones (17)**
+- ✅ Documentada pantalla de reservaciones con todas sus funcionalidades
+- ✅ Documentado flujo completo de creación de reservaciones
+- ✅ Documentado sistema de campos obligatorios y opcionales
+- ✅ Documentado almacenamiento en base de datos (tabla `reservations`)
 - ✅ **Agregada sección completa de Funcionalidades para Restaurantes (26)**
 - ✅ Documentadas todas las pantallas de restaurante (Menú, Promociones, Perfil, Home, Estadísticas, Panel de Control)
 - ✅ Documentado sistema de tipos de cuenta (consumer vs restaurant)

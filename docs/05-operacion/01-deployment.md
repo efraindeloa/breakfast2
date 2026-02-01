@@ -32,7 +32,9 @@ Este documento describe el proceso de deployment y release de **Breakfast App** 
    ```
 
 3. **Ejecutar scripts SQL**:
-   - Ejecutar `supabase/MASTER_SETUP.sql` en Supabase SQL Editor
+   - Ejecutar `supabase/MASTER_SETUP.sql` en Supabase SQL Editor (incluye todas las tablas, incluyendo `reservations`)
+   - O ejecutar scripts individuales si prefieres:
+     - `supabase/create-reservations-table.sql` (para crear solo la tabla de reservaciones)
    - Configurar RLS policies según scripts en `supabase/fix-*.sql`
    - Configurar Storage buckets:
      - `product-images`

@@ -32,7 +32,7 @@ Bienvenido a **Breakfast App**, la aplicación que te permite disfrutar de una e
 
 ### Acciones Rápidas
 
-La pantalla de inicio te muestra tres acciones principales:
+La pantalla de inicio te muestra varias acciones principales:
 
 1. **📷 Escanear QR**
    - Permite escanear el código QR de tu mesa
@@ -46,6 +46,11 @@ La pantalla de inicio te muestra tres acciones principales:
 3. **👥 Unirse a Mesa**
    - Ingresa manualmente el código de mesa
    - Únete a una orden grupal
+
+4. **📅 Hacer Reservación**
+   - Reserva tu mesa con anticipación
+   - Disponible solo para cuentas de comensal
+   - Acceso desde el botón en la pantalla de inicio
 
 ---
 
@@ -251,6 +256,79 @@ Después de pagar:
 Al momento de pagar:
 - Puedes pagar solo tus items
 - O puedes pagar una parte del total dividido
+
+---
+
+## 📅 Hacer una Reservación
+
+### Acceder a Reservaciones
+
+1. Desde la pantalla de inicio, haz click en el botón **"Hacer Reservación"**
+2. Se abrirá la pantalla de reservaciones con un modal de bienvenida
+3. Haz click en **"Continuar"** para comenzar
+
+### Completar la Reservación
+
+#### 1. Seleccionar Fecha (Obligatorio)
+- Se muestra un calendario mensual
+- Navega entre meses usando las flechas
+- Haz click en el día que deseas reservar
+- El día seleccionado se resalta en color naranja
+
+#### 2. Seleccionar Hora (Obligatorio)
+- Haz click en el campo de hora
+- Se abrirá un selector de hora con diseño de reloj
+- Usa los botones de incremento/decremento para:
+  - Ajustar las horas (1-12)
+  - Ajustar los minutos (00, 15, 30, 45)
+  - Seleccionar AM o PM
+- Haz click en **"Confirmar"** para guardar la hora
+
+#### 3. Número de Personas (Obligatorio)
+- Usa los botones + y - para ajustar el número de personas
+- Rango: 1 a 20 personas
+- El número se muestra en grande en el centro
+
+#### 4. Seleccionar Zona (Obligatorio)
+- Elige entre las zonas disponibles:
+  - **Interior**: Zona interior del restaurante
+  - **Terraza**: Zona de terraza
+  - **Jardín**: Zona de jardín
+- Haz click en la zona deseada
+
+#### 5. Ocasión Especial (Opcional)
+- Selecciona si es una ocasión especial:
+  - Cumpleaños
+  - Aniversario
+  - Negocios
+  - Cita
+- Puedes seleccionar una opción o ninguna
+
+#### 6. Preferencias de Mesa (Opcional)
+- Escribe tus preferencias en el campo de texto
+- Ejemplos: "Cerca de la ventana", "Zona tranquila", "Trona para bebé"
+- Este campo es completamente opcional
+
+#### 7. Pedido Anticipado (Opcional)
+- Si deseas, puedes agregar productos a tu pedido anticipado
+- Haz click en el botón + junto a cada producto
+- Los productos se agregarán a tu carrito después de confirmar la reservación
+- Puedes hacer click en **"Ver el menú completo"** para ver más opciones
+
+### Confirmar la Reservación
+
+1. Una vez completados los campos obligatorios (fecha, hora, personas, zona), aparecerá el botón **"Solicitar reservación"**
+2. Haz click en el botón
+3. El sistema guardará tu reservación
+4. Verás un mensaje de confirmación
+5. Serás redirigido a la pantalla de inicio
+
+### Notas Importantes
+
+- **Campos obligatorios**: Fecha, hora, número de personas y zona son obligatorios
+- **Campos opcionales**: Ocasión especial, preferencias de mesa y pedido anticipado son opcionales
+- **Estado de la reservación**: Tu reservación se creará con estado "pendiente" y el restaurante la confirmará
+- **Pedido anticipado**: Los productos que agregues al pedido anticipado se añadirán automáticamente a tu carrito después de confirmar la reservación
 
 ---
 

@@ -57,6 +57,7 @@
   - `user.ts`: API de usuarios
   - `restaurant.ts`: API de restaurantes
   - `orders.ts`: API de órdenes
+  - `reservations.ts`: API de reservaciones
   - `menu-sections.ts`: API de secciones de menú
   - `index.ts`: Exportaciones centralizadas
 

@@ -87,6 +87,23 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 - ✅ Agregar items a orden grupal
 - ✅ División de cuenta
 
+#### Reservaciones
+- ✅ Acceso a pantalla de reservaciones desde home
+- ✅ Modal de bienvenida
+- ✅ Selección de fecha en calendario
+- ✅ Selección de hora con selector personalizado
+- ✅ Ajuste de número de personas
+- ✅ Selección de zona (interior, terraza, jardín)
+- ✅ Selección de ocasión especial (opcional)
+- ✅ Ingreso de preferencias de mesa (opcional)
+- ✅ Agregar productos al pedido anticipado (opcional)
+- ✅ Validación de campos obligatorios
+- ✅ Botón de confirmación solo aparece cuando se completan campos obligatorios
+- ✅ Guardado de reservación en base de datos
+- ✅ Agregado de items del pedido anticipado al carrito
+- ✅ Navegación después de confirmar reservación
+- ✅ Manejo de errores al crear reservación
+
 #### Opiniones
 - ✅ Calificación con estrellas
 - ✅ Selección de chips
@@ -165,6 +182,8 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 - ✅ Configuración de modo desayuno en promociones
 - ✅ Configuración de contador flash
 - ✅ Validación de RLS en todas las operaciones
+- ✅ RLS para reservaciones: usuarios solo pueden ver/crear sus propias reservaciones
+- ✅ RLS para reservaciones: restaurantes pueden ver/actualizar reservaciones de su restaurante
 - ✅ Manejo de errores 403/406/409
 
 #### Mesa Lista
@@ -259,7 +278,6 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 ### Funcionalidades Futuras
 - ❌ Notificaciones push
 - ❌ Integraciones con pasarelas de pago reales
-- ❌ Sistema de reservas
 - ❌ Dashboard administrativo completo
 
 ### Áreas No Implementadas
@@ -511,6 +529,10 @@ Este documento describe la estrategia de pruebas para **Breakfast App**, incluye
 **Responsable**: QA Team
 
 ### Cambios Recientes (Enero 2025)
+- ✅ **Agregadas pruebas completas para Reservaciones**
+- ✅ Agregadas pruebas para creación de reservaciones
+- ✅ Agregadas pruebas para validación de campos obligatorios
+- ✅ Agregadas pruebas para RLS de reservaciones
 - ✅ **Agregadas pruebas completas para Funcionalidades de Restaurante**
 - ✅ Agregadas pruebas para autenticación con Supabase
 - ✅ Agregadas pruebas para gestión de productos (CRUD)

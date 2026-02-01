@@ -746,6 +746,45 @@ CREATE TABLE restaurant_menu_sections (
 
 **Propósito**: Define qué productos aparecen en cada sección del menú (Menú, Sugerencias del chef, Destacados).
 
+#### `reservations`
+```sql
+CREATE TABLE reservations (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  restaurant_id UUID REFERENCES restaurants(id) ON DELETE CASCADE,
+  reservation_date DATE NOT NULL,
+  reservation_time TIME NOT NULL,
+  number_of_people INTEGER NOT NULL CHECK (number_of_people > 0),
+  zone TEXT NOT NULL,
+  special_occasion TEXT,
+  table_preferences TEXT,
+  advance_order_items JSONB DEFAULT '[]'::jsonb,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed', 'no_show')),
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE
+);
+```
+
+**Propósito**: Almacena las reservaciones de los comensales en restaurantes.
+
+**Estados de Reservación**:
+- `pending`: Reservación pendiente de confirmación
+- `confirmed`: Reservación confirmada por el restaurante
+- `cancelled`: Reservación cancelada
+- `completed`: Reservación completada (el comensal asistió)
+- `no_show`: El comensal no asistió
+
+**Zonas Disponibles**:
+- `interior`: Interior
+- `terrace`: Terraza
+- `garden`: Jardín
+
+**Campos Opcionales**:
+- `special_occasion`: Ocasión especial (cumpleaños, aniversario, negocios, cita)
+- `table_preferences`: Preferencias de mesa (ej: cerca de la ventana, zona tranquila)
+- `advance_order_items`: Array JSONB con items del pedido anticipado
+
 ### Claves de localStorage (Solo UI)
 
 | Clave | Tipo | Descripción |
@@ -767,11 +806,15 @@ Usuario
   │     └── Items (1:N) → OrderItem
   │           └── Referencia (N:1) → Platillo
   ├── Historial (1:N) → HistoricalOrder
+  ├── Reservaciones (1:N) → Reservation
+  │     └── Referencia (N:1) → Restaurante
   └── Transacciones (1:N) → Transaction
         └── Referencia (N:1) → HistoricalOrder
 
 Restaurante
-  └── Configuración (1:1) → RestaurantConfig
+  ├── Configuración (1:1) → RestaurantConfig
+  └── Reservaciones (1:N) → Reservation
+        └── Referencia (N:1) → Usuario
 
 GroupOrder
   ├── Participantes (N:M) → Usuario

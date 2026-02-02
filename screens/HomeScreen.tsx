@@ -5,6 +5,7 @@ import TopNavbar from '../components/TopNavbar';
 import { useAuth } from '../contexts/AuthContext';
 import CurrencyWidget from '../components/widgets/CurrencyWidget';
 import WeatherWidget from '../components/widgets/WeatherWidget';
+import { playClickSound } from '../utils/sound';
 
 interface ButtonConfig {
   id: string;
@@ -247,7 +248,10 @@ const HomeScreen: React.FC = () => {
         onDragOver={(e) => handleDragOver(e, button.id)}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, button.id)}
-        onClick={() => navigate(button.path)}
+        onClick={() => {
+          playClickSound();
+          navigate(button.path);
+        }}
         className={`relative flex flex-col rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-primary transition-all duration-500 ease-out cursor-move group min-h-[140px] overflow-hidden ${
           isDragOver ? 'border-primary border-2 bg-primary/5' : ''
         } ${isDragging ? 'opacity-50' : ''}`}
@@ -290,7 +294,10 @@ const HomeScreen: React.FC = () => {
           {/* Botón QR que ocupa todo el ancho */}
           {qrButton && (
             <div 
-              onClick={() => navigate(qrButton.path)}
+              onClick={() => {
+                playClickSound();
+                navigate(qrButton.path);
+              }}
               className="flex flex-col gap-3 rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white p-5 items-start shadow-lg cursor-pointer overflow-hidden relative mb-3 transition-opacity duration-500 ease-out"
               style={{ opacity: buttonOpacities.qr }}
             >
@@ -352,7 +359,10 @@ const HomeScreen: React.FC = () => {
           }}
         >
           <button
-            onClick={() => navigate(assistanceButton.path)}
+            onClick={() => {
+              playClickSound();
+              navigate(assistanceButton.path);
+            }}
             className="bg-primary text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 mx-auto hover:bg-primary-dark transition-colors w-auto"
           >
             <span className="material-symbols-outlined">{assistanceButton.icon}</span>

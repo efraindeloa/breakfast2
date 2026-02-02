@@ -13,6 +13,7 @@ import {
   UserPaymentMethod
 } from '../services/database';
 import { getUserProfile, updateUserProfile } from '../services/api';
+import { playClickSound, areSoundsEnabled, setSoundsEnabled } from '../utils/sound';
 
 interface Card {
   id: string; // Cambiar a string para usar UUID de la BD
@@ -52,11 +53,17 @@ const ProfileScreen: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [showImageMenu, setShowImageMenu] = useState(false);
+  const [soundsEnabled, setSoundsEnabledState] = useState<boolean>(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Cargar preferencia de sonidos
+  useEffect(() => {
+    setSoundsEnabledState(areSoundsEnabled());
+  }, []);
 
   // Cargar datos del usuario desde la base de datos
   useEffect(() => {
@@ -560,12 +567,26 @@ const ProfileScreen: React.FC = () => {
   return (
     <div className="pb-32">
       <header className="flex items-center bg-white dark:bg-[#2d2116] p-4 pb-2 justify-between sticky top-0 z-50 border-b border-gray-100 dark:border-gray-800 safe-top">
-        <button onClick={() => navigate(-1)} className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm">
+        <button 
+          onClick={() => {
+            playClickSound();
+            navigate(-1);
+          }} 
+          className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm"
+        >
           <span className="material-symbols-outlined cursor-pointer text-[#8a7560] dark:text-[#d4c4a8]">arrow_back_ios</span>
         </button>
         <h2 className="text-lg font-bold flex-1 text-center">{t('profile.title')}</h2>
         <div className="w-12 flex items-center justify-end">
-          <span className="material-symbols-outlined cursor-pointer" onClick={() => navigate('/settings')}>settings</span>
+          <span 
+            className="material-symbols-outlined cursor-pointer" 
+            onClick={() => {
+              playClickSound();
+              navigate('/settings');
+            }}
+          >
+            settings
+          </span>
         </div>
       </header>
 
@@ -864,6 +885,39 @@ const ProfileScreen: React.FC = () => {
         </div>
       </section>
 
+      {/* Preferencias */}
+      <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
+        <h3 className="text-lg font-bold py-4">{t('profile.preferences') || 'Preferencias'}</h3>
+        <div className="flex items-center justify-between py-3 border-b border-gray-50 dark:border-gray-800">
+          <div className="flex items-center gap-4">
+            <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 size-12">
+              <span className="material-symbols-outlined">volume_up</span>
+            </div>
+            <div>
+              <p className="font-semibold text-[#181411] dark:text-white">{t('profile.soundEffects') || 'Efectos de Sonido'}</p>
+              <p className="text-[#8a7560] dark:text-[#c0a890] text-sm">{t('profile.soundEffectsSubtitle') || 'Reproducir sonidos al interactuar'}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const newValue = !soundsEnabled;
+              setSoundsEnabledState(newValue);
+              setSoundsEnabled(newValue);
+              playClickSound(); // Reproducir sonido incluso si se está desactivando (último sonido)
+            }}
+            className={`relative w-12 h-6 rounded-full transition-colors ${
+              soundsEnabled ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
+            }`}
+          >
+            <span
+              className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                soundsEnabled ? 'translate-x-6' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+      </section>
+
       <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
         <h3 className="text-lg font-bold py-4">{t('profile.myActivity')}</h3>
         <MenuItem icon="favorite" title={t('profile.favorites')} subtitle={t('profile.favoritesSubtitle')} onClick={() => navigate('/favorites')} />
@@ -1130,7 +1184,13 @@ const ProfileScreen: React.FC = () => {
 };
 
 const MenuItem: React.FC<{ icon: string; title: string; subtitle: string; onClick?: () => void }> = ({ icon, title, subtitle, onClick }) => (
-  <div onClick={onClick} className="flex items-center gap-4 py-3 justify-between hover:bg-gray-50 dark:hover:bg-primary/5 cursor-pointer border-b border-gray-50 dark:border-gray-800 last:border-0">
+  <div 
+    onClick={() => {
+      playClickSound();
+      onClick?.();
+    }} 
+    className="flex items-center gap-4 py-3 justify-between hover:bg-gray-50 dark:hover:bg-primary/5 cursor-pointer border-b border-gray-50 dark:border-gray-800 last:border-0"
+  >
     <div className="flex items-center gap-4">
       <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 size-12">
         <span className="material-symbols-outlined">{icon}</span>

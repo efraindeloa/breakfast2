@@ -124,9 +124,17 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
   return (
     <header className="sticky top-0 z-20 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 safe-top">
       <div className="flex items-center p-4 pb-2 justify-between">
-        {/* Left side: Avatar */}
+        {/* Left side: Back button or Avatar */}
         <div className="flex items-center gap-2 shrink-0">
-          {showAvatar ? (
+          {showBackButton ? (
+            <button
+              onClick={handleBack}
+              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors active:scale-95"
+              title={t('common.back') || 'Volver'}
+            >
+              <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">chevron_left</span>
+            </button>
+          ) : showAvatar ? (
             <button
               onClick={() => navigate('/profile')}
               className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 transition-all hover:border-primary/40 active:scale-95"

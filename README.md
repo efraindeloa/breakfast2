@@ -29,6 +29,10 @@ Aplicación móvil y web para restaurantes que permite a los comensales interact
      VITE_SUPABASE_URL=https://tkwackqrnsqlmxtalvuw.supabase.co
      VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRrd2Fja3FybnNxbG14dGFsdnV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxMTU3NzEsImV4cCI6MjA4NDY5MTc3MX0.1PG0x0ZdAAjhunyiPBRzpgpsr9nZGV5epHdUvalHqbA
      ```
+   - Configurar OpenWeatherMap para widget de clima:
+     ```env
+     VITE_WEATHER_API_KEY=c3082f3d3ed88c7afc1e8ff24f39e153
+     ```
 
 3. **Ejecutar en desarrollo**:
    ```bash

@@ -1401,5 +1401,34 @@
         "deleted": "Promotion supprimée avec succès"
       }
     }
+  },
+  "weather": {
+    "detail": {
+      "title": "Prévisions Météo",
+      "city": "Ville",
+      "currentLocation": "Localisation actuelle",
+      "searchPlaceholder": "Rechercher une ville...",
+      "useCurrentLocation": "Utiliser la localisation actuelle",
+      "forecast": "Prévisions 5 Jours",
+      "feelsLike": "Ressenti",
+      "humidity": "Humidité",
+      "wind": "Vent"
+    }
+  },
+  "currency": {
+    "detail": {
+      "perUSD": "pour 1 USD",
+      "change": "Changement",
+      "min": "Minimum",
+      "max": "Maximum",
+      "week": "Semaine",
+      "month": "Mois",
+      "year": "Année",
+      "history": "Historique",
+      "detailedHistory": "Historique Détaillé",
+      "date": "Date",
+      "rate": "Taux",
+      "noData": "Aucune donnée disponible"
+    }
   }
 }

@@ -1401,5 +1401,34 @@
         "deleted": "Promoção excluída com sucesso"
       }
     }
+  },
+  "weather": {
+    "detail": {
+      "title": "Previsão do Tempo",
+      "city": "Cidade",
+      "currentLocation": "Localização atual",
+      "searchPlaceholder": "Buscar cidade...",
+      "useCurrentLocation": "Usar localização atual",
+      "forecast": "Previsão 5 Dias",
+      "feelsLike": "Sensação",
+      "humidity": "Umidade",
+      "wind": "Vento"
+    }
+  },
+  "currency": {
+    "detail": {
+      "perUSD": "por 1 USD",
+      "change": "Mudança",
+      "min": "Mínimo",
+      "max": "Máximo",
+      "week": "Semana",
+      "month": "Mês",
+      "year": "Ano",
+      "history": "Histórico",
+      "detailedHistory": "Histórico Detalhado",
+      "date": "Data",
+      "rate": "Taxa",
+      "noData": "Nenhum dado disponível"
+    }
   }
 }

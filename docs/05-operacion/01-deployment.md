@@ -29,6 +29,7 @@ Este documento describe el proceso de deployment y release de **Breakfast App** 
    # Crear archivo .env en la raíz del proyecto
    VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
    VITE_SUPABASE_ANON_KEY=tu-anon-key
+   VITE_WEATHER_API_KEY=c3082f3d3ed88c7afc1e8ff24f39e153
    ```
 
 3. **Ejecutar scripts SQL**:

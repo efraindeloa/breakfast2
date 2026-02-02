@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import TopNavbar from '../components/TopNavbar';
 import { useAuth } from '../contexts/AuthContext';
+import CurrencyWidget from '../components/widgets/CurrencyWidget';
+import WeatherWidget from '../components/widgets/WeatherWidget';
 
 interface ButtonConfig {
   id: string;
@@ -324,6 +326,17 @@ const HomeScreen: React.FC = () => {
             {/* Columna derecha - 50% */}
             <div className="flex flex-col gap-3 w-1/2">
               {rightColumnButtons.map(button => renderRegularButton(button))}
+            </div>
+          </div>
+
+          {/* Sección de Widgets */}
+          <div className="mt-6 mb-4">
+            <h3 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-3">
+              Widgets
+            </h3>
+            <div className="px-4 space-y-3">
+              <CurrencyWidget />
+              <WeatherWidget />
             </div>
           </div>
         </div>

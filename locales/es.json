@@ -1412,5 +1412,34 @@
         "deleted": "Promoción eliminada correctamente"
       }
     }
+  },
+  "weather": {
+    "detail": {
+      "title": "Pronóstico del Clima",
+      "city": "Ciudad",
+      "currentLocation": "Ubicación actual",
+      "searchPlaceholder": "Buscar ciudad...",
+      "useCurrentLocation": "Usar ubicación actual",
+      "forecast": "Pronóstico 5 Días",
+      "feelsLike": "Sensación",
+      "humidity": "Humedad",
+      "wind": "Viento"
+    }
+  },
+  "currency": {
+    "detail": {
+      "perUSD": "por 1 USD",
+      "change": "Cambio",
+      "min": "Mínimo",
+      "max": "Máximo",
+      "week": "Semana",
+      "month": "Mes",
+      "year": "Año",
+      "history": "Historial",
+      "detailedHistory": "Historial Detallado",
+      "date": "Fecha",
+      "rate": "Tasa",
+      "noData": "No hay datos disponibles"
+    }
   }
 }

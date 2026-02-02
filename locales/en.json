@@ -1402,5 +1402,34 @@
         "deleted": "Promotion deleted successfully"
       }
     }
+  },
+  "weather": {
+    "detail": {
+      "title": "Weather Forecast",
+      "city": "City",
+      "currentLocation": "Current location",
+      "searchPlaceholder": "Search city...",
+      "useCurrentLocation": "Use current location",
+      "forecast": "5-Day Forecast",
+      "feelsLike": "Feels like",
+      "humidity": "Humidity",
+      "wind": "Wind"
+    }
+  },
+  "currency": {
+    "detail": {
+      "perUSD": "per 1 USD",
+      "change": "Change",
+      "min": "Minimum",
+      "max": "Maximum",
+      "week": "Week",
+      "month": "Month",
+      "year": "Year",
+      "history": "History",
+      "detailedHistory": "Detailed History",
+      "date": "Date",
+      "rate": "Rate",
+      "noData": "No data available"
+    }
   }
 }

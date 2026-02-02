@@ -52,6 +52,8 @@ import PromotionsRestaurantScreen from './screens/PromotionsRestaurantScreen';
 import MenuRestaurantScreen from './screens/MenuRestaurantScreen';
 import ReservationsRestaurantScreen from './screens/ReservationsRestaurantScreen';
 import StatisticsRestaurantScreen from './screens/StatisticsRestaurantScreen';
+import WeatherDetailScreen from './screens/WeatherDetailScreen';
+import CurrencyDetailScreen from './screens/CurrencyDetailScreen';
 import BottomNav from './components/BottomNav';
 import AssistantButton from './components/AssistantButton';
 import AndroidBackButton from './components/AndroidBackButton';
@@ -156,6 +158,8 @@ const AppContent: React.FC = () => {
           <Route path="/promotion-detail/:id" element={isAuthenticated ? <PromotionDetailScreen /> : <Navigate to="/" />} />
           <Route path="/table-ready" element={isAuthenticated ? <TableReadyScreen /> : <Navigate to="/" />} />
           <Route path="/reservations" element={isAuthenticated ? <ReservationsRestaurantScreen /> : <Navigate to="/" />} />
+          <Route path="/weather-detail" element={isAuthenticated ? <WeatherDetailScreen /> : <Navigate to="/" />} />
+          <Route path="/currency-detail/:code" element={isAuthenticated ? <CurrencyDetailScreen /> : <Navigate to="/" />} />
           <Route path="/restaurant-profile" element={isAuthenticated ? <RestaurantProfileScreen /> : <Navigate to="/" />} />
           <Route path="/restaurant-details" element={isAuthenticated ? <RestaurantDetailsScreen /> : <Navigate to="/" />} />
           <Route path="/admin-control-panel" element={isAuthenticated ? <AdminControlPanelScreen /> : <Navigate to="/" />} />

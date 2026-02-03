@@ -330,18 +330,8 @@ const CurrencyDetailScreen: React.FC = () => {
         setCurrentRate(data);
       } catch (err) {
         console.error('Error fetching current rate:', err);
-        // Usar datos mock
-        setCurrentRate({
-          base: 'USD',
-          rates: {
-            USD: 1.0,
-            MXN: 20.50,
-            CAD: 1.22,
-            EUR: 0.90,
-            GBP: 0.64,
-            JPY: 121.11
-          }
-        });
+        setError('Error al cargar tasa de cambio');
+        setCurrentRate(null);
       }
     };
 
@@ -351,65 +341,18 @@ const CurrencyDetailScreen: React.FC = () => {
   // Obtener datos históricos
   useEffect(() => {
     const fetchHistoricalData = async () => {
-      if (isUSD) {
-        // Para USD, mostrar siempre 1.0
-        const { startDate, endDate } = getDateRange(period);
-        const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        const mockData: HistoricalDataPoint[] = [];
-        
-        for (let i = 0; i <= days; i++) {
-          const date = new Date(startDate);
-          date.setDate(startDate.getDate() + i);
-          mockData.push({
-            date: date.toISOString().split('T')[0],
-            rate: 1.0
-          });
-        }
-        
-        setHistoricalData(mockData);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        const { startDate, endDate } = getDateRange(period);
-        
-        // Para obtener datos históricos, usaremos una aproximación con datos mock
-        // ya que la API gratuita de exchangerate-api.com no tiene endpoint histórico completo
-        // En producción, podrías usar una API premium o calcular basado en datos disponibles
-        
-        const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        const currentRateValue = currentRate?.rates[currency.code] || 20.50;
-        const historicalPoints: HistoricalDataPoint[] = [];
-        
-        // Generar datos históricos simulados con variación
-        for (let i = 0; i <= days; i++) {
-          const date = new Date(startDate);
-          date.setDate(startDate.getDate() + i);
-          
-          // Simular variación del ±5% para datos históricos
-          const variation = (Math.random() - 0.5) * 0.1; // ±5%
-          const historicalRate = currentRateValue * (1 + variation);
-          
-          historicalPoints.push({
-            date: date.toISOString().split('T')[0],
-            rate: Number(historicalRate.toFixed(4))
-          });
-        }
-        
-        setHistoricalData(historicalPoints);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching historical data:', err);
-        setError('Error al cargar datos históricos');
-      } finally {
-        setLoading(false);
-      }
+      // La API gratuita de exchangerate-api.com no tiene endpoint histórico completo
+      // Por lo tanto, no mostramos datos históricos
+      setHistoricalData([]);
+      setLoading(false);
+      setError('Los datos históricos no están disponibles con la API gratuita');
     };
 
     if (currentRate) {
       fetchHistoricalData();
+    } else {
+      setHistoricalData([]);
+      setLoading(false);
     }
   }, [code, period, currentRate, isUSD]);
 
@@ -472,9 +415,9 @@ const CurrencyDetailScreen: React.FC = () => {
               <p className="text-gray-600 dark:text-gray-400">{t('common.loading') || 'Cargando...'}</p>
             </div>
           </div>
-        ) : error ? (
+        ) : error || !currentRate ? (
           <div className="text-center py-20">
-            <p className="text-red-500 mb-4">{error}</p>
+            <p className="text-red-500 mb-4">{error || 'No se pudieron cargar los datos'}</p>
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors"
@@ -522,7 +465,7 @@ const CurrencyDetailScreen: React.FC = () => {
                     {t('currency.detail.min') || 'Mínimo'}
                   </div>
                   <div className="text-lg font-semibold text-[#181411] dark:text-white">
-                    {formatRate(min)}
+                    {historicalData.length > 0 ? formatRate(min) : '-'}
                   </div>
                 </div>
                 <div className="text-center">
@@ -530,7 +473,7 @@ const CurrencyDetailScreen: React.FC = () => {
                     {t('currency.detail.max') || 'Máximo'}
                   </div>
                   <div className="text-lg font-semibold text-[#181411] dark:text-white">
-                    {formatRate(max)}
+                    {historicalData.length > 0 ? formatRate(max) : '-'}
                   </div>
                 </div>
               </div>
@@ -594,16 +537,24 @@ const CurrencyDetailScreen: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {historicalData.slice().reverse().map((point, index) => (
-                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                          <td className="px-4 py-3 text-sm text-[#181411] dark:text-white">
-                            {formatDate(point.date)}
-                          </td>
-                          <td className="px-4 py-3 text-sm font-medium text-right text-[#181411] dark:text-white">
-                            {formatRate(point.rate)}
+                      {historicalData.length > 0 ? (
+                        historicalData.slice().reverse().map((point, index) => (
+                          <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                            <td className="px-4 py-3 text-sm text-[#181411] dark:text-white">
+                              {formatDate(point.date)}
+                            </td>
+                            <td className="px-4 py-3 text-sm font-medium text-right text-[#181411] dark:text-white">
+                              {formatRate(point.rate)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={2} className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                            {t('currency.detail.noData') || 'No hay datos históricos disponibles'}
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>

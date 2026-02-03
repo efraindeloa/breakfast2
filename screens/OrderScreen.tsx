@@ -866,7 +866,10 @@ const OrderScreen: React.FC = () => {
 
       {/* Botón Confirmar Orden - Siempre visible en la parte inferior, justo arriba de la navbar */}
       {orderItems.length > 0 && (
-        <div className="fixed bottom-20 left-0 right-0 z-40 bg-background-light dark:bg-background-dark border-t border-gray-200 dark:border-gray-800 px-4 py-3 shadow-lg md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2">
+        <div 
+          className="fixed left-0 right-0 z-40 bg-background-light dark:bg-background-dark border-t border-gray-200 dark:border-gray-800 px-4 py-3 shadow-lg md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2"
+          style={{ bottom: 'calc(80px + env(safe-area-inset-bottom))' }}
+        >
           {isConfirmed ? (
             <button
               onClick={() => navigate('/payments')}

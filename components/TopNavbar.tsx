@@ -175,10 +175,6 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
                 {userName ?? ''}
               </h2>
             </>
-          ) : title ? (
-            <h2 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] truncate text-center">
-              {title}
-            </h2>
           ) : null}
         </div>
 
@@ -226,6 +222,13 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
           </button>
         </div>
       </div>
+      {title && !showWelcome && (
+        <div className="px-4 pb-2">
+          <h2 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] truncate text-center">
+            {title}
+          </h2>
+        </div>
+      )}
     </header>
   );
 };

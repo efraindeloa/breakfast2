@@ -24,7 +24,9 @@ const AddCardScreen: React.FC = () => {
   };
 
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCardNumber(e.target.value);
+    // Solo permitir números
+    const numbersOnly = e.target.value.replace(/\D/g, '');
+    const formatted = formatCardNumber(numbersOnly);
     setCardNumber(formatted);
   };
 
@@ -329,6 +331,7 @@ const AddCardScreen: React.FC = () => {
               onChange={handleCardNumberChange}
               placeholder="1234 5678 9012 3456"
               maxLength={19}
+              inputMode="numeric"
               className="w-full h-14 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[#181411] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
             />
           </div>
@@ -340,7 +343,11 @@ const AddCardScreen: React.FC = () => {
             <input
               type="text"
               value={cardName}
-              onChange={(e) => setCardName(e.target.value.toUpperCase())}
+              onChange={(e) => {
+                // Solo permitir letras y espacios
+                const lettersOnly = e.target.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+                setCardName(lettersOnly.toUpperCase());
+              }}
               placeholder="ALEX GONZALEZ"
               className="w-full h-14 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[#181411] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
             />
@@ -358,6 +365,7 @@ const AddCardScreen: React.FC = () => {
                   onChange={handleExpiryMonthChange}
                   placeholder="MM"
                   maxLength={2}
+                  inputMode="numeric"
                   className="w-full h-14 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[#181411] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-center"
                 />
                 <span className="self-end pb-3 text-gray-400">/</span>
@@ -367,9 +375,24 @@ const AddCardScreen: React.FC = () => {
                   onChange={handleExpiryYearChange}
                   placeholder="YY"
                   maxLength={2}
+                  inputMode="numeric"
                   className="w-full h-14 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[#181411] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-center"
                 />
               </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-[#181411] dark:text-white mb-2">
+                {t('addCard.cvv') || 'CVV'}
+              </label>
+              <input
+                type="text"
+                value={cvv}
+                onChange={handleCvvChange}
+                placeholder="123"
+                maxLength={4}
+                inputMode="numeric"
+                className="w-full h-14 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[#181411] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-center"
+              />
             </div>
           </div>
         </div>
@@ -442,7 +465,10 @@ const AddCardScreen: React.FC = () => {
 
       <canvas ref={canvasRef} className="hidden" />
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-background-dark/90 p-4 pb-12 z-50">
+      <div 
+        className="fixed left-0 right-0 bg-white/90 dark:bg-background-dark/90 p-4 z-50 border-t border-gray-200 dark:border-gray-800"
+        style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))', bottom: 'calc(80px + env(safe-area-inset-bottom))' }}
+      >
         <button 
           onClick={handleSubmit}
           className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform"

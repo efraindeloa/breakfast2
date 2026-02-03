@@ -75,18 +75,7 @@ const CurrencyWidget: React.FC = () => {
       } catch (err) {
         console.error('Error fetching exchange rates:', err);
         setError('Error al cargar divisas');
-        // Usar datos mock en caso de error
-        setExchangeRates({
-          base: 'USD',
-          rates: {
-            USD: 1.0,
-            CAD: 1.22,
-            EUR: 0.90,
-            GBP: 0.64,
-            JPY: 121.11
-          }
-        });
-        setLastUpdated(new Date());
+        setExchangeRates(null);
       } finally {
         setLoading(false);
       }
@@ -163,7 +152,13 @@ const CurrencyWidget: React.FC = () => {
           </div>
         )}
 
-        {!loading && exchangeRates && (
+        {error && !loading && (
+          <div className="flex items-center justify-center py-8">
+            <span className="text-[#897C61] dark:text-[#A8937D] text-sm">No se pudieron cargar las divisas</span>
+          </div>
+        )}
+
+        {!loading && !error && exchangeRates && (
           <div>
             {/* Currency List */}
             <div className="space-y-0">

@@ -39,6 +39,7 @@ const TableReadyScreen: React.FC = () => {
   });
 
   const [timeRemaining, setTimeRemaining] = useState(tableData.timeRemaining || 300);
+  const [hasExtendedTime, setHasExtendedTime] = useState(false);
 
   // Contador regresivo
   useEffect(() => {
@@ -79,6 +80,9 @@ const TableReadyScreen: React.FC = () => {
   };
 
   const handleNeedMoreTime = () => {
+    // Solo permitir una vez
+    if (hasExtendedTime) return;
+    
     // Solicitar 5 minutos más
     const newTime = timeRemaining + 300; // Agregar 5 minutos (300 segundos)
     setTimeRemaining(newTime);
@@ -87,6 +91,9 @@ const TableReadyScreen: React.FC = () => {
     const updatedData = { ...tableData, timeRemaining: newTime };
     localStorage.setItem('tableReadyData', JSON.stringify(updatedData));
     setTableData(updatedData);
+    
+    // Marcar como usado y ocultar el botón
+    setHasExtendedTime(true);
     
     alert(t('tableReady.timeExtended'));
   };
@@ -171,19 +178,21 @@ const TableReadyScreen: React.FC = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="w-full max-w-sm flex flex-col gap-4">
+        <div className="w-full max-w-sm flex flex-col gap-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
           <button
             onClick={handleImHere}
             className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-5 px-6 rounded-full text-lg shadow-lg shadow-primary/20 transition-all active:scale-[0.98]"
           >
             {t('tableReady.imHere')}
           </button>
-          <button
-            onClick={handleNeedMoreTime}
-            className="w-full bg-white dark:bg-transparent border-2 border-primary/20 dark:border-white/20 text-[#181411] dark:text-white font-bold py-5 px-6 rounded-full text-lg transition-all active:bg-gray-50"
-          >
-            {t('tableReady.needMoreTime')}
-          </button>
+          {!hasExtendedTime && (
+            <button
+              onClick={handleNeedMoreTime}
+              className="w-full bg-white dark:bg-transparent border-2 border-primary/20 dark:border-white/20 text-[#181411] dark:text-white font-bold py-5 px-6 rounded-full text-lg transition-all active:bg-gray-50"
+            >
+              {t('tableReady.needMoreTime')}
+            </button>
+          )}
         </div>
       </main>
     </div>

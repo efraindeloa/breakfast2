@@ -313,7 +313,10 @@ const InviteUsersScreen: React.FC = () => {
 
         {/* Botón de invitar seleccionados */}
         {selectedUsers.size > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 w-full px-4 pb-24 z-40 md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2 safe-bottom">
+          <div 
+            className="fixed left-0 right-0 w-full px-4 py-4 z-40 bg-background-light dark:bg-background-dark border-t border-gray-200 dark:border-gray-800 shadow-lg md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2"
+            style={{ bottom: 'calc(80px + env(safe-area-inset-bottom))' }}
+          >
             <button
               onClick={handleInviteSelected}
               className="w-full py-4 px-6 rounded-xl bg-primary text-white font-bold text-lg flex items-center justify-center gap-2 shadow-lg hover:bg-primary/90 transition-colors"

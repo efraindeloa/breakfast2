@@ -9,7 +9,6 @@ const FavoritesScreen: React.FC = () => {
   const { t } = useTranslation();
   const { favoriteDishes, savedCombinations, favoritePromotions, removeFavorite, removeFavoritePromotion, deleteCombination, loadCombination } = useFavorites();
   const { addToCart, clearCart } = useCart();
-  const [activeTab, setActiveTab] = useState<'dishes' | 'combinations' | 'promotions'>('dishes');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [showNameInput, setShowNameInput] = useState(false);
   const [combinationName, setCombinationName] = useState('');
@@ -107,118 +106,31 @@ const FavoritesScreen: React.FC = () => {
           <h1 className="text-[#181411] dark:text-white text-lg font-semibold tracking-tight">{t('favorites.title')}</h1>
           <div className="w-10"></div>
         </div>
-        {/* Tabs */}
-        <div className="bg-background-light dark:bg-background-dark border-b border-gray-200 dark:border-gray-800">
-          <div className="flex px-4">
-            <button
-              onClick={() => setActiveTab('dishes')}
-              className={`flex-1 py-2 text-center font-semibold border-b-2 transition-colors ${
-                activeTab === 'dishes'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-500 dark:text-gray-400'
-              }`}
-            >
-              {t('favorites.dishes')}
-            </button>
-            <button
-              onClick={() => setActiveTab('combinations')}
-              className={`flex-1 py-2 text-center font-semibold border-b-2 transition-colors ${
-                activeTab === 'combinations'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-500 dark:text-gray-400'
-              }`}
-            >
-              {t('favorites.combinations')}
-            </button>
-            <button
-              onClick={() => setActiveTab('promotions')}
-              className={`flex-1 py-2 text-center font-semibold border-b-2 transition-colors ${
-                activeTab === 'promotions'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-500 dark:text-gray-400'
-              }`}
-            >
-              {t('favorites.promotions')}
-            </button>
-          </div>
-        </div>
       </header>
 
       <main className="flex-1 overflow-y-auto pb-24">
         {/* Content */}
-        <div className="p-4">
-          {activeTab === 'promotions' ? (
-            <>
-              {favoritePromotions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4">
-                    local_offer
-                  </span>
-                  <p className="text-gray-500 dark:text-gray-400 text-center mb-2">{t('favorites.noPromotions')}</p>
-                  <p className="text-sm text-gray-400 dark:text-gray-500 text-center">{t('favorites.noPromotionsDesc')}</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {favoritePromotions.map((promotion) => (
-                    <div
-                      key={promotion.id}
-                      className="bg-white dark:bg-[#2d241c] rounded-xl border border-[#e6e0db] dark:border-[#3d3228] overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                      onClick={() => navigate(`/promotion-detail/${promotion.id}`)}
-                    >
-                      <div className="relative w-full aspect-[16/9] bg-cover bg-center rounded-t-xl overflow-hidden" style={{ backgroundImage: `url("${promotion.image}")` }}>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeFavoritePromotion(promotion.id);
-                          }}
-                          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 dark:bg-gray-800/90 flex items-center justify-center hover:bg-white dark:hover:bg-gray-800 transition-colors z-10"
-                        >
-                          <span className="material-symbols-outlined text-red-500 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
-                            favorite
-                          </span>
-                        </button>
-                        <div className={`absolute top-2 left-2 ${promotion.badge.color} text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider z-10`}>
-                          {promotion.badge.text}
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        <h3 className="text-base font-bold text-[#181411] dark:text-white mb-1">
-                          {promotion.title}
-                        </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
-                          {promotion.description}
-                        </p>
-                        {promotion.timeRestriction && (
-                          <p className="text-xs text-gray-500 dark:text-gray-500 flex items-center gap-1 mb-2">
-                            <span className="material-symbols-outlined text-xs">schedule</span>
-                            {promotion.timeRestriction}
-                          </p>
-                        )}
-                        {promotion.discount && (
-                          <p className="text-sm font-bold text-primary">{promotion.discount}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : activeTab === 'dishes' ? (
-            <>
-              {favoriteDishes.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4">
-                    favorite_border
-                  </span>
-                  <p className="text-gray-500 dark:text-gray-400 text-center mb-2">{t('favorites.noFavorites')}</p>
-                  <p className="text-sm text-gray-400 dark:text-gray-500 text-center">{t('favorites.noFavoritesDesc')}</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-6 pb-6">
+          {/* Platillos Favoritos */}
+          <section>
+            <div className="px-4 mb-3">
+              <h2 className="text-lg font-bold text-[#181411] dark:text-white">Del menú</h2>
+            </div>
+            {favoriteDishes.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4">
+                <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4">
+                  favorite_border
+                </span>
+                <p className="text-gray-500 dark:text-gray-400 text-center mb-2">{t('favorites.noFavorites')}</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 text-center">{t('favorites.noFavoritesDesc')}</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto hide-scrollbar">
+                <div className="flex gap-4 px-4">
                   {favoriteDishes.map((dish) => (
                     <div
                       key={dish.id}
-                      className="bg-white dark:bg-[#2d241c] rounded-xl border border-[#e6e0db] dark:border-[#3d3228] overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                      className="min-w-[280px] bg-white dark:bg-[#2d241c] rounded-xl border border-[#e6e0db] dark:border-[#3d3228] overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer flex-shrink-0"
                       onClick={() => navigate(`/dish/${dish.id}`)}
                     >
                       <div
@@ -270,33 +182,101 @@ const FavoritesScreen: React.FC = () => {
                     </div>
                   ))}
                 </div>
-              )}
-            </>
-          ) : (
-            <>
-              {savedCombinations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4">
-                    restaurant_menu
-                  </span>
-                  <p className="text-gray-500 dark:text-gray-400 text-center mb-2">{t('favorites.noCombinations')}</p>
-                  <p className="text-sm text-gray-400 dark:text-gray-500 text-center">{t('favorites.noCombinationsDesc')}</p>
+              </div>
+            )}
+          </section>
+
+          {/* Promociones */}
+          <section>
+            <div className="px-4 mb-3">
+              <h2 className="text-lg font-bold text-[#181411] dark:text-white">{t('favorites.promotions')}</h2>
+            </div>
+            {favoritePromotions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4">
+                <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4">
+                  local_offer
+                </span>
+                <p className="text-gray-500 dark:text-gray-400 text-center mb-2">{t('favorites.noPromotions')}</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 text-center">{t('favorites.noPromotionsDesc')}</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto hide-scrollbar">
+                <div className="flex gap-4 px-4">
+                  {favoritePromotions.map((promotion) => (
+                    <div
+                      key={promotion.id}
+                      className="min-w-[280px] bg-white dark:bg-[#2d241c] rounded-xl border border-[#e6e0db] dark:border-[#3d3228] overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer flex-shrink-0"
+                      onClick={() => navigate(`/promotion-detail/${promotion.id}`)}
+                    >
+                      <div className="relative w-full aspect-[16/9] bg-cover bg-center rounded-t-xl overflow-hidden" style={{ backgroundImage: `url("${promotion.image}")` }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFavoritePromotion(promotion.id);
+                          }}
+                          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 dark:bg-gray-800/90 flex items-center justify-center hover:bg-white dark:hover:bg-gray-800 transition-colors z-10"
+                        >
+                          <span className="material-symbols-outlined text-red-500 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
+                            favorite
+                          </span>
+                        </button>
+                        <div className={`absolute top-2 left-2 ${promotion.badge.color} text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider z-10`}>
+                          {promotion.badge.text}
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <h3 className="text-base font-bold text-[#181411] dark:text-white mb-1">
+                          {promotion.title}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
+                          {promotion.description}
+                        </p>
+                        {promotion.timeRestriction && (
+                          <p className="text-xs text-gray-500 dark:text-gray-500 flex items-center gap-1 mb-2">
+                            <span className="material-symbols-outlined text-xs">schedule</span>
+                            {promotion.timeRestriction}
+                          </p>
+                        )}
+                        {promotion.discount && (
+                          <p className="text-sm font-bold text-primary">{promotion.discount}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <div className="space-y-4">
+              </div>
+            )}
+          </section>
+
+          {/* Combinaciones */}
+          <section>
+            <div className="px-4 mb-3">
+              <h2 className="text-lg font-bold text-[#181411] dark:text-white">{t('favorites.combinations')}</h2>
+            </div>
+            {savedCombinations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4">
+                <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4">
+                  restaurant_menu
+                </span>
+                <p className="text-gray-500 dark:text-gray-400 text-center mb-2">{t('favorites.noCombinations')}</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 text-center">{t('favorites.noCombinationsDesc')}</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto hide-scrollbar">
+                <div className="flex gap-4 px-4">
                   {savedCombinations.map((combination) => {
                     const total = combination.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
                     return (
                       <div
                         key={combination.id}
-                        className="bg-white dark:bg-[#2d241c] rounded-xl border border-[#e6e0db] dark:border-[#3d3228] p-4 shadow-sm"
+                        className="min-w-[320px] bg-white dark:bg-[#2d241c] rounded-xl border border-[#e6e0db] dark:border-[#3d3228] p-4 shadow-sm flex-shrink-0"
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
                             <h3 className="text-lg font-bold text-[#181411] dark:text-white mb-1">
                               {combination.name}
                             </h3>
-                            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                            <div className="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
                               <span>{t('favorites.created')}: {formatDate(combination.createdAt)}</span>
                               {combination.lastUsed && (
                                 <span>{t('favorites.lastUsed')}: {formatDate(combination.lastUsed)}</span>
@@ -341,9 +321,9 @@ const FavoritesScreen: React.FC = () => {
                     );
                   })}
                 </div>
-              )}
-            </>
-          )}
+              </div>
+            )}
+          </section>
         </div>
       </main>
 

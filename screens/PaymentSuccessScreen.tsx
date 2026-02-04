@@ -3,8 +3,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
+import { useAuth } from '../contexts/AuthContext';
 import { HistoricalOrder } from '../types/order';
 import { saveOrderHistory } from '../services/database';
+import { getUserBillingProfile } from '../services/api/user';
 
 interface Email {
   id: number;
@@ -23,24 +25,70 @@ const PaymentSuccessScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { config, selectedRestaurant } = useRestaurant();
+  const { user } = useAuth();
   const [wantsInvoice, setWantsInvoice] = useState<boolean | null>(null);
   const [selectedEmailId, setSelectedEmailId] = useState<number | null>(null);
   const [fiscalDataConfirmed, setFiscalDataConfirmed] = useState(false);
   const [isEditingFiscalData, setIsEditingFiscalData] = useState(false);
+  const [showIncompleteDataNotification, setShowIncompleteDataNotification] = useState(false);
   const [emails] = useState<Email[]>([
     { id: 1, email: 'juan.perez@empresa.com', isPrimary: true },
     { id: 2, email: 'contabilidad@empresa.com', isPrimary: false },
   ]);
   
-  // Datos fiscales del usuario (en producción vendrían de una API o contexto)
+  // Datos fiscales del usuario
   const [fiscalData, setFiscalData] = useState<FiscalData>({
-    rfc: 'XAXX010101000',
-    razonSocial: 'Juan Pérez García',
-    usoCFDI: 'G03 - Gastos en general',
-    regimenFiscal: '601 - General de Ley Personas Morales',
+    rfc: '',
+    razonSocial: '',
+    usoCFDI: '',
+    regimenFiscal: '',
   });
 
   const [editingFiscalData, setEditingFiscalData] = useState<FiscalData>(fiscalData);
+
+  // Cargar datos fiscales reales
+  useEffect(() => {
+    const loadFiscalData = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const billingProfile = await getUserBillingProfile();
+        if (billingProfile?.success && billingProfile.data) {
+          const profile = billingProfile.data;
+          const loadedData: FiscalData = {
+            rfc: profile.tax_id || '',
+            razonSocial: profile.business_name || '',
+            usoCFDI: profile.uso_cfdi || '',
+            regimenFiscal: profile.regimen_fiscal || '',
+          };
+          setFiscalData(loadedData);
+          setEditingFiscalData(loadedData);
+        } else {
+          // Intentar cargar desde localStorage
+          const savedData = localStorage.getItem('fiscalData');
+          if (savedData) {
+            try {
+              const parsed = JSON.parse(savedData);
+              const loadedData: FiscalData = {
+                rfc: parsed.rfc || '',
+                razonSocial: parsed.businessName || '',
+                usoCFDI: parsed.cfdiUsage || '',
+                regimenFiscal: parsed.taxRegime || '',
+              };
+              setFiscalData(loadedData);
+              setEditingFiscalData(loadedData);
+            } catch (e) {
+              console.error('Error parsing fiscal data from localStorage:', e);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading fiscal data:', error);
+      }
+    };
+
+    loadFiscalData();
+  }, [user?.id]);
 
   const handleSaveFiscalData = () => {
     setFiscalData(editingFiscalData);
@@ -167,6 +215,23 @@ const PaymentSuccessScreen: React.FC = () => {
       </header>
 
       <div className="flex flex-col items-center justify-center px-4 py-8">
+        {/* Notificación de datos incompletos */}
+        {showIncompleteDataNotification && (
+          <div className="w-full max-w-md mb-6 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <span className="material-symbols-outlined text-amber-600 dark:text-amber-400 text-2xl flex-shrink-0">info</span>
+              <div className="flex-1">
+                <h4 className="text-sm font-bold text-amber-800 dark:text-amber-300 mb-1">
+                  Datos fiscales incompletos
+                </h4>
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  Para recibir tu factura, necesitas completar tus datos fiscales. Redirigiendo...
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Icono de éxito */}
         <div className="w-24 h-24 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center mb-6">
           <span className="material-symbols-outlined text-green-600 dark:text-green-400 text-5xl">check_circle</span>
@@ -185,7 +250,21 @@ const PaymentSuccessScreen: React.FC = () => {
               </h4>
               <div className="flex gap-3">
                 <button
-                  onClick={() => {
+                  onClick={async () => {
+                    // Verificar si los datos fiscales están completos
+                    const isComplete = fiscalData.rfc?.trim() && 
+                                      fiscalData.razonSocial?.trim() && 
+                                      fiscalData.usoCFDI?.trim() && 
+                                      fiscalData.regimenFiscal?.trim();
+                    
+                    if (!isComplete) {
+                      setShowIncompleteDataNotification(true);
+                      setTimeout(() => {
+                        navigate('/billing-step-1');
+                      }, 2000);
+                      return;
+                    }
+                    
                     setWantsInvoice(true);
                     if (emails.length > 0) {
                       setSelectedEmailId(emails[0].id);

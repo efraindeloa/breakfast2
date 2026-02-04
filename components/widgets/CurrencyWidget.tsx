@@ -97,15 +97,11 @@ const CurrencyWidget: React.FC = () => {
     return `${currency.symbol} ${rate.toFixed(2)}`;
   };
 
-  const getTimeAgo = (): string => {
+  const formatLastUpdatedTime = (): string => {
     if (!lastUpdated) return '';
-    const now = new Date();
-    const diffMs = now.getTime() - lastUpdated.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 1) return 'Actualizado hace menos de un minuto';
-    if (diffMins === 1) return 'Actualizado hace 1 minuto';
-    return `Actualizado hace ${diffMins} minutos`;
+    const hours = lastUpdated.getHours().toString().padStart(2, '0');
+    const minutes = lastUpdated.getMinutes().toString().padStart(2, '0');
+    return `Actualizado a las ${hours}:${minutes}`;
   };
 
   const toggleCurrency = (code: string) => {
@@ -204,12 +200,9 @@ const CurrencyWidget: React.FC = () => {
 
             {/* Footer */}
             <div className="mt-4 pt-3 border-t border-[#E6E0DB] dark:border-[#3D3228]">
-              <div className="text-xs text-[#897C61] dark:text-[#A8937D] mb-1 cursor-pointer hover:text-primary transition-colors">
-                Ver más...
-              </div>
               {lastUpdated && (
                 <div className="text-xs text-[#897C61] dark:text-[#A8937D]">
-                  {getTimeAgo()}
+                  {formatLastUpdatedTime()}
                 </div>
               )}
             </div>

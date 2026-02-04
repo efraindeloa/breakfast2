@@ -59,48 +59,69 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
+-- Bucket para documentos fiscales (PDFs de constancias)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'fiscal-documents',
+  'fiscal-documents',
+  false, -- Privado: solo el usuario puede ver sus documentos
+  5242880, -- 5MB máximo por archivo
+  ARRAY['application/pdf']
+)
+ON CONFLICT (id) DO NOTHING;
+
 -- ==================== POLÍTICAS RLS PARA STORAGE ====================
 
 -- Políticas para product-images: Todos pueden leer, todos pueden escribir (para desarrollo)
 -- En producción, cambiar a solo usuarios autenticados
+DROP POLICY IF EXISTS "Product images are publicly readable" ON storage.objects;
 CREATE POLICY "Product images are publicly readable"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'product-images');
 
+DROP POLICY IF EXISTS "Anyone can upload product images" ON storage.objects;
 CREATE POLICY "Anyone can upload product images"
 ON storage.objects FOR INSERT
 WITH CHECK (bucket_id = 'product-images');
 
+DROP POLICY IF EXISTS "Anyone can update product images" ON storage.objects;
 CREATE POLICY "Anyone can update product images"
 ON storage.objects FOR UPDATE
 USING (bucket_id = 'product-images');
 
+DROP POLICY IF EXISTS "Anyone can delete product images" ON storage.objects;
 CREATE POLICY "Anyone can delete product images"
 ON storage.objects FOR DELETE
 USING (bucket_id = 'product-images');
 
 -- Políticas para restaurant-images: Todos pueden leer, todos pueden escribir (para desarrollo)
+DROP POLICY IF EXISTS "Restaurant images are publicly readable" ON storage.objects;
 CREATE POLICY "Restaurant images are publicly readable"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'restaurant-images');
 
+DROP POLICY IF EXISTS "Anyone can upload restaurant images" ON storage.objects;
 CREATE POLICY "Anyone can upload restaurant images"
 ON storage.objects FOR INSERT
 WITH CHECK (bucket_id = 'restaurant-images');
 
+DROP POLICY IF EXISTS "Anyone can update restaurant images" ON storage.objects;
 CREATE POLICY "Anyone can update restaurant images"
 ON storage.objects FOR UPDATE
 USING (bucket_id = 'restaurant-images');
 
+DROP POLICY IF EXISTS "Anyone can delete restaurant images" ON storage.objects;
 CREATE POLICY "Anyone can delete restaurant images"
 ON storage.objects FOR DELETE
 USING (bucket_id = 'restaurant-images');
 
 -- Políticas para user-avatars: Todos pueden leer, usuarios pueden escribir sus propios avatares
+DROP POLICY IF EXISTS "User avatars are publicly readable" ON storage.objects;
 CREATE POLICY "User avatars are publicly readable"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'user-avatars');
 
+DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
 CREATE POLICY "Users can upload their own avatar"
 ON storage.objects FOR INSERT
 WITH CHECK (
@@ -109,6 +130,7 @@ WITH CHECK (
   (storage.foldername(name))[1] = auth.uid()::text -- Solo en su propia carpeta
 );
 
+DROP POLICY IF EXISTS "Users can update their own avatar" ON storage.objects;
 CREATE POLICY "Users can update their own avatar"
 ON storage.objects FOR UPDATE
 USING (
@@ -117,6 +139,7 @@ USING (
   (storage.foldername(name))[1] = auth.uid()::text
 );
 
+DROP POLICY IF EXISTS "Users can delete their own avatar" ON storage.objects;
 CREATE POLICY "Users can delete their own avatar"
 ON storage.objects FOR DELETE
 USING (
@@ -126,10 +149,12 @@ USING (
 );
 
 -- Políticas para promotion-images: Todos pueden leer, solo restaurantes pueden escribir
+DROP POLICY IF EXISTS "Promotion images are publicly readable" ON storage.objects;
 CREATE POLICY "Promotion images are publicly readable"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'promotion-images');
 
+DROP POLICY IF EXISTS "Restaurants can upload promotion images" ON storage.objects;
 CREATE POLICY "Restaurants can upload promotion images"
 ON storage.objects FOR INSERT
 WITH CHECK (
@@ -137,6 +162,7 @@ WITH CHECK (
   auth.role() = 'authenticated'
 );
 
+DROP POLICY IF EXISTS "Restaurants can update their promotion images" ON storage.objects;
 CREATE POLICY "Restaurants can update their promotion images"
 ON storage.objects FOR UPDATE
 USING (
@@ -144,6 +170,7 @@ USING (
   auth.role() = 'authenticated'
 );
 
+DROP POLICY IF EXISTS "Restaurants can delete their promotion images" ON storage.objects;
 CREATE POLICY "Restaurants can delete their promotion images"
 ON storage.objects FOR DELETE
 USING (
@@ -152,10 +179,12 @@ USING (
 );
 
 -- Políticas para coupon-images: Todos pueden leer, solo restaurantes pueden escribir
+DROP POLICY IF EXISTS "Coupon images are publicly readable" ON storage.objects;
 CREATE POLICY "Coupon images are publicly readable"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'coupon-images');
 
+DROP POLICY IF EXISTS "Restaurants can upload coupon images" ON storage.objects;
 CREATE POLICY "Restaurants can upload coupon images"
 ON storage.objects FOR INSERT
 WITH CHECK (
@@ -163,6 +192,7 @@ WITH CHECK (
   auth.role() = 'authenticated'
 );
 
+DROP POLICY IF EXISTS "Restaurants can update their coupon images" ON storage.objects;
 CREATE POLICY "Restaurants can update their coupon images"
 ON storage.objects FOR UPDATE
 USING (
@@ -170,11 +200,49 @@ USING (
   auth.role() = 'authenticated'
 );
 
+DROP POLICY IF EXISTS "Restaurants can delete their coupon images" ON storage.objects;
 CREATE POLICY "Restaurants can delete their coupon images"
 ON storage.objects FOR DELETE
 USING (
   bucket_id = 'coupon-images' AND
   auth.role() = 'authenticated'
+);
+
+-- Políticas para fiscal-documents: Solo el usuario puede leer/escribir sus propios documentos
+DROP POLICY IF EXISTS "Users can view their own fiscal documents" ON storage.objects;
+CREATE POLICY "Users can view their own fiscal documents"
+ON storage.objects FOR SELECT
+USING (
+  bucket_id = 'fiscal-documents' AND
+  auth.role() = 'authenticated' AND
+  (storage.foldername(name))[1] = auth.uid()::text -- Solo en su propia carpeta
+);
+
+DROP POLICY IF EXISTS "Users can upload their own fiscal documents" ON storage.objects;
+CREATE POLICY "Users can upload their own fiscal documents"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'fiscal-documents' AND
+  auth.role() = 'authenticated' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+DROP POLICY IF EXISTS "Users can update their own fiscal documents" ON storage.objects;
+CREATE POLICY "Users can update their own fiscal documents"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'fiscal-documents' AND
+  auth.role() = 'authenticated' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+DROP POLICY IF EXISTS "Users can delete their own fiscal documents" ON storage.objects;
+CREATE POLICY "Users can delete their own fiscal documents"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'fiscal-documents' AND
+  auth.role() = 'authenticated' AND
+  (storage.foldername(name))[1] = auth.uid()::text
 );
 
 -- ==================== NOTAS IMPORTANTES ====================

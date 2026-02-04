@@ -38,10 +38,34 @@ const HomeScreen: React.FC = () => {
   // Estado para el orden de los botones y drag and drop
   const [draggedButtonId, setDraggedButtonId] = useState<string | null>(null);
   const [dragOverButtonId, setDragOverButtonId] = useState<string | null>(null);
+
+  // Estado para el orden de los widgets y drag and drop
+  const getDefaultWidgetOrder = (): string[] => ['weather', 'currency'];
+  const [widgetOrder, setWidgetOrder] = useState<string[]>(() => {
+    const savedOrder = localStorage.getItem('homeWidgetOrder');
+    if (savedOrder) {
+      try {
+        const parsed = JSON.parse(savedOrder);
+        const defaultOrder = getDefaultWidgetOrder();
+        const validOrder = defaultOrder.filter(id => parsed.includes(id));
+        const missingWidgets = defaultOrder.filter(id => !parsed.includes(id));
+        return [...validOrder, ...missingWidgets];
+      } catch {
+        return getDefaultWidgetOrder();
+      }
+    }
+    return getDefaultWidgetOrder();
+  });
+  const [draggedWidgetId, setDraggedWidgetId] = useState<string | null>(null);
+  const [dragOverWidgetId, setDragOverWidgetId] = useState<string | null>(null);
   
   // Estados para controlar la visibilidad de las descripciones
   const [showDescriptions, setShowDescriptions] = useState<boolean>(true);
   const [descriptionsOpacity, setDescriptionsOpacity] = useState<number>(1);
+  const [descriptionTimer, setDescriptionTimer] = useState<NodeJS.Timeout | null>(null);
+  // Estado para controlar la visibilidad de descripciones por botón
+  const [buttonDescriptions, setButtonDescriptions] = useState<Record<string, { show: boolean; opacity: number }>>({});
+  const [buttonDescriptionTimers, setButtonDescriptionTimers] = useState<Record<string, NodeJS.Timeout>>({});
   
   // Estados para controlar la visibilidad del título "Acciones Rápidas"
   const [showTitle, setShowTitle] = useState<boolean>(true);
@@ -91,6 +115,11 @@ const HomeScreen: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(`homeButtonOrder_${accountType}`, JSON.stringify(buttonOrder));
   }, [buttonOrder, accountType]);
+
+  // Guardar orden de widgets cuando cambie
+  useEffect(() => {
+    localStorage.setItem('homeWidgetOrder', JSON.stringify(widgetOrder));
+  }, [widgetOrder]);
 
   // Filtrar y ordenar botones según el orden guardado
   const getOrderedButtons = (): ButtonConfig[] => {
@@ -166,6 +195,60 @@ const HomeScreen: React.FC = () => {
     setDragOverButtonId(null);
   };
 
+  // Funciones de drag and drop para widgets
+  const handleWidgetDragStart = (e: React.DragEvent, widgetId: string) => {
+    setDraggedWidgetId(widgetId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', widgetId);
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.5';
+    }
+  };
+
+  const handleWidgetDragEnd = (e: React.DragEvent) => {
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+    }
+    setDraggedWidgetId(null);
+    setDragOverWidgetId(null);
+  };
+
+  const handleWidgetDragOver = (e: React.DragEvent, widgetId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedWidgetId && draggedWidgetId !== widgetId) {
+      setDragOverWidgetId(widgetId);
+    }
+  };
+
+  const handleWidgetDragLeave = () => {
+    setDragOverWidgetId(null);
+  };
+
+  const handleWidgetDrop = (e: React.DragEvent, targetWidgetId: string) => {
+    e.preventDefault();
+    
+    if (!draggedWidgetId || draggedWidgetId === targetWidgetId) {
+      setDraggedWidgetId(null);
+      setDragOverWidgetId(null);
+      return;
+    }
+
+    // Reordenar los widgets
+    const newOrder = [...widgetOrder];
+    const draggedIndex = newOrder.indexOf(draggedWidgetId);
+    const targetIndex = newOrder.indexOf(targetWidgetId);
+
+    if (draggedIndex !== -1 && targetIndex !== -1) {
+      newOrder.splice(draggedIndex, 1);
+      newOrder.splice(targetIndex, 0, draggedWidgetId);
+      setWidgetOrder(newOrder);
+    }
+
+    setDraggedWidgetId(null);
+    setDragOverWidgetId(null);
+  };
+
   // Efecto para mostrar todos los botones al mismo tiempo con fade-in lento
   // Usando el mismo patrón que el botón "Seleccionar idioma"
   useEffect(() => {
@@ -201,6 +284,61 @@ const HomeScreen: React.FC = () => {
     });
   }, [accountType, buttonOrder]);
 
+  // Función para mostrar descripciones por 10 segundos más
+  const showDescriptionsFor10Seconds = () => {
+    // Cancelar timer anterior si existe
+    if (descriptionTimer) {
+      clearTimeout(descriptionTimer);
+    }
+    
+    // Mostrar descripciones inmediatamente
+    setShowDescriptions(true);
+    setDescriptionsOpacity(1);
+    
+    // Configurar timer para ocultar después de 10 segundos
+    const timer = setTimeout(() => {
+      setDescriptionsOpacity(0);
+      setTimeout(() => {
+        setShowDescriptions(false);
+      }, 500);
+    }, 10000);
+    
+    setDescriptionTimer(timer);
+  };
+
+  // Función para mostrar descripción de un botón específico por 10 segundos
+  const showButtonDescriptionFor10Seconds = (buttonId: string) => {
+    // Cancelar timer anterior si existe para este botón
+    if (buttonDescriptionTimers[buttonId]) {
+      clearTimeout(buttonDescriptionTimers[buttonId]);
+    }
+    
+    // Mostrar descripción inmediatamente
+    setButtonDescriptions(prev => ({
+      ...prev,
+      [buttonId]: { show: true, opacity: 1 }
+    }));
+    
+    // Configurar timer para ocultar después de 10 segundos
+    const timer = setTimeout(() => {
+      setButtonDescriptions(prev => ({
+        ...prev,
+        [buttonId]: { show: prev[buttonId]?.show || false, opacity: 0 }
+      }));
+      setTimeout(() => {
+        setButtonDescriptions(prev => ({
+          ...prev,
+          [buttonId]: { show: false, opacity: 0 }
+        }));
+      }, 500);
+    }, 10000);
+    
+    setButtonDescriptionTimers(prev => ({
+      ...prev,
+      [buttonId]: timer
+    }));
+  };
+
   // Ocultar descripciones después de 10 segundos con efecto de desvanecimiento
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -214,6 +352,20 @@ const HomeScreen: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Limpiar timers al desmontar
+  useEffect(() => {
+    return () => {
+      if (descriptionTimer) {
+        clearTimeout(descriptionTimer);
+      }
+      Object.values(buttonDescriptionTimers).forEach(timer => {
+        if (timer && typeof timer === 'object' && 'ref' in timer) {
+          clearTimeout(timer as NodeJS.Timeout);
+        }
+      });
+    };
+  }, [descriptionTimer, buttonDescriptionTimers]);
 
   // Ocultar título "Acciones Rápidas" después de 10 segundos con efecto de desvanecimiento
   useEffect(() => {
@@ -238,6 +390,9 @@ const HomeScreen: React.FC = () => {
   const renderRegularButton = (button: ButtonConfig) => {
     const isDragging = draggedButtonId === button.id;
     const isDragOver = dragOverButtonId === button.id;
+    const buttonDescription = buttonDescriptions[button.id] || { show: showDescriptions, opacity: descriptionsOpacity };
+    const shouldShowDescription = buttonDescription.show || showDescriptions;
+    const descriptionOpacityValue = buttonDescription.show ? buttonDescription.opacity : descriptionsOpacity;
 
     return (
       <div
@@ -261,18 +416,29 @@ const HomeScreen: React.FC = () => {
           <span className="material-symbols-outlined text-primary group-hover:text-white">{button.icon}</span>
         </div>
         <div className="flex flex-col gap-1.5 flex-1 min-h-0 min-w-0">
-          <h2 className={`text-[#111813] dark:text-white font-bold leading-tight line-clamp-2 transition-all duration-500 ease-out ${showDescriptions ? 'text-base' : 'text-lg'}`}>{t(button.titleKey)}</h2>
-          {showDescriptions && (
+          <h2 className={`text-[#111813] dark:text-white font-bold leading-tight line-clamp-2 transition-all duration-500 ease-out ${shouldShowDescription ? 'text-base' : 'text-lg'}`}>{t(button.titleKey)}</h2>
+          {shouldShowDescription && (
             <p 
               className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 transition-opacity duration-500 ease-out"
-              style={{ opacity: descriptionsOpacity }}
+              style={{ opacity: descriptionOpacityValue }}
             >
               {t(button.descriptionKey)}
             </p>
           )}
         </div>
+        {/* Ícono de información */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            playClickSound();
+            showButtonDescriptionFor10Seconds(button.id);
+          }}
+          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors z-10"
+        >
+          <span className="material-symbols-outlined text-xs text-gray-500 dark:text-gray-400">info</span>
+        </button>
         {/* Indicador de que se puede arrastrar */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute top-2 right-10 opacity-0 group-hover:opacity-100 transition-opacity">
           <span className="material-symbols-outlined text-xs text-gray-400">drag_indicator</span>
         </div>
       </div>
@@ -301,22 +467,42 @@ const HomeScreen: React.FC = () => {
               className="flex flex-col gap-3 rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white p-5 items-start shadow-lg cursor-pointer overflow-hidden relative mb-3 transition-opacity duration-500 ease-out"
               style={{ opacity: buttonOpacities.qr }}
             >
-              <div className="z-10 flex items-center gap-3">
-                <div className="flex items-center justify-center size-12 rounded-xl bg-white/20 backdrop-blur-md">
+              <div className="z-10 flex items-center gap-3 w-full">
+                <div className="flex items-center justify-center size-12 rounded-xl bg-white/20 backdrop-blur-md shrink-0">
                   <span className="material-symbols-outlined text-white text-2xl">qr_code_scanner</span>
                 </div>
-                <div>
-                  <h2 className={`text-white font-bold leading-tight transition-all duration-500 ease-out ${showDescriptions ? 'text-lg' : 'text-xl'}`}>{t(qrButton.titleKey)}</h2>
-                  {showDescriptions && (
-                    <p 
-                      className="text-white/80 text-sm transition-opacity duration-500 ease-out"
-                      style={{ opacity: descriptionsOpacity }}
-                    >
-                      {t(qrButton.descriptionKey)}
-                    </p>
-                  )}
+                <div className="flex-1 min-w-0">
+                  {(() => {
+                    const qrDescription = buttonDescriptions['qr'] || { show: showDescriptions, opacity: descriptionsOpacity };
+                    const shouldShowQrDescription = qrDescription.show || showDescriptions;
+                    const qrDescriptionOpacityValue = qrDescription.show ? qrDescription.opacity : descriptionsOpacity;
+                    return (
+                      <>
+                        <h2 className={`text-white font-bold leading-tight transition-all duration-500 ease-out ${shouldShowQrDescription ? 'text-lg' : 'text-xl'}`}>{t(qrButton.titleKey)}</h2>
+                        {shouldShowQrDescription && (
+                          <p 
+                            className="text-white/80 text-sm transition-opacity duration-500 ease-out"
+                            style={{ opacity: qrDescriptionOpacityValue }}
+                          >
+                            {t(qrButton.descriptionKey)}
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
+              {/* Ícono de información */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  playClickSound();
+                  showButtonDescriptionFor10Seconds('qr');
+                }}
+                className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/30 transition-colors z-20"
+              >
+                <span className="material-symbols-outlined text-xs text-white">info</span>
+              </button>
               <div className="absolute -right-4 -bottom-4 opacity-10">
                 <span className="material-symbols-outlined text-[120px]">qr_code_2</span>
               </div>
@@ -342,8 +528,34 @@ const HomeScreen: React.FC = () => {
               Widgets
             </h3>
             <div className="px-4 space-y-3">
-              <CurrencyWidget />
-              <WeatherWidget />
+              {widgetOrder.map((widgetId) => {
+                const isDragging = draggedWidgetId === widgetId;
+                const isDragOver = dragOverWidgetId === widgetId;
+                
+                return (
+                  <div
+                    key={widgetId}
+                    draggable
+                    onDragStart={(e) => handleWidgetDragStart(e, widgetId)}
+                    onDragEnd={handleWidgetDragEnd}
+                    onDragOver={(e) => handleWidgetDragOver(e, widgetId)}
+                    onDragLeave={handleWidgetDragLeave}
+                    onDrop={(e) => handleWidgetDrop(e, widgetId)}
+                    className={`relative transition-all duration-200 group ${
+                      isDragOver ? 'border-2 border-primary border-dashed rounded-xl' : ''
+                    } ${isDragging ? 'opacity-50' : ''}`}
+                  >
+                    {widgetId === 'weather' && <WeatherWidget />}
+                    {widgetId === 'currency' && <CurrencyWidget />}
+                    {/* Indicador de que se puede arrastrar */}
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                      <div className="bg-black/50 dark:bg-white/50 backdrop-blur-sm rounded-lg p-1.5">
+                        <span className="material-symbols-outlined text-white dark:text-gray-900 text-sm">drag_indicator</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

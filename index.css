@@ -88,6 +88,33 @@
   transform: translateX(100%);
 }
 
+.toggle-checkbox {
+  background-image: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+}
+
+.toggle-checkbox:checked {
+  background-image: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+}
+
+.toggle-checkbox::before,
+.toggle-checkbox::after {
+  display: none !important;
+  content: none !important;
+}
+
+.toggle-checkbox::-webkit-appearance,
+.toggle-checkbox::-moz-appearance {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+}
+
 /* Safe area para evitar que el contenido se superponga con la barra de estado */
 .safe-top {
   padding-top: env(safe-area-inset-top, 24px);

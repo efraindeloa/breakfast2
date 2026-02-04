@@ -46,7 +46,7 @@
     "home": "Inicio",
     "menu": "Menú",
     "myOrder": "Mi orden",
-    "payments": "Pagos",
+    "payments": "Pagar",
     "profile": "Perfil",
     "settings": "Configuración",
     "assistant": "Asistente",
@@ -275,7 +275,7 @@
     "fiscalData": "Datos Fiscales",
     "paymentMethods": "Métodos de Pago",
     "orderHistory": "Historial de Órdenes",
-    "transactions": "Transacciones",
+    "transactions": "Historial de Pagos",
     "addPhoto": "Agregar foto",
     "changePhoto": "Cambiar foto",
     "editPhoto": "Editar foto",
@@ -297,7 +297,7 @@
     "favorites": "Mis Favoritos",
     "favoritesSubtitle": "Platillos y combinaciones guardadas",
     "orderHistorySubtitle": "Revisa tus desayunos anteriores",
-    "transactionsSubtitle": "Revisa tus transacciones anteriores",
+    "transactionsSubtitle": "Revisa tus pagos anteriores",
     "preferences": "Preferencias",
     "soundEffects": "Efectos de Sonido",
     "soundEffectsSubtitle": "Reproducir sonidos al interactuar",
@@ -381,7 +381,7 @@
     "step4": "Confirmación",
     "step1of4": "Paso 1 de 4",
     "billingInformation": "Información de Facturación",
-    "billingInformationDesc": "Completa tus datos para generar facturas automáticas en tus consumos de desayuno de forma rápida y sencilla.",
+    "billingInformationDesc": "Completa tus datos para generar facturas automáticas en tus consumos de forma rápida y sencilla.",
     "rfc": "RFC",
     "rfcHint": "Introduce tu RFC a 12 o 13 caracteres.",
     "businessName": "Razón Social",
@@ -412,16 +412,16 @@
     "generalExpenses": "Gastos en general",
     "selectRegime": "Selecciona tu régimen",
     "generalLawLegalEntities": "General de Ley Personas Morales",
-    "saveAndContinue": "Guardar y Continuar",
+    "saveAndContinue": "Continuar",
     "step2of4": "Paso 2 de 4",
     "uploadCertificate": "Sube tu Constancia",
-    "uploadCertificateDesc": "Sube el PDF de tu Constancia de Situación Fiscal o escanéalo con tu cámara. Usaremos IA para extraer tus datos automáticamente."
+    "uploadCertificateDesc": "Sube el PDF de tu Constancia de Situación Fiscal."
   },
   "emailConfig": {
     "title": "Configuración de Envío",
     "step3of4": "Paso 3 de 4",
     "whereToSend": "¿A dónde enviamos tus facturas?",
-    "whereToSendDesc": "Configura los correos electrónicos donde recibirás automáticamente tus archivos XML y PDF cada mañana.",
+    "whereToSendDesc": "Configura los correos electrónicos donde recibirás automáticamente tus archivos XML y PDF.",
     "receptionEmails": "Correos de recepción",
     "addAnother": "Agregar otro",
     "noEmailsConfigured": "No hay correos configurados",
@@ -431,7 +431,7 @@
     "autoSendOnPayment": "Envío automático al pagar",
     "autoSendOnPaymentDesc": "Generar y enviar la factura inmediatamente después de cada consumo de desayuno.",
     "dataSecurity": "Tus datos se manejan de forma segura bajo los protocolos del SAT.",
-    "continueToFinalStep": "Continuar al Paso Final",
+    "continueToFinalStep": "Continuar",
     "deleteEmail": "Eliminar correo"
   },
   "confirmation": {
@@ -447,7 +447,7 @@
     "generalExpenses": "G03 - Gastos en general",
     "generalLawLegalEntities": "601 - General de Ley Personas Morales",
     "editInformation": "Editar Información",
-    "finishConfiguration": "Finalizar Configuración"
+    "finishConfiguration": "Finalizar"
   },
   "transactions": {
     "title": "Transacciones",
@@ -951,7 +951,7 @@
   },
   "waitlist": {
     "title": "Lista de Espera",
-    "scanQR": "Escanear QR para Lista de Espera",
+    "scanQR": "Lista de espera",
     "scanQRDescription": "Escanea el código QR para agregarte a la lista de espera",
     "selectZone": "Selecciona la zona",
     "interior": "Interior",

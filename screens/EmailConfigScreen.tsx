@@ -1,41 +1,149 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
+import { 
+  getBillingReceptionEmails, 
+  createBillingReceptionEmail, 
+  updateBillingReceptionEmail, 
+  deleteBillingReceptionEmail,
+  updateBillingAutoSendConfig,
+  getUserBillingProfile,
+  type BillingReceptionEmail
+} from '../services/api/user';
 
 interface Email {
-  id: number;
+  id: string;
   email: string;
   label?: string;
   isPrimary: boolean;
+  autoSendOnPayment: boolean;
 }
 
 const EmailConfigScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [autoSend, setAutoSend] = useState(true);
   const [showAddEmail, setShowAddEmail] = useState(false);
   const [newEmail, setNewEmail] = useState('');
-  const [editingEmailId, setEditingEmailId] = useState<number | null>(null);
+  const [editingEmailId, setEditingEmailId] = useState<string | null>(null);
   const [editingEmailValue, setEditingEmailValue] = useState('');
-  const [selectedEmailId, setSelectedEmailId] = useState<number | null>(1); // Por defecto el primer correo está seleccionado
-  const [emails, setEmails] = useState<Email[]>([
-    { id: 1, email: 'juan.perez@empresa.com', isPrimary: true },
-    { id: 2, email: 'contabilidad@empresa.com', isPrimary: false },
-  ]);
+  const [selectedEmailIds, setSelectedEmailIds] = useState<string[]>([]);
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [billingProfileId, setBillingProfileId] = useState<string | undefined>();
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [showDescription, setShowDescription] = useState(true);
+  const [showHints, setShowHints] = useState(true);
 
-  const handleAddEmail = () => {
-    if (newEmail.trim()) {
-      const newId = Math.max(...emails.map(e => e.id), 0) + 1;
-      const newEmails = [...emails, { id: newId, email: newEmail.trim(), isPrimary: false }];
-      setEmails(newEmails);
-      setSelectedEmailId(newId); // Seleccionar el nuevo correo agregado
-      setNewEmail('');
-      setShowAddEmail(false);
+  // Ocultar descripción y hints después de 10 segundos
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowDescription(false);
+      setShowHints(false);
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Obtener el perfil de facturación para obtener el billing_profile_id
+        const billingProfile = await getUserBillingProfile();
+        if (billingProfile?.success && billingProfile.data) {
+          setBillingProfileId(billingProfile.data.id);
+        }
+
+        // Cargar emails de recepción
+        const emailsResponse = await getBillingReceptionEmails(billingProfile?.data?.id);
+        if (emailsResponse?.success) {
+          // Si la respuesta es exitosa, usar los datos (puede ser un array vacío si la tabla no existe)
+          const loadedEmails: Email[] = (emailsResponse.data || []).map(e => ({
+            id: e.id,
+            email: e.email,
+            label: e.label,
+            isPrimary: e.is_primary,
+            autoSendOnPayment: e.auto_send_on_payment
+          }));
+          setEmails(loadedEmails);
+          
+          // Seleccionar emails que tienen auto_send_on_payment activo
+          const activeEmails = loadedEmails.filter(e => e.autoSendOnPayment);
+          setSelectedEmailIds(activeEmails.map(e => e.id));
+          
+          // Si hay emails, usar el auto_send del primero como referencia
+          if (loadedEmails.length > 0) {
+            setAutoSend(loadedEmails[0].autoSendOnPayment);
+          }
+        } else if (emailsResponse?.error) {
+          // Solo mostrar error si no es el caso de tabla no existente
+          if (!emailsResponse.error.includes('no existe') && !emailsResponse.error.includes('Could not find')) {
+            console.warn('[EmailConfig] No se pudieron cargar los emails:', emailsResponse.error);
+          }
+        }
+      } catch (error: any) {
+        // Solo mostrar error si no es el caso de tabla no existente
+        if (!error.message?.includes('no existe') && !error.message?.includes('Could not find')) {
+          console.error('[EmailConfig] Error loading emails:', error);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user?.id]);
+
+  const handleAddEmail = async () => {
+    if (!newEmail.trim() || !user?.id) return;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail.trim())) {
+      alert('Por favor, ingresa un email válido');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await createBillingReceptionEmail({
+        billing_profile_id: billingProfileId,
+        email: newEmail.trim(),
+        is_primary: emails.length === 0, // Primer email es primary
+        auto_send_on_payment: autoSend
+      });
+
+      if (response?.success && response.data) {
+        const newEmailObj: Email = {
+          id: response.data.id,
+          email: response.data.email,
+          label: response.data.label,
+          isPrimary: response.data.is_primary,
+          autoSendOnPayment: response.data.auto_send_on_payment
+        };
+        setEmails([...emails, newEmailObj]);
+        setSelectedEmailIds([...selectedEmailIds, newEmailObj.id]);
+        setNewEmail('');
+        setShowAddEmail(false);
+      }
+    } catch (error) {
+      console.error('Error adding email:', error);
+      setNotification({ message: 'Error al agregar el email. Por favor, intenta nuevamente.', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleEditEmail = (id: number) => {
+  const handleEditEmail = (id: string) => {
     const email = emails.find(e => e.id === id);
     if (email) {
       setEditingEmailId(id);
@@ -43,13 +151,34 @@ const EmailConfigScreen: React.FC = () => {
     }
   };
 
-  const handleSaveEdit = (id: number) => {
-    if (editingEmailValue.trim()) {
-      setEmails(emails.map(e => 
-        e.id === id ? { ...e, email: editingEmailValue.trim() } : e
-      ));
-      setEditingEmailId(null);
-      setEditingEmailValue('');
+  const handleSaveEdit = async (id: string) => {
+    if (!editingEmailValue.trim() || !user?.id) return;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(editingEmailValue.trim())) {
+      alert('Por favor, ingresa un email válido');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await updateBillingReceptionEmail(id, {
+        email: editingEmailValue.trim()
+      });
+
+      if (response?.success && response.data) {
+        setEmails(emails.map(e => 
+          e.id === id ? { ...e, email: response.data!.email } : e
+        ));
+        setEditingEmailId(null);
+        setEditingEmailValue('');
+      }
+    } catch (error) {
+      console.error('Error updating email:', error);
+      setNotification({ message: 'Error al actualizar el email. Por favor, intenta nuevamente.', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -58,20 +187,83 @@ const EmailConfigScreen: React.FC = () => {
     setEditingEmailValue('');
   };
 
-  const handleDeleteEmail = (id: number) => {
+  const handleDeleteEmail = async (id: string) => {
+    if (!user?.id) return;
+
+    setIsSaving(true);
+    try {
+      const response = await deleteBillingReceptionEmail(id);
+      if (response?.success) {
+        const updatedEmails = emails.filter(e => e.id !== id);
+        setEmails(updatedEmails);
+        setSelectedEmailIds(selectedEmailIds.filter(emailId => emailId !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting email:', error);
+      setNotification({ message: 'Error al eliminar el email. Por favor, intenta nuevamente.', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleToggleEmailSelection = async (id: string) => {
+    if (!user?.id) return;
+
     const email = emails.find(e => e.id === id);
-    if (email) {
-      const updatedEmails = emails.filter(e => e.id !== id);
-      setEmails(updatedEmails);
-      
-      // Si se eliminó el correo seleccionado, seleccionar otro o limpiar selección
-      if (selectedEmailId === id) {
-        if (updatedEmails.length > 0) {
-          setSelectedEmailId(updatedEmails[0].id);
+    if (!email) return;
+
+    const newAutoSend = !email.autoSendOnPayment;
+
+    // Si se está desactivando y es el último activo, no permitir
+    if (!newAutoSend && selectedEmailIds.length === 1 && selectedEmailIds.includes(id)) {
+      setNotification({ message: 'Debes tener al menos un email activo para recibir facturas', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await updateBillingReceptionEmail(id, {
+        auto_send_on_payment: newAutoSend
+      });
+
+      if (response?.success && response.data) {
+        setEmails(emails.map(e => 
+          e.id === id ? { ...e, autoSendOnPayment: response.data!.auto_send_on_payment } : e
+        ));
+
+        if (newAutoSend) {
+          setSelectedEmailIds([...selectedEmailIds, id]);
         } else {
-          setSelectedEmailId(null);
+          setSelectedEmailIds(selectedEmailIds.filter(emailId => emailId !== id));
         }
       }
+    } catch (error) {
+      console.error('Error updating email selection:', error);
+      setNotification({ message: 'Error al actualizar la selección. Por favor, intenta nuevamente.', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleContinue = async () => {
+    if (!user?.id) return;
+
+    setIsSaving(true);
+    try {
+      // Actualizar configuración de auto_send para todos los emails
+      await updateBillingAutoSendConfig(autoSend, billingProfileId);
+      
+      // Navegar a la siguiente pantalla
+      navigate('/billing-step-4');
+    } catch (error) {
+      console.error('Error saving configuration:', error);
+      setNotification({ message: 'Error al guardar la configuración. Por favor, intenta nuevamente.', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -99,9 +291,11 @@ const EmailConfigScreen: React.FC = () => {
 
         <section className="px-4 pt-4">
           <h3 className="text-[#181411] dark:text-white tracking-tight text-3xl font-extrabold leading-tight">{t('emailConfig.whereToSend')}</h3>
-          <p className="text-gray-600 dark:text-gray-400 text-base font-normal leading-relaxed pt-2">
-            {t('emailConfig.whereToSendDesc')}
-          </p>
+          {showDescription && (
+            <p className="text-gray-600 dark:text-gray-400 text-base font-normal leading-relaxed pt-2 transition-opacity duration-300">
+              {t('emailConfig.whereToSendDesc')}
+            </p>
+          )}
         </section>
 
         <div className="px-4 mt-8">
@@ -120,8 +314,12 @@ const EmailConfigScreen: React.FC = () => {
                 <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mx-auto mb-4">
                   <span className="material-symbols-outlined text-primary text-4xl">mail</span>
                 </div>
-                <h3 className="text-[#181411] dark:text-white text-lg font-bold mb-2">{t('emailConfig.noEmailsConfigured')}</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">{t('emailConfig.addEmailToReceive')}</p>
+                {showHints && (
+                  <>
+                    <h3 className="text-[#181411] dark:text-white text-lg font-bold mb-2 transition-opacity duration-300">{t('emailConfig.noEmailsConfigured')}</h3>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 transition-opacity duration-300">{t('emailConfig.addEmailToReceive')}</p>
+                  </>
+                )}
                 <button
                   onClick={() => setShowAddEmail(true)}
                   className="bg-primary text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 mx-auto hover:bg-[#e07d1d] transition-colors"
@@ -171,8 +369,8 @@ const EmailConfigScreen: React.FC = () => {
                   email={email.email}
                   label={email.label}
                   isPrimary={email.isPrimary}
-                  isSelected={selectedEmailId !== null && selectedEmailId === email.id}
-                  onSelect={() => setSelectedEmailId(email.id)}
+                  isSelected={selectedEmailIds.includes(email.id)}
+                  onSelect={() => handleToggleEmailSelection(email.id)}
                   onEdit={handleEditEmail}
                   onDelete={handleDeleteEmail}
                 />
@@ -218,69 +416,78 @@ const EmailConfigScreen: React.FC = () => {
             )}
           </div>
         </div>
-
-        <div className="px-4 mt-8">
-          <div className="bg-white dark:bg-gray-800/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 flex items-center justify-between">
-            <div className="flex-1 pr-4">
-              <h4 className="text-sm font-bold text-[#181411] dark:text-white">{t('emailConfig.autoSendOnPayment')}</h4>
-              <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">
-                {t('emailConfig.autoSendOnPaymentDesc')}
-              </p>
-            </div>
-            <div className="relative inline-block w-12 h-6 align-middle select-none transition duration-200 ease-in">
-              <input
-                checked={autoSend}
-                onChange={(e) => setAutoSend(e.target.checked)}
-                className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-200 dark:border-gray-700 checked:border-primary z-10 transition-transform duration-200"
-                id="toggle"
-                name="toggle"
-                type="checkbox"
-              />
-              <label
-                className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer transition-colors duration-200 ${
-                  autoSend ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-700'
-                }`}
-                htmlFor="toggle"
-              >
-                <span className={`toggle-dot absolute left-0 w-6 h-6 bg-white rounded-full transition-transform duration-200 ${
-                  autoSend ? 'translate-x-6' : 'translate-x-0'
-                }`}></span>
-              </label>
-            </div>
-          </div>
-          <p className="text-gray-500 dark:text-gray-400 text-[12px] font-normal leading-normal pt-3 ml-1 flex items-start gap-2">
-            <span className="material-symbols-outlined text-base mt-0.5">verified_user</span>
-            <span>{t('emailConfig.dataSecurity')}</span>
-          </p>
-        </div>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-background-dark/95 ios-blur border-t border-gray-100 dark:border-gray-800 safe-area-bottom z-50">
-        <div className="max-w-md mx-auto px-4 pt-4 pb-2">
+      <div className="fixed left-0 right-0 bg-white/95 dark:bg-background-dark/95 ios-blur border-t border-gray-100 dark:border-gray-800 z-50" style={{ bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
+        <div className="max-w-md mx-auto px-4 pt-4 pb-4">
           <button
-            onClick={() => navigate('/billing-step-4')}
-            className="w-full bg-primary hover:bg-[#e07d1d] text-white font-bold py-4 rounded-xl text-lg shadow-lg shadow-primary/20 active:scale-[0.98] transition-all"
+            onClick={handleContinue}
+            disabled={isSaving || isLoading}
+            className="w-full bg-primary hover:bg-[#e07d1d] text-white font-bold py-4 rounded-xl text-lg shadow-lg shadow-primary/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {t('emailConfig.continueToFinalStep')}
+            {isSaving ? 'Guardando...' : t('emailConfig.continueToFinalStep')}
           </button>
         </div>
       </div>
+
+      {/* Notificación temporal */}
+      {notification && (
+        <div 
+          className={`fixed top-20 left-1/2 -translate-x-1/2 z-[300] px-6 py-4 rounded-xl shadow-2xl max-w-sm w-full mx-4 transition-all duration-300 ${
+            notification.type === 'success' 
+              ? 'bg-green-500 text-white' 
+              : notification.type === 'error'
+              ? 'bg-red-500 text-white'
+              : 'bg-blue-500 text-white'
+          }`}
+          style={{ animation: 'slideDown 0.3s ease-out' }}
+        >
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined">
+              {notification.type === 'success' ? 'check_circle' : notification.type === 'error' ? 'error' : 'info'}
+            </span>
+            <p className="font-semibold text-sm flex-1">{notification.message}</p>
+            <button
+              onClick={() => setNotification(null)}
+              className="text-white/80 hover:text-white transition-colors"
+            >
+              <span className="material-symbols-outlined text-xl">close</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 };
 
 interface EmailItemProps {
-  id: number;
+  id: string;
   email: string;
   label?: string;
   isPrimary: boolean;
   isSelected: boolean;
   onSelect: () => void;
-  onEdit: (id: number) => void;
-  onDelete: (id: number) => void;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
-const EmailItem: React.FC<EmailItemProps> = ({ id, email, label, isPrimary, isSelected, onSelect, onEdit, onDelete }) => (
+const EmailItem: React.FC<EmailItemProps> = ({ id, email, label, isPrimary, isSelected, onSelect, onEdit, onDelete }) => {
+  const { t } = useTranslation();
+  
+  return (
   <div 
     onClick={onSelect}
     className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all ${
@@ -319,6 +526,7 @@ const EmailItem: React.FC<EmailItemProps> = ({ id, email, label, isPrimary, isSe
       </button>
     </div>
   </div>
-);
+  );
+};
 
 export default EmailConfigScreen;

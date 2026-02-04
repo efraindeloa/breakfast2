@@ -5,15 +5,15 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
-import { supabase, isSupabaseConfigured } from '../config/supabase';
+import { isSupabaseConfigured } from '../config/supabase';
 import { 
   getUserSettings, 
   upsertUserSettings,
   getUserPaymentMethods,
   UserPaymentMethod
 } from '../services/database';
-import { getUserProfile, updateUserProfile } from '../services/api';
-import { playClickSound, areSoundsEnabled, setSoundsEnabled } from '../utils/sound';
+import { getUserProfile, updateUserProfile, getUserData, updateUserData } from '../services/api/user';
+import { playClickSound } from '../utils/sound';
 
 interface Card {
   id: string; // Cambiar a string para usar UUID de la BD
@@ -53,19 +53,13 @@ const ProfileScreen: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [showImageMenu, setShowImageMenu] = useState(false);
-  const [soundsEnabled, setSoundsEnabledState] = useState<boolean>(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Cargar preferencia de sonidos
-  useEffect(() => {
-    setSoundsEnabledState(areSoundsEnabled());
-  }, []);
-
-  // Cargar datos del usuario desde la base de datos
+  // Cargar datos del usuario desde la API
   useEffect(() => {
     const loadUserData = async () => {
       if (!isSupabaseConfigured() || !user?.id) {
@@ -75,39 +69,12 @@ const ProfileScreen: React.FC = () => {
 
       try {
         setIsLoadingUserData(true);
-        const { data, error } = await supabase
-          .from('users')
-          .select('name, email, phone')
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          console.error('[ProfileScreen] Error loading user data:', error);
-          // Si hay error, usar datos del usuario autenticado de Supabase Auth
-          // Obtener nombre de OAuth si está disponible (full_name, name, o email)
-          const fullName = user.user_metadata?.full_name || 
-                          user.user_metadata?.name || 
-                          user.email?.split('@')[0] || 
-                          '';
-          setUserData({
-            name: fullName,
-            email: user.email || '',
-            phone: user.phone || user.user_metadata?.phone || '',
-          });
-        } else if (data) {
-          // Si hay datos en la BD, usarlos, pero si el nombre está vacío, intentar obtenerlo de OAuth
-          const fullName = data.name || 
-                          user.user_metadata?.full_name || 
-                          user.user_metadata?.name || 
-                          user.email?.split('@')[0] || 
-                          '';
-          setUserData({
-            name: fullName,
-            email: data.email || user.email || '',
-            phone: data.phone || user.phone || user.user_metadata?.phone || '',
-          });
+        const result = await getUserData(user.id);
+        
+        if (result.success && result.data) {
+          setUserData(result.data);
         } else {
-          // Si no hay datos en la tabla users, usar datos de Supabase Auth (incluyendo OAuth)
+          // Fallback a datos de Auth si la API falla
           const fullName = user.user_metadata?.full_name || 
                           user.user_metadata?.name || 
                           user.email?.split('@')[0] || 
@@ -121,8 +88,12 @@ const ProfileScreen: React.FC = () => {
       } catch (error) {
         console.error('[ProfileScreen] Error loading user data:', error);
         // Fallback a datos de Supabase Auth
+        const fullName = user.user_metadata?.full_name || 
+                        user.user_metadata?.name || 
+                        user.email?.split('@')[0] || 
+                        '';
         setUserData({
-          name: user.user_metadata?.name || user.email?.split('@')[0] || '',
+          name: fullName,
           email: user.email || '',
           phone: user.phone || user.user_metadata?.phone || '',
         });
@@ -138,11 +109,6 @@ const ProfileScreen: React.FC = () => {
   useEffect(() => {
     const loadUserProfileData = async () => {
       if (!user?.id || !isSupabaseConfigured()) {
-        // Fallback a localStorage si no hay usuario o Supabase
-        const savedImage = localStorage.getItem('profileImage');
-        if (savedImage) {
-          setProfileImage(savedImage);
-        }
         return;
       }
 
@@ -151,12 +117,6 @@ const ProfileScreen: React.FC = () => {
         const profileResult = await getUserProfile(user.id);
         if (profileResult.success && profileResult.data?.avatar_url) {
           setProfileImage(profileResult.data.avatar_url);
-        } else {
-          // Fallback a localStorage si no hay avatar en BD
-          const savedImage = localStorage.getItem('profileImage');
-          if (savedImage) {
-            setProfileImage(savedImage);
-          }
         }
 
         // Cargar métodos de pago
@@ -190,11 +150,6 @@ const ProfileScreen: React.FC = () => {
         setCards(formattedCards);
       } catch (error) {
         console.error('[ProfileScreen] Error loading profile data:', error);
-        // Fallback a localStorage
-        const savedImage = localStorage.getItem('profileImage');
-        if (savedImage) {
-          setProfileImage(savedImage);
-        }
       }
     };
 
@@ -205,22 +160,17 @@ const ProfileScreen: React.FC = () => {
   useEffect(() => {
     const saveProfileImage = async () => {
       if (!user?.id || !isSupabaseConfigured() || profileImage === defaultImage) {
-        // Fallback a localStorage si no hay usuario o Supabase
-        if (profileImage && profileImage !== defaultImage) {
-          localStorage.setItem('profileImage', profileImage);
-        }
         return;
       }
 
       try {
-        // Guardar avatar_url en user_profiles
-        await updateUserProfile({ avatar_url: profileImage }, user.id);
-        // También guardar en localStorage como backup
-        localStorage.setItem('profileImage', profileImage);
+        // Guardar avatar_url a través de la API
+        const result = await updateUserProfile({ avatar_url: profileImage }, user.id);
+        if (!result.success) {
+          console.error('[ProfileScreen] Error saving profile image:', result.error);
+        }
       } catch (error) {
         console.error('[ProfileScreen] Error saving profile image:', error);
-        // Fallback a localStorage
-        localStorage.setItem('profileImage', profileImage);
       }
     };
 
@@ -338,22 +288,28 @@ const ProfileScreen: React.FC = () => {
   const handleSaveEdit = async () => {
     if (editingField && user?.id) {
       try {
-        // Actualizar en la base de datos
+        // No permitir actualizar email desde aquí (debe hacerse a través de Supabase Auth)
+        if (editingField === 'email') {
+          console.warn('[ProfileScreen] Email cannot be updated from profile screen');
+          setEditingField(null);
+          setEditValue('');
+          return;
+        }
+
+        // Actualizar a través de la API
         if (isSupabaseConfigured()) {
-          const updateData: { name?: string; email?: string; phone?: string } = {};
-          updateData[editingField] = editValue;
+          const updateData: { name?: string; phone?: string } = {};
+          if (editingField === 'name') updateData.name = editValue;
+          if (editingField === 'phone') updateData.phone = editValue;
 
-          const { error } = await supabase
-            .from('users')
-            .update(updateData)
-            .eq('id', user.id);
+          const result = await updateUserData(updateData, user.id);
 
-          if (error) {
-            console.error('[ProfileScreen] Error updating user data:', error);
-            // Aún así actualizar el estado local
-            setUserData({ ...userData, [editingField]: editValue });
+          if (result.success && result.data) {
+            // Actualizar estado local con los datos actualizados de la API
+            setUserData(result.data);
           } else {
-            // Actualizar estado local solo si la actualización fue exitosa
+            console.error('[ProfileScreen] Error updating user data:', result.error);
+            // Aún así actualizar el estado local
             setUserData({ ...userData, [editingField]: editValue });
           }
         } else {
@@ -364,10 +320,10 @@ const ProfileScreen: React.FC = () => {
         console.error('[ProfileScreen] Error saving user data:', error);
         // Aún así actualizar el estado local
         setUserData({ ...userData, [editingField]: editValue });
+      } finally {
+        setEditingField(null);
+        setEditValue('');
       }
-      
-      setEditingField(null);
-      setEditValue('');
     }
   };
 
@@ -536,17 +492,18 @@ const ProfileScreen: React.FC = () => {
   const handleDeleteImage = async () => {
     setProfileImage(defaultImage);
     
-    // Eliminar de la base de datos
+    // Eliminar de la base de datos a través de la API
     if (user?.id && isSupabaseConfigured()) {
       try {
-        await updateUserProfile({ avatar_url: null }, user.id);
+        const result = await updateUserProfile({ avatar_url: null }, user.id);
+        if (!result.success) {
+          console.error('[ProfileScreen] Error deleting profile image:', result.error);
+        }
       } catch (error) {
         console.error('[ProfileScreen] Error deleting profile image:', error);
       }
     }
     
-    // También eliminar de localStorage
-    localStorage.removeItem('profileImage');
     setShowImageMenu(false);
   };
 
@@ -679,7 +636,6 @@ const ProfileScreen: React.FC = () => {
                 return t('profile.greeting').replace('Carlos', firstName);
               })()}
             </p>
-            <p className="text-[#8a7560] dark:text-[#c0a890] mt-1 text-center">{t('profile.greetingMessage')}</p>
             <div className="mt-2 px-3 py-1 bg-primary/10 rounded-full">
               <p className="text-primary text-xs font-semibold uppercase">{t('profile.memberSince')}</p>
             </div>
@@ -885,42 +841,8 @@ const ProfileScreen: React.FC = () => {
         </div>
       </section>
 
-      {/* Preferencias */}
-      <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
-        <h3 className="text-lg font-bold py-4">{t('profile.preferences') || 'Preferencias'}</h3>
-        <div className="flex items-center justify-between py-3 border-b border-gray-50 dark:border-gray-800">
-          <div className="flex items-center gap-4">
-            <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 size-12">
-              <span className="material-symbols-outlined">volume_up</span>
-            </div>
-            <div>
-              <p className="font-semibold text-[#181411] dark:text-white">{t('profile.soundEffects') || 'Efectos de Sonido'}</p>
-              <p className="text-[#8a7560] dark:text-[#c0a890] text-sm">{t('profile.soundEffectsSubtitle') || 'Reproducir sonidos al interactuar'}</p>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              const newValue = !soundsEnabled;
-              setSoundsEnabledState(newValue);
-              setSoundsEnabled(newValue);
-              playClickSound(); // Reproducir sonido incluso si se está desactivando (último sonido)
-            }}
-            className={`relative w-12 h-6 rounded-full transition-colors ${
-              soundsEnabled ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
-            }`}
-          >
-            <span
-              className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                soundsEnabled ? 'translate-x-6' : 'translate-x-0'
-              }`}
-            />
-          </button>
-        </div>
-      </section>
-
       <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
         <h3 className="text-lg font-bold py-4">{t('profile.myActivity')}</h3>
-        <MenuItem icon="favorite" title={t('profile.favorites')} subtitle={t('profile.favoritesSubtitle')} onClick={() => navigate('/favorites')} />
         <MenuItem icon="history" title={t('profile.orderHistory')} subtitle={t('profile.orderHistorySubtitle')} onClick={() => navigate('/order-history')} />
         <MenuItem icon="payments" title={t('profile.transactions')} subtitle={t('profile.transactionsSubtitle')} onClick={() => navigate('/transactions')} />
       </section>

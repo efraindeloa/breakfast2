@@ -1,11 +1,98 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
+import { getUserBillingProfile, getBillingReceptionEmails } from '../services/api/user';
+
+interface FiscalSummary {
+  rfc: string;
+  businessName: string;
+  taxRegime: string;
+  cfdiUsage: string;
+  emailCount: number;
+}
 
 const ConfirmationScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [summary, setSummary] = useState<FiscalSummary | null>(null);
+
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Cargar perfil de facturación
+        const billingProfile = await getUserBillingProfile();
+        if (billingProfile?.success && billingProfile.data) {
+          const profile = billingProfile.data;
+          
+          // Cargar emails de recepción
+          const emailsResponse = await getBillingReceptionEmails(profile.id);
+          const emailCount = emailsResponse?.success ? (emailsResponse.data?.length || 0) : 0;
+
+          // Mapear régimen fiscal
+          const regimeMap: Record<string, string> = {
+            '601': '601 – General de Ley Personas Morales',
+            '605': '605 – Sueldos y Salarios',
+            '612': '612 – Personas Físicas con Actividades Empresariales y Profesionales',
+            '616': '616 – Sin obligaciones fiscales',
+            '626': '626 – Régimen Simplificado de Confianza (RESICO)'
+          };
+
+          // Mapear uso de CFDI
+          const cfdiMap: Record<string, string> = {
+            'G03': 'G03 – Gastos en general',
+            'S01': 'S01 – Sin efectos fiscales',
+            'P01': 'P01 – Por definir'
+          };
+
+          setSummary({
+            rfc: profile.tax_id || '',
+            businessName: profile.business_name || '',
+            taxRegime: regimeMap[profile.regimen_fiscal || ''] || profile.regimen_fiscal || '',
+            cfdiUsage: cfdiMap[profile.uso_cfdi || ''] || profile.uso_cfdi || '',
+            emailCount
+          });
+        }
+      } catch (error) {
+        console.error('Error loading confirmation data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user?.id]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-screen pb-40 items-center justify-center">
+        <div className="text-gray-500">Cargando...</div>
+      </div>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <div className="flex flex-col h-screen pb-40 items-center justify-center">
+        <div className="text-gray-500">No se encontraron datos de facturación</div>
+        <button 
+          onClick={() => navigate('/billing-step-1')}
+          className="mt-4 bg-primary text-white px-6 py-2 rounded-xl"
+        >
+          Configurar datos fiscales
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen pb-40">
@@ -42,10 +129,11 @@ const ConfirmationScreen: React.FC = () => {
             <h4 className="text-xs font-bold text-gray-400 uppercase">{t('confirmation.fiscalSummary')}</h4>
           </div>
           <div className="p-5 space-y-6">
-            <SummaryItem label={t('confirmation.rfc')} value="XAXX010101000" />
-            <SummaryItem label={t('confirmation.businessName')} value="SERVICIOS DE RESTAURACIÓN S.A. DE C.V." />
-            <SummaryItem label={t('confirmation.cfdiUsage')} value={t('confirmation.generalExpenses')} />
-            <SummaryItem label={t('confirmation.taxRegime')} value={t('confirmation.generalLawLegalEntities')} />
+            <SummaryItem label={t('confirmation.rfc')} value={summary.rfc || '-'} />
+            <SummaryItem label={t('confirmation.businessName')} value={summary.businessName || '-'} />
+            <SummaryItem label={t('confirmation.cfdiUsage')} value={summary.cfdiUsage || '-'} />
+            <SummaryItem label={t('confirmation.taxRegime')} value={summary.taxRegime || '-'} />
+            <SummaryItem label="Emails de recepción" value={`${summary.emailCount} ${summary.emailCount === 1 ? 'email configurado' : 'emails configurados'}`} />
           </div>
           <button 
             onClick={() => navigate('/billing-step-1')}
@@ -57,10 +145,9 @@ const ConfirmationScreen: React.FC = () => {
         </section>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-background-dark/90 p-4 pb-12 z-50">
-        <button onClick={() => navigate('/profile')} className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-3">
+      <div className="fixed left-0 right-0 bg-white/90 dark:bg-background-dark/90 ios-blur border-t border-gray-100 dark:border-gray-800 p-4 pb-4 z-50" style={{ bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
+        <button onClick={() => navigate('/profile')} className="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg shadow-lg">
           {t('confirmation.finishConfiguration')}
-          <span className="material-symbols-outlined">rocket_launch</span>
         </button>
       </div>
     </div>

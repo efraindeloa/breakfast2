@@ -13,7 +13,8 @@ const getAudioContext = (): AudioContext => {
 };
 
 /**
- * Genera un sonido de click simple usando Web Audio API
+ * Genera un sonido de click tipo iOS usando Web Audio API
+ * Características: 20-30ms, frecuencia 2.5-4kHz, ataque rápido, decaimiento inmediato
  */
 export const playClickSound = (): void => {
   // Verificar si los sonidos están habilitados
@@ -22,24 +23,45 @@ export const playClickSound = (): void => {
 
   try {
     const ctx = getAudioContext();
+    
+    // Crear oscilador principal con frecuencia en rango 2.5-4kHz
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
-
-    oscillator.connect(gainNode);
+    
+    // Filtro pasa-altas para eliminar graves y hacer el sonido más "seco"
+    const highpassFilter = ctx.createBiquadFilter();
+    highpassFilter.type = 'highpass';
+    highpassFilter.frequency.value = 2000; // Eliminar frecuencias por debajo de 2kHz
+    
+    // Filtro pasa-bajas para eliminar frecuencias muy altas y resonancia metálica
+    const lowpassFilter = ctx.createBiquadFilter();
+    lowpassFilter.type = 'lowpass';
+    lowpassFilter.frequency.value = 5000; // Limitar frecuencias por encima de 5kHz
+    lowpassFilter.Q.value = 0.7; // Q bajo para evitar resonancia
+    
+    // Conectar: oscilador -> filtro pasa-altas -> filtro pasa-bajas -> ganancia -> salida
+    oscillator.connect(highpassFilter);
+    highpassFilter.connect(lowpassFilter);
+    lowpassFilter.connect(gainNode);
     gainNode.connect(ctx.destination);
 
-    // Configurar el sonido (tono corto y agradable)
-    oscillator.frequency.value = 800; // Frecuencia en Hz
-    oscillator.type = 'sine';
+    // Frecuencia central en rango 2.5-4kHz (usando 3kHz como punto medio)
+    oscillator.frequency.value = 3000;
+    oscillator.type = 'sine'; // Onda senoidal para sonido limpio y neutral
 
-    // Envelope para que el sonido sea corto
+    // Envolvente ADSR muy rápida: ataque instantáneo, decaimiento inmediato, sin sustain
     const now = ctx.currentTime;
+    const duration = 0.025; // 25ms de duración total
+    
+    // Ataque muy rápido (1-2ms)
     gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(0.1, now + 0.01);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+    gainNode.gain.linearRampToValueAtTime(0.18, now + 0.002); // Volumen sutil pero audible
+    
+    // Decaimiento inmediato (resto de la duración)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
     oscillator.start(now);
-    oscillator.stop(now + 0.1);
+    oscillator.stop(now + duration);
   } catch (error) {
     console.warn('Error playing click sound:', error);
   }

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage, useTranslation } from '../contexts/LanguageContext';
 import { popularLanguages, allLanguages, languagesData } from '../content/languages';
+import { playClickSound, areSoundsEnabled, setSoundsEnabled } from '../utils/sound';
 // Importaciones estáticas para obtener traducciones del idioma seleccionado
 import * as esTranslations from '../locales/es.json';
 import * as enTranslations from '../locales/en.json';
@@ -57,6 +58,9 @@ const SettingsScreen: React.FC = () => {
   const [assistantEnabled, setAssistantEnabled] = useState(() => {
     const saved = localStorage.getItem('assistantEnabled');
     return saved === null ? false : saved === 'true'; // Por defecto desactivado
+  });
+  const [soundsEnabled, setSoundsEnabledState] = useState<boolean>(() => {
+    return areSoundsEnabled();
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [saved, setSaved] = useState(false);
@@ -254,66 +258,6 @@ const SettingsScreen: React.FC = () => {
       </header>
 
       <main className="flex-1 overflow-y-auto pb-40">
-        {/* AI Configuration Section */}
-        <section className="mt-4">
-          <div className="px-4 pb-2">
-            <h2 className="text-[#181411] dark:text-white text-sm font-bold uppercase tracking-wider opacity-60">{t('settings.ai.title')}</h2>
-          </div>
-          <div className="mx-4 bg-white dark:bg-[#2d241c] rounded-xl border border-solid border-[#e6e0db] dark:border-[#3d3228] overflow-hidden shadow-sm">
-            {/* Smart Translation Toggle */}
-            <div className="flex items-center gap-4 px-4 py-5 justify-between">
-              <div className="flex items-center gap-4">
-                <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
-                  <span className="material-symbols-outlined text-[26px]">auto_awesome</span>
-                </div>
-                <div className="flex flex-col justify-center max-w-[200px]">
-                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('settings.ai.smartTranslation')}</p>
-                  <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">{t('settings.ai.smartTranslationDesc')}</p>
-                </div>
-              </div>
-              <Toggle checked={smartTranslation} onChange={setSmartTranslation} />
-            </div>
-
-            <div className="h-[1px] bg-[#e6e0db] dark:bg-[#3d3228] mx-4"></div>
-
-            {/* Analysis Toggle */}
-            <div className="flex items-center gap-4 px-4 py-5 justify-between">
-              <div className="flex items-center gap-4">
-                <div className="text-[#8a7560] dark:text-[#a8937d] flex items-center justify-center rounded-lg bg-gray-100 dark:bg-[#3d3328] shrink-0 size-12">
-                  <span className="material-symbols-outlined text-[26px]">restaurant</span>
-                </div>
-                <div className="flex flex-col justify-center max-w-[200px]">
-                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('settings.ai.showSuggestions')}</p>
-                  <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">{t('settings.ai.suggestionsDesc')}</p>
-                </div>
-              </div>
-              <Toggle checked={suggestions} onChange={(checked) => {
-                setSuggestions(checked);
-                localStorage.setItem('showSuggestions', checked.toString());
-              }} />
-            </div>
-
-            <div className="h-[1px] bg-[#e6e0db] dark:bg-[#3d3228] mx-4"></div>
-
-            {/* Highlights Toggle */}
-            <div className="flex items-center gap-4 px-4 py-5 justify-between">
-              <div className="flex items-center gap-4">
-                <div className="text-[#8a7560] dark:text-[#a8937d] flex items-center justify-center rounded-lg bg-gray-100 dark:bg-[#3d3328] shrink-0 size-12">
-                  <span className="material-symbols-outlined text-[26px]">star</span>
-                </div>
-                <div className="flex flex-col justify-center max-w-[200px]">
-                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('settings.ai.showHighlights')}</p>
-                  <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">{t('settings.ai.highlightsDesc')}</p>
-                </div>
-              </div>
-              <Toggle checked={highlights} onChange={(checked) => {
-                setHighlights(checked);
-                localStorage.setItem('showHighlights', checked.toString());
-              }} />
-            </div>
-          </div>
-        </section>
-
         {/* Assistant Configuration Section */}
         <section className="mt-6">
           <div className="px-4 pb-2">
@@ -336,6 +280,89 @@ const SettingsScreen: React.FC = () => {
                 localStorage.setItem('assistantEnabled', checked.toString());
                 // Disparar evento para que AssistantButton se actualice
                 window.dispatchEvent(new CustomEvent('assistant-enabled-changed', { detail: { enabled: checked } }));
+              }} />
+            </div>
+          </div>
+        </section>
+
+        {/* Preferences Section */}
+        <section className="mt-6">
+          <div className="px-4 pb-2">
+            <h2 className="text-[#181411] dark:text-white text-sm font-bold uppercase tracking-wider opacity-60">{t('profile.preferences') || 'Preferencias'}</h2>
+          </div>
+          <div className="mx-4 bg-white dark:bg-[#2d241c] rounded-xl border border-solid border-[#e6e0db] dark:border-[#3d3228] overflow-hidden shadow-sm">
+            {/* Sound Effects Toggle */}
+            <div className="flex items-center gap-4 px-4 py-5 justify-between">
+              <div className="flex items-center gap-4">
+                <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+                  <span className="material-symbols-outlined text-[26px]">volume_up</span>
+                </div>
+                <div className="flex flex-col justify-center max-w-[200px]">
+                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('profile.soundEffects') || 'Efectos de Sonido'}</p>
+                  <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">{t('profile.soundEffectsSubtitle') || 'Reproducir sonidos al interactuar'}</p>
+                </div>
+              </div>
+              <Toggle 
+                checked={soundsEnabled} 
+                onChange={(checked) => {
+                  setSoundsEnabledState(checked);
+                  setSoundsEnabled(checked);
+                  playClickSound(); // Reproducir sonido incluso si se está desactivando (último sonido)
+                }} 
+              />
+            </div>
+
+            <div className="h-[1px] bg-[#e6e0db] dark:bg-[#3d3228] mx-4"></div>
+
+            {/* Smart Translation Toggle */}
+            <div className="flex items-center gap-4 px-4 py-5 justify-between">
+              <div className="flex items-center gap-4">
+                <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+                  <span className="material-symbols-outlined text-[26px]">auto_awesome</span>
+                </div>
+                <div className="flex flex-col justify-center max-w-[200px]">
+                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('settings.ai.smartTranslation')}</p>
+                  <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">{t('settings.ai.smartTranslationDesc')}</p>
+                </div>
+              </div>
+              <Toggle checked={smartTranslation} onChange={setSmartTranslation} />
+            </div>
+
+            <div className="h-[1px] bg-[#e6e0db] dark:bg-[#3d3228] mx-4"></div>
+
+            {/* Suggestions Toggle */}
+            <div className="flex items-center gap-4 px-4 py-5 justify-between">
+              <div className="flex items-center gap-4">
+                <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+                  <span className="material-symbols-outlined text-[26px]">restaurant</span>
+                </div>
+                <div className="flex flex-col justify-center max-w-[200px]">
+                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('settings.ai.showSuggestions')}</p>
+                  <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">{t('settings.ai.suggestionsDesc')}</p>
+                </div>
+              </div>
+              <Toggle checked={suggestions} onChange={(checked) => {
+                setSuggestions(checked);
+                localStorage.setItem('showSuggestions', checked.toString());
+              }} />
+            </div>
+
+            <div className="h-[1px] bg-[#e6e0db] dark:bg-[#3d3228] mx-4"></div>
+
+            {/* Highlights Toggle */}
+            <div className="flex items-center gap-4 px-4 py-5 justify-between">
+              <div className="flex items-center gap-4">
+                <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+                  <span className="material-symbols-outlined text-[26px]">star</span>
+                </div>
+                <div className="flex flex-col justify-center max-w-[200px]">
+                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('settings.ai.showHighlights')}</p>
+                  <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">{t('settings.ai.highlightsDesc')}</p>
+                </div>
+              </div>
+              <Toggle checked={highlights} onChange={(checked) => {
+                setHighlights(checked);
+                localStorage.setItem('showHighlights', checked.toString());
               }} />
             </div>
           </div>

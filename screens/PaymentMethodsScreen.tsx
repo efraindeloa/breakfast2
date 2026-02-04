@@ -47,6 +47,7 @@ const PaymentMethodsScreen: React.FC = () => {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [showOrderNotSentNotification, setShowOrderNotSentNotification] = useState(false);
   const [cards, setCards] = useState<Card[]>([]);
+  const [showHeaderMessage, setShowHeaderMessage] = useState(true);
 
   // Función para obtener el nombre traducido del platillo desde la base de datos
   const getDishName = async (dishId: number): Promise<string> => {
@@ -168,6 +169,14 @@ const PaymentMethodsScreen: React.FC = () => {
   }, [orders, cart, t]);
 
   // Cargar métodos de pago desde la base de datos
+  // Ocultar mensaje del encabezado después de 10 segundos
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowHeaderMessage(false);
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     const loadPaymentMethods = async () => {
       if (!user?.id) {
@@ -238,8 +247,8 @@ const PaymentMethodsScreen: React.FC = () => {
       />
 
       {/* Encabezado - Solo mostrar si hay items en el carrito */}
-      {orderItems.length > 0 && (
-      <div className="px-4 pt-5 pb-2">
+      {orderItems.length > 0 && showHeaderMessage && (
+      <div className="px-4 pt-5 pb-2 transition-opacity duration-300">
         <h3 className="text-xl font-bold text-primary">{t('payment.enjoyMessage')}</h3>
         <p className="text-[#6b7280] dark:text-gray-400 mt-1">{t('payment.reviewOrder')}</p>
         
@@ -365,21 +374,6 @@ const PaymentMethodsScreen: React.FC = () => {
                           </button>
                         ))}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={tipPercentage}
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value) || 0;
-                            setTipPercentage(Math.min(100, Math.max(0, value)));
-                          }}
-                          className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] text-[#181411] dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                          placeholder={t('payment.otherPercent')}
-                        />
-                        <span className="text-gray-500 dark:text-gray-400 text-sm">%</span>
-                      </div>
                     </div>
                   )}
 
@@ -399,24 +393,9 @@ const PaymentMethodsScreen: React.FC = () => {
                               setTipFixedAmount(value);
                             }
                           }}
-                          className="w-full pl-8 pr-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] text-[#181411] dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                          className="w-1/2 pl-8 pr-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2d2516] text-[#181411] dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                           placeholder="0.00"
                         />
-                      </div>
-                      <div className="flex gap-2">
-                        {[5, 10, 20, 50].map((amount) => (
-                          <button
-                            key={amount}
-                            onClick={() => setTipFixedAmount(amount.toString())}
-                            className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${
-                              tipFixedAmount === amount.toString()
-                                ? 'bg-primary text-white shadow-sm'
-                                : 'bg-white dark:bg-[#2d2516] border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-primary/50'
-                            }`}
-                          >
-                            ${amount}
-                          </button>
-                        ))}
                       </div>
                     </div>
                   )}

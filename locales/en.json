@@ -46,7 +46,7 @@
     "home": "Home",
     "menu": "Menu",
     "myOrder": "My Order",
-    "payments": "Payments",
+    "payments": "Pay",
     "profile": "Profile",
     "settings": "Settings",
     "assistant": "Assistant",
@@ -291,7 +291,7 @@
     "favorites": "My Favorites",
     "favoritesSubtitle": "Saved dishes and combinations",
     "orderHistorySubtitle": "Review your previous breakfasts",
-    "transactionsSubtitle": "Review your previous transactions",
+    "transactionsSubtitle": "Review your previous payments",
     "preferences": "Preferences",
     "soundEffects": "Sound Effects",
     "soundEffectsSubtitle": "Play sounds when interacting",
@@ -429,7 +429,7 @@
     "cfdiUsage": "CFDI Usage",
     "step1of4": "Step 1 of 4",
     "billingInformation": "Billing Information",
-    "billingInformationDesc": "Complete your information to automatically generate invoices for your breakfast expenses quickly and easily.",
+    "billingInformationDesc": "Complete your information to automatically generate invoices for your expenses quickly and easily.",
     "rfcHint": "Enter your RFC with 12 or 13 characters.",
     "regimeHint": "Must match your Tax Status Certificate.",
     "selectOption": "Select an option",
@@ -439,7 +439,7 @@
     "saveAndContinue": "Save and Continue",
     "step2of4": "Step 2 of 4",
     "uploadCertificate": "Upload your Certificate",
-    "uploadCertificateDesc": "Upload the PDF of your Tax Status Certificate or scan it with your camera. We will use AI to automatically extract your data."
+    "uploadCertificateDesc": "Upload the PDF of your Tax Status Certificate."
   },
   "transactions": {
     "title": "Transactions",
@@ -784,7 +784,7 @@
     "title": "Shipping Configuration",
     "step3of4": "Step 3 of 4",
     "whereToSend": "Where do we send your invoices?",
-    "whereToSendDesc": "Configure the email addresses where you will automatically receive your XML and PDF files every morning.",
+    "whereToSendDesc": "Configure the email addresses where you will automatically receive your XML and PDF files.",
     "receptionEmails": "Reception emails",
     "addAnother": "Add another",
     "noEmailsConfigured": "No emails configured",
@@ -941,7 +941,7 @@
   },
   "waitlist": {
     "title": "Waitlist",
-    "scanQR": "Scan QR for Waitlist",
+    "scanQR": "Waitlist",
     "scanQRDescription": "Scan the QR code to join the waitlist",
     "selectZone": "Select zone",
     "interior": "Interior",

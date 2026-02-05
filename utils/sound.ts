@@ -14,7 +14,7 @@ const getAudioContext = (): AudioContext => {
 
 /**
  * Genera un sonido de click tipo iOS usando Web Audio API
- * Características: 20-30ms, frecuencia 2.5-4kHz, ataque rápido, decaimiento inmediato
+ * Características: 20-30ms, frecuencia ~2kHz, ataque rápido, decaimiento inmediato
  */
 export const playClickSound = (): void => {
   // Verificar si los sonidos están habilitados
@@ -31,12 +31,12 @@ export const playClickSound = (): void => {
     // Filtro pasa-altas para eliminar graves y hacer el sonido más "seco"
     const highpassFilter = ctx.createBiquadFilter();
     highpassFilter.type = 'highpass';
-    highpassFilter.frequency.value = 2000; // Eliminar frecuencias por debajo de 2kHz
+    highpassFilter.frequency.value = 1500; // Eliminar frecuencias por debajo de 1.5kHz
     
     // Filtro pasa-bajas para eliminar frecuencias muy altas y resonancia metálica
     const lowpassFilter = ctx.createBiquadFilter();
     lowpassFilter.type = 'lowpass';
-    lowpassFilter.frequency.value = 5000; // Limitar frecuencias por encima de 5kHz
+    lowpassFilter.frequency.value = 4000; // Limitar frecuencias por encima de 4kHz
     lowpassFilter.Q.value = 0.7; // Q bajo para evitar resonancia
     
     // Conectar: oscilador -> filtro pasa-altas -> filtro pasa-bajas -> ganancia -> salida
@@ -45,8 +45,8 @@ export const playClickSound = (): void => {
     lowpassFilter.connect(gainNode);
     gainNode.connect(ctx.destination);
 
-    // Frecuencia central en rango 2.5-4kHz (usando 3kHz como punto medio)
-    oscillator.frequency.value = 3000;
+    // Frecuencia central reducida para sonido menos agudo (2kHz en lugar de 3kHz)
+    oscillator.frequency.value = 2000;
     oscillator.type = 'sine'; // Onda senoidal para sonido limpio y neutral
 
     // Envolvente ADSR muy rápida: ataque instantáneo, decaimiento inmediato, sin sustain
@@ -64,6 +64,61 @@ export const playClickSound = (): void => {
     oscillator.stop(now + duration);
   } catch (error) {
     console.warn('Error playing click sound:', error);
+  }
+};
+
+/**
+ * Genera un sonido de retroceso (Backspace/Delete) ligeramente diferente
+ * Características: frecuencia más grave, duración similar
+ */
+export const playBackspaceSound = (): void => {
+  // Verificar si los sonidos están habilitados
+  const soundsEnabled = localStorage.getItem('soundsEnabled') !== 'false';
+  if (!soundsEnabled) return;
+
+  try {
+    const ctx = getAudioContext();
+    
+    // Crear oscilador principal con frecuencia más grave
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    // Filtro pasa-altas para eliminar graves excesivos
+    const highpassFilter = ctx.createBiquadFilter();
+    highpassFilter.type = 'highpass';
+    highpassFilter.frequency.value = 1200; // Permitir frecuencias más bajas
+    
+    // Filtro pasa-bajas para suavizar
+    const lowpassFilter = ctx.createBiquadFilter();
+    lowpassFilter.type = 'lowpass';
+    lowpassFilter.frequency.value = 3500;
+    lowpassFilter.Q.value = 0.7;
+    
+    // Conectar: oscilador -> filtro pasa-altas -> filtro pasa-bajas -> ganancia -> salida
+    oscillator.connect(highpassFilter);
+    highpassFilter.connect(lowpassFilter);
+    lowpassFilter.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    // Frecuencia más grave que el click normal (1.6kHz vs 2kHz)
+    oscillator.frequency.value = 1600;
+    oscillator.type = 'sine';
+
+    // Envolvente similar pero con ataque ligeramente más suave
+    const now = ctx.currentTime;
+    const duration = 0.025; // 25ms de duración total
+    
+    // Ataque rápido pero ligeramente más suave
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(0.16, now + 0.003); // Volumen ligeramente más bajo
+    
+    // Decaimiento inmediato
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    oscillator.start(now);
+    oscillator.stop(now + duration);
+  } catch (error) {
+    console.warn('Error playing backspace sound:', error);
   }
 };
 

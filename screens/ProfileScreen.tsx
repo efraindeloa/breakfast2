@@ -32,11 +32,16 @@ const ProfileScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { config } = useRestaurant();
-  const { signOut } = useAuth();
+  const { signOut, user, userType } = useAuth();
   const { clearCart } = useCart();
   const [cards, setCards] = useState<Card[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
-  const { user } = useAuth();
+  
+  // Estado para el modal de restricción de invitados
+  const [guestRestrictionModal, setGuestRestrictionModal] = useState<{ show: boolean; featureName: string }>({
+    show: false,
+    featureName: ''
+  });
   const [userData, setUserData] = useState({
     name: '',
     email: '',
@@ -643,9 +648,26 @@ const ProfileScreen: React.FC = () => {
         </div>
       </section>
 
-      <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
-        <h3 className="text-lg font-bold py-4">{t('profile.accountInfo')}</h3>
-        <div className="py-4 space-y-4">
+      <section className={`bg-white dark:bg-[#2d2116] mb-2 px-4 ${userType === 'guest' ? 'opacity-50' : ''}`}>
+        <h3 className={`text-lg font-bold py-4 ${userType === 'guest' ? 'text-gray-400 dark:text-gray-500' : ''}`}>{t('profile.accountInfo')}</h3>
+        {userType === 'guest' ? (
+          <div className="py-8 text-center">
+            <div className="text-gray-400 dark:text-gray-500 mb-2">
+              <span className="material-symbols-outlined text-4xl">person_off</span>
+            </div>
+            <p className="text-gray-400 dark:text-gray-500 text-sm font-medium mb-2">Solo para usuarios registrados</p>
+              <button 
+                onClick={() => setGuestRestrictionModal({
+                  show: true,
+                  featureName: t('profile.accountInfo')
+                })}
+                className="text-primary text-sm font-medium hover:text-primary/80 transition-colors bg-transparent border-none shadow-none"
+              >
+                Registrarse para acceder
+              </button>
+          </div>
+        ) : (
+          <div className="py-4 space-y-4">
           {/* Nombre */}
           <div className="flex items-start gap-4">
             <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 size-12 shrink-0">
@@ -789,13 +811,24 @@ const ProfileScreen: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
+          </div>
+        )}
       </section>
 
       {/* Mis datos de facturación */}
       {config.allowInvoice && (
         <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
-          <MenuItem icon="receipt_long" title={t('profile.billingData')} subtitle={t('profile.billingDataSubtitle')} onClick={() => navigate('/billing-step-1')} />
+          <MenuItem 
+            icon="receipt_long" 
+            title={t('profile.billingData')} 
+            subtitle={t('profile.billingDataSubtitle')} 
+            disabled={userType === 'guest'}
+            onClick={() => navigate('/billing-step-1')} 
+            onRestrictedClick={() => setGuestRestrictionModal({
+              show: true,
+              featureName: t('profile.billingData')
+            })}
+          />
         </section>
       )}
 
@@ -805,13 +838,23 @@ const ProfileScreen: React.FC = () => {
           icon="stars" 
           title={t('loyalty.title')} 
           subtitle={t('loyalty.myLevelBenefits')} 
+          disabled={userType === 'guest'}
           onClick={() => navigate('/loyalty')} 
+          onRestrictedClick={() => setGuestRestrictionModal({
+            show: true,
+            featureName: t('loyalty.title')
+          })}
         />
         <MenuItem 
           icon="confirmation_number" 
           title={t('coupons.title')} 
           subtitle={t('coupons.yourCoupons')} 
+          disabled={userType === 'guest'}
           onClick={() => navigate('/coupons')} 
+          onRestrictedClick={() => setGuestRestrictionModal({
+            show: true,
+            featureName: t('coupons.title')
+          })}
         />
       </section>
 
@@ -821,58 +864,122 @@ const ProfileScreen: React.FC = () => {
           icon="contacts" 
           title={t('contacts.title')} 
           subtitle={t('contacts.manageContacts')} 
+          disabled={userType === 'guest'}
           onClick={() => navigate('/contacts')} 
+          onRestrictedClick={() => setGuestRestrictionModal({
+            show: true,
+            featureName: t('contacts.title')
+          })}
         />
       </section>
 
       {/* Tarjetas de Crédito */}
-      <section className="bg-white dark:bg-[#2d2116] mb-2 px-4 py-4">
-        <h3 className="text-lg font-bold mb-4">{t('profile.myCards')}</h3>
-        <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-2 -mx-4 px-4">
-          {cards.map((card) => (
-            <CreditCard
-              key={card.id}
-              {...card}
-              onDelete={() => setShowDeleteConfirm(card.id)}
-              onToggle={() => toggleCardStatus(card.id)}
-            />
-          ))}
-          <EmptyCard onClick={() => navigate('/add-card')} />
-        </div>
+      <section className={`bg-white dark:bg-[#2d2116] mb-2 px-4 py-4 ${userType === 'guest' ? 'opacity-50' : ''}`}>
+        <h3 className={`text-lg font-bold mb-4 ${userType === 'guest' ? 'text-gray-400 dark:text-gray-500' : ''}`}>{t('profile.myCards')}</h3>
+        {userType === 'guest' ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="text-gray-400 dark:text-gray-500 mb-2">
+                <span className="material-symbols-outlined text-4xl">credit_card_off</span>
+              </div>
+              <p className="text-gray-400 dark:text-gray-500 text-sm font-medium">Solo para usuarios registrados</p>
+              <button 
+                onClick={() => setGuestRestrictionModal({
+                  show: true,
+                  featureName: t('profile.myCards')
+                })}
+                className="mt-2 text-primary text-sm font-medium hover:text-primary/80 transition-colors bg-transparent border-none shadow-none"
+              >
+                Registrarse para acceder
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-2 -mx-4 px-4">
+            {cards.map((card) => (
+              <CreditCard
+                key={card.id}
+                {...card}
+                onDelete={() => setShowDeleteConfirm(card.id)}
+                onToggle={() => toggleCardStatus(card.id)}
+              />
+            ))}
+            <EmptyCard onClick={() => navigate('/add-card')} />
+          </div>
+        )}
       </section>
 
       <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
         <h3 className="text-lg font-bold py-4">{t('profile.myActivity')}</h3>
-        <MenuItem icon="history" title={t('profile.orderHistory')} subtitle={t('profile.orderHistorySubtitle')} onClick={() => navigate('/order-history')} />
-        <MenuItem icon="payments" title={t('profile.transactions')} subtitle={t('profile.transactionsSubtitle')} onClick={() => navigate('/transactions')} />
+        <MenuItem 
+          icon="history" 
+          title={t('profile.orderHistory')} 
+          subtitle={t('profile.orderHistorySubtitle')} 
+          disabled={userType === 'guest'}
+          onClick={() => navigate('/order-history')} 
+          onRestrictedClick={() => setGuestRestrictionModal({
+            show: true,
+            featureName: t('profile.orderHistory')
+          })}
+        />
+        <MenuItem 
+          icon="payments" 
+          title={t('profile.transactions')} 
+          subtitle={t('profile.transactionsSubtitle')} 
+          disabled={userType === 'guest'}
+          onClick={() => navigate('/transactions')} 
+          onRestrictedClick={() => setGuestRestrictionModal({
+            show: true,
+            featureName: t('profile.transactions')
+          })}
+        />
       </section>
 
       <div className="px-4 mt-8">
         <button 
           onClick={async () => {
-            try {
-              // Limpiar carrito ANTES de cerrar sesión (necesita usuario autenticado)
-              await clearCart();
-              // Cerrar sesión
-              await signOut();
-              // Redirigir a la página de login/welcome
-              navigate('/', { replace: true });
-            } catch (error) {
-              console.error('Error al cerrar sesión:', error);
-              // Aún así intentar cerrar sesión y redirigir
+            if (userType === 'guest') {
+              // Para usuarios invitados, navegar a registro
+              playClickSound();
+              navigate('/register');
+            } else {
+              // Para usuarios registrados, cerrar sesión
               try {
+                // Limpiar carrito ANTES de cerrar sesión (necesita usuario autenticado)
+                await clearCart();
+                // Cerrar sesión
                 await signOut();
-              } catch (signOutError) {
-                console.error('Error al cerrar sesión después del error:', signOutError);
+                // Redirigir a la página de login/welcome
+                navigate('/', { replace: true });
+              } catch (error) {
+                console.error('Error al cerrar sesión:', error);
+                // Aún así intentar cerrar sesión y redirigir
+                try {
+                  await signOut();
+                } catch (signOutError) {
+                  console.error('Error al cerrar sesión después del error:', signOutError);
+                }
+                navigate('/', { replace: true });
               }
-              navigate('/', { replace: true });
             }
           }}
-          className="w-full h-14 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 font-bold rounded-xl border border-red-100 dark:border-red-900/30 active:scale-95 transition-all"
+          className={`w-full h-14 font-bold rounded-xl border active:scale-95 transition-all ${
+            userType === 'guest'
+              ? 'bg-primary text-white border-primary hover:bg-primary/90'
+              : 'bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border-red-100 dark:border-red-900/30'
+          }`}
         >
-          {t('profile.logout')}
+          {userType === 'guest' ? t('welcome.register') : t('profile.logout')}
         </button>
       </div>
+
+      {/* Modal de restricción para usuarios invitados */}
+      {guestRestrictionModal.show && (
+        <GuestRestrictionModal
+          featureName={guestRestrictionModal.featureName}
+          onClose={() => setGuestRestrictionModal({ show: false, featureName: '' })}
+        />
+      )}
 
       {/* Modal de recorte de imagen */}
       {showCropModal && (
@@ -1105,24 +1212,48 @@ const ProfileScreen: React.FC = () => {
   );
 };
 
-const MenuItem: React.FC<{ icon: string; title: string; subtitle: string; onClick?: () => void }> = ({ icon, title, subtitle, onClick }) => (
+const MenuItem: React.FC<{ 
+  icon: string; 
+  title: string; 
+  subtitle: string; 
+  onClick?: () => void; 
+  disabled?: boolean;
+  onRestrictedClick?: () => void;
+}> = ({ icon, title, subtitle, onClick, disabled = false, onRestrictedClick }) => (
   <div 
     onClick={() => {
+      if (disabled) {
+        onRestrictedClick?.();
+        return;
+      }
       playClickSound();
       onClick?.();
     }} 
-    className="flex items-center gap-4 py-3 justify-between hover:bg-gray-50 dark:hover:bg-primary/5 cursor-pointer border-b border-gray-50 dark:border-gray-800 last:border-0"
+    className={`flex items-center gap-4 py-3 justify-between border-b border-gray-50 dark:border-gray-800 last:border-0 ${
+      disabled 
+        ? 'opacity-50 cursor-not-allowed' 
+        : 'hover:bg-gray-50 dark:hover:bg-primary/5 cursor-pointer'
+    }`}
   >
     <div className="flex items-center gap-4">
-      <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 size-12">
+      <div className={`flex items-center justify-center rounded-lg size-12 ${
+        disabled 
+          ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500' 
+          : 'text-primary bg-primary/10'
+      }`}>
         <span className="material-symbols-outlined">{icon}</span>
       </div>
       <div>
-        <p className="font-semibold">{title}</p>
+        <p className={`font-semibold ${disabled ? 'text-gray-400 dark:text-gray-500' : ''}`}>{title}</p>
         <p className="text-[#8a7560] dark:text-[#c0a890] text-sm">{subtitle}</p>
+        {disabled && (
+          <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mt-1">
+            Solo para usuarios registrados
+          </p>
+        )}
       </div>
     </div>
-    <span className="material-symbols-outlined text-[#8a7560]">chevron_right</span>
+    <span className={`material-symbols-outlined ${disabled ? 'text-gray-400' : 'text-[#8a7560]'}`}>chevron_right</span>
   </div>
 );
 

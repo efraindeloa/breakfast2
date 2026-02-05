@@ -3,7 +3,7 @@
  */
 
 import { supabase, isSupabaseConfigured } from '../../config/supabase';
-import { handleSupabaseError, requireAuth } from './base';
+import { handleSupabaseError, requireAuth, getAuthenticatedOrGuestUserId } from './base';
 import { ApiResponse } from './types';
 import { Order, OrderStatus } from '../../types/order';
 
@@ -30,6 +30,13 @@ export interface UpdateOrderRequest {
  */
 export async function getOrders(userId?: string): Promise<ApiResponse<Order[]>> {
   return handleSupabaseError(async () => {
+    // Verificar si es un usuario invitado
+    const guestSession = localStorage.getItem('guestSession');
+    if (guestSession) {
+      const guestOrders = localStorage.getItem('guest_orders');
+      return guestOrders ? JSON.parse(guestOrders) : [];
+    }
+
     const targetUserId = userId || await requireAuth();
 
     const { data, error } = await supabase
@@ -67,6 +74,35 @@ export async function getOrderById(orderId: string, userId?: string): Promise<Ap
  */
 export async function createOrder(orderData: CreateOrderRequest, userId?: string): Promise<ApiResponse<Order>> {
   return handleSupabaseError(async () => {
+    // Verificar si es un usuario invitado
+    const guestSession = localStorage.getItem('guestSession');
+    if (guestSession) {
+      const guestUser = JSON.parse(guestSession);
+      const orderId = `guest-${Date.now()}`;
+      const newOrder: Order = {
+        id: orderId,
+        orderId: orderId, // Para compatibilidad con la definición antigua
+        user_id: guestUser.id,
+        restaurant_id: orderData.restaurant_id,
+        status: orderData.status || 'pending',
+        items: orderData.items || [],
+        total: orderData.total || 0,
+        special_instructions: orderData.special_instructions || null,
+        table_number: orderData.table_number || null,
+        group_order_id: orderData.group_order_id || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      // Guardar en localStorage
+      const guestOrders = localStorage.getItem('guest_orders');
+      const orders = guestOrders ? JSON.parse(guestOrders) : [];
+      orders.push(newOrder);
+      localStorage.setItem('guest_orders', JSON.stringify(orders));
+      
+      return newOrder;
+    }
+
     const targetUserId = userId || await requireAuth();
 
     const insertData: any = {

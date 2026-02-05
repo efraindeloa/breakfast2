@@ -27,15 +27,22 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
-  const { user, accountType } = useAuth();
+  const { user, accountType, userType } = useAuth();
   const [userName, setUserName] = useState<string>(propUserName || '');
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const [userInitials, setUserInitials] = useState<string>('');
 
+  // Manejar usuarios invitados
+  useEffect(() => {
+    if (userType === 'guest' && !propUserName) {
+      setUserName(t('register.userType'));
+    }
+  }, [userType, propUserName, t]);
+
   // Cargar datos del usuario si no se proporcionaron
   useEffect(() => {
     const loadUserData = async () => {
-      if (!isSupabaseConfigured() || !user?.id || propUserName) {
+      if (!isSupabaseConfigured() || !user?.id || propUserName || userType === 'guest') {
         return;
       }
 
@@ -62,7 +69,12 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
                  '';
         }
 
-        setUserName(name.split(' ')[0]);
+        // Si es un usuario invitado, mostrar "Usuario no registrado"
+        if (userType === 'guest') {
+          setUserName(t('register.userType'));
+        } else {
+          setUserName(name.split(' ')[0] || t('register.userType'));
+        }
 
         // Generar iniciales (2 letras)
         const words = name.trim().split(' ').filter(w => w.length > 0);
@@ -92,7 +104,12 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
                          user?.user_metadata?.name?.split(' ')[0] || 
                          user?.email?.split('@')[0] || 
                          '';
-        setUserName(firstName);
+        // Si es un usuario invitado, mostrar "Usuario no registrado"
+        if (userType === 'guest') {
+          setUserName(t('register.userType'));
+        } else {
+          setUserName(firstName || t('register.userType'));
+        }
         
         const name = user?.user_metadata?.full_name || 
                     user?.user_metadata?.name || 
@@ -187,7 +204,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
             <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">notifications</span>
           </button>
           
-          {showFavorites && accountType !== 'restaurant' && (
+          {showFavorites && accountType !== 'restaurant' && userType === 'registered' && (
             <button 
               onClick={() => navigate('/favorites')}
               className={`flex size-10 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm border transition-colors ${
@@ -218,7 +235,9 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
               location.pathname === '/profile' || location.pathname.includes('billing')
                 ? 'text-primary'
                 : 'text-gray-600 dark:text-gray-300'
-            }`}>person</span>
+            }`}>
+              {userType === 'guest' ? 'person_outline' : 'person'}
+            </span>
           </button>
         </div>
       </div>

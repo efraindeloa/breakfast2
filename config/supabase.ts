@@ -17,11 +17,13 @@ if (typeof window !== 'undefined') {
   
   // Interceptar console.error
   console.error = (...args: any[]) => {
-    const message = String(args[0] || '');
+    // Verificar TODOS los argumentos, no solo el primero
+    const fullMessage = args.map(arg => String(arg || '')).join(' ');
+    
     // Filtrar errores 404 relacionados con user_billing_reception_emails
     if (
-      message.includes('user_billing_reception_emails') &&
-      (message.includes('404') || message.includes('Not Found'))
+      fullMessage.includes('user_billing_reception_emails') &&
+      (fullMessage.includes('404') || fullMessage.includes('Not Found'))
     ) {
       // No mostrar estos errores en la consola, son esperados hasta que se ejecute el script SQL
       return;
@@ -31,10 +33,12 @@ if (typeof window !== 'undefined') {
   
   // Interceptar console.warn
   console.warn = (...args: any[]) => {
-    const message = String(args[0] || '');
+    // Verificar TODOS los argumentos, no solo el primero
+    const fullMessage = args.map(arg => String(arg || '')).join(' ');
+    
     if (
-      message.includes('user_billing_reception_emails') &&
-      (message.includes('404') || message.includes('Not Found'))
+      fullMessage.includes('user_billing_reception_emails') &&
+      (fullMessage.includes('404') || fullMessage.includes('Not Found'))
     ) {
       return;
     }
@@ -43,15 +47,21 @@ if (typeof window !== 'undefined') {
   
   // Interceptar errores no capturados relacionados con user_billing_reception_emails
   window.addEventListener('error', (event) => {
-    const message = event.message || '';
+    const message = String(event.message || '');
+    const source = String(event.filename || event.target || '');
+    const fullMessage = `${message} ${source}`;
+    
     if (
-      message.includes('user_billing_reception_emails') &&
-      (message.includes('404') || message.includes('Not Found'))
+      fullMessage.includes('user_billing_reception_emails') &&
+      (fullMessage.includes('404') || fullMessage.includes('Not Found'))
     ) {
       event.preventDefault();
       event.stopPropagation();
+      return false;
     }
+    
   }, true);
+  
 }
 
 // Crear cliente de Supabase con configuración para evitar expiración de sesiones

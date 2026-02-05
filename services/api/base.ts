@@ -68,3 +68,15 @@ export async function requireAuth(): Promise<string> {
   }
   return userId;
 }
+
+export async function getAuthenticatedOrGuestUserId(): Promise<string | null> {
+  // Verificar si es un usuario invitado
+  const guestSession = localStorage.getItem('guestSession');
+  if (guestSession) {
+    const guestUser = JSON.parse(guestSession);
+    return guestUser.id;
+  }
+  
+  // Si no es invitado, usar autenticación normal
+  return await getAuthenticatedUserId();
+}

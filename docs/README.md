@@ -56,7 +56,8 @@ Esta es la documentación completa de **Breakfast App**, una aplicación móvil 
 
 #### [🏗️ Arquitectura del Sistema](./03-tecnica/01-arquitectura.md)
 - Frontend: React, TypeScript, Vite
-- Backend: Supabase (PostgreSQL, Auth, Storage)
+- Backend: Supabase (PostgreSQL, Storage)
+- **Autenticación**: Sistema simple basado en tabla `users` (NO usa Supabase Auth)
 - API Layer: Capa de abstracción en `services/api/`
 - Mobile: Capacitor, Android
 - Estructura del proyecto
@@ -64,8 +65,15 @@ Esta es la documentación completa de **Breakfast App**, una aplicación móvil 
 - Navegación
 - Internacionalización
 - Persistencia de datos
-- Seguridad (RLS, Supabase Auth)
+- Seguridad (RLS simplificado)
 - Build y deployment
+
+#### [🔐 Autenticación Simple](./03-tecnica/06-autenticacion-simple.md)
+- Sistema de autenticación sin Supabase Auth
+- Contraseñas hasheadas con SHA-256
+- Sesiones en localStorage
+- Flujos de registro y login
+- Políticas RLS simplificadas
 
 #### 📡 API Documentation (Futuro)
 - Endpoints

@@ -89,6 +89,9 @@ La documentación completa está disponible en la carpeta [`docs/`](./docs/).
 
 - **Frontend**: React 19, TypeScript, Vite
 - **Mobile**: Capacitor 8, Android
+- **Backend**: Supabase (PostgreSQL + Storage)
+- **Autenticación**: Sistema simple basado en tabla `users` con contraseñas hasheadas (SHA-256)
+  - **NO usa Supabase Auth** - Ver [Autenticación Simple](./docs/03-tecnica/06-autenticacion-simple.md)
 - **Estilos**: Tailwind CSS
 - **Iconos**: Material Symbols
 - **i18n**: Sistema propio con JSON

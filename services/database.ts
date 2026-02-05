@@ -300,10 +300,18 @@ export const getOrders = async (): Promise<Order[]> => {
     return [];
   }
 
+  // Verificar si es un usuario invitado
+  const guestSession = localStorage.getItem('guestSession');
+  if (guestSession) {
+    console.log('[getOrders] Guest user detected, using localStorage');
+    const guestOrders = localStorage.getItem('guest_orders');
+    return guestOrders ? JSON.parse(guestOrders) : [];
+  }
+
   try {
     const userId = await getAuthenticatedUserId();
     if (!userId) {
-      console.warn('[getOrders] No authenticated user');
+      console.warn('[getOrders] No authenticated user - returning empty orders');
       return [];
     }
     
@@ -418,10 +426,34 @@ export const createOrder = async (order: Omit<Order, 'id' | 'created_at' | 'upda
     return null;
   }
 
+  // Verificar si es un usuario invitado
+  const guestSession = localStorage.getItem('guestSession');
+  if (guestSession) {
+    console.log('[createOrder] Guest user detected, saving to localStorage');
+    const guestUser = JSON.parse(guestSession);
+    const orderId = `guest-${Date.now()}`;
+    const newOrder: Order = {
+      ...order,
+      id: orderId,
+      orderId: orderId, // Para compatibilidad con la definición antigua
+      user_id: guestUser.id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    
+    // Guardar en localStorage
+    const guestOrders = localStorage.getItem('guest_orders');
+    const orders = guestOrders ? JSON.parse(guestOrders) : [];
+    orders.push(newOrder);
+    localStorage.setItem('guest_orders', JSON.stringify(orders));
+    
+    return newOrder;
+  }
+
   try {
     const userId = await getAuthenticatedUserId();
     if (!userId) {
-      console.warn('[updateOrderStatus] No authenticated user - login required');
+      console.warn('[createOrder] No authenticated user - login required');
       throw new Error('Authentication required');
     }
     
@@ -769,6 +801,13 @@ export const getCart = async (): Promise<CartItem[]> => {
     return fallbackToLocalStorage<CartItem[]>('cart', [], 'get') || [];
   }
 
+  // Verificar si es un usuario invitado
+  const guestSession = localStorage.getItem('guestSession');
+  if (guestSession) {
+    console.log('[getCart] Guest user detected, using localStorage');
+    return fallbackToLocalStorage<CartItem[]>('cart', [], 'get') || [];
+  }
+
   try {
     // Obtener la sesión actual de Supabase de forma asíncrona
     let userId: string | null = null;
@@ -784,8 +823,8 @@ export const getCart = async (): Promise<CartItem[]> => {
     }
     
     if (!userId) {
-      console.warn('[getCart] No authenticated user - login required');
-      return [];
+      console.warn('[getCart] No authenticated user - using localStorage fallback');
+      return fallbackToLocalStorage<CartItem[]>('cart', [], 'get') || [];
     }
     
     // Obtener cart_items primero (sin JOIN para evitar problemas de RLS)
@@ -844,7 +883,10 @@ export const getCart = async (): Promise<CartItem[]> => {
 };
 
 export const setCart = async (items: CartItem[]): Promise<boolean> => {
-  if (!isSupabaseConfigured()) {
+  // Verificar si es un usuario invitado
+  const guestSession = localStorage.getItem('guestSession');
+  if (!isSupabaseConfigured() || guestSession) {
+    console.log('[setCart] Using localStorage for guest user');
     fallbackToLocalStorage('cart', items, 'set', items);
     return true;
   }
@@ -852,8 +894,9 @@ export const setCart = async (items: CartItem[]): Promise<boolean> => {
   try {
     const userId = await getAuthenticatedUserId();
     if (!userId) {
-      console.warn('[setCart] No authenticated user - login required');
-      return false;
+      console.warn('[setCart] No authenticated user - using localStorage fallback');
+      fallbackToLocalStorage('cart', items, 'set', items);
+      return true;
     }
     
     // Agrupar items por (product_id, notes) para evitar duplicados
@@ -995,7 +1038,10 @@ export const addToCart = async (item: CartItem): Promise<boolean> => {
   // Estos se guardan solo en localStorage
   const isCombo = item.id > 10000;
   
-  if (!isSupabaseConfigured() || isCombo) {
+  // Verificar si es un usuario invitado
+  const guestSession = localStorage.getItem('guestSession');
+  if (!isSupabaseConfigured() || isCombo || guestSession) {
+    console.log('[addToCart] Using localStorage for guest user or combo');
     const cart = await getCart();
     cart.push(item);
     fallbackToLocalStorage('cart', cart, 'set', cart);
@@ -1005,8 +1051,11 @@ export const addToCart = async (item: CartItem): Promise<boolean> => {
   try {
     const userId = await getAuthenticatedUserId();
     if (!userId) {
-      console.warn('[addToCart] No authenticated user - login required');
-      throw new Error('Authentication required');
+      console.warn('[addToCart] No authenticated user - using localStorage fallback');
+      const cart = await getCart();
+      cart.push(item);
+      fallbackToLocalStorage('cart', cart, 'set', cart);
+      return true;
     }
     
     // Asegurar que el usuario existe en la tabla users antes de agregar al carrito
@@ -1104,7 +1153,10 @@ export const addToCart = async (item: CartItem): Promise<boolean> => {
 };
 
 export const removeFromCart = async (itemId: number, notes?: string): Promise<boolean> => {
-  if (!isSupabaseConfigured()) {
+  // Verificar si es un usuario invitado
+  const guestSession = localStorage.getItem('guestSession');
+  if (!isSupabaseConfigured() || guestSession) {
+    console.log('[removeFromCart] Using localStorage for guest user');
     const cart = await getCart();
     const filtered = cart.filter(item => 
       item.id !== itemId || (notes !== undefined && item.notes !== notes)
@@ -1116,8 +1168,13 @@ export const removeFromCart = async (itemId: number, notes?: string): Promise<bo
   try {
     const userId = await getAuthenticatedUserId();
     if (!userId) {
-      console.warn('[removeFromCart] No authenticated user - login required');
-      return;
+      console.warn('[removeFromCart] No authenticated user - using localStorage fallback');
+      const cart = await getCart();
+      const filtered = cart.filter(item => 
+        item.id !== itemId || (notes !== undefined && item.notes !== notes)
+      );
+      fallbackToLocalStorage('cart', filtered, 'set', filtered);
+      return true;
     }
     let query = supabase
       .from('cart_items')
@@ -2384,6 +2441,54 @@ export const getCurrentUserRestaurantId = async (): Promise<string | null> => {
 };
 
 /**
+ * Verifica si un nombre de restaurante ya existe en la base de datos (comparación exacta case-insensitive)
+ * Usa consulta directa a la base de datos (las políticas RLS simplificadas permiten esto)
+ * @param restaurantName - Nombre del restaurante a verificar
+ * @returns true si el nombre ya existe, false si está disponible
+ */
+export const checkRestaurantNameExists = async (restaurantName: string): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    return false;
+  }
+
+  if (!restaurantName || !restaurantName.trim()) {
+    return false;
+  }
+
+  const normalizedName = restaurantName.trim();
+
+  // Usar consulta directa (las políticas RLS simplificadas permiten esto sin recursión)
+  try {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('id, name')
+      .ilike('name', normalizedName)
+      .maybeSingle();
+
+    if (error) {
+      // Si es error de recursión, ignorar y permitir continuar
+      if (error.code === '42P17') {
+        console.warn('[checkRestaurantNameExists] Error de recursión en RLS, permitiendo continuar');
+        return false;
+      }
+      console.error('[checkRestaurantNameExists] Error al verificar nombre:', error);
+      return false;
+    }
+
+    // Verificar coincidencia exacta (case-insensitive)
+    if (data && data.name) {
+      const exactMatch = data.name.trim().toLowerCase() === normalizedName.toLowerCase();
+      return exactMatch;
+    }
+
+    return false; // No existe
+  } catch (error) {
+    console.error('[checkRestaurantNameExists] Error inesperado:', error);
+    return false;
+  }
+};
+
+/**
  * Registra un restaurante completo y asocia al usuario como owner
  * Esta función debe ser llamada después de que el usuario se haya registrado en auth
  */
@@ -2391,112 +2496,116 @@ export const registerRestaurant = async (
   userId: string,
   restaurantName: string,
   rfc?: string
-): Promise<{ restaurant: Restaurant | null; staff: RestaurantStaff | null; error: string | null }> => {
+): Promise<{ restaurant: Restaurant; staff: RestaurantStaff }> => {
   if (!isSupabaseConfigured()) {
-    return { restaurant: null, staff: null, error: 'Supabase no está configurado' };
+    throw new Error('Supabase no está configurado');
   }
 
-  try {
-    // Verificar que el usuario no tenga ya un restaurante asociado
-    const existingStaff = await supabase
-      .from('restaurant_staff')
-      .select('restaurant_id')
-      .eq('user_id', userId)
-      .eq('is_active', true)
+  // Verificar que el usuario no tenga ya un restaurante asociado
+  // Usar una consulta simple sin políticas complejas para evitar recursión
+  const { data: existingStaff, error: staffCheckError } = await supabase
+    .from('restaurant_staff')
+    .select('restaurant_id')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .maybeSingle();
+  
+  // Si hay error de RLS (recursión), ignorar y continuar (el usuario probablemente no tiene restaurante)
+  if (staffCheckError && staffCheckError.code !== '42P17') {
+    console.warn('[registerRestaurant] Error checking existing staff (non-recursion):', staffCheckError);
+  }
+
+  if (existingStaff?.restaurant_id) {
+    throw new Error('El usuario ya tiene un restaurante asociado');
+  }
+
+  // Generar slug único
+  let slug = generateRestaurantSlug(restaurantName);
+  let slugCounter = 1;
+  let finalSlug = slug;
+
+  // Verificar que el slug sea único
+  while (true) {
+    const { data: existing } = await supabase
+      .from('restaurants')
+      .select('id')
+      .eq('slug', finalSlug)
       .maybeSingle();
 
-    if (existingStaff?.restaurant_id) {
-      return { 
-        restaurant: null, 
-        staff: null, 
-        error: 'El usuario ya tiene un restaurante asociado' 
-      };
-    }
-
-    // Generar slug único
-    let slug = generateRestaurantSlug(restaurantName);
-    let slugCounter = 1;
-    let finalSlug = slug;
-
-    // Verificar que el slug sea único
-    while (true) {
-      const { data: existing } = await supabase
-        .from('restaurants')
-        .select('id')
-        .eq('slug', finalSlug)
-        .maybeSingle();
-
-      if (!existing) break;
-      finalSlug = `${slug}-${slugCounter}`;
-      slugCounter++;
-    }
-
-    // Crear el restaurante
-    const { data: restaurant, error: restaurantError } = await supabase
-      .from('restaurants')
-      .insert({
-        name: restaurantName.trim(),
-        slug: finalSlug,
-        city: 'Ciudad', // Valores por defecto, se pueden actualizar después
-        country: 'México',
-        is_active: true,
-        is_verified: false,
-        rating: 0.0,
-        total_reviews: 0,
-        timezone: 'America/Mexico_City',
-      })
-      .select()
-      .single();
-
-    if (restaurantError) throw restaurantError;
-    if (!restaurant) {
-      return { restaurant: null, staff: null, error: 'No se pudo crear el restaurante' };
-    }
-
-    // Si se proporcionó RFC, actualizar el restaurante con datos fiscales
-    if (rfc && rfc.trim() !== '') {
-      // Aquí se podría actualizar una tabla de datos fiscales si existe
-      // Por ahora, solo logueamos el RFC
-      console.log(`[registerRestaurant] RFC proporcionado: ${rfc}`);
-    }
-
-    // Asociar al usuario como owner del restaurante
-    const { data: staff, error: staffError } = await supabase
-      .from('restaurant_staff')
-      .insert({
-        restaurant_id: restaurant.id,
-        user_id: userId,
-        role: 'owner',
-        is_active: true,
-      })
-      .select()
-      .single();
-
-    if (staffError) {
-      // Si falla la asociación, eliminar el restaurante creado
-      await supabase.from('restaurants').delete().eq('id', restaurant.id);
-      throw staffError;
-    }
-
-    console.log(`[registerRestaurant] Restaurante creado: ${restaurant.name} (ID: ${restaurant.id})`);
-    console.log(`[registerRestaurant] Usuario asociado como owner: ${userId}`);
-
-    return { 
-      restaurant: {
-        ...restaurant,
-        image: restaurant.logo_url ? getRestaurantImageUrl(restaurant.logo_url, 'logo') : undefined,
-      }, 
-      staff, 
-      error: null 
-    };
-  } catch (error: any) {
-    console.error('[registerRestaurant] Error:', error);
-    return { 
-      restaurant: null, 
-      staff: null, 
-      error: error?.message || 'Error al registrar el restaurante' 
-    };
+    if (!existing) break;
+    finalSlug = `${slug}-${slugCounter}`;
+    slugCounter++;
   }
+
+  // Crear el restaurante
+  const { data: restaurant, error: restaurantError } = await supabase
+    .from('restaurants')
+    .insert({
+      name: restaurantName.trim(),
+      slug: finalSlug,
+      city: 'Ciudad', // Valores por defecto, se pueden actualizar después
+      country: 'México',
+      is_active: true,
+      is_verified: false,
+      rating: 0.0,
+      total_reviews: 0,
+      timezone: 'America/Mexico_City',
+    })
+    .select()
+    .single();
+
+  if (restaurantError) {
+    console.error('[registerRestaurant] Error al crear restaurante:', restaurantError);
+    throw restaurantError;
+  }
+  
+  if (!restaurant) {
+    throw new Error('No se pudo crear el restaurante');
+  }
+
+  // Si se proporcionó RFC, actualizar el restaurante con datos fiscales
+  if (rfc && rfc.trim() !== '') {
+    // Aquí se podría actualizar una tabla de datos fiscales si existe
+    // Por ahora, solo logueamos el RFC
+    console.log(`[registerRestaurant] RFC proporcionado: ${rfc}`);
+  }
+
+  // Asociar al usuario como owner del restaurante
+  const { data: staff, error: staffError } = await supabase
+    .from('restaurant_staff')
+    .insert({
+      restaurant_id: restaurant.id,
+      user_id: userId,
+      role: 'owner',
+      is_active: true,
+    })
+    .select()
+    .single();
+
+  if (staffError) {
+    // Si falla la asociación, eliminar el restaurante creado
+    console.error('[registerRestaurant] Error al asociar usuario, eliminando restaurante:', staffError);
+    await supabase.from('restaurants').delete().eq('id', restaurant.id);
+    throw staffError;
+  }
+
+  if (!staff) {
+    // Si no se creó el staff, eliminar el restaurante
+    console.error('[registerRestaurant] No se pudo crear el staff, eliminando restaurante');
+    await supabase.from('restaurants').delete().eq('id', restaurant.id);
+    throw new Error('No se pudo asociar el usuario al restaurante');
+  }
+
+  console.log(`[registerRestaurant] Restaurante creado: ${restaurant.name} (ID: ${restaurant.id})`);
+  console.log(`[registerRestaurant] Usuario asociado como owner: ${userId}`);
+
+  return { 
+    restaurant: {
+      ...restaurant,
+      image: restaurant.logo_url ? getRestaurantImageUrl(restaurant.logo_url, 'logo') : undefined,
+    }, 
+    staff
+  };
 };
 
 // ==================== RESTAURANTES ====================

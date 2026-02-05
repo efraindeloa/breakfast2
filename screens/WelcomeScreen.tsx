@@ -3,7 +3,9 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation, useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import { simpleSignIn } from '../services/simple-auth';
 import { languagesData, allLanguages, popularLanguages } from '../content/languages';
+import { supabase } from '../config/supabase';
 
 interface WelcomeScreenProps {
   onLogin: () => void;
@@ -29,7 +31,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { setLanguage, language: currentLanguage } = useLanguage();
-  const { signIn } = useAuth();
+  const { signIn, signInAsGuest, user } = useAuth();
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -45,8 +47,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
   const [languageButtonOpacity, setLanguageButtonOpacity] = useState<number>(1);
   const [rotationCount, setRotationCount] = useState<number>(1); // Comienza en 1 porque ya estamos mostrando el primer idioma
   const [isRotationComplete, setIsRotationComplete] = useState<boolean>(false);
-  const [showLabels, setShowLabels] = useState<boolean>(true);
-  const [labelsOpacity, setLabelsOpacity] = useState<number>(1);
   
   // Mapeo de índices a nombres de idiomas en español (para obtener las banderas)
   const rotatingLanguageNames = ['Español', 'Inglés', 'Francés', 'Portugués'];
@@ -186,19 +186,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Ocultar etiquetas después de 10 segundos con efecto de desvanecimiento
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      // Primero desvanecer (cambiar opacidad a 0)
-      setLabelsOpacity(0);
-      // Después de la transición, ocultar completamente
-      setTimeout(() => {
-        setShowLabels(false);
-      }, 500); // Duración de la transición
-    }, 10000); // 10 segundos
-
-    return () => clearTimeout(timer);
-  }, []);
 
   // Rotar el idioma del botón cada 5 segundos con efecto de desvanecimiento
   // Después de mostrar los 4 idiomas, se fija en el idioma actual de la página
@@ -257,7 +244,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
   const handleLogin = async () => {
     // Validar campos
     if (!emailOrPhone.trim()) {
-      setError(t('welcome.pleaseEnterEmailOrPhone') || 'Por favor ingresa tu correo o teléfono');
+      setError(t('welcome.pleaseEnterEmailOrPhone') || 'Por favor ingresa tu usuario, correo o teléfono');
       return;
     }
 
@@ -270,54 +257,77 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
     setError('');
 
     try {
-      // Supabase Auth solo acepta email, no teléfono directamente
-      // Si el usuario ingresó un teléfono, intentar buscar el email asociado
-      let email = emailOrPhone.trim();
+      const identifier = emailOrPhone.trim();
+      let email = identifier;
       
-      // Si no contiene @, asumir que es un teléfono y buscar por teléfono
-      // Por ahora, requerimos email para login
-      if (!email.includes('@')) {
-        setError(t('welcome.pleaseUseEmail') || 'Por favor usa tu correo electrónico para iniciar sesión');
+      // Si contiene @, usar directamente como email
+      // Si no contiene @, buscar en la BD por email, phone o name (username)
+      if (!identifier.includes('@')) {
+        console.log('[WelcomeScreen] Buscando usuario por identificador (no es email):', identifier);
+        
+        // 1. Buscar por email (por si acaso el usuario ingresó email sin @)
+        const { data: userDataByEmail, error: emailError } = await supabase
+          .from('users')
+          .select('email')
+          .eq('email', identifier)
+          .eq('is_active', true)
+          .maybeSingle();
+        
+        if (!emailError && userDataByEmail) {
+          console.log('[WelcomeScreen] Usuario encontrado por email:', userDataByEmail.email);
+          email = userDataByEmail.email;
+        } else {
+          // 2. Si no se encontró por email, buscar por phone
+          const { data: userDataByPhone, error: phoneError } = await supabase
+            .from('users')
+            .select('email')
+            .eq('phone', identifier)
+            .eq('is_active', true)
+            .maybeSingle();
+          
+          if (!phoneError && userDataByPhone) {
+            console.log('[WelcomeScreen] Usuario encontrado por teléfono:', userDataByPhone.email);
+            email = userDataByPhone.email;
+          } else {
+            // 3. Si no se encontró por phone, buscar por name (username)
+            const { data: userDataByName, error: nameError } = await supabase
+              .from('users')
+              .select('email')
+              .eq('name', identifier)
+              .eq('is_active', true)
+              .maybeSingle();
+            
+            if (!nameError && userDataByName) {
+              console.log('[WelcomeScreen] Usuario encontrado por nombre:', userDataByName.email);
+              email = userDataByName.email;
+            } else {
+              console.log('[WelcomeScreen] Usuario no encontrado por ningún método (email, teléfono o nombre):', identifier);
+              setError('El usuario no existe');
+              setIsLoading(false);
+              return;
+            }
+          }
+        }
+      }
+
+      // Usar login simple - busca por email, phone o name automáticamente
+      console.log('[WelcomeScreen] Intentando login simple con:', { identifier, passwordLength: password.length });
+      const result = await simpleSignIn(identifier, password);
+
+      if (!result.success) {
+        console.log('[WelcomeScreen] Error en login:', result.error);
+        setError(result.error || 'Error al iniciar sesión');
         setIsLoading(false);
         return;
       }
 
-      const { error: signInError } = await signIn(email, password);
-
-      if (signInError) {
-        // Solo loguear errores inesperados, no errores de credenciales inválidas (que son esperados)
-        const errorMessage = signInError.message || '';
-        const isExpectedError = errorMessage.includes('Invalid login credentials') || 
-                                errorMessage.includes('invalid_credentials') ||
-                                errorMessage.includes('Invalid login') ||
-                                errorMessage.includes('User not found') ||
-                                errorMessage.includes('user_not_found') ||
-                                errorMessage.includes('no está registrada') ||
-                                errorMessage.includes('regístrate primero');
+      // Guardar usuario en localStorage para sesión simple
+      if (result.user) {
+        localStorage.setItem('simpleAuthUser', JSON.stringify(result.user));
+        console.log('[WelcomeScreen] ✓ Login exitoso, usuario guardado:', result.user);
         
-        if (!isExpectedError) {
-          console.error('Login error:', signInError);
-        }
-        
-        let displayError = '';
-        
-        if (errorMessage.includes('no está registrada') || 
-            errorMessage.includes('regístrate primero')) {
-          displayError = errorMessage; // Usar el mensaje exacto del error
-        } else if (errorMessage.includes('Invalid login credentials') || 
-            errorMessage.includes('invalid_credentials') ||
-            errorMessage.includes('Invalid login')) {
-          displayError = t('welcome.invalidCredentials') || 'Correo o contraseña incorrectos';
-        } else if (errorMessage.includes('User not found') || 
-                   errorMessage.includes('user_not_found')) {
-          displayError = t('welcome.invalidCredentials') || 'Correo o contraseña incorrectos';
-        } else {
-          displayError = errorMessage || t('welcome.loginError') || 'Error al iniciar sesión';
-        }
-        
-        setError(displayError);
-        setIsLoading(false);
-        return;
+        // Disparar evento para que AuthContext detecte el cambio
+        window.dispatchEvent(new Event('simpleAuthLogin'));
       }
 
       // Login exitoso
@@ -406,19 +416,22 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
         </div>
       </div>
 
-      <div className="flex flex-col items-center px-6 relative -mt-6 z-10">
-        <h1 className="text-[#181411] dark:text-white tracking-tight text-[32px] font-bold leading-tight text-center pb-1">
-          {t('welcome.goodDay')}
-        </h1>
-        {showSubtitle && (
-          <p 
-            className="text-[#181411]/60 dark:text-white/60 text-base font-normal leading-normal pb-6 text-center transition-opacity duration-500 ease-out"
-            style={{ opacity: subtitleOpacity }}
-          >
-            {t('welcome.subtitleMessage')}
-          </p>
-        )}
-      </div>
+      {/* Solo mostrar saludo si NO hay sesión activa */}
+      {!user && (
+        <div className="flex flex-col items-center px-6 relative -mt-6 z-10">
+          <h1 className="text-[#181411] dark:text-white tracking-tight text-[32px] font-bold leading-tight text-center pb-1">
+            {t('welcome.goodDay')}
+          </h1>
+          {showSubtitle && (
+            <p 
+              className="text-[#181411]/60 dark:text-white/60 text-base font-normal leading-normal pb-6 text-center transition-opacity duration-500 ease-out"
+              style={{ opacity: subtitleOpacity }}
+            >
+              {t('welcome.subtitleMessage')}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-col flex-1 px-6">
         <div className="max-w-[480px] mx-auto w-full space-y-4">
@@ -433,14 +446,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
           )}
 
           <div className="flex flex-col gap-1.5">
-            {showLabels && (
-              <label 
-                className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1 transition-opacity duration-500 ease-out"
-                style={{ opacity: labelsOpacity }}
-              >
-                {t('welcome.emailOrPhone')}
-              </label>
-            )}
             <div className="relative">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">
                 person
@@ -449,8 +454,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
                 className={`w-full h-14 pl-12 pr-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary ${
                   error ? 'ring-2 ring-red-500' : ''
                 }`}
-                placeholder={t('welcome.emailOrPhonePlaceholder')}
-                type="email"
+                placeholder={t('welcome.emailOrPhonePlaceholder') || 'Usuario, correo o teléfono'}
+                type="text"
                 value={emailOrPhone}
                 onChange={(e) => {
                   setEmailOrPhone(e.target.value);
@@ -463,17 +468,12 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
                 }}
               />
             </div>
+            <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
+              {t('welcome.emailOrPhone') || 'Usuario, correo o teléfono'}
+            </label>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            {showLabels && (
-              <label 
-                className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1 transition-opacity duration-500 ease-out"
-                style={{ opacity: labelsOpacity }}
-              >
-                {t('welcome.password')}
-              </label>
-            )}
             <div className="relative">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">
                 lock
@@ -500,6 +500,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
                 </span>
               </button>
             </div>
+            <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
+              {t('welcome.password')}
+            </label>
           </div>
 
           <div className="flex justify-end">
@@ -529,6 +532,18 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
               )}
             </button>
           </div>
+
+          {/* Botón Continuar como invitado */}
+          <button
+            onClick={() => {
+              signInAsGuest();
+              navigate('/home');
+            }}
+            className="flex items-center justify-center rounded-xl h-12 bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary text-sm font-medium w-full mt-4 hover:bg-primary/20 dark:hover:bg-primary/30 transition-colors"
+          >
+            <span className="material-symbols-outlined mr-2 text-lg">person_outline</span>
+            {t('welcome.continueAsGuest')}
+          </button>
 
           <p className="text-[#8a7560] dark:text-primary/70 text-sm font-medium leading-normal text-center pt-4">
             {t('welcome.noAccount')}{' '}

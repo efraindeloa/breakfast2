@@ -2,7 +2,9 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
-import { validateRFC } from '../services/database';
+import { useCart } from '../contexts/CartContext';
+import { validateRFC, checkRestaurantNameExists, registerRestaurant } from '../services/database';
+import { simpleSignUp } from '../services/simple-auth';
 import { supabase } from '../config/supabase';
 
 interface RegisterScreenProps {
@@ -45,7 +47,8 @@ type RegisterType = 'user' | 'restaurant';
 const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { signUp, signIn } = useAuth();
+  const { signUp, signIn, userType } = useAuth();
+  const { migrateGuestCartToUser } = useCart();
   const [registerType, setRegisterType] = useState<RegisterType | null>(null);
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [selectedCountryCode, setSelectedCountryCode] = useState<CountryCode>(countryCodes[0]);
@@ -65,6 +68,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
   const [rfc, setRfc] = useState('');
   const [restaurantNameError, setRestaurantNameError] = useState<string>('');
   const [rfcError, setRfcError] = useState<string>('');
+  const [isCheckingRestaurantName, setIsCheckingRestaurantName] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
@@ -158,19 +162,18 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
     // Si no se ha seleccionado el tipo de registro, el formulario no es válido
     if (!registerType) return false;
     
-    // Validar que el campo de email/teléfono esté lleno y sea válido
-    const isEmailOrPhoneValid = emailOrPhone.trim() !== '' && 
-      (inputType === 'email' ? isValidEmail : inputType === 'phone' ? isValidPhone : false);
+    // Validar que el campo de usuario esté lleno (sin validar formato)
+    const isEmailOrPhoneValid = emailOrPhone.trim() !== '';
     
     // Validar que todas las reglas de contraseña se cumplan
     const isPasswordValid = Object.values(passwordValidations).every(valid => valid);
     
     // Si es registro de restaurante, validar campos adicionales
     if (registerType === 'restaurant') {
-      const isRestaurantNameValid = restaurantName.trim() !== '' && restaurantName.trim().length >= 3;
+      const isRestaurantNameValid = restaurantName.trim() !== '' && restaurantName.trim().length >= 3 && !restaurantNameError;
       const isRFCValid = rfc.trim() === '' || validateRFC(rfc.trim()); // RFC es opcional pero debe ser válido si se proporciona
       
-      return isEmailOrPhoneValid && isPasswordValid && isRestaurantNameValid && isRFCValid;
+      return isEmailOrPhoneValid && isPasswordValid && isRestaurantNameValid && isRFCValid && !isCheckingRestaurantName;
     }
     
     return isEmailOrPhoneValid && isPasswordValid;
@@ -178,7 +181,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
 
   // Limpiar mensajes de error cuando el usuario corrige los campos
   useEffect(() => {
-    if (emailOrPhoneError && (emailOrPhone.trim() && (inputType === 'email' ? isValidEmail : inputType === 'phone' ? isValidPhone : false))) {
+    if (emailOrPhoneError && emailOrPhone.trim()) {
       setEmailOrPhoneError('');
     }
     if (passwordError && password.trim() && Object.values(passwordValidations).slice(0, 5).every(valid => valid)) {
@@ -188,6 +191,33 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
       setConfirmPasswordError('');
     }
   }, [emailOrPhone, password, confirmPassword, emailOrPhoneError, passwordError, confirmPasswordError, inputType, isValidEmail, isValidPhone, passwordValidations]);
+
+  // Verificar si el nombre del restaurante ya existe (con debounce)
+  useEffect(() => {
+    if (registerType !== 'restaurant' || !restaurantName.trim() || restaurantName.trim().length < 3) {
+      setRestaurantNameError('');
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setIsCheckingRestaurantName(true);
+      try {
+        const exists = await checkRestaurantNameExists(restaurantName.trim());
+        if (exists) {
+          setRestaurantNameError('Este nombre de restaurante no está disponible. Por favor, elige otro nombre.');
+        } else {
+          setRestaurantNameError('');
+        }
+      } catch (error) {
+        console.error('Error al verificar nombre de restaurante:', error);
+        // No mostrar error si falla la verificación, permitir continuar
+      } finally {
+        setIsCheckingRestaurantName(false);
+      }
+    }, 500); // Debounce de 500ms
+
+    return () => clearTimeout(timeoutId);
+  }, [restaurantName, registerType]);
 
   const handleContinue = async () => {
     // Limpiar mensajes de error anteriores
@@ -205,24 +235,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
       return;
     }
     
-    // Validar formato de correo/teléfono
-    if (inputType === 'email' && !isValidEmail) {
-      setEmailOrPhoneError(t('register.invalidEmail'));
-      setTimeout(() => {
-        inputRef.current?.focus();
-        scrollToFocusedField(inputRef.current);
-      }, 0);
-      return;
-    }
-    
-    if (inputType === 'phone' && !isValidPhone) {
-      setEmailOrPhoneError(t('register.invalidPhone'));
-      setTimeout(() => {
-        inputRef.current?.focus();
-        scrollToFocusedField(inputRef.current);
-      }, 0);
-      return;
-    }
+    // No validar formato - aceptar cualquier texto válido
     
     // Validar contraseña
     if (!password.trim()) {
@@ -281,6 +294,24 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
         setRestaurantNameError('El nombre del restaurante debe tener al menos 3 caracteres');
         return;
       }
+
+      // Verificar si el nombre ya existe antes de continuar
+      if (isCheckingRestaurantName) {
+        setRestaurantNameError('Verificando disponibilidad del nombre...');
+        return;
+      }
+
+      // Verificar nuevamente si el nombre existe (por si acaso no se verificó antes)
+      try {
+        const nameExists = await checkRestaurantNameExists(restaurantName.trim());
+        if (nameExists) {
+          setRestaurantNameError('Este nombre de restaurante no está disponible. Por favor, elige otro nombre.');
+          return;
+        }
+      } catch (error) {
+        console.error('Error al verificar nombre de restaurante:', error);
+        // Continuar si hay error en la verificación (mejor UX que bloquear)
+      }
       
       if (rfc.trim() && !validateRFC(rfc.trim())) {
         setRfcError('El RFC no tiene un formato válido. Formato: XXXX######XXX (12 o 13 caracteres)');
@@ -297,83 +328,107 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
       setSuccessMessage('');
 
       try {
-        // Determinar si es email o teléfono
+        // Determinar si es email o teléfono basado en el contenido
         let email: string | undefined;
         let phone: string | undefined;
-
-        if (inputType === 'email') {
-          email = emailOrPhone.trim();
-        } else if (inputType === 'phone') {
-          // Normalizar a formato E.164 usando el código de país seleccionado
-          const raw = emailOrPhone.trim();
-          const digits = raw.replace(/[^\d+]/g, '');
-          const dialDigits = selectedCountryCode.dialCode.replace('+', '');
-          const withoutPlus = digits.startsWith('+') ? digits.slice(1) : digits;
-          const withoutCode = withoutPlus.startsWith(dialDigits) ? withoutPlus.slice(dialDigits.length) : withoutPlus;
-          const onlyDigits = withoutCode.replace(/\D/g, '');
-          phone = `${selectedCountryCode.dialCode}${onlyDigits}`;
+        
+        // Preservar espacios internos pero eliminar espacios al inicio y final
+        const identifier = emailOrPhone.trim();
+        let username: string | undefined; // Username original (puede tener espacios)
+        
+        // Si contiene @, usar como email (sin espacios internos)
+        if (identifier.includes('@')) {
+          // Los emails no pueden tener espacios, eliminar espacios internos
+          email = identifier.replace(/\s+/g, '');
+        } else {
+          // Si solo tiene números, espacios, + y guiones, intentar como teléfono
+          if (/^[\d\s+\-()]+$/.test(identifier) && !/[a-zA-Z]/.test(identifier)) {
+            // Normalizar a formato E.164 usando el código de país seleccionado
+            const raw = identifier;
+            const digits = raw.replace(/[^\d+]/g, '');
+            const dialDigits = selectedCountryCode.dialCode.replace('+', '');
+            const withoutPlus = digits.startsWith('+') ? digits.slice(1) : digits;
+            const withoutCode = withoutPlus.startsWith(dialDigits) ? withoutPlus.slice(dialDigits.length) : withoutPlus;
+            const onlyDigits = withoutCode.replace(/\D/g, '');
+            phone = `${selectedCountryCode.dialCode}${onlyDigits}`;
+          } else {
+            // Si es un username (puede tener espacios), guardar el username original
+            username = identifier; // Preservar espacios
+            // Para Supabase Auth necesitamos un email válido, así que generamos uno temporal
+            const usernameForEmail = identifier.replace(/\s+/g, '.').toLowerCase();
+            // Generar un email único basado en el username y timestamp
+            const timestamp = Date.now();
+            email = `${usernameForEmail}.${timestamp}@temp.local`;
+          }
         }
 
-        // Pasar datos del restaurante si es registro de restaurante
-        const { error: signUpError } = await signUp({ 
-          email, 
-          phone, 
+        // Usar registro simple
+        const userName = username || email?.split('@')[0] || 'Usuario';
+        const result = await simpleSignUp({
+          email: email!,
           password,
-          restaurantName: registerType === 'restaurant' ? restaurantName.trim() : undefined,
-          rfc: registerType === 'restaurant' && rfc.trim() ? rfc.trim() : undefined
+          name: userName,
+          phone: phone
         });
 
-        if (signUpError) {
-          console.error('Registration error:', signUpError);
-          if (signUpError.message.includes('User already registered')) {
-            setEmailOrPhoneError(t('register.userAlreadyExists') || 'Este correo ya está registrado');
-          } else if (signUpError.message.includes('Phone signups are disabled')) {
-            setEmailOrPhoneError('El registro por teléfono está deshabilitado. Actívalo en Supabase (Auth > Providers > Phone) o regístrate con correo.');
-            } else if (
-              signUpError.message.includes('Error sending confirmation OTP to provider') ||
-              signUpError.message.includes('twilio') ||
-              signUpError.message.includes('www.twilio.com/docs/errors/20003') ||
-              signUpError.message.toLowerCase().includes('invalid username')
-            ) {
-              setEmailOrPhoneError(
-                'No se pudo enviar el SMS de confirmación (OTP). Revisa la configuración de Twilio en Supabase (credenciales/SID/Auth Token o Messaging Service).'
-              );
-          } else if (signUpError.message.toLowerCase().includes('phone') && signUpError.message.toLowerCase().includes('not')) {
-            setEmailOrPhoneError('El registro por teléfono no está habilitado en Supabase. Habilita Phone Auth o regístrate con correo.');
-          } else if (signUpError.message.includes('Password')) {
-            setPasswordError(signUpError.message);
+        if (!result.success) {
+          console.error('Registration error:', result.error);
+          if (result.error?.includes('ya existe')) {
+            setEmailOrPhoneError('El usuario ya existe');
           } else {
-            setEmailOrPhoneError(signUpError.message || t('register.registrationError') || 'Error al registrarse');
+            setEmailOrPhoneError(result.error || t('register.registrationError') || 'Error al registrarse');
           }
           setIsLoading(false);
           return;
         }
 
-        // Registro exitoso - verificar si hay error de email duplicado
-        if (signUpError && signUpError.message?.includes('ya está registrado')) {
-          // El email ya existe, redirigir al login
-          setEmailOrPhoneError(signUpError.message);
-          setIsLoading(false);
-          setTimeout(() => {
-            onLogin();
-          }, 2000);
-        } else if (signUpError && (signUpError.message?.includes('Email not confirmed') || 
-                                   signUpError.message?.includes('email_not_confirmed'))) {
-          // El email no está confirmado - el usuario debe confirmar antes de iniciar sesión
-          setSuccessMessage(t('register.emailConfirmationRequired') || 'Por favor, confirma tu correo electrónico antes de iniciar sesión.');
-          setIsLoading(false);
-          setTimeout(() => {
-            onLogin();
-          }, 3000);
-        } else {
-          // Registro exitoso - el restaurante se crea automáticamente en AuthContext si se proporcionó restaurantName
-          // Esperar un momento para que la sesión se establezca
-          setTimeout(() => {
-            setSuccessMessage(t('register.registrationSuccess') || '¡Registro exitoso! Redirigiendo...');
-            // Intentar redirigir a home, pero si no hay sesión, onAuthStateChange manejará el login
-            navigate('/home');
-          }, 1500);
+        // Si es registro de restaurante, crear el restaurante
+        if (registerType === 'restaurant' && restaurantName.trim() && result.userId) {
+          try {
+            await registerRestaurant(
+              result.userId,
+              restaurantName.trim(),
+              rfc?.trim() || undefined
+            );
+            console.log('[RegisterScreen] Restaurante creado exitosamente');
+          } catch (restaurantError: any) {
+            console.error('[RegisterScreen] Error al crear restaurante:', restaurantError);
+            setEmailOrPhoneError('Usuario creado pero error al crear restaurante: ' + (restaurantError.message || 'Error desconocido'));
+            setIsLoading(false);
+            return;
+          }
         }
+
+        // Guardar usuario en localStorage para sesión simple
+        if (result.userId) {
+          const userData = {
+            id: result.userId,
+            email: email!,
+            name: userName,
+            phone: phone || null
+          };
+          localStorage.setItem('simpleAuthUser', JSON.stringify(userData));
+          console.log('[RegisterScreen] Usuario guardado en sesión simple');
+        }
+
+        // Migrar carrito de invitado si existe
+        if (userType === 'guest') {
+          try {
+            console.log('[RegisterScreen] Migrando carrito de usuario invitado...');
+            await migrateGuestCartToUser();
+            console.log('[RegisterScreen] ✅ Carrito migrado exitosamente');
+          } catch (cartError) {
+            console.error('[RegisterScreen] ❌ Error al migrar carrito:', cartError);
+            // No interrumpir el proceso de registro por un error de carrito
+          }
+        }
+
+        // Registro exitoso
+        setSuccessMessage(t('register.registrationSuccess') || '¡Registro exitoso! Redirigiendo...');
+        setTimeout(() => {
+          onLogin(); // Esto actualizará el estado de autenticación
+          navigate('/home');
+        }, 1500);
       } catch (err) {
         console.error('Unexpected registration error:', err);
         setEmailOrPhoneError(t('register.registrationError') || 'Error inesperado al registrarse');
@@ -545,19 +600,15 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
               )}
               
               <div className="relative flex-1">
-                <span className={`material-symbols-outlined absolute ${inputType === 'phone' ? 'left-4' : 'left-4'} top-1/2 -translate-y-1/2 text-primary`}>
-                  {inputType === 'phone' ? 'phone_iphone' : 'mail'}
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">
+                  person
                 </span>
                 <input
                   ref={inputRef}
-                  className={`w-full h-14 ${inputType === 'phone' ? 'pl-12 pr-4 rounded-r-xl' : 'pl-12 pr-4 rounded-xl'} border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary ${
-                    (inputType === 'email' && !isValidEmail) || (inputType === 'phone' && !isValidPhone)
-                      ? 'ring-2 ring-red-500'
-                      : ''
-                  }`}
-                  placeholder={inputType === 'phone' ? `${selectedCountryCode.dialCode} ${t('register.phonePlaceholder')}` : t('register.emailPlaceholder')}
+                  className="w-full h-14 pl-12 pr-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder={t('register.emailOrPhonePlaceholder') || 'Usuario, correo o teléfono'}
                   type="text"
-                  inputMode={inputType === 'phone' ? 'tel' : 'email'}
+                  inputMode="text"
                   value={emailOrPhone}
                   onFocus={(e) => {
                     scrollToFocusedField(e.target);
@@ -598,16 +649,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
             {successMessage && (
               <p className="text-xs text-green-500 px-1 mt-1">
                 {successMessage}
-              </p>
-            )}
-            {!emailOrPhoneError && inputType === 'email' && emailOrPhone.trim() && !isValidEmail && (
-              <p className="text-xs text-red-500 px-1 mt-1">
-                Por favor ingresa un número de teléfono o correo electrónico válido
-              </p>
-            )}
-            {!emailOrPhoneError && inputType === 'phone' && emailOrPhone.trim() && !isValidPhone && (
-              <p className="text-xs text-red-500 px-1 mt-1">
-                {t('register.invalidPhone')}
               </p>
             )}
           </div>
@@ -760,23 +801,36 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
                 <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
                   Nombre del restaurante <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={restaurantName}
-                  onChange={(e) => {
-                    setRestaurantName(e.target.value);
-                    if (restaurantNameError) setRestaurantNameError('');
-                  }}
-                  onFocus={(e) => {
-                    scrollToFocusedField(e.target);
-                  }}
-                  className="w-full h-14 px-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Ej: Donk Restaurant"
-                  maxLength={100}
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={restaurantName}
+                    onChange={(e) => {
+                      setRestaurantName(e.target.value);
+                      if (restaurantNameError) setRestaurantNameError('');
+                    }}
+                    onFocus={(e) => {
+                      scrollToFocusedField(e.target);
+                    }}
+                    className="w-full h-14 px-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Ej: Donk Restaurant"
+                    maxLength={100}
+                    required
+                  />
+                  {isCheckingRestaurantName && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                      <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    </div>
+                  )}
+                </div>
                 {restaurantNameError && (
                   <p className="text-xs text-red-500 px-1 mt-1">
                     {restaurantNameError}
+                  </p>
+                )}
+                {restaurantName.trim().length >= 3 && !restaurantNameError && !isCheckingRestaurantName && (
+                  <p className="text-xs text-green-600 dark:text-green-400 px-1 mt-1">
+                    ✓ Nombre disponible
                   </p>
                 )}
               </div>
@@ -834,7 +888,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
 
       {/* Botón Registrarse sticky en la parte inferior */}
       {registerType && (
-        <div className="fixed bottom-0 left-0 right-0 w-full px-4 sm:px-6 pb-6 pt-4 bg-background-light dark:bg-background-dark border-t border-gray-100 dark:border-gray-800 z-50 md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2">
+        <div className="fixed bottom-0 left-0 right-0 w-full px-4 sm:px-6 pt-4 bg-background-light dark:bg-background-dark border-t border-gray-100 dark:border-gray-800 z-50 md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2" style={{ paddingBottom: 'calc(85px + env(safe-area-inset-bottom))' }}>
           <button
             onClick={handleContinue}
             disabled={isLoading || !isFormValid}

@@ -513,22 +513,22 @@ const OrderScreen: React.FC = () => {
                 const statusInfo = getStatusInfo(order.status);
                 return (
                   <div
-                    key={order.orderId}
-                    onClick={() => navigate(`/order-detail/${order.orderId}`)}
+                    key={order.orderId || order.id}
+                    onClick={() => navigate(`/order-detail/${order.orderId || order.id}`)}
                     className="bg-white dark:bg-[#2d2516] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-[#3d3321] cursor-pointer hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-[#181411] dark:text-white font-bold text-base">
-                            {t('order.orderNumber') || 'Orden'} #{order.orderNumber || order.orderId.slice(0, 8)}
+                            {t('order.orderNumber') || 'Orden'} #{order.orderNumber || (order.orderId || order.id)?.slice(0, 8)}
                           </span>
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color} ${statusInfo.borderColor} border`}>
                             {statusInfo.label}
                           </span>
                         </div>
                         <p className="text-gray-500 dark:text-gray-400 text-xs">
-                          {new Date(order.timestamp).toLocaleDateString('es-MX', {
+                          {new Date(order.timestamp || order.created_at).toLocaleDateString('es-MX', {
                             day: 'numeric',
                             month: 'short',
                             hour: '2-digit',
@@ -592,20 +592,37 @@ const OrderScreen: React.FC = () => {
         {/* Order Items */}
         <div className="space-y-4 mb-6">
           {orderItems.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mx-auto mb-4">
-                <span className="material-symbols-outlined text-primary text-4xl">receipt_long</span>
+            // Solo mostrar mensaje de carrito vacío si no hay órdenes activas
+            orders.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mx-auto mb-4">
+                  <span className="material-symbols-outlined text-primary text-4xl">receipt_long</span>
+                </div>
+                <h3 className="text-[#181411] dark:text-white text-lg font-bold mb-2">{t('order.empty')}</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">{t('order.addItems')}</p>
+                <button
+                  onClick={() => navigate('/menu')}
+                  className="bg-primary text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 mx-auto hover:bg-primary-dark transition-colors"
+                >
+                  <span className="material-symbols-outlined">restaurant_menu</span>
+                  <span>{t('order.exploreMenu')}</span>
+                </button>
               </div>
-              <h3 className="text-[#181411] dark:text-white text-lg font-bold mb-2">{t('order.empty')}</h3>
-              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">{t('order.addItems')}</p>
-              <button
-                onClick={() => navigate('/menu')}
-                className="bg-primary text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 mx-auto hover:bg-primary-dark transition-colors"
-              >
-                <span className="material-symbols-outlined">restaurant_menu</span>
-                <span>{t('order.exploreMenu')}</span>
-              </button>
-            </div>
+            ) : (
+              // Si hay órdenes activas pero el carrito está vacío, mostrar mensaje para agregar más items
+              <div className="text-center py-8 bg-white dark:bg-[#2d2516] rounded-xl border border-gray-100 dark:border-[#3d3321]">
+                <span className="material-symbols-outlined text-primary text-3xl mb-3">add_shopping_cart</span>
+                <h3 className="text-[#181411] dark:text-white text-base font-semibold mb-2">Agregar más productos</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">¿Quieres agregar algo más a tu nueva orden?</p>
+                <button
+                  onClick={() => navigate('/menu')}
+                  className="bg-primary text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2 mx-auto hover:bg-primary-dark transition-colors text-sm"
+                >
+                  <span className="material-symbols-outlined text-lg">restaurant_menu</span>
+                  <span>Ver Menú</span>
+                </button>
+              </div>
+            )
           ) : (
             orderItems.map((item) => (
             <div
@@ -905,7 +922,7 @@ const OrderScreen: React.FC = () => {
                   const orderNumber = getNextOrderNumber();
                   const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
                   
-                  const newOrder = await createOrderDB({
+                  const createResult = await createOrderAPI({
                     restaurant_id: '00000000-0000-0000-0000-000000000001',
                     status: 'orden_enviada',
                     total: total,

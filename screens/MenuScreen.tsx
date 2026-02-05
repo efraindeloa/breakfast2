@@ -5,6 +5,7 @@ import { useTranslation, useLanguage } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useProducts } from '../contexts/ProductsContext';
 import { formatPrice } from '../utils/currency';
+import { playClickSound, playBackspaceSound } from '../utils/sound';
 import TopNavbar from '../components/TopNavbar';
 
 type OriginType = 'mar' | 'tierra' | 'aire' | 'vegetariano' | 'vegano' | 
@@ -824,6 +825,15 @@ const MenuScreen: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              // Reproducir sonido de tecla para teclas que generan caracteres
+              // Excluir teclas especiales como Shift, Ctrl, Alt, etc.
+              if (e.key === 'Backspace' || e.key === 'Delete') {
+                playBackspaceSound();
+              } else if (e.key.length === 1) {
+                playClickSound();
+              }
+            }}
             placeholder={t('menu.searchPlaceholder') || 'Buscar productos...'}
             className="w-full h-12 pl-12 pr-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#322a1a] focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500 text-[#181511] dark:text-white"
           />

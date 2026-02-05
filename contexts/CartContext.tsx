@@ -19,6 +19,7 @@ interface CartContextType {
   updateCartItemNotes: (itemId: number, notes: string) => void;
   clearCart: () => void;
   getCartItemCount: () => number;
+  migrateGuestCartToUser: () => Promise<void>;
   setCartItems: (items: CartItem[]) => void;
   isLoading: boolean;
 }
@@ -157,6 +158,40 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setCartDB(items).catch(console.error);
   };
 
+  // Función para migrar el carrito de localStorage a Supabase cuando un invitado se registra
+  const migrateGuestCartToUser = async () => {
+    try {
+      // Obtener carrito de localStorage
+      const localStorageCart = localStorage.getItem('cart');
+      if (!localStorageCart) {
+        console.log('[CartContext] No guest cart found in localStorage');
+        return;
+      }
+
+      const guestCart: CartItem[] = JSON.parse(localStorageCart);
+      if (guestCart.length === 0) {
+        console.log('[CartContext] Guest cart is empty');
+        return;
+      }
+
+      console.log('[CartContext] Migrating guest cart to user:', guestCart);
+
+      // Guardar el carrito en Supabase usando setCartDB
+      await setCartDB(guestCart);
+      
+      // Actualizar el estado local
+      setCart(guestCart);
+
+      // Limpiar localStorage después de la migración exitosa
+      localStorage.removeItem('cart');
+      
+      console.log('[CartContext] ✅ Guest cart migrated successfully');
+    } catch (error) {
+      console.error('[CartContext] ❌ Error migrating guest cart:', error);
+      // No lanzar el error para no interrumpir el proceso de registro
+    }
+  };
+
   return (
     <CartContext.Provider value={{ 
       cart, 
@@ -166,6 +201,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       updateCartItemNotes,
       clearCart, 
       getCartItemCount,
+      migrateGuestCartToUser,
       setCartItems,
       isLoading
     }}>

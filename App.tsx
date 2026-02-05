@@ -68,8 +68,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // Componente interno que usa el AuthContext
 const AppContent: React.FC = () => {
-  const { user, loading, accountType } = useAuth();
-  const isAuthenticated = !!user;
+  const { user, loading, accountType, userType } = useAuth();
+  const isAuthenticated = !!user && userType !== 'guest';
 
   // Mostrar loading mientras se verifica la sesión
   if (loading) {
@@ -102,7 +102,7 @@ const AppContent: React.FC = () => {
           <Route
             path="/home"
             element={
-              isAuthenticated
+              (isAuthenticated || userType === 'guest')
                 ? accountType === 'restaurant'
                   ? <Navigate to="/home-restaurant" />
                   : <HomeScreen />
@@ -112,23 +112,23 @@ const AppContent: React.FC = () => {
           <Route
             path="/menu"
             element={
-              isAuthenticated
+              (isAuthenticated || userType === 'guest')
                 ? accountType === 'restaurant'
                   ? <Navigate to="/menu-restaurant" />
                   : <MenuScreen />
                 : <Navigate to="/" />
             }
           />
-          <Route path="/dish/:id" element={isAuthenticated ? <DishDetailScreen /> : <Navigate to="/" />} />
-          <Route path="/orders" element={isAuthenticated ? <OrderScreen /> : <Navigate to="/" />} />
-          <Route path="/profile" element={isAuthenticated ? <ProfileScreen /> : <Navigate to="/" />} />
+          <Route path="/dish/:id" element={(isAuthenticated || userType === 'guest') ? <DishDetailScreen /> : <Navigate to="/" />} />
+          <Route path="/orders" element={(isAuthenticated || userType === 'guest') ? <OrderScreen /> : <Navigate to="/" />} />
+          <Route path="/profile" element={(isAuthenticated || userType === 'guest') ? <ProfileScreen /> : <Navigate to="/" />} />
           <Route path="/billing-step-1" element={<BillingDataScreen />} />
           <Route path="/billing-step-2" element={<UploadConstanciaScreen />} />
           <Route path="/billing-step-3" element={<EmailConfigScreen />} />
           <Route path="/billing-step-4" element={<ConfirmationScreen />} />
           <Route path="/payments" element={<PaymentMethodsScreen />} />
-          <Route path="/split-payment-selection" element={isAuthenticated ? <SplitPaymentSelectionScreen /> : <Navigate to="/" />} />
-          <Route path="/split-payment-summary" element={isAuthenticated ? <SplitPaymentSummaryScreen /> : <Navigate to="/" />} />
+          <Route path="/split-payment-selection" element={(isAuthenticated || userType === 'guest') ? <SplitPaymentSelectionScreen /> : <Navigate to="/" />} />
+          <Route path="/split-payment-summary" element={(isAuthenticated || userType === 'guest') ? <SplitPaymentSummaryScreen /> : <Navigate to="/" />} />
           <Route path="/payment-success" element={<PaymentSuccessScreen />} />
           <Route path="/add-card" element={<AddCardScreen />} />
           <Route path="/transactions" element={<TransactionsScreen />} />
@@ -136,26 +136,26 @@ const AppContent: React.FC = () => {
           <Route path="/order-history" element={<OrderHistoryScreen />} />
           <Route path="/invite-users" element={isAuthenticated ? <InviteUsersScreen /> : <Navigate to="/" />} />
           <Route path="/group-order-management" element={isAuthenticated ? <GroupOrderManagementScreen /> : <Navigate to="/" />} />
-          <Route path="/order-confirmed" element={isAuthenticated ? <OrderConfirmedScreen /> : <Navigate to="/" />} />
-          <Route path="/order-detail/:id" element={isAuthenticated ? <OrderDetailScreen /> : <Navigate to="/" />} />
-          <Route path="/order-detail" element={isAuthenticated ? <OrderDetailScreen /> : <Navigate to="/" />} />
+          <Route path="/order-confirmed" element={(isAuthenticated || userType === 'guest') ? <OrderConfirmedScreen /> : <Navigate to="/" />} />
+          <Route path="/order-detail/:id" element={(isAuthenticated || userType === 'guest') ? <OrderDetailScreen /> : <Navigate to="/" />} />
+          <Route path="/order-detail" element={(isAuthenticated || userType === 'guest') ? <OrderDetailScreen /> : <Navigate to="/" />} />
           <Route path="/join-table" element={isAuthenticated ? <JoinTableScreen /> : <Navigate to="/" />} />
           <Route path="/qr-scanner" element={isAuthenticated ? <QRScannerScreen /> : <Navigate to="/" />} />
-          <Route path="/settings" element={<SettingsScreen />} />
+          <Route path="/settings" element={(isAuthenticated || userType === 'guest') ? <SettingsScreen /> : <Navigate to="/" />} />
           <Route path="/favorites" element={isAuthenticated ? <FavoritesScreen /> : <Navigate to="/" />} />
           <Route path="/review" element={isAuthenticated ? <ReviewScreen /> : <Navigate to="/" />} />
           <Route path="/request-assistance" element={isAuthenticated ? <RequestAssistanceScreen /> : <Navigate to="/" />} />
           <Route path="/product-reviews/:dishId" element={isAuthenticated ? <ProductReviewsScreen /> : <Navigate to="/" />} />
           <Route path="/waitlist" element={isAuthenticated ? <WaitlistScreen /> : <Navigate to="/" />} />
-          <Route path="/edit-order" element={isAuthenticated ? <EditOrderScreen /> : <Navigate to="/" />} />
+          <Route path="/edit-order" element={(isAuthenticated || userType === 'guest') ? <EditOrderScreen /> : <Navigate to="/" />} />
           <Route path="/loyalty" element={isAuthenticated ? <LoyaltyScreen /> : <Navigate to="/" />} />
           <Route path="/coupons" element={isAuthenticated ? <CouponsScreen /> : <Navigate to="/" />} />
           <Route path="/coupon-detail/:id" element={isAuthenticated ? <CouponDetailScreen /> : <Navigate to="/" />} />
           <Route path="/discover" element={isAuthenticated ? <DiscoverRestaurantsScreen /> : <Navigate to="/" />} />
           <Route path="/meetup" element={isAuthenticated ? <MeetUpScreen /> : <Navigate to="/" />} />
           <Route path="/contacts" element={isAuthenticated ? <ContactsScreen /> : <Navigate to="/" />} />
-          <Route path="/promotions" element={isAuthenticated ? <PromotionsScreen /> : <Navigate to="/" />} />
-          <Route path="/promotion-detail/:id" element={isAuthenticated ? <PromotionDetailScreen /> : <Navigate to="/" />} />
+          <Route path="/promotions" element={(isAuthenticated || userType === 'guest') ? <PromotionsScreen /> : <Navigate to="/" />} />
+          <Route path="/promotion-detail/:id" element={(isAuthenticated || userType === 'guest') ? <PromotionDetailScreen /> : <Navigate to="/" />} />
           <Route path="/table-ready" element={isAuthenticated ? <TableReadyScreen /> : <Navigate to="/" />} />
           <Route path="/reservations" element={isAuthenticated ? <ReservationsRestaurantScreen /> : <Navigate to="/" />} />
           <Route path="/weather-detail" element={isAuthenticated ? <WeatherDetailScreen /> : <Navigate to="/" />} />
@@ -172,8 +172,8 @@ const AppContent: React.FC = () => {
           <Route path="/estadisticas-restaurant" element={isAuthenticated ? <StatisticsRestaurantScreen /> : <Navigate to="/" />} />
         </Routes>
         
-                      {isAuthenticated && <BottomNav />}
-                      {isAuthenticated && <AssistantButton />}
+                      {(isAuthenticated || userType === 'guest') && <BottomNav />}
+                      {(isAuthenticated || userType === 'guest') && <AssistantButton />}
                     </div>
                   </HashRouter>
                 </GroupOrderProvider>

@@ -42,9 +42,10 @@
 
 #### Supabase (Backend-as-a-Service)
 - **Base de datos**: PostgreSQL en Supabase
-- **Autenticación**: Supabase Auth con email/contraseña y OAuth
+- **Autenticación**: Sistema simple basado en tabla `users` con contraseñas hasheadas (SHA-256)
+  - **NO usa Supabase Auth** - Ver `docs/03-tecnica/06-autenticacion-simple.md`
 - **Storage**: Supabase Storage para imágenes de productos y promociones
-- **Row Level Security (RLS)**: Políticas de seguridad a nivel de fila
+- **Row Level Security (RLS)**: Políticas simplificadas que permiten operaciones sin Supabase Auth
 - **API REST**: PostgREST API automática generada desde PostgreSQL
 
 #### Capa de API (`services/api/`)

@@ -5,6 +5,7 @@ import TopNavbar from '../components/TopNavbar';
 import { useAuth } from '../contexts/AuthContext';
 import CurrencyWidget from '../components/widgets/CurrencyWidget';
 import WeatherWidget from '../components/widgets/WeatherWidget';
+import GuestRestrictionModal from '../components/GuestRestrictionModal';
 import { playClickSound } from '../utils/sound';
 
 interface ButtonConfig {
@@ -20,7 +21,7 @@ interface ButtonConfig {
 const HomeScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { accountType } = useAuth();
+  const { accountType, userType } = useAuth();
   
   // Estados para controlar la opacidad de los botones (efecto fade-in)
   const [buttonOpacities, setButtonOpacities] = useState<Record<string, number>>({
@@ -70,6 +71,12 @@ const HomeScreen: React.FC = () => {
   // Estados para controlar la visibilidad del título "Acciones Rápidas"
   const [showTitle, setShowTitle] = useState<boolean>(true);
   const [titleOpacity, setTitleOpacity] = useState<number>(1);
+  
+  // Estado para el modal de restricción de invitados
+  const [guestRestrictionModal, setGuestRestrictionModal] = useState<{ show: boolean; featureName: string }>({
+    show: false,
+    featureName: ''
+  });
   
   // Configuración de todos los botones
   const allButtons: ButtonConfig[] = [
@@ -393,30 +400,64 @@ const HomeScreen: React.FC = () => {
     const buttonDescription = buttonDescriptions[button.id] || { show: showDescriptions, opacity: descriptionsOpacity };
     const shouldShowDescription = buttonDescription.show || showDescriptions;
     const descriptionOpacityValue = buttonDescription.show ? buttonDescription.opacity : descriptionsOpacity;
+    
+    // Verificar si el botón está deshabilitado para usuarios invitados
+    const isGuestRestricted = userType === 'guest' && button.id !== 'menu';
+    const isDisabled = isGuestRestricted;
+
+    const handleClick = () => {
+      if (isDisabled) {
+        setGuestRestrictionModal({
+          show: true,
+          featureName: t(button.titleKey)
+        });
+        return;
+      }
+      playClickSound();
+      navigate(button.path);
+    };
 
     return (
       <div
         key={button.id}
-        draggable
-        onDragStart={(e) => handleDragStart(e, button.id)}
-        onDragEnd={handleDragEnd}
-        onDragOver={(e) => handleDragOver(e, button.id)}
-        onDragLeave={handleDragLeave}
-        onDrop={(e) => handleDrop(e, button.id)}
-        onClick={() => {
-          playClickSound();
-          navigate(button.path);
-        }}
-        className={`relative flex flex-col rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-primary transition-all duration-500 ease-out cursor-move group min-h-[140px] overflow-hidden ${
-          isDragOver ? 'border-primary border-2 bg-primary/5' : ''
+        draggable={!isDisabled}
+        onDragStart={isDisabled ? undefined : (e) => handleDragStart(e, button.id)}
+        onDragEnd={isDisabled ? undefined : handleDragEnd}
+        onDragOver={isDisabled ? undefined : (e) => handleDragOver(e, button.id)}
+        onDragLeave={isDisabled ? undefined : handleDragLeave}
+        onDrop={isDisabled ? undefined : (e) => handleDrop(e, button.id)}
+        onClick={handleClick}
+        className={`relative flex flex-col rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm transition-all duration-500 ease-out group min-h-[140px] overflow-hidden ${
+          isDisabled 
+            ? 'opacity-50 cursor-not-allowed' 
+            : 'hover:border-primary cursor-move'
+        } ${
+          isDragOver && !isDisabled ? 'border-primary border-2 bg-primary/5' : ''
         } ${isDragging ? 'opacity-50' : ''}`}
         style={{ opacity: buttonOpacities[button.id] ?? 0 }}
       >
-        <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 group-hover:bg-primary transition-colors shrink-0 mb-2">
-          <span className="material-symbols-outlined text-primary group-hover:text-white">{button.icon}</span>
+        <div className={`flex items-center justify-center size-10 rounded-lg transition-colors shrink-0 mb-2 ${
+          isDisabled 
+            ? 'bg-gray-100 dark:bg-gray-700' 
+            : 'bg-primary/10 group-hover:bg-primary'
+        }`}>
+          <span className={`material-symbols-outlined transition-colors ${
+            isDisabled 
+              ? 'text-gray-400 dark:text-gray-500' 
+              : 'text-primary group-hover:text-white'
+          }`}>{button.icon}</span>
         </div>
         <div className="flex flex-col gap-1.5 flex-1 min-h-0 min-w-0">
-          <h2 className={`text-[#111813] dark:text-white font-bold leading-tight line-clamp-2 transition-all duration-500 ease-out ${shouldShowDescription ? 'text-base' : 'text-lg'}`}>{t(button.titleKey)}</h2>
+          <h2 className={`font-bold leading-tight line-clamp-2 transition-all duration-500 ease-out ${shouldShowDescription ? 'text-base' : 'text-lg'} ${
+            isDisabled 
+              ? 'text-gray-400 dark:text-gray-500' 
+              : 'text-[#111813] dark:text-white'
+          }`}>{t(button.titleKey)}</h2>
+          {isDisabled && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+              {t('guest.registeredOnly')}
+            </p>
+          )}
           {shouldShowDescription && (
             <p 
               className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 transition-opacity duration-500 ease-out"
@@ -433,7 +474,9 @@ const HomeScreen: React.FC = () => {
             playClickSound();
             showButtonDescriptionFor10Seconds(button.id);
           }}
-          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors z-10"
+          className={`absolute top-2 right-2 w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-primary/10 dark:hover:bg-primary/20 transition-all duration-500 ease-out z-10 ${
+            shouldShowDescription ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
         >
           <span className="material-symbols-outlined text-xs text-gray-500 dark:text-gray-400">info</span>
         </button>
@@ -493,16 +536,24 @@ const HomeScreen: React.FC = () => {
                 </div>
               </div>
               {/* Ícono de información */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  playClickSound();
-                  showButtonDescriptionFor10Seconds('qr');
-                }}
-                className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/30 transition-colors z-20"
-              >
-                <span className="material-symbols-outlined text-xs text-white">info</span>
-              </button>
+              {(() => {
+                const qrDescription = buttonDescriptions['qr'] || { show: showDescriptions, opacity: descriptionsOpacity };
+                const shouldShowQrDescription = qrDescription.show || showDescriptions;
+                return (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      playClickSound();
+                      showButtonDescriptionFor10Seconds('qr');
+                    }}
+                    className={`absolute top-2 right-2 w-6 h-6 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/30 transition-all duration-500 ease-out z-20 ${
+                      shouldShowQrDescription ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-xs text-white">info</span>
+                  </button>
+                );
+              })()}
               <div className="absolute -right-4 -bottom-4 opacity-10">
                 <span className="material-symbols-outlined text-[120px]">qr_code_2</span>
               </div>
@@ -522,8 +573,24 @@ const HomeScreen: React.FC = () => {
             </div>
           </div>
 
+          {/* Botón Registrarse para usuarios invitados */}
+          {userType === 'guest' && (
+            <div className="mt-6 mb-4 px-4" style={{ marginBottom: 'calc(100px + env(safe-area-inset-bottom))' }}>
+              <button
+                onClick={() => {
+                  playClickSound();
+                  navigate('/register');
+                }}
+                className="w-full h-14 bg-primary text-white text-base font-bold rounded-xl shadow-lg shadow-primary/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined">person_add</span>
+                <span>{t('welcome.register')}</span>
+              </button>
+            </div>
+          )}
+
           {/* Sección de Widgets */}
-          <div className="mt-6 mb-4">
+          <div className={`mt-6 ${userType === 'guest' ? 'mb-4' : 'mb-4'}`} style={{ marginBottom: userType !== 'guest' ? 'calc(100px + env(safe-area-inset-bottom))' : undefined }}>
             <h3 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-3">
               Widgets
             </h3>
@@ -572,15 +639,34 @@ const HomeScreen: React.FC = () => {
         >
           <button
             onClick={() => {
+              if (userType === 'guest') {
+                setGuestRestrictionModal({
+                  show: true,
+                  featureName: t(assistanceButton.titleKey)
+                });
+                return;
+              }
               playClickSound();
               navigate(assistanceButton.path);
             }}
-            className="bg-primary text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 mx-auto hover:bg-primary-dark transition-colors w-auto"
+            className={`font-bold py-3 px-6 rounded-xl flex items-center gap-2 mx-auto transition-colors w-auto ${
+              userType === 'guest'
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-primary text-white hover:bg-primary-dark'
+            }`}
           >
             <span className="material-symbols-outlined">{assistanceButton.icon}</span>
             <span>{t(assistanceButton.titleKey)}</span>
           </button>
         </div>
+      )}
+
+      {/* Modal de restricción para usuarios invitados */}
+      {guestRestrictionModal.show && (
+        <GuestRestrictionModal
+          featureName={guestRestrictionModal.featureName}
+          onClose={() => setGuestRestrictionModal({ show: false, featureName: '' })}
+        />
       )}
     </div>
   );

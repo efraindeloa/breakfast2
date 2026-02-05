@@ -2,7 +2,6 @@
   "common": {
     "welcome": "Bienvenido",
     "save": "Guardar",
-    "saving": "Guardando...",
     "saved": "Guardado",
     "cancel": "Cancelar",
     "confirm": "Confirmar",
@@ -20,40 +19,23 @@
     "remove": "Quitar",
     "yes": "Sí",
     "no": "No",
-    "retry": "Reintentar",
     "languageNames": {
       "es": "Español",
       "en": "English",
       "pt": "Português",
       "fr": "Français"
-    },
-    "months": {
-      "january": "Enero",
-      "february": "Febrero",
-      "march": "Marzo",
-      "april": "Abril",
-      "may": "Mayo",
-      "june": "Junio",
-      "july": "Julio",
-      "august": "Agosto",
-      "september": "Septiembre",
-      "october": "Octubre",
-      "november": "Noviembre",
-      "december": "Diciembre"
     }
   },
   "navigation": {
     "home": "Inicio",
     "menu": "Menú",
     "myOrder": "Mi orden",
-    "payments": "Pagar",
+    "payments": "Pagos",
     "profile": "Perfil",
     "settings": "Configuración",
     "assistant": "Asistente",
     "favorites": "Favoritos",
-    "promotions": "Promociones",
-    "notifications": "Notificaciones",
-    "back": "Atrás"
+    "promotions": "Promociones"
   },
   "home": {
     "welcome": "Bienvenido",
@@ -64,16 +46,11 @@
     "joinTable": "Unirse a la mesa",
     "joinTableDescription": "Únete a una orden grupal",
     "scanQR": "Escanear QR",
-    "scanQRDescription": "Para seleccionar restaurant y mesa",
+    "scanQRDescription": "Pide directamente desde tu mesa",
     "requestAssistanceDescription": "Solicita ayuda del personal",
     "inviteDescription": "Invita personas a tu mesa",
-    "makeReservation": "Hacer Reservación",
-    "makeReservationDescription": "Reserva tu mesa con anticipación",
-    "currentRestaurant": "Restaurante actual",
-    "selectRestaurant": "Seleccionar restaurante",
-    "searchRestaurant": "Buscar restaurante...",
-    "noRestaurantsFound": "No se encontraron restaurantes",
-    "noRestaurants": "No hay restaurantes disponibles"
+    "makeReservation": "Hacer Reserva",
+    "makeReservationDescription": "Reserva tu mesa con anticipación"
   },
   "menu": {
     "categories": {
@@ -123,11 +100,148 @@
     "noDishesFound": "No se encontraron platos con los filtros aplicados",
     "noDishesInCategory": "No hay platos disponibles en esta categoría",
     "clearFilters": "Limpiar filtros",
-    "searchResults": "Resultados de búsqueda",
     "filtersLabel": "Filtros",
     "proteinOrigin": "Origen de la Proteína",
     "clear": "Limpiar",
     "apply": "Aplicar"
+  },
+  "dishes": {
+    "1": {
+      "name": "Tacos de Atún Marinado",
+      "description": "Atún fresco con aderezo de chipotle artesanal, aguacate y cebolla morada."
+    },
+    "2": {
+      "name": "Ceviche de Maracuyá",
+      "description": "Pescado blanco marinado en leche de tigre de maracuyá y toques de cilantro."
+    },
+    "3": {
+      "name": "Rib Eye a la Leña",
+      "description": "Corte premium de 400g cocinado a fuego lento con madera de encino."
+    },
+    "4": {
+      "name": "Carpaccio de Res",
+      "description": "Láminas finas de res con parmesano, arúgula y aceite de trufa blanca."
+    },
+    "5": {
+      "name": "Ensalada Mediterránea",
+      "description": "Fresco, saludable y de temporada"
+    },
+    "6": {
+      "name": "Pollo al Limón & Hierbas",
+      "description": "Plato insignia del día"
+    },
+    "7": {
+      "name": "Quinoa & Aguacate Bowl",
+      "description": "Nutritivo y equilibrado"
+    },
+    "8": {
+      "name": "Pasta al Pomodoro",
+      "description": "Elaboración artesanal"
+    },
+    "9": {
+      "name": "Café Espresso",
+      "description": "Café italiano intenso y aromático"
+    },
+    "10": {
+      "name": "Jugo de Naranja Natural",
+      "description": "Recién exprimido, rico en vitamina C"
+    },
+    "11": {
+      "name": "Tarta de Chocolate",
+      "description": "Deliciosa tarta con cobertura de chocolate belga"
+    },
+    "12": {
+      "name": "Flan de Vainilla",
+      "description": "Tradicional flan casero con caramelo"
+    },
+    "13": {
+      "name": "Mojito Clásico",
+      "description": "Ron, menta fresca, lima y soda"
+    },
+    "14": {
+      "name": "Margarita Premium",
+      "description": "Tequila reposado, triple sec y jugo de lima"
+    },
+    "15": {
+      "name": "Americano",
+      "description": "180 ml - NESPRESSO"
+    },
+    "16": {
+      "name": "Espresso",
+      "description": "60 ml - NESPRESSO"
+    },
+    "17": {
+      "name": "Capuchino",
+      "description": "180 ml - NESPRESSO. Opciones: Napolitano, baileys, vainilla"
+    },
+    "18": {
+      "name": "Frapuccino",
+      "description": "180 ml - NESPRESSO"
+    },
+    "19": {
+      "name": "Té",
+      "description": "Opciones: Hierbabuena / Manzanilla"
+    },
+    "20": {
+      "name": "Carajillo",
+      "description": "Café con licor 43"
+    },
+    "21": {
+      "name": "Coketillo",
+      "description": "Carajillo con paleta de chocomilk"
+    },
+    "22": {
+      "name": "Carajilla",
+      "description": "Café con Baileys"
+    },
+    "23": {
+      "name": "Licor 43",
+      "description": "700 ml - Porción: $140.00 / Botella: $1,400.00"
+    },
+    "24": {
+      "name": "Baileys",
+      "description": "700 ml - Porción: $120.00 / Botella: $1,200.00"
+    },
+    "25": {
+      "name": "Frangelico",
+      "description": "700 ml - Porción: $120.00 / Botella: $1,200.00"
+    },
+    "26": {
+      "name": "Sambuca",
+      "description": "700 ml - Porción: $100.00 / Botella: $1,000.00"
+    },
+    "27": {
+      "name": "Chinchón Seco",
+      "description": "1000 ml - Porción: $95.00 / Botella: $950.00"
+    },
+    "28": {
+      "name": "Chinchón Dulce",
+      "description": "1000 ml - Porción: $95.00 / Botella: $950.00"
+    },
+    "29": {
+      "name": "Volcán",
+      "description": "Con una textura única, firme por fuera, suave por dentro, acompañado de helado. Opciones: Dulce de leche o chocolate"
+    },
+    "30": {
+      "name": "Cheesecake Vasco",
+      "description": "Cremoso pay de natilla montado sobre cama de galleta horneada y bañado con mermelada de frutos rojos. (200 g.)"
+    },
+    "31": {
+      "name": "Pan de Elote",
+      "description": "Recién horneado, sobre una cama de mermelada, frutos rojos, helado de vainilla, bañado con dulce de cajeta y nuez. (200 g.)"
+    },
+    "32": {
+      "name": "Cheesecake Lotus",
+      "description": "Pay de queso con la autentica galleta \"Lotus Biscoff\", bañado con mezcla de leches, acompañado de frutos rojos."
+    },
+    "33": {
+      "name": "Pastel 3 Leches",
+      "description": "Delicioso pan de vainilla, con trozos de durazno, bañado con mezcla de 3 leches, con frutos rojos y nuez."
+    },
+    "34": {
+      "name": "Red Velvet",
+      "description": "Pan de red velvet con sabor a chocolate oscuro y betún de queso crema. Coronado con fresa natural."
+    }
   },
   "joinTable": {
     "title": "Unirse a Mesa",
@@ -199,8 +313,8 @@
     "popularLanguages": "Idiomas Populares",
     "assistant": {
       "title": "Asistente",
-      "enableButton": "Botón de Asistente",
-      "enableButtonDesc": "Mostrar u ocultar el botón flotante de asistente"
+      "enableButton": "Botón del Asistente",
+      "enableButtonDesc": "Mostrar u ocultar el botón flotante del asistente"
     }
   },
   "order": {
@@ -224,6 +338,8 @@
     "continueExploring": "Seguir Explorando",
     "addMoreProducts": "Agrega más productos a tu orden",
     "exploreMenu": "Explorar Menú",
+    "activeOrders": "Órdenes Activas",
+    "orderNumber": "Orden",
     "specialInstructions": "Instrucciones Especiales para la Orden",
     "specialInstructionsPlaceholder": "Ej. Traer todos los platillos al mismo tiempo, servir las bebidas primero...",
     "noSpecialInstructions": "Sin instrucciones especiales para la orden",
@@ -235,7 +351,7 @@
     "finishedSelecting": "¿Terminaste de seleccionar tus alimentos?",
     "canUnmark": "Puedes desmarcar si necesitas hacer cambios",
     "markWhenFinished": "Marca cuando hayas terminado de agregar todos tus productos",
-    "confirmAndSendOrder": "Confirmar Orden",
+    "confirmAndSendOrder": "Confirmar y Enviar Orden",
     "changeOrder": "Cambiar mi orden",
     "waitingForAll": "Esperando a que todos terminen",
     "pending": "pendientes",
@@ -245,8 +361,6 @@
     "saveCombinationDesc": "Guarda esta combinación de platillos para pedirla fácilmente en el futuro.",
     "combinationNamePlaceholder": "Ej: Desayuno de fin de semana",
     "combinationSaved": "¡Combinación guardada exitosamente!",
-    "activeOrders": "Órdenes Activas",
-    "orderNumber": "Orden",
     "status": {
       "sent": "Orden Enviada",
       "sentDescription": "Tu orden ha sido enviada y está esperando confirmación del restaurante",
@@ -275,7 +389,7 @@
     "fiscalData": "Datos Fiscales",
     "paymentMethods": "Métodos de Pago",
     "orderHistory": "Historial de Órdenes",
-    "transactions": "Historial de Pagos",
+    "transactions": "Transacciones",
     "addPhoto": "Agregar foto",
     "changePhoto": "Cambiar foto",
     "editPhoto": "Editar foto",
@@ -297,7 +411,7 @@
     "favorites": "Mis Favoritos",
     "favoritesSubtitle": "Platillos y combinaciones guardadas",
     "orderHistorySubtitle": "Revisa tus desayunos anteriores",
-    "transactionsSubtitle": "Revisa tus pagos anteriores",
+    "transactionsSubtitle": "Revisa tus transacciones anteriores",
     "preferences": "Preferencias",
     "soundEffects": "Efectos de Sonido",
     "soundEffectsSubtitle": "Reproducir sonidos al interactuar",
@@ -381,7 +495,7 @@
     "step4": "Confirmación",
     "step1of4": "Paso 1 de 4",
     "billingInformation": "Información de Facturación",
-    "billingInformationDesc": "Completa tus datos para generar facturas automáticas en tus consumos de forma rápida y sencilla.",
+    "billingInformationDesc": "Completa tus datos para generar facturas automáticas en tus consumos de desayuno de forma rápida y sencilla.",
     "rfc": "RFC",
     "rfcHint": "Introduce tu RFC a 12 o 13 caracteres.",
     "businessName": "Razón Social",
@@ -412,16 +526,16 @@
     "generalExpenses": "Gastos en general",
     "selectRegime": "Selecciona tu régimen",
     "generalLawLegalEntities": "General de Ley Personas Morales",
-    "saveAndContinue": "Continuar",
+    "saveAndContinue": "Guardar y Continuar",
     "step2of4": "Paso 2 de 4",
     "uploadCertificate": "Sube tu Constancia",
-    "uploadCertificateDesc": "Sube el PDF de tu Constancia de Situación Fiscal."
+    "uploadCertificateDesc": "Sube el PDF de tu Constancia de Situación Fiscal o escanéalo con tu cámara. Usaremos IA para extraer tus datos automáticamente."
   },
   "emailConfig": {
     "title": "Configuración de Envío",
     "step3of4": "Paso 3 de 4",
     "whereToSend": "¿A dónde enviamos tus facturas?",
-    "whereToSendDesc": "Configura los correos electrónicos donde recibirás automáticamente tus archivos XML y PDF.",
+    "whereToSendDesc": "Configura los correos electrónicos donde recibirás automáticamente tus archivos XML y PDF cada mañana.",
     "receptionEmails": "Correos de recepción",
     "addAnother": "Agregar otro",
     "noEmailsConfigured": "No hay correos configurados",
@@ -431,7 +545,7 @@
     "autoSendOnPayment": "Envío automático al pagar",
     "autoSendOnPaymentDesc": "Generar y enviar la factura inmediatamente después de cada consumo de desayuno.",
     "dataSecurity": "Tus datos se manejan de forma segura bajo los protocolos del SAT.",
-    "continueToFinalStep": "Continuar",
+    "continueToFinalStep": "Continuar al Paso Final",
     "deleteEmail": "Eliminar correo"
   },
   "confirmation": {
@@ -447,7 +561,7 @@
     "generalExpenses": "G03 - Gastos en general",
     "generalLawLegalEntities": "601 - General de Ley Personas Morales",
     "editInformation": "Editar Información",
-    "finishConfiguration": "Finalizar"
+    "finishConfiguration": "Finalizar Configuración"
   },
   "transactions": {
     "title": "Transacciones",
@@ -534,7 +648,7 @@
     "pending": "Pendiente",
     "pendingPlural": "pendientes",
     "inviteMorePeople": "Invitar más personas",
-    "confirmAndSendOrder": "Confirmar Orden",
+    "confirmAndSendOrder": "Confirmar y Enviar Orden",
     "waitingForAll": "Esperando a que todos terminen",
     "orderConfirmed": "Orden confirmada"
   },
@@ -563,16 +677,7 @@
     "noOrdersMessage": "Aún no has realizado ninguna orden. ¡Explora nuestro menú y comienza a pedir!",
     "mainOrder": "Orden Principal",
     "complementaryOrder": "Orden Complementaria",
-    "editingOrder": "Editando Orden",
     "items": "Items",
-    "original": "Original",
-    "new": "Nuevo",
-    "removeItem": "Eliminar producto",
-    "confirmRemoveItem": "¿Estás seguro de que deseas eliminar este producto de la orden?",
-    "errorUpdatingOrder": "Error al actualizar la orden. Por favor, intenta de nuevo.",
-    "errorRemovingItem": "Error al eliminar el producto. Por favor, intenta de nuevo.",
-    "cannotEditInPreparation": "No puedes modificar esta orden porque ya está en preparación. Si necesitas hacer cambios, contacta al personal.",
-    "canEditOrder": "Puedes modificar esta orden agregando o eliminando productos antes de que comience la preparación.",
     "orderTotal": "Total de la Orden",
     "currentCart": "Carrito Actual",
     "pendingComplementaryOrder": "Orden Complementaria",
@@ -678,23 +783,11 @@
     "noAccount": "¿Aún no tienes una cuenta?",
     "otherLanguage": "Otro idioma",
     "selectLanguage": "Seleccionar Idioma",
-    "pleaseEnterEmailOrPhone": "Por favor ingresa tu correo o teléfono",
-    "pleaseEnterPassword": "Por favor ingresa tu contraseña",
-    "pleaseUseEmail": "Por favor usa tu correo electrónico para iniciar sesión",
-    "invalidCredentials": "Correo o contraseña incorrectos",
-    "emailNotConfirmed": "Por favor confirma tu correo electrónico antes de iniciar sesión",
-    "loginError": "Error al iniciar sesión",
-    "loggingIn": "Iniciando sesión..."
+    "continueAsGuest": "Continuar como invitado"
   },
   "register": {
     "title": "¡Buen día!",
     "subtitle": "Ingresa tus datos para continuar",
-    "selectType": "¿Cómo quieres registrarte?",
-    "userType": "Usuario",
-    "userTypeDescription": "Para comensales",
-    "restaurantType": "Restaurante",
-    "restaurantTypeDescription": "Para establecimientos",
-    "changeType": "Cambiar tipo de registro",
     "name": "Nombre completo",
     "email": "Correo electrónico",
     "phone": "Teléfono",
@@ -712,47 +805,6 @@
     "invalidEmail": "Por favor ingresa un correo electrónico válido",
     "invalidPhone": "Por favor ingresa un número de teléfono válido",
     "pleaseEnterPassword": "Por favor introduce una contraseña",
-    "passwordDoesNotMeet": "La contraseña no cumple con las siguientes reglas",
-    "pleaseUseEmail": "Por favor usa tu correo electrónico para registrarte",
-    "userAlreadyExists": "Este correo ya está registrado",
-    "registrationError": "Error al registrarse",
-    "registrationSuccess": "¡Registro exitoso! Redirigiendo...",
-    "creatingAccount": "Creando cuenta...",
-    "pleaseConfirmPassword": "Por favor confirma tu contraseña",
-    "passwordsDoNotMatch": "Las contraseñas no coinciden. Por favor verifica que ambas contraseñas sean iguales",
-    "passwordRuleMinLength": "8 caracteres",
-    "passwordRuleNumber": "1 número",
-    "passwordRuleLowercase": "1 minúscula",
-    "passwordRuleUppercase": "1 mayúscula",
-    "passwordRuleSymbol": "1 símbolo",
-    "passwordConfirmation": "Confirmación"
-  },
-  "forgotPassword": {
-    "title": "Recuperar contraseña",
-    "subtitle": "Ingresa tu correo electrónico y te enviaremos un enlace para recuperar tu contraseña",
-    "email": "Correo electrónico",
-    "emailPlaceholder": "ejemplo@correo.com",
-    "pleaseEnterEmail": "Por favor ingresa tu correo electrónico",
-    "invalidEmail": "Por favor ingresa un correo electrónico válido",
-    "emailNotFound": "No encontramos una cuenta con este correo electrónico",
-    "resetError": "Error al enviar el correo de recuperación",
-    "sendResetLink": "Enviar enlace de recuperación",
-    "sending": "Enviando...",
-    "backToLogin": "Volver al inicio de sesión",
-    "successMessage": "Te hemos enviado un correo con las instrucciones para recuperar tu contraseña",
-    "checkEmail": "Revisa tu correo electrónico y sigue las instrucciones para restablecer tu contraseña."
-  },
-  "resetPassword": {
-    "title": "Restablecer contraseña",
-    "successTitle": "¡Contraseña actualizada!",
-    "subtitle": "Ingresa tu nueva contraseña",
-    "successMessage": "Tu contraseña ha sido actualizada exitosamente. Serás redirigido al inicio de sesión.",
-    "newPassword": "Nueva contraseña",
-    "passwordPlaceholder": "Ingresa tu nueva contraseña",
-    "confirmPassword": "Confirmar contraseña",
-    "confirmPasswordPlaceholder": "Confirma tu nueva contraseña",
-    "pleaseEnterPassword": "Por favor ingresa una contraseña",
-    "pleaseConfirmPassword": "Por favor confirma tu contraseña",
     "passwordDoesNotMeet": "La contraseña no cumple con las siguientes reglas",
     "passwordRuleMinLength": "8 caracteres",
     "passwordRuleNumber": "1 número",
@@ -776,7 +828,7 @@
     "fromAir": "Aire",
     "vegetarian": "Vegetariano",
     "inCart": "en carrito",
-    "addProtein": "Complementos",
+    "addProtein": "Agrega tu proteína",
     "optional": "Opcional",
     "specialInstructions": "Instrucciones especiales",
     "specialInstructionsPlaceholder": "Ej. Sin cebolla, salsa aparte, bien cocido...",
@@ -796,13 +848,10 @@
     "title": "Mis Favoritos",
     "dishes": "Platillos",
     "combinations": "Combinaciones",
-    "promotions": "Promociones",
     "noFavorites": "No tienes platillos favoritos",
     "noFavoritesDesc": "Marca platillos como favoritos para encontrarlos fácilmente",
     "noCombinations": "No tienes combinaciones guardadas",
     "noCombinationsDesc": "Guarda combinaciones de platillos desde tu orden para pedirlas rápidamente",
-    "noPromotions": "No tienes promociones favoritas",
-    "noPromotionsDesc": "Marca promociones como favoritas para encontrarlas fácilmente",
     "addToCart": "Agregar al carrito",
     "created": "Creada",
     "lastUsed": "Último uso",
@@ -951,7 +1000,7 @@
   },
   "waitlist": {
     "title": "Lista de Espera",
-    "scanQR": "Lista de espera",
+    "scanQR": "Escanear QR para Lista de Espera",
     "scanQRDescription": "Escanea el código QR para agregarte a la lista de espera",
     "selectZone": "Selecciona la zona",
     "interior": "Interior",
@@ -1223,226 +1272,85 @@
     "whatIncludes": "¿Qué incluye?",
     "applyToOrder": "Aplicar a mi Orden",
     "appliedToOrder": "Promoción aplicada a tu orden",
-    "linkCopied": "Enlace copiado al portapapeles",
-    "badges": {
-      "flashSale": "FLASH SALE",
-      "healthy": "SALUDABLE",
-      "vipExclusive": "VIP Exclusive"
-    },
-    "discounts": {
-      "20off": "20% OFF",
-      "15off": "15% OFF"
-    },
-    "items": {
-      "cappuccino2x1": {
-        "title": "2x1 en Capuchinos",
-        "description": "Solo hoy antes de las 11 AM",
-        "timeRestriction": "Solo hoy antes de las 11 AM"
-      },
-      "energeticBreakfast": {
-        "title": "Combo Desayuno Energético",
-        "description": "¡Empieza el día con energía!"
-      },
-      "seasonalBowl": {
-        "title": "Bowl de Temporada",
-        "description": "Frutas frescas"
-      },
-      "sourdoughBread": {
-        "title": "Pan Masa Madre",
-        "description": "Artesanal diario"
-      },
-      "tropicalSmoothie": {
-        "title": "Smoothie Tropical",
-        "description": "Frutas de temporada"
-      },
-      "premiumCoffee": {
-        "title": "Café Especial Premium",
-        "description": "Edición limitada"
-      }
-    }
+    "linkCopied": "Enlace copiado al portapapeles"
+  },
+  "register": {
+    "title": "¡Buen día!",
+    "subtitle": "Ingresa tu información para continuar",
+    "name": "Nombre completo",
+    "email": "Correo electrónico",
+    "phone": "Teléfono",
+    "emailOrPhone": "Correo o número de teléfono",
+    "emailPlaceholder": "ejemplo@correo.com",
+    "phonePlaceholder": "000 000 0000",
+    "password": "Contraseña",
+    "passwordPlaceholder": "Ingresa tu contraseña",
+    "confirmPassword": "Repetir contraseña",
+    "confirmPasswordPlaceholder": "Repite tu contraseña",
+    "createAccount": "Registrarse",
+    "alreadyHaveAccount": "¿Ya tienes cuenta?",
+    "login": "Iniciar sesión",
+    "pleaseEnterEmailOrPhone": "Por favor ingresa un correo o número de teléfono",
+    "invalidEmail": "Por favor ingresa un correo válido",
+    "invalidPhone": "Por favor ingresa un número de teléfono válido",
+    "pleaseEnterPassword": "Por favor ingresa una contraseña",
+    "passwordDoesNotMeet": "La contraseña no cumple con las siguientes reglas",
+    "passwordRuleMinLength": "8 caracteres",
+    "passwordRuleNumber": "1 número",
+    "passwordRuleLowercase": "1 minúscula",
+    "passwordRuleUppercase": "1 mayúscula",
+    "passwordRuleSymbol": "1 símbolo",
+    "passwordConfirmation": "Confirmación",
+    "pleaseConfirmPassword": "Por favor confirma tu contraseña",
+    "passwordsDoNotMatch": "Las contraseñas no coinciden. Por favor verifica que ambas contraseñas sean iguales",
+    "pleaseUseEmail": "Por favor usa tu dirección de correo para registrarte",
+    "userAlreadyExists": "Este correo ya está registrado",
+    "registrationError": "Error al registrarse",
+    "registrationSuccess": "¡Registro exitoso! Redirigiendo...",
+    "creatingAccount": "Creando cuenta...",
+    "selectType": "¿Cómo te quieres registrar?",
+    "userType": "Usuario no registrado",
+    "userTypeDescription": "Para comensales",
+    "restaurantType": "Restaurante",
+    "restaurantTypeDescription": "Para establecimientos",
+    "changeType": "Cambiar tipo de registro"
   },
   "restaurant": {
-    "navigation": {
-      "home": "Inicio",
-      "promotions": "Promociones",
-      "menu": "Menú",
-      "reservations": "Reservaciones",
-      "statistics": "Estadísticas"
-    },
-    "menu": {
-      "chefSuggestions": "Sugerencias del chef",
-      "highlights": "Destacados",
-      "menu": "Menú",
-      "addSuggestion": "Agregar sugerencia",
-      "addHighlight": "Agregar destacado",
-      "addProduct": "Agregar Producto",
-      "addEntry": "Agregar Entrada",
-      "addMain": "Agregar Plato Fuerte",
-      "addDrink": "Agregar Bebida",
-      "addDessert": "Agregar Postre",
-      "addCocktail": "Agregar Coctel",
-      "newProduct": "Nuevo producto",
-      "productDescription": "Descripción del producto",
-      "tag": "Etiqueta",
-      "complementName": "Nombre del complemento",
-      "noCost": "Sin costo",
-      "editModeActive": "Modo edición activado",
-      "switchToEditMode": "Cambiar a modo de edición",
-      "add": "Agregar",
-      "delete": "Eliminar",
-      "save": "Guardar",
-      "cancel": "Cancelar",
-      "edit": "Editar",
-      "deleteImage": "Eliminar imagen",
-      "deleteTag": "Eliminar etiqueta",
-      "addTag": "Agregar etiqueta",
-      "clearTagFilter": "Limpiar filtro de etiqueta",
-      "viewReviews": "Ver opiniones",
-      "deleteProduct": "Eliminar",
-      "deleteProductConfirm": "¿Estás seguro de que deseas eliminar este producto? Esta acción eliminará el producto completamente y no se puede deshacer.",
-      "confirmDeletion": "Confirmar Eliminación",
-      "errors": {
-        "emptyName": "Por favor, ingresa un nombre para el producto.",
-        "invalidRestaurant": "Error: No se pudo identificar el restaurante. Por favor, inicia sesión como restaurante.",
-        "invalidPrice": "Error: El precio debe ser un número válido mayor o igual a 0.",
-        "invalidCategory": "Error: La categoría no está definida. Por favor, selecciona una categoría.",
-        "updateFailed": "Error al actualizar el producto. Por favor, intenta de nuevo.",
-        "createFailed": "Error al crear el producto. Revisa la consola para más detalles. Por favor, intenta de nuevo.",
-        "saveFailed": "Error al guardar el producto: {message}. Revisa la consola para más detalles.",
-        "deleteFailed": "Error al eliminar el producto. Por favor, intenta de nuevo.",
-        "deleteFromDbFailed": "Error al eliminar el producto de la base de datos"
-      }
-    },
     "profile": {
       "title": "Perfil del Restaurante",
-      "manage": "Gestiona tu restaurante",
-      "saving": "Guardando...",
-      "changesSaved": "Cambios guardados correctamente",
-      "invalidRestaurantId": "Error: ID de restaurante inválido. Por favor, ejecuta el script SQL para crear el restaurante correctamente.",
-      "saveError": "Error al guardar los cambios",
-      "notFound": "No se encontró el restaurante o no tienes permisos para actualizarlo. Verifica que estés asociado como owner.",
-      "tagExists": "Este tag ya existe",
-      "editName": "Editar nombre",
-      "editCuisine": "Editar tipo de cocina",
-      "editDescription": "Editar descripción",
-      "deleteTag": "Eliminar tag",
-      "saveTag": "Guardar tag",
-      "cancel": "Cancelar",
-      "addTag": "Agregar tag"
-    },
-    "details": {
-      "onlineReservation": "Reserva Online",
-      "delivery": "Domicilio",
-      "digitalPayment": "Pago Digital",
-      "freeWifi": "WiFi Gratis",
-      "saveAddress": "Guardar dirección",
-      "cancel": "Cancelar",
-      "editAddress": "Editar dirección",
-      "addService": "Agregar servicio",
-      "cancelReservation": "Cancelar",
-      "save": "Guardar",
-      "cancelReservationInfo": "Puedes cancelar tu reserva sin costo hasta",
-      "hoursBefore": "horas antes",
-      "days": {
-        "monday": "Lunes",
-        "tuesday": "Martes",
-        "wednesday": "Miércoles",
-        "thursday": "Jueves",
-        "friday": "Viernes",
-        "saturday": "Sábado",
-        "sunday": "Domingo"
-      }
-    },
-    "reservations": {
-      "details": "Detalles de Reservación",
-      "welcomeTitle": "Hacer una reservación",
-      "welcomeMessage": "Por favor completa las preguntas que irán apareciendo",
-      "selectDate": "Selecciona la Fecha",
-      "arrivalTime": "¿A qué hora llegas?",
-      "numberOfPeople": "¿Cuántas personas?",
-      "selectZone": "Selecciona la Zona",
-      "specialOccasion": "¿Es una ocasión especial?",
-      "tablePreferences": "Preferencias de Mesa",
-      "tablePreferencesPlaceholder": "Ej. Cerca de la ventana, zona tranquila, trona para bebé...",
-      "advanceOrder": "Pedido Anticipado",
-      "advanceOrderDescription": "Ahorra tiempo al llegar. Selecciona tus platillos favoritos ahora.",
-      "viewFullMenu": "Ver el menú completo",
-      "totalReservation": "Total Reservación",
-      "guests": "Personas",
-      "zones": {
-        "interior": "Interior",
-        "terraza": "Terraza",
-        "jardin": "Jardín"
-      },
-      "occasions": {
-        "birthday": "Cumpleaños",
-        "anniversary": "Aniversario",
-        "business": "Negocios",
-        "date": "Cita"
-      }
-    },
-    "promotions": {
-      "addPromotion": "Agregar Promoción",
-      "editPromotion": "Editar Promoción",
-      "newPromotion": "Nueva Promoción",
-      "title": "Título",
-      "titlePlaceholder": "Ej: 2x1 en Cappuccinos",
-      "description": "Descripción",
-      "descriptionPlaceholder": "Descripción de la promoción",
-      "category": "Categoría",
-      "discountType": "Tipo de Descuento",
-      "percentage": "Porcentaje",
-      "fixed": "Cantidad Fija",
-      "combo": "Combo",
-      "discountValue": "Valor del Descuento (%)",
-      "originalPrice": "Precio Original",
-      "finalPrice": "Precio Final",
-      "validFrom": "Válido Desde",
-      "validUntil": "Válido Hasta",
-      "image": "Imagen",
-      "badges": "Etiquetas (Opcional)",
-      "badgePlaceholder": "Ej: Desayuno, Temporada, VIP",
-      "featured": "Promoción Destacada",
-      "confirmDelete": "¿Estás seguro de que deseas eliminar esta promoción?",
-      "errors": {
-        "titleRequired": "El título es requerido",
-        "saveFailed": "Error al guardar la promoción",
-        "deleteFailed": "Error al eliminar la promoción"
-      },
-      "success": {
-        "created": "Promoción creada correctamente",
-        "updated": "Promoción actualizada correctamente",
-        "deleted": "Promoción eliminada correctamente"
-      }
+      "manage": "Administra tu restaurante"
     }
   },
-  "weather": {
-    "detail": {
-      "title": "Pronóstico del Clima",
-      "city": "Ciudad",
-      "currentLocation": "Ubicación actual",
-      "searchPlaceholder": "Buscar ciudad...",
-      "useCurrentLocation": "Usar ubicación actual",
-      "forecast": "Pronóstico 5 Días",
-      "feelsLike": "Sensación",
-      "humidity": "Humedad",
-      "wind": "Viento"
-    }
+  "guest": {
+    "restrictionTitle": "Función Restringida",
+    "restrictionMessage": "Para acceder a esta función, necesitas crear una cuenta. ¡Es gratis y solo toma un minuto!",
+    "createAccount": "Crear Cuenta",
+    "signIn": "Iniciar Sesión",
+    "registeredOnly": "Solo registrados"
   },
-  "currency": {
-    "detail": {
-      "perUSD": "por 1 USD",
-      "change": "Cambio",
-      "min": "Mínimo",
-      "max": "Máximo",
-      "week": "Semana",
-      "month": "Mes",
-      "year": "Año",
-      "history": "Historial",
-      "detailedHistory": "Historial Detallado",
-      "date": "Fecha",
-      "rate": "Tasa",
-      "noData": "No hay datos disponibles"
-    }
+  "welcome": {
+    "title": "Bienvenido",
+    "subtitle": "Inicia sesión para continuar",
+    "login": "Iniciar Sesión",
+    "register": "Registrarse",
+    "or": "o",
+    "goodDay": "¡Buen día!",
+    "subtitleMessage": "Comienza tu experiencia con el mejor sabor matutino",
+    "emailOrPhone": "Correo o número de teléfono",
+    "emailOrPhonePlaceholder": "ejemplo@correo.com o +52 000 000 0000",
+    "password": "Contraseña",
+    "passwordPlaceholder": "Ingresa tu contraseña",
+    "forgotPassword": "Olvidé mi contraseña",
+    "noAccount": "¿Aún no tienes cuenta?",
+    "otherLanguage": "Otro idioma",
+    "selectLanguage": "Seleccionar Idioma",
+    "pleaseEnterEmailOrPhone": "Por favor ingresa tu correo o teléfono",
+    "pleaseEnterPassword": "Por favor ingresa tu contraseña",
+    "pleaseUseEmail": "Por favor usa tu dirección de correo para iniciar sesión",
+    "invalidCredentials": "Correo o contraseña incorrectos",
+    "emailNotConfirmed": "Por favor confirma tu correo antes de iniciar sesión",
+    "loginError": "Error al iniciar sesión",
+    "loggingIn": "Iniciando sesión...",
+    "continueAsGuest": "Continuar como invitado"
   }
 }

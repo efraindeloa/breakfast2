@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage, useTranslation } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { popularLanguages, allLanguages, languagesData } from '../content/languages';
 import { playClickSound, areSoundsEnabled, setSoundsEnabled } from '../utils/sound';
+import GuestRestrictionModal from '../components/GuestRestrictionModal';
 // Importaciones estáticas para obtener traducciones del idioma seleccionado
 import * as esTranslations from '../locales/es.json';
 import * as enTranslations from '../locales/en.json';
@@ -20,6 +22,13 @@ const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
   const { language: currentLanguage, setLanguage: setAppLanguage } = useLanguage();
   const { t } = useTranslation();
+  const { userType } = useAuth();
+  
+  // Estado para el modal de restricción de invitados
+  const [guestRestrictionModal, setGuestRestrictionModal] = useState<{ show: boolean; featureName: string }>({
+    show: false,
+    featureName: ''
+  });
   // Función auxiliar para obtener el nombre del idioma desde el código usando traducciones estáticas
   const getLanguageNameFromCode = (code: 'es' | 'en' | 'pt' | 'fr', useCurrentLang = true): string => {
     // Si useCurrentLang es true, usar el idioma actual para las traducciones
@@ -265,22 +274,46 @@ const SettingsScreen: React.FC = () => {
           </div>
           <div className="mx-4 bg-white dark:bg-[#2d241c] rounded-xl border border-solid border-[#e6e0db] dark:border-[#3d3228] overflow-hidden shadow-sm">
             {/* Assistant Button Toggle */}
-            <div className="flex items-center gap-4 px-4 py-5 justify-between">
+            <div className={`flex items-center gap-4 px-4 py-5 justify-between ${userType === 'guest' ? 'opacity-50' : ''}`}>
               <div className="flex items-center gap-4">
-                <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+                <div className={`flex items-center justify-center rounded-lg shrink-0 size-12 ${
+                  userType === 'guest' 
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500' 
+                    : 'text-primary bg-primary/10'
+                }`}>
                   <span className="material-symbols-outlined text-[26px]">smart_toy</span>
                 </div>
                 <div className="flex flex-col justify-center max-w-[200px]">
-                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('settings.assistant.enableButton') || 'Botón de Asistente'}</p>
+                  <p className={`text-base font-semibold leading-tight ${
+                    userType === 'guest' 
+                      ? 'text-gray-400 dark:text-gray-500' 
+                      : 'text-[#181411] dark:text-white'
+                  }`}>{t('settings.assistant.enableButton') || 'Botón de Asistente'}</p>
                   <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">{t('settings.assistant.enableButtonDesc') || 'Mostrar u ocultar el botón flotante de asistente'}</p>
+                  {userType === 'guest' && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mt-1">
+                      {t('guest.registeredOnly')}
+                    </p>
+                  )}
                 </div>
               </div>
-              <Toggle checked={assistantEnabled} onChange={(checked) => {
-                setAssistantEnabled(checked);
-                localStorage.setItem('assistantEnabled', checked.toString());
-                // Disparar evento para que AssistantButton se actualice
-                window.dispatchEvent(new CustomEvent('assistant-enabled-changed', { detail: { enabled: checked } }));
-              }} />
+              <Toggle 
+                checked={assistantEnabled} 
+                disabled={userType === 'guest'}
+                onChange={(checked) => {
+                  if (userType === 'guest') {
+                    setGuestRestrictionModal({
+                      show: true,
+                      featureName: t('settings.assistant.enableButton') || 'Botón de Asistente'
+                    });
+                    return;
+                  }
+                  setAssistantEnabled(checked);
+                  localStorage.setItem('assistantEnabled', checked.toString());
+                  // Disparar evento para que AssistantButton se actualice
+                  window.dispatchEvent(new CustomEvent('assistant-enabled-changed', { detail: { enabled: checked } }));
+                }} 
+              />
             </div>
           </div>
         </section>
@@ -315,55 +348,129 @@ const SettingsScreen: React.FC = () => {
             <div className="h-[1px] bg-[#e6e0db] dark:bg-[#3d3228] mx-4"></div>
 
             {/* Smart Translation Toggle */}
-            <div className="flex items-center gap-4 px-4 py-5 justify-between">
+            <div className={`flex items-center gap-4 px-4 py-5 justify-between ${userType === 'guest' ? 'opacity-50' : ''}`}>
               <div className="flex items-center gap-4">
-                <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+                <div className={`flex items-center justify-center rounded-lg shrink-0 size-12 ${
+                  userType === 'guest' 
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500' 
+                    : 'text-primary bg-primary/10'
+                }`}>
                   <span className="material-symbols-outlined text-[26px]">auto_awesome</span>
                 </div>
                 <div className="flex flex-col justify-center max-w-[200px]">
-                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('settings.ai.smartTranslation')}</p>
+                  <p className={`text-base font-semibold leading-tight ${
+                    userType === 'guest' 
+                      ? 'text-gray-400 dark:text-gray-500' 
+                      : 'text-[#181411] dark:text-white'
+                  }`}>{t('settings.ai.smartTranslation')}</p>
                   <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">{t('settings.ai.smartTranslationDesc')}</p>
+                  {userType === 'guest' && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mt-1">
+                      {t('guest.registeredOnly')}
+                    </p>
+                  )}
                 </div>
               </div>
-              <Toggle checked={smartTranslation} onChange={setSmartTranslation} />
+              <Toggle 
+                checked={smartTranslation} 
+                disabled={userType === 'guest'}
+                onChange={(checked) => {
+                  if (userType === 'guest') {
+                    setGuestRestrictionModal({
+                      show: true,
+                      featureName: t('settings.ai.smartTranslation')
+                    });
+                    return;
+                  }
+                  setSmartTranslation(checked);
+                }} 
+              />
             </div>
 
             <div className="h-[1px] bg-[#e6e0db] dark:bg-[#3d3228] mx-4"></div>
 
             {/* Suggestions Toggle */}
-            <div className="flex items-center gap-4 px-4 py-5 justify-between">
+            <div className={`flex items-center gap-4 px-4 py-5 justify-between ${userType === 'guest' ? 'opacity-50' : ''}`}>
               <div className="flex items-center gap-4">
-                <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+                <div className={`flex items-center justify-center rounded-lg shrink-0 size-12 ${
+                  userType === 'guest' 
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500' 
+                    : 'text-primary bg-primary/10'
+                }`}>
                   <span className="material-symbols-outlined text-[26px]">restaurant</span>
                 </div>
                 <div className="flex flex-col justify-center max-w-[200px]">
-                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('settings.ai.showSuggestions')}</p>
+                  <p className={`text-base font-semibold leading-tight ${
+                    userType === 'guest' 
+                      ? 'text-gray-400 dark:text-gray-500' 
+                      : 'text-[#181411] dark:text-white'
+                  }`}>{t('settings.ai.showSuggestions')}</p>
                   <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">{t('settings.ai.suggestionsDesc')}</p>
+                  {userType === 'guest' && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mt-1">
+                      {t('guest.registeredOnly')}
+                    </p>
+                  )}
                 </div>
               </div>
-              <Toggle checked={suggestions} onChange={(checked) => {
-                setSuggestions(checked);
-                localStorage.setItem('showSuggestions', checked.toString());
-              }} />
+              <Toggle 
+                checked={suggestions} 
+                disabled={userType === 'guest'}
+                onChange={(checked) => {
+                  if (userType === 'guest') {
+                    setGuestRestrictionModal({
+                      show: true,
+                      featureName: t('settings.ai.showSuggestions')
+                    });
+                    return;
+                  }
+                  setSuggestions(checked);
+                  localStorage.setItem('showSuggestions', checked.toString());
+                }} 
+              />
             </div>
 
             <div className="h-[1px] bg-[#e6e0db] dark:bg-[#3d3228] mx-4"></div>
 
             {/* Highlights Toggle */}
-            <div className="flex items-center gap-4 px-4 py-5 justify-between">
+            <div className={`flex items-center gap-4 px-4 py-5 justify-between ${userType === 'guest' ? 'opacity-50' : ''}`}>
               <div className="flex items-center gap-4">
-                <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+                <div className={`flex items-center justify-center rounded-lg shrink-0 size-12 ${
+                  userType === 'guest' 
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500' 
+                    : 'text-primary bg-primary/10'
+                }`}>
                   <span className="material-symbols-outlined text-[26px]">star</span>
                 </div>
                 <div className="flex flex-col justify-center max-w-[200px]">
-                  <p className="text-[#181411] dark:text-white text-base font-semibold leading-tight">{t('settings.ai.showHighlights')}</p>
+                  <p className={`text-base font-semibold leading-tight ${
+                    userType === 'guest' 
+                      ? 'text-gray-400 dark:text-gray-500' 
+                      : 'text-[#181411] dark:text-white'
+                  }`}>{t('settings.ai.showHighlights')}</p>
                   <p className="text-[#8a7560] dark:text-[#a8937d] text-xs font-normal leading-normal mt-1">{t('settings.ai.highlightsDesc')}</p>
+                  {userType === 'guest' && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mt-1">
+                      {t('guest.registeredOnly')}
+                    </p>
+                  )}
                 </div>
               </div>
-              <Toggle checked={highlights} onChange={(checked) => {
-                setHighlights(checked);
-                localStorage.setItem('showHighlights', checked.toString());
-              }} />
+              <Toggle 
+                checked={highlights} 
+                disabled={userType === 'guest'}
+                onChange={(checked) => {
+                  if (userType === 'guest') {
+                    setGuestRestrictionModal({
+                      show: true,
+                      featureName: t('settings.ai.showHighlights')
+                    });
+                    return;
+                  }
+                  setHighlights(checked);
+                  localStorage.setItem('showHighlights', checked.toString());
+                }} 
+              />
             </div>
           </div>
         </section>
@@ -471,6 +578,14 @@ const SettingsScreen: React.FC = () => {
               )}
         </button>
       </div>
+
+      {/* Modal de restricción para usuarios invitados */}
+      {guestRestrictionModal.show && (
+        <GuestRestrictionModal
+          featureName={guestRestrictionModal.featureName}
+          onClose={() => setGuestRestrictionModal({ show: false, featureName: '' })}
+        />
+      )}
     </div>
   );
 };
@@ -525,15 +640,20 @@ const LanguageOption: React.FC<{ id: string; name: string; selected: boolean; on
   );
 };
 
-const Toggle: React.FC<{ checked: boolean; onChange: (val: boolean) => void }> = ({ checked, onChange }) => (
-  <label className="relative inline-flex items-center cursor-pointer">
+const Toggle: React.FC<{ checked: boolean; onChange: (val: boolean) => void; disabled?: boolean }> = ({ checked, onChange, disabled = false }) => (
+  <label className={`relative inline-flex items-center ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
     <input 
       type="checkbox" 
       className="sr-only peer" 
       checked={checked} 
+      disabled={disabled}
       onChange={(e) => onChange(e.target.checked)} 
     />
-    <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
+    <div className={`w-14 h-8 rounded-full peer-focus:outline-none peer after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all ${
+      disabled 
+        ? 'bg-gray-300 dark:bg-gray-600 after:bg-gray-200 dark:after:bg-gray-400' 
+        : 'bg-gray-200 dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white peer-checked:bg-primary'
+    }`}></div>
   </label>
 );
 

@@ -5,6 +5,7 @@ import { useCart } from '../contexts/CartContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import AssistantModal from './AssistantModal';
+import GuestRestrictionModal from './GuestRestrictionModal';
 
 const DOCKED_STATE_KEY = 'assistant_button_docked';
 const POSITION_STORAGE_KEY = 'assistant_button_position';
@@ -12,6 +13,8 @@ const ASSISTANT_ENABLED_KEY = 'assistantEnabled';
 
 const BottomNav: React.FC = () => {
   const [showAssistant, setShowAssistant] = useState(false);
+  const [showGuestModal, setShowGuestModal] = useState(false);
+  const [restrictedFeature, setRestrictedFeature] = useState('');
   const [isDocked, setIsDocked] = useState(() => {
     const saved = localStorage.getItem(DOCKED_STATE_KEY);
     return saved === 'true';
@@ -170,8 +173,15 @@ const BottomNav: React.FC = () => {
   const location = useLocation();
   const { getCartItemCount } = useCart();
   const { t } = useTranslation();
-  const { accountType } = useAuth();
-  const cartCount = getCartItemCount();
+  const { accountType, userType } = useAuth();
+  
+  // Verificación de seguridad para evitar errores durante transiciones de estado
+  let cartCount = 0;
+  try {
+    cartCount = getCartItemCount();
+  } catch (error) {
+    console.warn('[BottomNav] Error getting cart count:', error);
+  }
 
   // Cargar todas las órdenes desde Supabase para mostrar el contador
   const [ordersCount, setOrdersCount] = useState(0);
@@ -268,10 +278,20 @@ const BottomNav: React.FC = () => {
           ? (location.pathname === '/orders' || location.pathname === '/order-detail')
           : (location.pathname === item.path);
         
+        // Verificar si el botón está restringido para invitados
+        const isRestricted = userType === 'guest' && (item as any).guestRestricted;
+        const isDisabled = isRestricted;
+        
         return (
           <button
             key={item.label}
             onClick={() => {
+              if (isDisabled) {
+                setRestrictedFeature(item.label);
+                setShowGuestModal(true);
+                return;
+              }
+              
               if (isOrdersPath) {
                 handleOrdersClick();
               } else {
@@ -279,12 +299,14 @@ const BottomNav: React.FC = () => {
               }
             }}
             className={`flex flex-col items-center gap-0.5 transition-colors ${
-              isActive ? 'text-primary dark:text-white' : 'text-gray-400 dark:text-gray-500'
+              isActive ? 'text-primary dark:text-white' : 
+              isDisabled ? 'text-gray-300 dark:text-gray-600' : 
+              'text-gray-400 dark:text-gray-500'
             }`}
           >
             <span className="relative">
               <span 
-                className="material-symbols-outlined text-[28px]"
+                className={`material-symbols-outlined text-[28px] ${isDisabled ? 'opacity-50' : ''}`}
                 style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}
               >
                 {item.icon}
@@ -300,7 +322,9 @@ const BottomNav: React.FC = () => {
                 </span>
               )}
             </span>
-            <span className={`text-[10px] ${isActive ? 'font-bold' : 'font-medium'}`}>{item.label}</span>
+            <span className={`text-[10px] ${isActive ? 'font-bold' : 'font-medium'} ${isDisabled ? 'opacity-50' : ''}`}>
+              {isDisabled ? t('guest.registeredOnly') || 'Solo registrados' : item.label}
+            </span>
           </button>
         );
       })}
@@ -355,6 +379,14 @@ const BottomNav: React.FC = () => {
     
     {showAssistant && (
       <AssistantModal onClose={() => setShowAssistant(false)} />
+    )}
+    
+    {showGuestModal && (
+      <GuestRestrictionModal 
+        isOpen={showGuestModal}
+        onClose={() => setShowGuestModal(false)}
+        featureName={restrictedFeature}
+      />
     )}
     </>
   );

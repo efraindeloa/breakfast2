@@ -81,7 +81,8 @@
       "mains": "Plats Principaux",
       "drinks": "Boissons",
       "desserts": "Desserts",
-      "cocktails": "Cocktails"
+      "cocktails": "Cocktails",
+      "miscellaneous": "Divers"
     },
     "filters": {
       "land": "Terre",
@@ -1258,6 +1259,44 @@
       "reservations": "Réservations",
       "statistics": "Statistiques"
     },
+    "home": {
+      "manageMenu": "Gérer le Menu",
+      "manageMenuDescription": "Gérez votre menu et vos produits",
+      "managePromotions": "Gérer les Promotions",
+      "managePromotionsDescription": "Gérez vos offres et réductions"
+    },
+    "reservations": {
+      "title": "Gérer les Réservations",
+      "todayReservations": "Réservations d'Aujourd'hui",
+      "allReservations": "Toutes les Réservations",
+      "pending": "En Attente",
+      "confirmed": "Confirmées",
+      "completed": "Terminées",
+      "cancelled": "Annulées",
+      "noShow": "Absent",
+      "searchPlaceholder": "Rechercher par zone, occasion, notes...",
+      "filterByDate": "Filtrer par date",
+      "filterByStatus": "Filtrer par statut",
+      "allStatuses": "Tous les statuts",
+      "guestsCount": "Invités",
+      "zone": "Zone",
+      "specialOccasion": "Occasion Spéciale",
+      "tablePreferences": "Préférences de Table",
+      "advanceOrder": "Commande Anticipée",
+      "notes": "Notes",
+      "reservationDetails": "Détails de la Réservation",
+      "confirm": "Confirmer",
+      "cancel": "Annuler",
+      "complete": "Terminer",
+      "markNoShow": "Marquer Absent",
+      "viewDetails": "Voir Détails",
+      "noReservations": "Aucune réservation",
+      "noReservationsForDate": "Aucune réservation pour cette date",
+      "loadingReservations": "Chargement des réservations...",
+      "errorLoading": "Erreur lors du chargement",
+      "retry": "Réessayer",
+      "tablePreferencesPlaceholder": "Ex: Table près de la fenêtre, zone calme..."
+    },
     "menu": {
       "chefSuggestions": "Suggestions du chef",
       "highlights": "En vedette",
@@ -1371,10 +1410,12 @@
       }
     },
     "promotions": {
+      "title": "Gérer les Promotions",
       "addPromotion": "Ajouter une Promotion",
+      "addSpecial": "Ajouter un Spécial",
       "editPromotion": "Modifier la Promotion",
       "newPromotion": "Nouvelle Promotion",
-      "title": "Titre",
+      "formTitle": "Titre",
       "titlePlaceholder": "Ex. : 2x1 sur Cappuccinos",
       "description": "Description",
       "descriptionPlaceholder": "Description de la promotion",

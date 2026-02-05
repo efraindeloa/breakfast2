@@ -14,6 +14,7 @@ export async function simpleSignUp(params: {
   password: string;
   name: string;
   phone?: string;
+  account_type?: 'owner' | 'manager' | 'hostess' | 'waiter' | 'cashier' | 'kitchen' | 'delivery_driver' | 'delivery_manager' | 'accountant' | 'support' | 'customer' | 'valet_parking';
 }): Promise<{ success: boolean; error?: string; userId?: string }> {
   try {
     // Verificar si el usuario ya existe
@@ -38,6 +39,7 @@ export async function simpleSignUp(params: {
         name: params.name,
         phone: params.phone || null,
         password_hash: passwordHash,
+        account_type: params.account_type || 'customer',
         is_active: true,
       })
       .select('id')

@@ -368,7 +368,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
           email: email!,
           password,
           name: userName,
-          phone: phone
+          phone: phone,
+          account_type: registerType === 'restaurant' ? 'owner' : 'customer'
         });
 
         if (!result.success) {

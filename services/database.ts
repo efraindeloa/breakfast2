@@ -2414,6 +2414,7 @@ export const deleteProduct = async (productId: number): Promise<boolean> => {
 
 /**
  * Obtiene el restaurant_id del usuario actual (si es un restaurante)
+ * Compatible con autenticación simple
  */
 export const getCurrentUserRestaurantId = async (): Promise<string | null> => {
   if (!isSupabaseConfigured()) {
@@ -2421,13 +2422,33 @@ export const getCurrentUserRestaurantId = async (): Promise<string | null> => {
   }
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
+    // Obtener user ID usando la función compatible con autenticación simple
+    let userId: string | null = null;
+    
+    // Primero intentar autenticación simple
+    const simpleAuthUser = localStorage.getItem('simpleAuthUser');
+    if (simpleAuthUser) {
+      try {
+        const userData = JSON.parse(simpleAuthUser);
+        userId = userData.id;
+      } catch (error) {
+        console.error('Error parsing simple auth user:', error);
+        localStorage.removeItem('simpleAuthUser');
+      }
+    }
+
+    // Si no hay autenticación simple, intentar Supabase Auth
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id || null;
+    }
+
+    if (!userId) return null;
 
     const { data: staffRow, error } = await supabase
       .from('restaurant_staff')
       .select('restaurant_id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('is_active', true)
       .limit(1)
       .maybeSingle();

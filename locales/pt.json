@@ -81,7 +81,8 @@
       "mains": "Pratos Principais",
       "drinks": "Bebidas",
       "desserts": "Sobremesas",
-      "cocktails": "Coquetéis"
+      "cocktails": "Coquetéis",
+      "miscellaneous": "Diversos"
     },
     "filters": {
       "land": "Terra",
@@ -1258,6 +1259,44 @@
       "reservations": "Reservas",
       "statistics": "Estatísticas"
     },
+    "home": {
+      "manageMenu": "Gerenciar Cardápio",
+      "manageMenuDescription": "Gerencie seu cardápio e produtos",
+      "managePromotions": "Gerenciar Promoções",
+      "managePromotionsDescription": "Gerencie suas ofertas e descontos"
+    },
+    "reservations": {
+      "title": "Gerenciar Reservas",
+      "todayReservations": "Reservas de Hoje",
+      "allReservations": "Todas as Reservas",
+      "pending": "Pendentes",
+      "confirmed": "Confirmadas",
+      "completed": "Concluídas",
+      "cancelled": "Canceladas",
+      "noShow": "Não Compareceu",
+      "searchPlaceholder": "Buscar por zona, ocasião, notas...",
+      "filterByDate": "Filtrar por data",
+      "filterByStatus": "Filtrar por status",
+      "allStatuses": "Todos os status",
+      "guestsCount": "Convidados",
+      "zone": "Zona",
+      "specialOccasion": "Ocasião Especial",
+      "tablePreferences": "Preferências de Mesa",
+      "advanceOrder": "Pedido Antecipado",
+      "notes": "Notas",
+      "reservationDetails": "Detalhes da Reserva",
+      "confirm": "Confirmar",
+      "cancel": "Cancelar",
+      "complete": "Concluir",
+      "markNoShow": "Marcar Não Compareceu",
+      "viewDetails": "Ver Detalhes",
+      "noReservations": "Nenhuma reserva",
+      "noReservationsForDate": "Nenhuma reserva para esta data",
+      "loadingReservations": "Carregando reservas...",
+      "errorLoading": "Erro ao carregar reservas",
+      "retry": "Tentar novamente",
+      "tablePreferencesPlaceholder": "Ex: Mesa perto da janela, área tranquila..."
+    },
     "menu": {
       "chefSuggestions": "Sugestões do chef",
       "highlights": "Destaques",
@@ -1371,10 +1410,12 @@
       }
     },
     "promotions": {
+      "title": "Gerenciar Promoções",
       "addPromotion": "Adicionar Promoção",
+      "addSpecial": "Adicionar Especial",
       "editPromotion": "Editar Promoção",
       "newPromotion": "Nova Promoção",
-      "title": "Título",
+      "formTitle": "Título",
       "titlePlaceholder": "Ex.: 2x1 em Cappuccinos",
       "description": "Descrição",
       "descriptionPlaceholder": "Descrição da promoção",

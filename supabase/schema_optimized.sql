@@ -45,6 +45,23 @@ CREATE INDEX IF NOT EXISTS idx_restaurants_location ON restaurants USING GIST (
   ll_to_earth(latitude, longitude)
 ) WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
 
+-- ==================== TIPOS ENUM ====================
+-- Tipo ENUM para los tipos de cuenta
+CREATE TYPE IF NOT EXISTS account_type_enum AS ENUM (
+  'owner',
+  'manager', 
+  'hostess',
+  'waiter',
+  'cashier',
+  'kitchen',
+  'delivery_driver',
+  'delivery_manager',
+  'accountant',
+  'support',
+  'customer',
+  'valet_parking'
+);
+
 -- ==================== TABLA DE USUARIOS ====================
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -53,6 +70,8 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL,
   avatar_url TEXT,
   preferred_language TEXT DEFAULT 'es',
+  account_type account_type_enum NOT NULL DEFAULT 'customer',
+  password_hash TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
   email_verified BOOLEAN NOT NULL DEFAULT false,
   phone_verified BOOLEAN NOT NULL DEFAULT false,
@@ -65,6 +84,8 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone) WHERE phone IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);
+CREATE INDEX IF NOT EXISTS idx_users_account_type ON users(account_type);
+CREATE INDEX IF NOT EXISTS idx_users_account_type_active ON users(account_type, is_active) WHERE is_active = true;
 
 -- ==================== TABLA DE PRODUCTOS (OPTIMIZADA) ====================
 CREATE TABLE IF NOT EXISTS products (
@@ -414,19 +435,33 @@ ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE promotions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE coupons ENABLE ROW LEVEL SECURITY;
 
--- Políticas para restaurantes (todos pueden leer activos)
-CREATE POLICY "Anyone can view active restaurants"
+-- Políticas SIMPLES para restaurants (sin restricciones de auth.uid())
+CREATE POLICY "simple_restaurants_insert"
+  ON restaurants FOR INSERT
+  WITH CHECK (true);
+
+CREATE POLICY "simple_restaurants_select"
   ON restaurants FOR SELECT
-  USING (is_active = true);
+  USING (true);
 
--- Políticas para usuarios (solo pueden ver/editar sus propios datos)
-CREATE POLICY "Users can view their own data"
+CREATE POLICY "simple_restaurants_update"
+  ON restaurants FOR UPDATE
+  USING (true)
+  WITH CHECK (true);
+
+-- Políticas SIMPLES para users (sin restricciones de auth.uid())
+CREATE POLICY "simple_users_insert"
+  ON users FOR INSERT
+  WITH CHECK (true);
+
+CREATE POLICY "simple_users_select"
   ON users FOR SELECT
-  USING (auth.uid() = id OR id = current_setting('app.user_id', true)::uuid);
+  USING (true);
 
-CREATE POLICY "Users can update their own data"
+CREATE POLICY "simple_users_update"
   ON users FOR UPDATE
-  USING (auth.uid() = id OR id = current_setting('app.user_id', true)::uuid);
+  USING (true)
+  WITH CHECK (true);
 
 -- Políticas para productos (todos pueden leer activos)
 CREATE POLICY "Anyone can view active products"

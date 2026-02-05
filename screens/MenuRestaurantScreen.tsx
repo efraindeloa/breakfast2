@@ -75,6 +75,7 @@ const MenuRestaurantScreen: React.FC = () => {
       t('menu.categories.drinks'),
       t('menu.categories.desserts'),
       t('menu.categories.cocktails'),
+      t('menu.categories.miscellaneous'),
     ],
     [t]
   );
@@ -86,6 +87,7 @@ const MenuRestaurantScreen: React.FC = () => {
       Bebidas: t('menu.categories.drinks'),
       Postres: t('menu.categories.desserts'),
       Coctelería: t('menu.categories.cocktails'),
+      Misceláneos: t('menu.categories.miscellaneous'),
     }),
     [t]
   );

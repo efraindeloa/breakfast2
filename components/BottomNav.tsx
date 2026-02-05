@@ -258,7 +258,7 @@ const BottomNav: React.FC = () => {
           { label: t('restaurant.navigation.home'), icon: 'home', path: '/home-restaurant' },
           { label: t('restaurant.navigation.promotions'), icon: 'local_offer', path: '/promotions-restaurant', showBadge: true },
           { label: t('restaurant.navigation.menu'), icon: 'restaurant_menu', path: '/menu-restaurant' },
-          { label: t('restaurant.navigation.reservations'), icon: 'calendar_today', path: '/reservaciones-restaurant' },
+          { label: t('restaurant.navigation.reservations'), icon: 'calendar_today', path: '/gestionar-reservaciones' },
           { label: t('restaurant.navigation.statistics'), icon: 'bar_chart', path: '/estadisticas-restaurant' },
         ]
       : [

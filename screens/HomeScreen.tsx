@@ -27,6 +27,7 @@ const HomeScreen: React.FC = () => {
   const [buttonOpacities, setButtonOpacities] = useState<Record<string, number>>({
     qr: 0,
     menu: 0,
+    promotions: 0,
     assistance: 0,
     waitlist: 0,
     joinTable: 0,
@@ -81,7 +82,21 @@ const HomeScreen: React.FC = () => {
   // Configuración de todos los botones
   const allButtons: ButtonConfig[] = [
     { id: 'qr', path: '/qr-scanner', titleKey: 'home.scanQR', descriptionKey: 'home.scanQRDescription', icon: 'qr_code_scanner', isQR: true },
-    { id: 'menu', path: '/menu', titleKey: 'home.viewMenu', descriptionKey: 'home.viewMenuDescription', icon: 'restaurant_menu' },
+    { 
+      id: 'menu', 
+      path: accountType === 'restaurant' ? '/menu-restaurant' : '/menu', 
+      titleKey: accountType === 'restaurant' ? 'restaurant.home.manageMenu' : 'home.viewMenu', 
+      descriptionKey: accountType === 'restaurant' ? 'restaurant.home.manageMenuDescription' : 'home.viewMenuDescription', 
+      icon: 'restaurant_menu' 
+    },
+    { 
+      id: 'promotions', 
+      path: '/promotions-restaurant', 
+      titleKey: 'restaurant.home.managePromotions', 
+      descriptionKey: 'restaurant.home.managePromotionsDescription', 
+      icon: 'local_offer',
+      condition: (accountType) => accountType === 'restaurant'
+    },
     { id: 'assistance', path: '/request-assistance', titleKey: 'payment.requestAssistance', descriptionKey: 'home.requestAssistanceDescription', icon: 'person' },
     { id: 'waitlist', path: '/waitlist', titleKey: 'waitlist.scanQR', descriptionKey: 'waitlist.scanQRDescription', icon: 'schedule' },
     { id: 'joinTable', path: '/join-table', titleKey: 'home.joinTable', descriptionKey: 'home.joinTableDescription', icon: 'groups' },

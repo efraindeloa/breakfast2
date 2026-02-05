@@ -42,6 +42,23 @@ CREATE TABLE restaurants (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- ==================== TIPOS ENUM ====================
+-- Tipo ENUM para los tipos de cuenta
+CREATE TYPE account_type_enum AS ENUM (
+  'owner',
+  'manager', 
+  'hostess',
+  'waiter',
+  'cashier',
+  'kitchen',
+  'delivery_driver',
+  'delivery_manager',
+  'accountant',
+  'support',
+  'customer',
+  'valet_parking'
+);
+
 -- Tabla de Usuarios
 DROP TABLE IF EXISTS users CASCADE;
 CREATE TABLE users (
@@ -51,6 +68,8 @@ CREATE TABLE users (
   name TEXT NOT NULL,
   avatar_url TEXT,
   preferred_language TEXT DEFAULT 'es',
+  account_type account_type_enum NOT NULL DEFAULT 'customer',
+  password_hash TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
   email_verified BOOLEAN NOT NULL DEFAULT false,
   phone_verified BOOLEAN NOT NULL DEFAULT false,
@@ -58,6 +77,13 @@ CREATE TABLE users (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   last_login_at TIMESTAMP WITH TIME ZONE
 );
+
+-- Índices para usuarios
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone) WHERE phone IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);
+CREATE INDEX IF NOT EXISTS idx_users_account_type ON users(account_type);
+CREATE INDEX IF NOT EXISTS idx_users_account_type_active ON users(account_type, is_active) WHERE is_active = true;
 
 -- ==================== TABLAS DE USUARIO ====================
 -- Información extendida del usuario

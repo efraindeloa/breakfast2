@@ -51,6 +51,7 @@ import HomeRestaurantScreen from './screens/HomeRestaurantScreen';
 import PromotionsRestaurantScreen from './screens/PromotionsRestaurantScreen';
 import MenuRestaurantScreen from './screens/MenuRestaurantScreen';
 import ReservationsRestaurantScreen from './screens/ReservationsRestaurantScreen';
+import ReservationsManagementScreen from './screens/ReservationsManagementScreen';
 import StatisticsRestaurantScreen from './screens/StatisticsRestaurantScreen';
 import WeatherDetailScreen from './screens/WeatherDetailScreen';
 import CurrencyDetailScreen from './screens/CurrencyDetailScreen';
@@ -169,6 +170,7 @@ const AppContent: React.FC = () => {
           <Route path="/promotions-restaurant" element={isAuthenticated ? <PromotionsRestaurantScreen /> : <Navigate to="/" />} />
           <Route path="/menu-restaurant" element={isAuthenticated ? <MenuRestaurantScreen /> : <Navigate to="/" />} />
           <Route path="/reservaciones-restaurant" element={isAuthenticated ? <ReservationsRestaurantScreen /> : <Navigate to="/" />} />
+          <Route path="/gestionar-reservaciones" element={isAuthenticated ? <ReservationsManagementScreen /> : <Navigate to="/" />} />
           <Route path="/estadisticas-restaurant" element={isAuthenticated ? <StatisticsRestaurantScreen /> : <Navigate to="/" />} />
         </Routes>
         

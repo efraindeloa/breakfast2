@@ -52,7 +52,8 @@ const MenuScreen: React.FC = () => {
     t('menu.categories.mains'),
     t('menu.categories.drinks'),
     t('menu.categories.desserts'),
-    t('menu.categories.cocktails')
+    t('menu.categories.cocktails'),
+    t('menu.categories.miscellaneous')
   ], [t]);
 
   // Restaurar estado desde location.state o sessionStorage
@@ -203,7 +204,8 @@ const MenuScreen: React.FC = () => {
     'Platos Fuertes': t('menu.categories.mains'),
     'Bebidas': t('menu.categories.drinks'),
     'Postres': t('menu.categories.desserts'),
-    'Coctelería': t('menu.categories.cocktails')
+    'Coctelería': t('menu.categories.cocktails'),
+    'Misceláneos': t('menu.categories.miscellaneous')
   };
   
   

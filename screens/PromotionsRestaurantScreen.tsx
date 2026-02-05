@@ -514,7 +514,7 @@ const PromotionsRestaurantScreen: React.FC = () => {
     return (
       <div className="relative flex h-auto min-h-screen w-full max-w-[480px] mx-auto flex-col overflow-x-hidden pb-24 bg-background-light dark:bg-background-dark">
         <TopNavbar 
-          title={t('promotions.title')}
+          title={t('restaurant.promotions.title')}
           showBackButton={true}
           showAvatar={true}
         />
@@ -542,7 +542,7 @@ const PromotionsRestaurantScreen: React.FC = () => {
       <div className="relative flex h-auto min-h-screen w-full max-w-[480px] mx-auto flex-col overflow-x-hidden pb-24 bg-background-light dark:bg-background-dark">
         {/* TopAppBar */}
         <TopNavbar 
-          title={t('promotions.title')}
+          title={t('restaurant.promotions.title')}
           showBackButton={true}
           showAvatar={true}
         />
@@ -785,11 +785,11 @@ const PromotionsRestaurantScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => openEditPromotion()}
-              className="bg-white dark:bg-[#32281d] p-3 rounded-2xl shadow-sm border-2 border-dashed border-primary/40 text-primary bg-primary/5"
+              className="bg-[#F7F2ED] dark:bg-[#F7F2ED] p-3 rounded-2xl shadow-sm border-2 border-dashed border-primary/40 text-primary bg-primary/5"
             >
               <div className="flex flex-col items-center justify-center h-full">
                 <span className="material-symbols-outlined text-3xl">add</span>
-                <span className="text-sm font-bold">{t('restaurant.promotions.addPromotion') || 'Agregar Promoción'}</span>
+                <span className="text-sm font-bold">{t('restaurant.promotions.addSpecial') || 'Agregar Especial'}</span>
               </div>
             </button>
           )}

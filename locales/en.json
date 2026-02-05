@@ -81,7 +81,8 @@
       "mains": "Main Courses",
       "drinks": "Drinks",
       "desserts": "Desserts",
-      "cocktails": "Cocktails"
+      "cocktails": "Cocktails",
+      "miscellaneous": "Miscellaneous"
     },
     "filters": {
       "land": "Land",
@@ -1259,6 +1260,44 @@
       "reservations": "Reservations",
       "statistics": "Statistics"
     },
+    "home": {
+      "manageMenu": "Manage Menu",
+      "manageMenuDescription": "Manage your menu and products",
+      "managePromotions": "Manage Promotions",
+      "managePromotionsDescription": "Manage your offers and discounts"
+    },
+    "reservations": {
+      "title": "Manage Reservations",
+      "todayReservations": "Today's Reservations",
+      "allReservations": "All Reservations",
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "noShow": "No Show",
+      "searchPlaceholder": "Search by zone, occasion, notes...",
+      "filterByDate": "Filter by date",
+      "filterByStatus": "Filter by status",
+      "allStatuses": "All statuses",
+      "guestsCount": "Guests",
+      "zone": "Zone",
+      "specialOccasion": "Special Occasion",
+      "tablePreferences": "Table Preferences",
+      "advanceOrder": "Advance Order",
+      "notes": "Notes",
+      "reservationDetails": "Reservation Details",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "complete": "Complete",
+      "markNoShow": "Mark No Show",
+      "viewDetails": "View Details",
+      "noReservations": "No reservations",
+      "noReservationsForDate": "No reservations for this date",
+      "loadingReservations": "Loading reservations...",
+      "errorLoading": "Error loading reservations",
+      "retry": "Retry",
+      "tablePreferencesPlaceholder": "E.g.: Table by the window, quiet area..."
+    },
     "menu": {
       "chefSuggestions": "Chef Suggestions",
       "highlights": "Highlights",
@@ -1372,10 +1411,12 @@
       }
     },
     "promotions": {
+      "title": "Manage Promotions",
       "addPromotion": "Add Promotion",
+      "addSpecial": "Add Special",
       "editPromotion": "Edit Promotion",
       "newPromotion": "New Promotion",
-      "title": "Title",
+      "formTitle": "Title",
       "titlePlaceholder": "E.g.: 2x1 on Cappuccinos",
       "description": "Description",
       "descriptionPlaceholder": "Promotion description",

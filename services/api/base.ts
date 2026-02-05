@@ -42,9 +42,22 @@ export async function handleSupabaseError<T>(
 }
 
 /**
- * Obtener el ID del usuario autenticado
+ * Obtener el ID del usuario autenticado (compatible con autenticación simple)
  */
 export async function getAuthenticatedUserId(): Promise<string | null> {
+  // Primero intentar autenticación simple
+  const simpleAuthUser = localStorage.getItem('simpleAuthUser');
+  if (simpleAuthUser) {
+    try {
+      const userData = JSON.parse(simpleAuthUser);
+      return userData.id || null;
+    } catch (error) {
+      console.error('[API] Error parsing simple auth user:', error);
+      localStorage.removeItem('simpleAuthUser');
+    }
+  }
+
+  // Si no hay autenticación simple, intentar Supabase Auth
   if (!isSupabaseConfigured()) {
     return null;
   }

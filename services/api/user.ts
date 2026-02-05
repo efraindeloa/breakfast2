@@ -141,6 +141,12 @@ export async function getUserProfile(
   return handleSupabaseError(async () => {
     const targetUserId = userId || await requireAuth();
 
+    // Establecer la variable de sesión para RLS
+    await supabase.rpc('set_config', {
+      setting_name: 'app.user_id',
+      setting_value: targetUserId
+    });
+
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
@@ -172,6 +178,12 @@ export async function updateUserProfile(
   return handleSupabaseError(async () => {
     const targetUserId = userId || await requireAuth();
 
+    // Establecer la variable de sesión para RLS
+    await supabase.rpc('set_config', {
+      setting_name: 'app.user_id',
+      setting_value: targetUserId
+    });
+
     const updateData: any = {};
     
     if (updates.name !== undefined) updateData.name = updates.name;
@@ -189,7 +201,7 @@ export async function updateUserProfile(
     // Intentar actualizar, si no existe, crear
     const { data: existing, error: checkError } = await supabase
       .from('user_profiles')
-      .select('id')
+      .select('user_id')
       .eq('user_id', targetUserId)
       .maybeSingle();
     
@@ -199,8 +211,8 @@ export async function updateUserProfile(
     }
 
     let result;
-    // Si existe un registro (incluso si es solo un objeto con id), actualizar
-    if (existing && existing.id) {
+    // Si existe un registro (incluso si es solo un objeto con user_id), actualizar
+    if (existing && existing.user_id) {
       // Actualizar
       const { data, error } = await supabase
         .from('user_profiles')

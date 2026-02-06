@@ -189,7 +189,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
                 {t('home.welcome')}
               </p>
               <h2 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] truncate">
-                {userName ?? ''}
+                {userName ? (userName.length > 10 ? userName.substring(0, 10) : userName) : ''}
               </h2>
             </>
           ) : null}

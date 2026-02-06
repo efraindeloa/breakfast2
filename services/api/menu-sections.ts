@@ -65,7 +65,17 @@ export async function saveMenuSections(
   menuItems: PicksByCategory
 ): Promise<ApiResponse<boolean>> {
   return handleSupabaseError(async () => {
-    await requireAuth(); // Validar autenticación
+    const userId = await requireAuth(); // Validar autenticación
+
+    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
+    try {
+      await supabase.rpc('set_config', {
+        setting_name: 'app.user_id',
+        setting_value: userId
+      });
+    } catch (error) {
+      console.warn('[saveMenuSections] No se pudo establecer app.user_id, continuando...', error);
+    }
 
     // Obtener todas las categorías únicas
     const allCategories = new Set<string>();

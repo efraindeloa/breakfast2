@@ -92,6 +92,16 @@ export async function getCurrentUserRestaurantId(): Promise<ApiResponse<string |
   return handleSupabaseError(async () => {
     const userId = await requireAuth();
 
+    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
+    try {
+      await supabase.rpc('set_config', {
+        setting_name: 'app.user_id',
+        setting_value: userId
+      });
+    } catch (error) {
+      console.warn('[getCurrentUserRestaurantId] No se pudo establecer app.user_id, continuando...', error);
+    }
+
     const { data, error } = await supabase
       .from('restaurant_staff')
       .select('restaurant_id')

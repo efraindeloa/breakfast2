@@ -110,29 +110,33 @@ export async function createProduct(
   product: CreateProductRequest
 ): Promise<ApiResponse<Product>> {
   return handleSupabaseError(async () => {
-    await requireAuth(); // Validar autenticación
+    const userId = await requireAuth(); // Validar autenticación
+
+    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
+    try {
+      await supabase.rpc('set_config', {
+        setting_name: 'app.user_id',
+        setting_value: userId
+      });
+    } catch (error) {
+      console.warn('[createProduct] No se pudo establecer app.user_id, continuando...', error);
+    }
 
     const productData: any = {
       restaurant_id: product.restaurant_id,
       name: product.name.trim(),
-      description: product.description?.trim() || null,
+      description: product.description?.trim() || '', // NOT NULL, usar cadena vacía en lugar de null
       price: product.price,
       category: product.category,
-      origin: product.origin || null,
+      origin: product.origin || '', // NOT NULL DEFAULT '', usar cadena vacía en lugar de null
       badges: product.badges || [],
-      complements: product.complements || [],
-      allow_custom_complements: product.allow_custom_complements || false,
-      allow_special_instructions: product.allow_special_instructions || false,
+      // complements, allow_custom_complements y allow_special_instructions removidos - columnas no existen en la BD
       is_active: true,
     };
 
-    // Manejar imágenes
-    if (product.image_urls && product.image_urls.length > 0) {
-      productData.image_urls = product.image_urls;
-      productData.image_url = product.image_urls[0]; // Primera imagen como principal
-    } else if (product.image_url) {
+    // Manejar imágenes (solo image_url, image_urls no existe en la BD)
+    if (product.image_url) {
       productData.image_url = product.image_url;
-      productData.image_urls = [product.image_url];
     }
 
     const { data, error } = await supabase
@@ -154,7 +158,17 @@ export async function updateProduct(
   updates: UpdateProductRequest
 ): Promise<ApiResponse<Product>> {
   return handleSupabaseError(async () => {
-    await requireAuth(); // Validar autenticación
+    const userId = await requireAuth(); // Validar autenticación
+
+    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
+    try {
+      await supabase.rpc('set_config', {
+        setting_name: 'app.user_id',
+        setting_value: userId
+      });
+    } catch (error) {
+      console.warn('[updateProduct] No se pudo establecer app.user_id, continuando...', error);
+    }
 
     const updateData: any = {};
 
@@ -162,7 +176,7 @@ export async function updateProduct(
       updateData.name = updates.name.trim();
     }
     if (updates.description !== undefined) {
-      updateData.description = updates.description?.trim() || null;
+      updateData.description = updates.description?.trim() || ''; // Usar cadena vacía en lugar de null
     }
     if (updates.price !== undefined) {
       updateData.price = updates.price;
@@ -171,30 +185,16 @@ export async function updateProduct(
       updateData.category = updates.category;
     }
     if (updates.origin !== undefined) {
-      updateData.origin = updates.origin || null;
+      updateData.origin = updates.origin || ''; // NOT NULL DEFAULT '', usar cadena vacía en lugar de null
     }
     if (updates.badges !== undefined) {
       updateData.badges = updates.badges;
     }
-    if (updates.complements !== undefined) {
-      updateData.complements = updates.complements;
-    }
-    if (updates.allow_custom_complements !== undefined) {
-      updateData.allow_custom_complements = updates.allow_custom_complements;
-    }
-    if (updates.allow_special_instructions !== undefined) {
-      updateData.allow_special_instructions = updates.allow_special_instructions;
-    }
+    // complements, allow_custom_complements y allow_special_instructions removidos - columnas no existen en la BD
 
-    // Manejar imágenes
-    if (updates.image_urls && updates.image_urls.length > 0) {
-      updateData.image_urls = updates.image_urls;
-      updateData.image_url = updates.image_urls[0];
-    } else if (updates.image_url) {
+    // Manejar imágenes (solo image_url, image_urls no existe en la BD)
+    if (updates.image_url) {
       updateData.image_url = updates.image_url;
-      if (!updateData.image_urls) {
-        updateData.image_urls = [updates.image_url];
-      }
     }
 
     const { data, error } = await supabase

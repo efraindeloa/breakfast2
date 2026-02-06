@@ -803,6 +803,9 @@ const ReservationsManagementScreen: React.FC = () => {
           </div>
         )}
       </main>
+      
+      {/* Safe area bottom para navbar */}
+      <div className="h-20"></div>
 
       {/* Modal de detalles */}
       {showDetailsModal && selectedReservation && (

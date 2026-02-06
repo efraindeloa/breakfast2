@@ -637,8 +637,10 @@ const ProfileScreen: React.FC = () => {
                                  user?.user_metadata?.name?.split(' ')[0] || 
                                  user?.email?.split('@')[0] || 
                                  'Usuario';
-                // Reemplazar "Carlos" con el nombre real
-                return t('profile.greeting').replace('Carlos', firstName);
+                // Limitar a 10 caracteres (sin contar "¡Hola,")
+                const limitedFirstName = firstName.length > 10 ? firstName.substring(0, 10) : firstName;
+                // Reemplazar "Carlos" con el nombre real limitado
+                return t('profile.greeting').replace('Carlos', limitedFirstName);
               })()}
             </p>
             <div className="mt-2 px-3 py-1 bg-primary/10 rounded-full">

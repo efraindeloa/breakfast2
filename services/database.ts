@@ -2037,9 +2037,7 @@ export const createProduct = async (product: {
       is_active: product.is_active !== undefined ? product.is_active : true,
       is_featured: product.is_featured || false,
       sort_order: product.sort_order || 0,
-      complements: product.complements || [],
-      allow_custom_complements: product.allow_custom_complements || false,
-      allow_special_instructions: product.allow_special_instructions !== undefined ? product.allow_special_instructions : true,
+      // complements, allow_custom_complements y allow_special_instructions removidos - columnas no existen en la BD
     };
 
     console.log('[createProduct] Inserting product:', insertData);
@@ -2192,10 +2190,7 @@ export const updateProduct = async (
     if (updates.is_active !== undefined) updateData.is_active = updates.is_active;
     if (updates.is_featured !== undefined) updateData.is_featured = updates.is_featured;
     if (updates.sort_order !== undefined) updateData.sort_order = updates.sort_order;
-    // Siempre enviar los complementos, incluso si es un array vacío
-    if (updates.complements !== undefined) updateData.complements = updates.complements;
-    if (updates.allow_custom_complements !== undefined) updateData.allow_custom_complements = updates.allow_custom_complements;
-    if (updates.allow_special_instructions !== undefined) updateData.allow_special_instructions = updates.allow_special_instructions;
+    // complements, allow_custom_complements y allow_special_instructions removidos - columnas no existen en la BD
 
     // Si solo cambió la capitalización, usar actualización en dos pasos
     let originalNameForRollback: string | null = null;
@@ -2445,6 +2440,16 @@ export const getCurrentUserRestaurantId = async (): Promise<string | null> => {
 
     if (!userId) return null;
 
+    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
+    try {
+      await supabase.rpc('set_config', {
+        setting_name: 'app.user_id',
+        setting_value: userId
+      });
+    } catch (error) {
+      console.warn('[getCurrentUserRestaurantId] No se pudo establecer app.user_id, continuando...', error);
+    }
+
     const { data: staffRow, error } = await supabase
       .from('restaurant_staff')
       .select('restaurant_id')
@@ -2589,6 +2594,21 @@ export const registerRestaurant = async (
     // Aquí se podría actualizar una tabla de datos fiscales si existe
     // Por ahora, solo logueamos el RFC
     console.log(`[registerRestaurant] RFC proporcionado: ${rfc}`);
+  }
+
+  // Establecer la variable de sesión para RLS (compatible con autenticación simple)
+  try {
+    const { error: configError } = await supabase.rpc('set_config', {
+      setting_name: 'app.user_id',
+      setting_value: userId
+    });
+    if (configError) {
+      console.warn('[registerRestaurant] Error al establecer app.user_id:', configError);
+    } else {
+      console.log('[registerRestaurant] app.user_id establecido correctamente:', userId);
+    }
+  } catch (error) {
+    console.warn('[registerRestaurant] Excepción al establecer app.user_id, continuando...', error);
   }
 
   // Asociar al usuario como owner del restaurante
@@ -4057,6 +4077,16 @@ export const getRestaurantStaffByUser = async (userId: string): Promise<Restaura
   if (!isSupabaseConfigured()) return [];
 
   try {
+    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
+    try {
+      await supabase.rpc('set_config', {
+        setting_name: 'app.user_id',
+        setting_value: userId
+      });
+    } catch (error) {
+      console.warn('[getRestaurantStaffByUser] No se pudo establecer app.user_id, continuando...', error);
+    }
+
     const { data, error } = await supabase
       .from('restaurant_staff')
       .select('*')

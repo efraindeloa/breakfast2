@@ -98,9 +98,9 @@ const HomeScreen: React.FC = () => {
       condition: (accountType) => accountType === 'restaurant'
     },
     { id: 'assistance', path: '/request-assistance', titleKey: 'payment.requestAssistance', descriptionKey: 'home.requestAssistanceDescription', icon: 'person' },
-    { id: 'waitlist', path: '/waitlist', titleKey: 'waitlist.scanQR', descriptionKey: 'waitlist.scanQRDescription', icon: 'schedule' },
-    { id: 'joinTable', path: '/join-table', titleKey: 'home.joinTable', descriptionKey: 'home.joinTableDescription', icon: 'groups' },
-    { id: 'invite', path: '/invite-users', titleKey: 'invite.title', descriptionKey: 'home.inviteDescription', icon: 'person_add' },
+    { id: 'waitlist', path: '/waitlist', titleKey: 'waitlist.scanQR', descriptionKey: 'waitlist.scanQRDescription', icon: 'schedule', condition: (type) => type !== 'restaurant' },
+    { id: 'joinTable', path: '/join-table', titleKey: 'home.joinTable', descriptionKey: 'home.joinTableDescription', icon: 'groups', condition: (type) => type !== 'restaurant' },
+    { id: 'invite', path: '/invite-users', titleKey: 'invite.title', descriptionKey: 'home.inviteDescription', icon: 'person_add', condition: (type) => type !== 'restaurant' },
     { id: 'discover', path: '/discover', titleKey: 'discover.title', descriptionKey: 'discover.description', icon: 'explore', condition: (type) => type !== 'restaurant' },
     { id: 'reservations', path: '/reservations', titleKey: 'home.makeReservation', descriptionKey: 'home.makeReservationDescription', icon: 'calendar_month', condition: (type) => type !== 'restaurant' },
     { id: 'restaurantProfile', path: '/restaurant-profile', titleKey: 'restaurant.profile.title', descriptionKey: 'restaurant.profile.manage', icon: 'store' }

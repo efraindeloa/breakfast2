@@ -522,6 +522,43 @@ const MenuRestaurantScreen: React.FC = () => {
     return filtered;
   }, [dishes, searchQuery]);
 
+  // Calcular cuántos productos hay en la categoría actual
+  const menuItemsCount = useMemo(() => {
+    if (searchQuery.trim()) {
+      return filteredDishes.length;
+    }
+    if (menuIds.length > 0) {
+      return menuIds
+        .map((dishId) => dishes.find((d) => d.id === dishId))
+        .filter((dish): dish is Dish => {
+          if (!dish || dish.category !== originalCategory) return false;
+          if (selectedOrigin) {
+            if (selectedOrigin === 'vegano') {
+              return dish.badges?.includes('vegano') || false;
+            }
+            return dish.origin === selectedOrigin;
+          }
+          if (selectedTag) {
+            return dish.badges?.includes(selectedTag) || false;
+          }
+          return true;
+        }).length;
+    }
+    return dishes.filter((dish) => {
+      if (dish.category !== originalCategory) return false;
+      if (selectedOrigin) {
+        if (selectedOrigin === 'vegano') {
+          return dish.badges?.includes('vegano') || false;
+        }
+        return dish.origin === selectedOrigin;
+      }
+      if (selectedTag) {
+        return dish.badges?.includes(selectedTag) || false;
+      }
+      return true;
+    }).length;
+  }, [dishes, menuIds, originalCategory, selectedOrigin, selectedTag, searchQuery, filteredDishes]);
+
   const openPicker = (section: 'chef' | 'highlights' | 'menu', editingId?: number) => {
     setPickerSection(section);
     setPickerEditingId(typeof editingId === 'number' ? editingId : null);
@@ -1202,7 +1239,7 @@ const MenuRestaurantScreen: React.FC = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-24 bg-background-light dark:bg-background-dark">
+    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden overflow-y-scroll bg-background-light dark:bg-background-dark" style={{ height: '100vh' }}>
       <TopNavbar title={selectedRestaurant || 'RESTAURANT'} showAvatar={true} />
 
       {/* Categories */}
@@ -1289,16 +1326,6 @@ const MenuRestaurantScreen: React.FC = () => {
             <h3 className="text-[#181611] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">
               {t('restaurant.menu.chefSuggestions')}
             </h3>
-            {editMode && (
-              <button
-                type="button"
-                onClick={() => openPicker('chef')}
-                className="text-primary font-bold text-sm flex items-center gap-1"
-              >
-                <span className="material-symbols-outlined text-base">add</span>
-                {t('restaurant.menu.add')}
-              </button>
-            )}
           </div>
 
           <div className="flex overflow-x-auto hide-scrollbar pb-2 -mx-4 px-4">
@@ -1347,7 +1374,7 @@ const MenuRestaurantScreen: React.FC = () => {
                 );
               })}
 
-              {editMode && (
+              {editMode && chefIds.length === 0 && (
                 <button
                   type="button"
                   onClick={() => openPicker('chef')}
@@ -1371,16 +1398,6 @@ const MenuRestaurantScreen: React.FC = () => {
             <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-2">
               {t('restaurant.menu.highlights')}
             </h3>
-            {editMode && (
-              <button
-                type="button"
-                onClick={() => openPicker('highlights')}
-                className="text-primary font-bold text-sm flex items-center gap-1 pb-2"
-              >
-                <span className="material-symbols-outlined text-base">add</span>
-                {t('restaurant.menu.add')}
-              </button>
-            )}
           </div>
 
           <div className="flex flex-col gap-3">
@@ -1419,7 +1436,7 @@ const MenuRestaurantScreen: React.FC = () => {
               );
             })}
 
-            {editMode && (
+            {editMode && highlightIds.length === 0 && (
               <button
                 type="button"
                 onClick={() => openPicker('highlights')}
@@ -1442,16 +1459,6 @@ const MenuRestaurantScreen: React.FC = () => {
           <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">
             {searchQuery.trim() ? t('menu.searchResults') || 'Resultados de búsqueda' : t('navigation.menu')}
           </h3>
-          {editMode && !searchQuery.trim() && (
-            <button
-              type="button"
-              onClick={() => openPicker('menu')}
-              className="text-primary font-bold text-sm flex items-center gap-1 ml-auto"
-            >
-              <span className="material-symbols-outlined text-base">add</span>
-              {t('restaurant.menu.add')}
-            </button>
-          )}
         </div>
 
           {/* Origin Filters - Ocultar cuando hay búsqueda activa */}
@@ -1731,24 +1738,6 @@ const MenuRestaurantScreen: React.FC = () => {
               }}
             >
               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60"></div>
-            </div>
-            <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
-              <button 
-                onClick={closeEditProduct}
-                className="px-4 py-2 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition-colors text-sm font-medium"
-              >
-                Cancelar
-              </button>
-              {accountType !== 'restaurant' && (
-                <div className="flex items-center gap-2">
-                  <button className="w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center transition-colors bg-black/30 text-white hover:bg-black/50">
-                    <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 0' }}>favorite</span>
-                  </button>
-                  <button className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition-colors" title={t('restaurant.menu.viewReviews')}>
-                    <span className="material-symbols-outlined">reviews</span>
-                  </button>
-                </div>
-              )}
             </div>
             <div className="absolute bottom-4 left-4 right-4 flex gap-2 flex-wrap">
               {editingProduct?.badges?.includes('vegano') && (
@@ -2155,9 +2144,14 @@ const MenuRestaurantScreen: React.FC = () => {
                     <textarea 
                       value={specialInstructions}
                       onChange={(e) => setSpecialInstructions(e.target.value)}
-                      className="w-full bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-4 text-sm text-[#181611] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none" 
+                      readOnly={editingProduct === null}
+                      className={`w-full bg-white dark:bg-gray-900 border-2 rounded-xl p-4 text-sm text-[#181611] dark:text-white placeholder:text-gray-400 outline-none transition-all resize-none ${
+                        editingProduct === null 
+                          ? 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-60' 
+                          : 'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:border-primary'
+                      }`}
                       placeholder="Ej. Sin cebolla, salsa aparte, bien cocido..." 
-                      rows={3}
+                      rows={1}
                     ></textarea>
                   )}
                 </div>
@@ -2246,6 +2240,9 @@ const MenuRestaurantScreen: React.FC = () => {
           </div>
         </div>
       )}
+      
+      {/* Safe area bottom para navbar - Espacio adicional para scroll */}
+      <div className="pb-48" style={{ paddingBottom: 'calc(200px + env(safe-area-inset-bottom))' }}></div>
     </div>
   );
 };

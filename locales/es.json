@@ -49,7 +49,7 @@
     "scanQRDescription": "Pide directamente desde tu mesa",
     "requestAssistanceDescription": "Solicita ayuda del personal",
     "inviteDescription": "Invita personas a tu mesa",
-    "makeReservation": "Hacer Reserva",
+    "makeReservation": "Hacer Reservación",
     "makeReservationDescription": "Reserva tu mesa con anticipación"
   },
   "menu": {
@@ -91,6 +91,7 @@
       "specialty": "Especialidad"
     },
     "searchPlaceholder": "Busco...",
+    "searchResults": "Resultados de búsqueda",
     "addToCart": "Agregar al carrito",
     "inCart": "En carrito",
     "chefSuggestions": "Sugerencias del Chef",
@@ -678,6 +679,15 @@
     "noOrdersMessage": "Aún no has realizado ninguna orden. ¡Explora nuestro menú y comienza a pedir!",
     "mainOrder": "Orden Principal",
     "complementaryOrder": "Orden Complementaria",
+    "editingOrder": "Editando Orden",
+    "original": "Original",
+    "new": "Nuevo",
+    "removeItem": "Eliminar producto",
+    "confirmRemoveItem": "¿Estás seguro de que deseas eliminar este producto de la orden?",
+    "errorUpdatingOrder": "Error al actualizar la orden. Por favor, intenta de nuevo.",
+    "errorRemovingItem": "Error al eliminar el producto. Por favor, intenta de nuevo.",
+    "cannotEditInPreparation": "No puedes modificar esta orden porque ya está siendo preparada. Si necesitas hacer cambios, por favor contacta al personal.",
+    "canEditOrder": "Puedes modificar esta orden agregando o eliminando productos antes de que comience la preparación.",
     "items": "Items",
     "orderTotal": "Total de la Orden",
     "currentCart": "Carrito Actual",
@@ -806,6 +816,7 @@
     "noCombinations": "No tienes combinaciones guardadas",
     "noCombinationsDesc": "Guarda combinaciones de platillos desde tu orden para pedirlas rápidamente",
     "addToCart": "Agregar al carrito",
+    "removeFavorite": "Quitar de favoritos",
     "created": "Creada",
     "lastUsed": "Último uso",
     "used": "Usada",
@@ -953,7 +964,7 @@
   },
   "waitlist": {
     "title": "Lista de Espera",
-    "scanQR": "Escanear QR para Lista de Espera",
+    "scanQR": "Lista de Espera",
     "scanQRDescription": "Escanea el código QR para agregarte a la lista de espera",
     "selectZone": "Selecciona la zona",
     "interior": "Interior",
@@ -1151,6 +1162,7 @@
     "coordinateArrival": "Coordina la llegada con tus amigos",
     "change": "Cambiar",
     "selectRestaurant": "Seleccionar Restaurante",
+    "selectRestaurantHint": "Elige un restaurante para ver el menú",
     "shareWithFriends": "Compartir con amigos",
     "realTimeLocation": "Ubicación en tiempo real",
     "copy": "Copiar",
@@ -1276,6 +1288,8 @@
       "reservations": "Reservas",
       "statistics": "Estadísticas"
     },
+    "selectRestaurant": "Seleccionar Restaurante",
+    "selectRestaurantHint": "Elige un restaurante para ver el menú",
     "home": {
       "manageMenu": "Gestionar Menú",
       "manageMenuDescription": "Administra tu menú y productos",

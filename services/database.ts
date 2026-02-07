@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured, getSupabaseUrl } from '../config/supabase';
 import { HistoricalOrder, HistoricalOrderItem, Order, OrderStatus } from '../types/order';
+import { getAuthenticatedUserId } from './api/base';
 
 // Helper para obtener el idioma actual desde localStorage
 const getCurrentLanguage = (): string => {
@@ -51,9 +52,24 @@ export interface CartItem {
 export interface FavoriteDish {
   id: number;
   name: string;
-  price: number;
+  price: number | string; // Puede ser number (BD) o string (formato mostrado)
   image?: string;
   category: string;
+  description?: string;
+  origin?: string;
+  badges?: string[];
+}
+
+// Tipo completo para favoritos (formato del contexto)
+export interface FavoriteDishFull {
+  id: number;
+  name: string;
+  description: string;
+  price: string;
+  image: string;
+  category: string;
+  origin: string;
+  badges?: string[];
 }
 
 export interface SavedCombination {
@@ -309,10 +325,37 @@ export const getOrders = async (): Promise<Order[]> => {
   }
 
   try {
-    const userId = await getAuthenticatedUserId();
+    let userId = await getAuthenticatedUserId();
+    
+    // Fallback: obtener userId directamente desde localStorage si getAuthenticatedUserId() retorna null
+    if (!userId) {
+      const simpleAuthUser = localStorage.getItem('simpleAuthUser');
+      if (simpleAuthUser) {
+        try {
+          const userData = JSON.parse(simpleAuthUser);
+          userId = userData.id || null;
+          if (userId) {
+            console.log('[getOrders] Usuario encontrado directamente desde localStorage:', userId);
+          }
+        } catch (error) {
+          console.error('[getOrders] Error parsing simpleAuthUser:', error);
+        }
+      }
+    }
+    
     if (!userId) {
       console.warn('[getOrders] No authenticated user - returning empty orders');
       return [];
+    }
+    
+    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
+    try {
+      await supabase.rpc('set_config', {
+        setting_name: 'app.user_id',
+        setting_value: userId
+      });
+    } catch (error) {
+      console.warn('[getOrders] No se pudo establecer app.user_id, continuando...', error);
     }
     
     // Verificar si hay datos pendientes de migración (después de cerrar sesión)
@@ -451,10 +494,37 @@ export const createOrder = async (order: Omit<Order, 'id' | 'created_at' | 'upda
   }
 
   try {
-    const userId = await getAuthenticatedUserId();
+    let userId = await getAuthenticatedUserId();
+    
+    // Fallback: obtener userId directamente desde localStorage si getAuthenticatedUserId() retorna null
+    if (!userId) {
+      const simpleAuthUser = localStorage.getItem('simpleAuthUser');
+      if (simpleAuthUser) {
+        try {
+          const userData = JSON.parse(simpleAuthUser);
+          userId = userData.id || null;
+          if (userId) {
+            console.log('[createOrder] Usuario encontrado directamente desde localStorage:', userId);
+          }
+        } catch (error) {
+          console.error('[createOrder] Error parsing simpleAuthUser:', error);
+        }
+      }
+    }
+    
     if (!userId) {
       console.warn('[createOrder] No authenticated user - login required');
       throw new Error('Authentication required');
+    }
+    
+    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
+    try {
+      await supabase.rpc('set_config', {
+        setting_name: 'app.user_id',
+        setting_value: userId
+      });
+    } catch (error) {
+      console.warn('[createOrder] No se pudo establecer app.user_id, continuando...', error);
     }
     
     // Validar que el status sea de una orden activa (no 'entregada' o 'cancelada')
@@ -463,11 +533,30 @@ export const createOrder = async (order: Omit<Order, 'id' | 'created_at' | 'upda
       throw new Error(`Invalid status for active order: ${order.status}. Use moveOrderToHistory() for completed orders.`);
     }
     
+    // Verificar que el restaurant_id existe, si no, obtener el primer restaurante disponible
+    let restaurantId = order.restaurant_id;
+    if (restaurantId === '00000000-0000-0000-0000-000000000001' || !restaurantId) {
+      // Intentar obtener el primer restaurante disponible
+      const { data: restaurants, error: restaurantError } = await supabase
+        .from('restaurants')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+      
+      if (restaurantError || !restaurants) {
+        console.warn('[createOrder] No se pudo obtener restaurante, usando ID por defecto');
+        // Si no hay restaurantes, el error se mostrará al intentar insertar
+      } else {
+        restaurantId = restaurants.id;
+        console.log('[createOrder] Usando restaurante encontrado:', restaurantId);
+      }
+    }
+    
     const { data, error } = await supabase
       .from('orders')
       .insert({
         user_id: userId,
-        restaurant_id: order.restaurant_id,
+        restaurant_id: restaurantId,
         status: order.status,
         total: order.total,
         subtotal: order.total, // Si no se proporciona subtotal, usar total
@@ -809,22 +898,102 @@ export const getCart = async (): Promise<CartItem[]> => {
   }
 
   try {
-    // Obtener la sesión actual de Supabase de forma asíncrona
-    let userId: string | null = null;
+    // Obtener el usuario autenticado (compatible con autenticación simple)
+    console.log('[getCart] Llamando getAuthenticatedUserId()...');
+    const userId = await getAuthenticatedUserId();
     
-    // Primero intentar obtener el usuario autenticado desde la sesión de Supabase
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) {
-      console.warn('[getCart] Error getting session:', sessionError);
-    }
-    
-    if (session?.user?.id) {
-      userId = session.user.id;
-    }
+    console.log('[getCart] userId obtenido:', userId);
+    console.log('[getCart] simpleAuthUser en localStorage:', localStorage.getItem('simpleAuthUser'));
     
     if (!userId) {
+      // Intentar obtener el userId directamente desde localStorage como fallback
+      const simpleAuthUser = localStorage.getItem('simpleAuthUser');
+      if (simpleAuthUser) {
+        try {
+          const userData = JSON.parse(simpleAuthUser);
+          const directUserId = userData.id || null;
+          if (directUserId) {
+            console.log('[getCart] Usuario encontrado directamente desde localStorage:', directUserId);
+            // Usar el userId obtenido directamente
+            const fallbackUserId = directUserId;
+            
+            // Establecer la variable de sesión para RLS
+            try {
+              await supabase.rpc('set_config', {
+                setting_name: 'app.user_id',
+                setting_value: fallbackUserId
+              });
+            } catch (error) {
+              console.warn('[getCart] No se pudo establecer app.user_id, continuando...', error);
+            }
+            
+            // Continuar con el userId obtenido directamente
+            const { data: cartItemsData, error: cartError } = await supabase
+              .from('cart_items')
+              .select('*')
+              .eq('user_id', fallbackUserId);
+
+            if (cartError) {
+              console.error('[getCart] Error fetching cart_items:', cartError);
+              throw cartError;
+            }
+            
+            if (!cartItemsData || cartItemsData.length === 0) {
+              return [];
+            }
+            
+            // Obtener los productos por separado para evitar problemas de RLS con JOINs
+            const productIds = [...new Set(cartItemsData.map((item: any) => item.product_id).filter((id: any) => id != null))];
+            
+            let productsMap: Record<number, any> = {};
+            if (productIds.length > 0) {
+              const { data: productsData, error: productsError } = await supabase
+                .from('products')
+                .select('*')
+                .in('id', productIds);
+              
+              if (productsError) {
+                console.error('[getCart] Error fetching products:', productsError);
+                throw productsError;
+              }
+              
+              productsData?.forEach((product: any) => {
+                productsMap[product.id] = product;
+              });
+            }
+            
+            // Combinar cart_items con productos
+            const cartItems: CartItem[] = cartItemsData.map((item: any) => {
+              const product = productsMap[item.product_id];
+              return {
+                id: item.product_id,
+                name: product?.name || `Producto ${item.product_id}`,
+                price: parseFloat(product?.price || item.price || '0'),
+                quantity: item.quantity,
+                notes: item.notes || undefined,
+                image: product?.image_url || undefined,
+              };
+            });
+            
+            return cartItems;
+          }
+        } catch (error) {
+          console.error('[getCart] Error parsing simpleAuthUser:', error);
+        }
+      }
+      
       console.warn('[getCart] No authenticated user - using localStorage fallback');
       return fallbackToLocalStorage<CartItem[]>('cart', [], 'get') || [];
+    }
+    
+    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
+    try {
+      await supabase.rpc('set_config', {
+        setting_name: 'app.user_id',
+        setting_value: userId
+      });
+    } catch (error) {
+      console.warn('[getCart] No se pudo establecer app.user_id, continuando...', error);
     }
     
     // Obtener cart_items primero (sin JOIN para evitar problemas de RLS)
@@ -897,6 +1066,16 @@ export const setCart = async (items: CartItem[]): Promise<boolean> => {
       console.warn('[setCart] No authenticated user - using localStorage fallback');
       fallbackToLocalStorage('cart', items, 'set', items);
       return true;
+    }
+    
+    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
+    try {
+      await supabase.rpc('set_config', {
+        setting_name: 'app.user_id',
+        setting_value: userId
+      });
+    } catch (error) {
+      console.warn('[setCart] No se pudo establecer app.user_id, continuando...', error);
     }
     
     // Agrupar items por (product_id, notes) para evitar duplicados
@@ -973,11 +1152,18 @@ export const setCart = async (items: CartItem[]): Promise<boolean> => {
       // Normalizar notes: usar null en lugar de string vacío para consistencia
       const normalizedNotes = (item.notes && item.notes.trim() !== '') ? item.notes : null;
       
+      // Obtener restaurant_id válido
+      const restaurantId = await getRestaurantIdForCart(item.id);
+      if (!restaurantId) {
+        console.error('[setCart] No se pudo obtener restaurant_id para el producto:', item.id);
+        continue; // Saltar este item si no hay restaurant_id válido
+      }
+      
       const { error: upsertError } = await supabase
         .from('cart_items')
         .upsert({
           product_id: item.id,
-          restaurant_id: '00000000-0000-0000-0000-000000000001',
+          restaurant_id: restaurantId,
           quantity: item.quantity,
           notes: normalizedNotes,
           user_id: userId,
@@ -1006,11 +1192,17 @@ export const setCart = async (items: CartItem[]): Promise<boolean> => {
           // Pequeña pausa antes de insertar
           await new Promise(resolve => setTimeout(resolve, 50));
           
+          const restaurantId = await getRestaurantIdForCart(item.id);
+          if (!restaurantId) {
+            console.error('[setCart] No se pudo obtener restaurant_id para el producto (fallback):', item.id);
+            continue;
+          }
+          
           const { error: insertError } = await supabase
             .from('cart_items')
             .insert({
               product_id: item.id,
-              restaurant_id: '00000000-0000-0000-0000-000000000001',
+              restaurant_id: restaurantId,
               quantity: item.quantity,
               notes: normalizedNotes,
               user_id: userId,
@@ -1049,13 +1241,40 @@ export const addToCart = async (item: CartItem): Promise<boolean> => {
   }
 
   try {
-    const userId = await getAuthenticatedUserId();
+    let userId = await getAuthenticatedUserId();
+    
+    // Fallback: obtener userId directamente desde localStorage si getAuthenticatedUserId() retorna null
+    if (!userId) {
+      const simpleAuthUser = localStorage.getItem('simpleAuthUser');
+      if (simpleAuthUser) {
+        try {
+          const userData = JSON.parse(simpleAuthUser);
+          userId = userData.id || null;
+          if (userId) {
+            console.log('[addToCart] Usuario encontrado directamente desde localStorage:', userId);
+          }
+        } catch (error) {
+          console.error('[addToCart] Error parsing simpleAuthUser:', error);
+        }
+      }
+    }
+    
     if (!userId) {
       console.warn('[addToCart] No authenticated user - using localStorage fallback');
       const cart = await getCart();
       cart.push(item);
       fallbackToLocalStorage('cart', cart, 'set', cart);
       return true;
+    }
+    
+    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
+    try {
+      await supabase.rpc('set_config', {
+        setting_name: 'app.user_id',
+        setting_value: userId
+      });
+    } catch (error) {
+      console.warn('[addToCart] No se pudo establecer app.user_id, continuando...', error);
     }
     
     // Asegurar que el usuario existe en la tabla users antes de agregar al carrito
@@ -1108,12 +1327,23 @@ export const addToCart = async (item: CartItem): Promise<boolean> => {
       if (updateError) throw updateError;
     } else {
       // Si no existe, insertar nuevo registro
+      // Obtener restaurant_id válido
+      const restaurantId = await getRestaurantIdForCart(item.id);
+      if (!restaurantId) {
+        console.error('[addToCart] No se pudo obtener restaurant_id para el producto:', item.id);
+        // Usar localStorage como fallback si no hay restaurant_id válido
+        const cart = await getCart();
+        cart.push(item);
+        fallbackToLocalStorage('cart', cart, 'set', cart);
+        return false;
+      }
+      
       // Usar upsert con las columnas de la constraint única: user_id, product_id, notes
       const { error: upsertError } = await supabase
         .from('cart_items')
         .upsert({
           product_id: item.id,
-          restaurant_id: '00000000-0000-0000-0000-000000000001', // ID del restaurante por defecto
+          restaurant_id: restaurantId,
           quantity: newQuantity,
           notes: notes,
           user_id: userId,
@@ -1176,6 +1406,17 @@ export const removeFromCart = async (itemId: number, notes?: string): Promise<bo
       fallbackToLocalStorage('cart', filtered, 'set', filtered);
       return true;
     }
+    
+    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
+    try {
+      await supabase.rpc('set_config', {
+        setting_name: 'app.user_id',
+        setting_value: userId
+      });
+    } catch (error) {
+      console.warn('[removeFromCart] No se pudo establecer app.user_id, continuando...', error);
+    }
+    
     let query = supabase
       .from('cart_items')
       .delete()
@@ -1201,31 +1442,84 @@ export const clearCart = async (): Promise<boolean> => {
 
 // ==================== FAVORITOS ====================
 
-export const getFavorites = async (): Promise<FavoriteDish[]> => {
+export const getFavorites = async (restaurantId?: string | null): Promise<FavoriteDishFull[]> => {
   if (!isSupabaseConfigured()) {
-    return fallbackToLocalStorage<FavoriteDish[]>('favorite_dishes', [], 'get') || [];
+    return fallbackToLocalStorage<FavoriteDishFull[]>('favorite_dishes', [], 'get') || [];
   }
 
   try {
     const userId = await getAuthenticatedUserId();
     if (!userId) {
       console.warn('[getFavorites] No authenticated user - login required');
-      return [];
+      return fallbackToLocalStorage<FavoriteDishFull[]>('favorite_dishes', [], 'get') || [];
     }
-    const { data, error } = await supabase
+
+    // Establecer app.user_id para RLS
+    await supabase.rpc('set_config', { setting_name: 'app.user_id', setting_value: userId });
+
+    // Construir query base
+    let query = supabase
       .from('favorite_dishes')
-      .select('*')
+      .select(`
+        product_id,
+        restaurant_id,
+        products:product_id (
+          id,
+          name,
+          description,
+          price,
+          image_url,
+          category,
+          origin,
+          badges
+        )
+      `)
       .eq('user_id', userId);
 
+    // Filtrar por restaurant_id si se proporciona
+    if (restaurantId) {
+      query = query.eq('restaurant_id', restaurantId);
+    }
+
+    const { data, error } = await query;
+
     if (error) throw error;
-    return data || [];
+    
+    // Mapear los datos al formato FavoriteDishFull
+    const favorites: FavoriteDishFull[] = (data || [])
+      .filter((item: any) => item.products) // Filtrar productos que no existen
+      .map((item: any) => {
+        const product = item.products;
+        // Convertir price a string si es number
+        let priceString: string;
+        if (typeof product.price === 'string') {
+          priceString = product.price;
+        } else if (typeof product.price === 'number') {
+          priceString = `$${product.price.toFixed(2)}`;
+        } else {
+          priceString = '$0.00';
+        }
+        
+        return {
+          id: product.id,
+          name: product.name || '',
+          description: product.description || '',
+          price: priceString,
+          image: product.image_url ? getProductImageUrl(product.image_url) : '',
+          category: product.category || '',
+          origin: product.origin || '',
+          badges: product.badges || [],
+        };
+      });
+
+    return favorites;
   } catch (error) {
     console.error('Error fetching favorites:', error);
-    return fallbackToLocalStorage<FavoriteDish[]>('favorite_dishes', [], 'get') || [];
+    return fallbackToLocalStorage<FavoriteDishFull[]>('favorite_dishes', [], 'get') || [];
   }
 };
 
-export const addFavorite = async (dish: FavoriteDish): Promise<boolean> => {
+export const addFavorite = async (dish: FavoriteDishFull): Promise<boolean> => {
   if (!isSupabaseConfigured()) {
     const favorites = await getFavorites();
     if (!favorites.find(f => f.id === dish.id)) {
@@ -1238,17 +1532,62 @@ export const addFavorite = async (dish: FavoriteDish): Promise<boolean> => {
   try {
     const userId = await getAuthenticatedUserId();
     if (!userId) {
-      console.warn('[addToFavorites] No authenticated user - login required');
-      throw new Error('Authentication required');
+      console.warn('[addFavorite] No authenticated user - login required');
+      // Fallback a localStorage si no hay usuario autenticado
+      const favorites = await getFavorites();
+      if (!favorites.find(f => f.id === dish.id)) {
+        favorites.push(dish);
+        fallbackToLocalStorage('favorite_dishes', favorites, 'set', favorites);
+      }
+      return true;
     }
+
+    // Obtener restaurant_id del producto
+    const restaurantId = await getRestaurantIdForCart(dish.id);
+    if (!restaurantId) {
+      console.error('[addFavorite] No se pudo obtener restaurant_id para el producto:', dish.id);
+      // Fallback a localStorage si no hay restaurant_id
+      const favorites = await getFavorites();
+      if (!favorites.find(f => f.id === dish.id)) {
+        favorites.push(dish);
+        fallbackToLocalStorage('favorite_dishes', favorites, 'set', favorites);
+      }
+      return true;
+    }
+
+    // Establecer app.user_id para RLS
+    await supabase.rpc('set_config', { setting_name: 'app.user_id', setting_value: userId });
+
+    // Insertar solo product_id y restaurant_id (los demás datos vienen del producto)
     const { error } = await supabase
       .from('favorite_dishes')
-      .insert({ ...dish, user_id: userId });
+      .insert({
+        user_id: userId,
+        product_id: dish.id,
+        restaurant_id: restaurantId,
+      });
 
-    if (error) throw error;
+    if (error) {
+      // Si el error es que ya existe (duplicado), no es un error crítico
+      if (error.code === '23505') {
+        console.log('[addFavorite] Producto ya está en favoritos');
+        return true;
+      }
+      throw error;
+    }
     return true;
   } catch (error) {
     console.error('Error adding favorite:', error);
+    // Fallback a localStorage en caso de error
+    try {
+      const favorites = await getFavorites();
+      if (!favorites.find(f => f.id === dish.id)) {
+        favorites.push(dish);
+        fallbackToLocalStorage('favorite_dishes', favorites, 'set', favorites);
+      }
+    } catch (fallbackError) {
+      console.error('Error in fallback to localStorage:', fallbackError);
+    }
     return false;
   }
 };
@@ -1264,19 +1603,36 @@ export const removeFavorite = async (dishId: number): Promise<boolean> => {
   try {
     const userId = await getAuthenticatedUserId();
     if (!userId) {
-      console.warn('[removeFromFavorites] No authenticated user - login required');
-      return;
+      console.warn('[removeFavorite] No authenticated user - login required');
+      // Fallback a localStorage si no hay usuario autenticado
+      const favorites = await getFavorites();
+      const filtered = favorites.filter(f => f.id !== dishId);
+      fallbackToLocalStorage('favorite_dishes', filtered, 'set', filtered);
+      return true;
     }
+
+    // Establecer app.user_id para RLS
+    await supabase.rpc('set_config', { setting_name: 'app.user_id', setting_value: userId });
+
+    // Eliminar por product_id (no por id de la tabla favorite_dishes)
     const { error } = await supabase
       .from('favorite_dishes')
       .delete()
       .eq('user_id', userId)
-      .eq('id', dishId);
+      .eq('product_id', dishId);
 
     if (error) throw error;
     return true;
   } catch (error) {
     console.error('Error removing favorite:', error);
+    // Fallback a localStorage en caso de error
+    try {
+      const favorites = await getFavorites();
+      const filtered = favorites.filter(f => f.id !== dishId);
+      fallbackToLocalStorage('favorite_dishes', filtered, 'set', filtered);
+    } catch (fallbackError) {
+      console.error('Error in fallback to localStorage:', fallbackError);
+    }
     return false;
   }
 };
@@ -2812,6 +3168,49 @@ export interface RestaurantStaff {
   created_at: string;
   updated_at: string;
 }
+
+// Helper para obtener restaurant_id para operaciones de carrito
+const getRestaurantIdForCart = async (productId?: number): Promise<string | null> => {
+  // 1. Intentar obtener desde localStorage (restaurante seleccionado por el usuario)
+  const selectedRestaurantId = localStorage.getItem('selectedRestaurantId');
+  if (selectedRestaurantId) {
+    return selectedRestaurantId;
+  }
+
+  // 2. Si hay productId, intentar obtener el restaurant_id del producto
+  if (productId) {
+    try {
+      const { data: product, error } = await supabase
+        .from('products')
+        .select('restaurant_id')
+        .eq('id', productId)
+        .single();
+      
+      if (!error && product?.restaurant_id) {
+        return product.restaurant_id;
+      }
+    } catch (error) {
+      console.warn('[getRestaurantIdForCart] Error getting restaurant_id from product:', error);
+    }
+  }
+
+  // 3. Obtener el primer restaurante activo disponible
+  try {
+    const { data: restaurants, error } = await supabase
+      .from('restaurants')
+      .select('id')
+      .eq('is_active', true)
+      .limit(1);
+    
+    if (!error && restaurants && restaurants.length > 0) {
+      return restaurants[0].id;
+    }
+  } catch (error) {
+    console.warn('[getRestaurantIdForCart] Error getting first restaurant:', error);
+  }
+
+  return null;
+};
 
 export const getRestaurants = async (filters?: {
   city?: string;

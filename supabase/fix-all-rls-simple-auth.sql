@@ -97,7 +97,6 @@ CREATE POLICY "Anyone can update users"
   USING (true)
   WITH CHECK (true);
 
--- ==================== 3. RESTAURANT_STAFF ====================
 ALTER TABLE restaurant_staff ENABLE ROW LEVEL SECURITY;
 
 -- Eliminar todas las políticas existentes
@@ -110,36 +109,12 @@ DROP POLICY IF EXISTS "simple_staff_update" ON restaurant_staff;
 DROP POLICY IF EXISTS "Authenticated users can view staff records" ON restaurant_staff;
 DROP POLICY IF EXISTS "Authenticated users can update staff records" ON restaurant_staff;
 
--- Políticas para restaurant_staff (compatibles con autenticación simple)
--- IMPORTANTE: Estas políticas NO consultan restaurant_staff para evitar recursión infinita
--- Solo verifican el user_id directamente
-CREATE POLICY "Users can view their own staff record"
-  ON restaurant_staff FOR SELECT
-  USING (
-    (auth.uid() IS NOT NULL AND user_id::text = auth.uid()::text)
-    OR (current_setting('app.user_id', true) IS NOT NULL AND user_id::text = current_setting('app.user_id', true))
-  );
-
-CREATE POLICY "Users can insert their own staff record"
-  ON restaurant_staff FOR INSERT
-  WITH CHECK (
-    -- Permitir si el user_id coincide con auth.uid() (Supabase Auth)
-    -- Esto funciona durante el registro porque auth.uid() está disponible después de signUp
-    (auth.uid() IS NOT NULL AND user_id::text = auth.uid()::text)
-    -- O si coincide con la variable de sesión (autenticación simple)
-    OR (current_setting('app.user_id', true) IS NOT NULL AND user_id::text = current_setting('app.user_id', true))
-  );
-
-CREATE POLICY "Users can update their own staff record"
-  ON restaurant_staff FOR UPDATE
-  USING (
-    (auth.uid() IS NOT NULL AND user_id::text = auth.uid()::text)
-    OR (current_setting('app.user_id', true) IS NOT NULL AND user_id::text = current_setting('app.user_id', true))
-  )
-  WITH CHECK (
-    (auth.uid() IS NOT NULL AND user_id::text = auth.uid()::text)
-    OR (current_setting('app.user_id', true) IS NOT NULL AND user_id::text = current_setting('app.user_id', true))
-  );
+-- Políticas PERMISIVAS para restaurant_staff (sin dependencia de auth.uid ni app.user_id)
+-- Esto evita problemas de RLS con autenticación simple y durante el registro
+CREATE POLICY "simple_restaurant_staff_all"
+  ON restaurant_staff FOR ALL
+  USING (true)
+  WITH CHECK (true);
 
 -- ==================== 4. PRODUCTS ====================
 -- Ya actualizado en fix-products-rls-simple-auth.sql, pero incluimos aquí para completitud
@@ -559,6 +534,18 @@ DROP POLICY IF EXISTS "Restaurants can insert their own menu sections" ON restau
 DROP POLICY IF EXISTS "Restaurants can update their own menu sections" ON restaurant_menu_sections;
 DROP POLICY IF EXISTS "Restaurants can delete their own menu sections" ON restaurant_menu_sections;
 
+-- Política: Cualquiera puede ver las secciones de menú de restaurantes activos (para comensales)
+CREATE POLICY "Anyone can view menu sections of active restaurants"
+  ON restaurant_menu_sections FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM restaurants r
+      WHERE r.id = restaurant_menu_sections.restaurant_id
+        AND r.is_active = true
+    )
+  );
+
+-- Política: Los restaurantes pueden ver sus propias secciones (para gestión)
 CREATE POLICY "Restaurants can view their own menu sections"
   ON restaurant_menu_sections FOR SELECT
   USING (

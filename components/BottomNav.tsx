@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useRestaurant } from '../contexts/RestaurantContext';
 import AssistantModal from './AssistantModal';
 import GuestRestrictionModal from './GuestRestrictionModal';
 
@@ -174,6 +175,7 @@ const BottomNav: React.FC = () => {
   const { getCartItemCount } = useCart();
   const { t } = useTranslation();
   const { accountType, userType } = useAuth();
+  const { selectedRestaurantId } = useRestaurant();
   
   // Verificación de seguridad para evitar errores durante transiciones de estado
   let cartCount = 0;
@@ -280,7 +282,10 @@ const BottomNav: React.FC = () => {
         
         // Verificar si el botón está restringido para invitados
         const isRestricted = userType === 'guest' && (item as any).guestRestricted;
-        const isDisabled = isRestricted;
+        // Verificar si el botón está deshabilitado por falta de restaurante seleccionado (solo para comensales)
+        const restaurantRequiredPaths = ['/menu', '/orders', '/payments'];
+        const isRestaurantRequired = accountType === 'diner' && restaurantRequiredPaths.includes(item.path) && !selectedRestaurantId;
+        const isDisabled = isRestricted || isRestaurantRequired;
         
         return (
           <button
@@ -323,7 +328,13 @@ const BottomNav: React.FC = () => {
               )}
             </span>
             <span className={`text-[10px] ${isActive ? 'font-bold' : 'font-medium'} ${isDisabled ? 'opacity-50' : ''}`}>
-              {isDisabled ? t('guest.registeredOnly') || 'Solo registrados' : item.label}
+              {isDisabled 
+                ? (isRestaurantRequired 
+                    ? (t('restaurant.selectRestaurantHint') || 'Selecciona un restaurante')
+                    : (t('guest.registeredOnly') || 'Solo registrados')
+                  )
+                : item.label
+              }
             </span>
           </button>
         );

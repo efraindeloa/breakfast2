@@ -20,7 +20,7 @@ const OrderDetailScreen: React.FC = () => {
   const { t } = useTranslation();
   const { selectedLanguage } = useLanguage();
   const { cart: currentCartItems, clearCart, removeFromCart, updateCartItemQuantity, setCartItems } = useCart();
-  const { config } = useRestaurant();
+  const { config, selectedRestaurantId } = useRestaurant();
   const { isGroupOrder, participants, currentUserParticipant, isConfirmed } = useGroupOrder();
   const [complementaryOrderInstructions, setComplementaryOrderInstructions] = useState('');
 
@@ -115,7 +115,7 @@ const OrderDetailScreen: React.FC = () => {
   // Función para obtener el número de la próxima orden complementaria
   const getNextOrderNumber = (): number => {
     if (orders.length === 0) return 1;
-    return Math.max(...orders.map(o => o.orderNumber)) + 1;
+    return Math.max(...orders.map(o => o.orderNumber || 0)) + 1;
   };
 
   // Función para enviar la orden complementaria o actualizar la orden original
@@ -240,7 +240,7 @@ const OrderDetailScreen: React.FC = () => {
         const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         
         const createResult = await createOrder({
-          restaurant_id: '00000000-0000-0000-0000-000000000001',
+          restaurant_id: selectedRestaurantId || '00000000-0000-0000-0000-000000000001', // Usar restaurante seleccionado o ID por defecto
           status: 'orden_enviada',
           total: total,
           items: orderItems,
@@ -542,7 +542,7 @@ const OrderDetailScreen: React.FC = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-lg font-bold text-[#181411] dark:text-white">
-                        {order.orderNumber === 1 ? t('orderDetail.mainOrder') : `${t('orderDetail.complementaryOrder')} #${order.orderNumber}`}
+                        {(order.orderNumber || 1) === 1 ? t('orderDetail.mainOrder') : `${t('orderDetail.complementaryOrder')} #${order.orderNumber || 1}`}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
@@ -610,7 +610,7 @@ const OrderDetailScreen: React.FC = () => {
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-lg font-bold text-[#181411] dark:text-white">
-                    {mainOrder.orderNumber === 1 ? t('orderDetail.mainOrder') : `${t('orderDetail.complementaryOrder')} #${mainOrder.orderNumber}`}
+                    {(mainOrder.orderNumber || 1) === 1 ? t('orderDetail.mainOrder') : `${t('orderDetail.complementaryOrder')} #${mainOrder.orderNumber || 1}`}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">

@@ -14,7 +14,6 @@ export interface CreateOrderRequest {
   total?: number;
   special_instructions?: string;
   table_number?: string;
-  group_order_id?: string;
 }
 
 export interface UpdateOrderRequest {
@@ -46,7 +45,54 @@ export async function getOrders(userId?: string): Promise<ApiResponse<Order[]>> 
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return (data || []) as Order[];
+    
+    // Ordenar las órdenes por fecha de creación ascendente para asignar números secuenciales
+    const sortedData = [...(data || [])].sort((a: any, b: any) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return dateA - dateB;
+    });
+    
+    // Mapear los datos de Supabase al formato Order esperado
+    const mappedOrders: Order[] = sortedData.map((order: any, index: number) => {
+      // Calcular orderNumber basado en el orden de creación
+      // La primera orden es 1, las siguientes son incrementales
+      let orderNumber = index + 1;
+      
+      if (order.order_number) {
+        // Si existe order_number en la BD, intentar extraer el número
+        if (typeof order.order_number === 'string') {
+          // Extraer números del formato "ORD-2024-000001" o similar
+          const match = order.order_number.match(/\d+$/);
+          if (match) {
+            const parsedNumber = parseInt(match[0]);
+            // Solo usar el número parseado si es válido y razonable
+            if (!isNaN(parsedNumber) && parsedNumber > 0) {
+              orderNumber = parsedNumber;
+            }
+          }
+        } else if (typeof order.order_number === 'number' && order.order_number > 0) {
+          orderNumber = order.order_number;
+        }
+      }
+      
+      return {
+        orderId: order.id, // Mapear id a orderId
+        orderNumber: orderNumber,
+        items: order.items || [],
+        status: order.status as OrderStatus,
+        timestamp: order.created_at || new Date().toISOString(),
+      };
+    });
+    
+    // Volver a ordenar por fecha descendente para mostrar las más recientes primero
+    mappedOrders.sort((a, b) => {
+      const dateA = new Date(a.timestamp).getTime();
+      const dateB = new Date(b.timestamp).getTime();
+      return dateB - dateA;
+    });
+    
+    return mappedOrders;
   }, 'Error al obtener órdenes');
 }
 
@@ -89,7 +135,6 @@ export async function createOrder(orderData: CreateOrderRequest, userId?: string
         total: orderData.total || 0,
         special_instructions: orderData.special_instructions || null,
         table_number: orderData.table_number || null,
-        group_order_id: orderData.group_order_id || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -103,17 +148,65 @@ export async function createOrder(orderData: CreateOrderRequest, userId?: string
       return newOrder;
     }
 
-    const targetUserId = userId || await requireAuth();
+    let targetUserId = userId;
+    if (!targetUserId) {
+      // Fallback: obtener userId directamente desde localStorage si requireAuth() falla
+      const simpleAuthUser = localStorage.getItem('simpleAuthUser');
+      if (simpleAuthUser) {
+        try {
+          const userData = JSON.parse(simpleAuthUser);
+          targetUserId = userData.id || null;
+          if (targetUserId) {
+            console.log('[createOrder] Usuario encontrado directamente desde localStorage:', targetUserId);
+          }
+        } catch (error) {
+          console.error('[createOrder] Error parsing simpleAuthUser:', error);
+        }
+      }
+      
+      if (!targetUserId) {
+        targetUserId = await requireAuth();
+      }
+    }
+
+    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
+    try {
+      await supabase.rpc('set_config', {
+        setting_name: 'app.user_id',
+        setting_value: targetUserId
+      });
+    } catch (error) {
+      console.warn('[createOrder] No se pudo establecer app.user_id, continuando...', error);
+    }
+
+    // Verificar que el restaurant_id existe, si no, obtener el primer restaurante disponible
+    let restaurantId = orderData.restaurant_id;
+    if (restaurantId === '00000000-0000-0000-0000-000000000001' || !restaurantId) {
+      // Intentar obtener el primer restaurante disponible
+      const { data: restaurants, error: restaurantError } = await supabase
+        .from('restaurants')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+      
+      if (restaurantError || !restaurants) {
+        console.warn('[createOrder] No se pudo obtener restaurante, usando ID por defecto');
+        // Si no hay restaurantes, el error se mostrará al intentar insertar
+      } else {
+        restaurantId = restaurants.id;
+        console.log('[createOrder] Usando restaurante encontrado:', restaurantId);
+      }
+    }
 
     const insertData: any = {
       user_id: targetUserId,
-      restaurant_id: orderData.restaurant_id,
+      restaurant_id: restaurantId,
       status: orderData.status || 'pending',
       items: orderData.items || [],
       total: orderData.total || 0,
-      special_instructions: orderData.special_instructions || null,
+      subtotal: orderData.total || 0, // Si no se proporciona subtotal, usar total
+      notes: orderData.special_instructions || null, // La columna se llama 'notes', no 'special_instructions'
       table_number: orderData.table_number || null,
-      group_order_id: orderData.group_order_id || null,
     };
 
     const { data, error } = await supabase

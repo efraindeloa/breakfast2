@@ -36,7 +36,7 @@ const OrderScreen: React.FC = () => {
     clearCart
   } = useCart();
   const { saveCombination } = useFavorites();
-  const { config } = useRestaurant();
+  const { config, selectedRestaurantId } = useRestaurant();
   const [editingNotesId, setEditingNotesId] = useState<number | null>(null);
   const [editingNotesText, setEditingNotesText] = useState('');
   const [orderSpecialInstructions, setOrderSpecialInstructions] = useState('');
@@ -164,7 +164,7 @@ const OrderScreen: React.FC = () => {
         const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         
         const createResult = await createOrderAPI({
-          restaurant_id: '00000000-0000-0000-0000-000000000001', // ID del restaurante por defecto
+          restaurant_id: selectedRestaurantId || '00000000-0000-0000-0000-000000000001', // Usar restaurante seleccionado o ID por defecto
           status: 'pending',
           total: total,
           items: orderItems.map(item => ({
@@ -923,7 +923,7 @@ const OrderScreen: React.FC = () => {
                   const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
                   
                   const createResult = await createOrderAPI({
-                    restaurant_id: '00000000-0000-0000-0000-000000000001',
+                    restaurant_id: selectedRestaurantId || '00000000-0000-0000-0000-000000000001', // Usar restaurante seleccionado o ID por defecto
                     status: 'orden_enviada',
                     total: total,
                     items: orderItems.map(item => ({

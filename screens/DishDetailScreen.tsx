@@ -478,23 +478,36 @@ const DishDetailScreen: React.FC = () => {
     window.scrollTo(0, 0);
   }, [id]);
 
-  // Función helper para regresar al menú preservando el estado
-  const navigateBackToMenu = () => {
+  // Función helper para regresar a la página de origen preservando el estado
+  const navigateBack = () => {
+    const fromPage = location.state?.fromPage || 'menu';
     const savedState = location.state || {
-      selectedCategory: sessionStorage.getItem('menuSelectedCategory'),
-      scrollPosition: sessionStorage.getItem('menuScrollPosition')
+      selectedCategory: fromPage === 'favorites' 
+        ? sessionStorage.getItem('favoritesSelectedCategory')
+        : sessionStorage.getItem('menuSelectedCategory'),
+      scrollPosition: fromPage === 'favorites'
+        ? sessionStorage.getItem('favoritesScrollPosition')
+        : sessionStorage.getItem('menuScrollPosition')
     };
     
-    navigate('/menu', {
-      state: savedState
-    });
+    // Navegar a la página correcta según el origen
+    if (fromPage === 'favorites') {
+      navigate('/favorites', {
+        state: savedState
+      });
+    } else {
+      navigate('/menu', {
+        state: savedState
+      });
+    }
   };
 
-  // Si no se encuentra el plato, redirigir al menú (usando useEffect para evitar warning)
+  // Si no se encuentra el plato, redirigir a la página de origen (usando useEffect para evitar warning)
   useEffect(() => {
     if (!dish) {
-      navigateBackToMenu();
+      navigateBack();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dish]);
 
   // Si no hay platillo, retornar null
@@ -596,7 +609,7 @@ const DishDetailScreen: React.FC = () => {
     }, quantity);
     
     // Regresar al menú después de agregar preservando el estado
-    navigateBackToMenu();
+    navigateBack();
   };
 
   const cartQuantity = cart.filter(item => item.id === dish.id).reduce((sum, item) => sum + item.quantity, 0);
@@ -719,7 +732,7 @@ const DishDetailScreen: React.FC = () => {
         {/* Top Bar */}
         <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4">
           <button
-            onClick={() => navigateBackToMenu()}
+            onClick={() => navigateBack()}
             className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition-colors"
           >
             <span className="material-symbols-outlined">arrow_back</span>

@@ -38,9 +38,21 @@ export async function getMenuSections(
     const highlights: PicksByCategory = {};
     const menuItems: PicksByCategory = {};
 
+    console.log('[getMenuSections] Raw data from Supabase:', {
+      dataCount: (data || []).length,
+      data: data
+    });
+
     (data || []).forEach((section: RestaurantMenuSection) => {
       const category = section.category;
       const productIds = section.product_ids || [];
+
+      console.log('[getMenuSections] Processing section:', {
+        section_type: section.section_type,
+        category,
+        productIds,
+        productIdsLength: productIds.length
+      });
 
       if (section.section_type === 'chef_suggestions') {
         chefSuggestions[category] = productIds;
@@ -49,6 +61,14 @@ export async function getMenuSections(
       } else if (section.section_type === 'menu_items') {
         menuItems[category] = productIds;
       }
+    });
+
+    console.log('[getMenuSections] Final objects:', {
+      chefSuggestions,
+      highlights,
+      menuItems,
+      chefSuggestionsKeys: Object.keys(chefSuggestions),
+      highlightsKeys: Object.keys(highlights)
     });
 
     return [chefSuggestions, highlights, menuItems];

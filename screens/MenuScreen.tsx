@@ -4,9 +4,11 @@ import { useCart } from '../contexts/CartContext';
 import { useTranslation, useLanguage } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useProducts } from '../contexts/ProductsContext';
+import { useRestaurant } from '../contexts/RestaurantContext';
 import { formatPrice } from '../utils/currency';
 import { playClickSound, playBackspaceSound } from '../utils/sound';
 import TopNavbar from '../components/TopNavbar';
+import { getMenuSections } from '../services/api';
 
 type OriginType = 'mar' | 'tierra' | 'aire' | 'vegetariano' | 'vegano' | 
   // Filtros para Bebidas
@@ -24,6 +26,74 @@ const MenuScreen: React.FC = () => {
   const { language } = useLanguage();
   const { favoriteDishes } = useFavorites();
   const { products, isLoading: productsLoading } = useProducts();
+  const { selectedRestaurantId } = useRestaurant();
+  
+  // Estados para las secciones del menú (cargadas desde la base de datos)
+  const [chefSuggestionsByCategory, setChefSuggestionsByCategory] = useState<Record<string, number[]>>({});
+  const [highlightsByCategory, setHighlightsByCategory] = useState<Record<string, number[]>>({});
+  const [hasLoadedSections, setHasLoadedSections] = useState(false); // Flag para saber si ya se intentó cargar desde la BD
+  
+  // Cargar secciones del menú desde la base de datos cuando cambia el restaurante seleccionado
+  useEffect(() => {
+    const loadMenuSections = async () => {
+      if (!selectedRestaurantId) {
+        // Si no hay restaurante seleccionado, resetear todo
+        setChefSuggestionsByCategory({});
+        setHighlightsByCategory({});
+        setHasLoadedSections(false);
+        return;
+      }
+
+      try {
+        const sectionsResult = await getMenuSections(selectedRestaurantId);
+        if (sectionsResult.success && sectionsResult.data) {
+          const [chefSuggestions, highlights] = sectionsResult.data;
+          console.log('[MenuScreen] Raw data from getMenuSections:', {
+            chefSuggestions,
+            highlights,
+            chefSuggestionsType: typeof chefSuggestions,
+            chefSuggestionsIsArray: Array.isArray(chefSuggestions),
+            chefSuggestionsKeys: Object.keys(chefSuggestions || {}),
+            highlightsKeys: Object.keys(highlights || {})
+          });
+          
+          // Asegurar que son objetos, no arrays
+          const chefSuggestionsObj = chefSuggestions && typeof chefSuggestions === 'object' && !Array.isArray(chefSuggestions) 
+            ? chefSuggestions 
+            : {};
+          const highlightsObj = highlights && typeof highlights === 'object' && !Array.isArray(highlights)
+            ? highlights
+            : {};
+          
+          setChefSuggestionsByCategory(chefSuggestionsObj);
+          setHighlightsByCategory(highlightsObj);
+          setHasLoadedSections(true);
+          console.log('[MenuScreen] Menu sections loaded from database:', { 
+            chefSuggestions: chefSuggestionsObj, 
+            highlights: highlightsObj,
+            restaurantId: selectedRestaurantId,
+            chefSuggestionsKeys: Object.keys(chefSuggestionsObj),
+            highlightsKeys: Object.keys(highlightsObj),
+            chefSuggestionsFull: JSON.stringify(chefSuggestionsObj),
+            highlightsFull: JSON.stringify(highlightsObj)
+          });
+        } else {
+          console.warn('[MenuScreen] No menu sections found for restaurant:', selectedRestaurantId);
+          // Si no hay datos en la BD, usar objetos vacíos (no valores por defecto)
+          setChefSuggestionsByCategory({});
+          setHighlightsByCategory({});
+          setHasLoadedSections(true); // Marcar como cargado para no usar valores por defecto
+        }
+      } catch (error) {
+        console.error('[MenuScreen] Error loading menu sections:', error);
+        setChefSuggestionsByCategory({});
+        setHighlightsByCategory({});
+        setHasLoadedSections(true); // Marcar como cargado incluso si hay error
+      }
+    };
+
+    loadMenuSections();
+  }, [selectedRestaurantId]);
   
   const getCartQuantity = (dishId: number) => {
     return cart.filter(item => item.id === dishId).reduce((sum, item) => sum + item.quantity, 0);
@@ -46,15 +116,24 @@ const MenuScreen: React.FC = () => {
     }
   };
   
-  // Categorías disponibles (se recalcula cuando cambia el idioma)
-  const categories = useMemo(() => [
-    t('menu.categories.appetizers'),
-    t('menu.categories.mains'),
-    t('menu.categories.drinks'),
-    t('menu.categories.desserts'),
-    t('menu.categories.cocktails'),
-    t('menu.categories.miscellaneous')
-  ], [t]);
+  // Obtener categorías dinámicamente desde las etiquetas (badges) de los productos del restaurante seleccionado
+  const categories = useMemo(() => {
+    if (!selectedRestaurantId || !products) {
+      return [];
+    }
+    const tagsSet = new Set<string>();
+    products.forEach((product) => {
+      if (product.badges && Array.isArray(product.badges)) {
+        product.badges.forEach((badge) => {
+          if (typeof badge === 'string' && badge.trim() !== '') {
+            tagsSet.add(badge.trim());
+          }
+        });
+      }
+    });
+    // Convertir a array y ordenar alfabéticamente
+    return Array.from(tagsSet).sort();
+  }, [products, selectedRestaurantId]);
 
   // Restaurar estado desde location.state o sessionStorage
   const getInitialCategory = (availableCategories: string[]) => {
@@ -73,17 +152,7 @@ const MenuScreen: React.FC = () => {
     return availableCategories[0];
   };
 
-  const [selectedCategory, setSelectedCategory] = useState(() => {
-    // Inicializar con una categoría válida
-    const currentCategories = [
-      t('menu.categories.appetizers'),
-      t('menu.categories.mains'),
-      t('menu.categories.drinks'),
-      t('menu.categories.desserts'),
-      t('menu.categories.cocktails')
-    ];
-    return getInitialCategory(currentCategories);
-  });
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedOrigin, setSelectedOrigin] = useState<OriginType>('');
@@ -136,32 +205,21 @@ const MenuScreen: React.FC = () => {
     };
   }, [showSuggestions, showHighlights]);
 
-  // Actualizar selectedCategory cuando cambia el idioma
+  // Establecer la primera categoría disponible si no hay ninguna seleccionada y hay categorías disponibles
   useEffect(() => {
-    const currentCategories = [
-      t('menu.categories.appetizers'),
-      t('menu.categories.mains'),
-      t('menu.categories.drinks'),
-      t('menu.categories.desserts'),
-      t('menu.categories.cocktails')
-    ];
-    
-    const saved = sessionStorage.getItem('menuSelectedCategory');
-    if (saved) {
-      // Si la categoría guardada no coincide con ninguna categoría actual (por cambio de idioma),
-      // resetear a la primera categoría
-      if (!currentCategories.includes(saved)) {
-        const defaultCategory = t('menu.categories.appetizers');
-        setSelectedCategory(defaultCategory);
-        sessionStorage.setItem('menuSelectedCategory', defaultCategory);
-      }
-    } else {
-      // Si no hay categoría guardada, usar la primera por defecto
-      const defaultCategory = t('menu.categories.appetizers');
-      setSelectedCategory(defaultCategory);
-      sessionStorage.setItem('menuSelectedCategory', defaultCategory);
+    if (categories.length > 0 && !selectedCategory) {
+      setSelectedCategory(categories[0]);
+      sessionStorage.setItem('menuSelectedCategory', categories[0]);
+    } else if (categories.length > 0 && selectedCategory && !categories.includes(selectedCategory)) {
+      // Si la categoría seleccionada ya no existe, usar la primera disponible
+      setSelectedCategory(categories[0]);
+      sessionStorage.setItem('menuSelectedCategory', categories[0]);
+    } else if (categories.length === 0) {
+      // Si no hay categorías, limpiar la selección
+      setSelectedCategory('');
+      sessionStorage.removeItem('menuSelectedCategory');
     }
-  }, [language, t]);
+  }, [categories, selectedCategory]);
 
   // Restaurar posición de scroll y categoría al regresar
   useEffect(() => {
@@ -192,6 +250,7 @@ const MenuScreen: React.FC = () => {
     sessionStorage.setItem('menuScrollPosition', window.scrollY.toString());
     navigate(`/dish/${dishId}`, {
       state: {
+        fromPage: 'menu',
         selectedCategory: selectedCategory,
         scrollPosition: window.scrollY
       }
@@ -199,22 +258,19 @@ const MenuScreen: React.FC = () => {
   };
 
   // Mapeo de categorías en español a traducciones
-  const categoryMap: Record<string, string> = {
+  const categoryMap: Record<string, string> = useMemo(() => ({
     'Entradas': t('menu.categories.appetizers'),
     'Platos Fuertes': t('menu.categories.mains'),
     'Bebidas': t('menu.categories.drinks'),
     'Postres': t('menu.categories.desserts'),
     'Coctelería': t('menu.categories.cocktails'),
     'Misceláneos': t('menu.categories.miscellaneous')
-  };
+  }), [t]);
   
   
-  // Función para obtener la categoría original en español desde la traducción
-  const getOriginalCategory = (translatedCategory: string): string => {
-    for (const [original, translated] of Object.entries(categoryMap)) {
-      if (translated === translatedCategory) return original;
-    }
-    return translatedCategory;
+  // Ya no necesitamos getOriginalCategory porque las categorías ahora son las etiquetas directamente
+  const getOriginalCategory = (category: string): string => {
+    return category; // Las categorías ahora son las etiquetas directamente
   };
 
   // Función para obtener los filtros según la categoría seleccionada
@@ -630,25 +686,33 @@ const MenuScreen: React.FC = () => {
     return dishesFromCode;
   }, [products]);
 
-  // Sugerencias del Chef por categoría
-  // Nota: Los IDs deben corresponder a productos que realmente pertenezcan a cada categoría
-  // El código filtra automáticamente para mostrar solo productos de la categoría correcta
-  const chefSuggestions: Record<string, number[]> = {
+  // Sugerencias del Chef y Destacados ahora se cargan desde la base de datos
+  // Valores por defecto hardcodeados solo se usan si no hay restaurante seleccionado o no hay datos en la BD
+  const defaultChefSuggestions: Record<string, number[]> = {
     'Entradas': [1, 2, 5, 4],
     'Platos Fuertes': [3, 6, 7, 8],
-    'Bebidas': [9, 10, 15, 16, 17, 18, 19], // Incluye todos los IDs posibles de bebidas
+    'Bebidas': [9, 10, 15, 16, 17, 18, 19],
     'Postres': [11, 12, 29, 30, 31, 32, 33, 34],
     'Coctelería': [13, 14, 20, 21, 22, 23, 24],
   };
 
-  // Destacados de hoy por categoría
-  const todayHighlights: Record<string, number[]> = {
+  const defaultHighlights: Record<string, number[]> = {
     'Entradas': [1, 2],
     'Platos Fuertes': [3, 7],
     'Bebidas': [15],
     'Postres': [29],
     'Coctelería': [20],
   };
+
+  // Usar datos de la BD si hay restaurante seleccionado y ya se cargaron los datos
+  // Solo usar valores por defecto si NO hay restaurante seleccionado
+  const chefSuggestions = (selectedRestaurantId && hasLoadedSections)
+    ? chefSuggestionsByCategory 
+    : defaultChefSuggestions;
+  
+  const todayHighlights = (selectedRestaurantId && hasLoadedSections)
+    ? highlightsByCategory 
+    : defaultHighlights;
 
   // Función de búsqueda fuzzy
   const fuzzyMatch = (text: string, query: string): boolean => {
@@ -722,21 +786,18 @@ const MenuScreen: React.FC = () => {
     return false;
   };
 
-  // Filtrar platos por categoría, búsqueda y origen
+  // Filtrar platos por etiqueta (categoría), búsqueda y origen
   const filteredDishes = useMemo(() => {
-    const originalCategory = getOriginalCategory(selectedCategory);
+    const selectedTagAsCategory = selectedCategory || '';
     const hasSearchQuery = searchQuery.trim().length > 0;
     
     return dishes.filter(dish => {
       // IMPORTANTE: Si hay búsqueda, buscar en TODAS las categorías (ignorar filtro de categoría)
-      // Si NO hay búsqueda, filtrar por la categoría seleccionada
-      if (!hasSearchQuery) {
-        // Filtro por categoría solo si NO hay búsqueda
-        // Normalizar categorías (trim y comparar sin case sensitivity)
-        const dishCategory = (dish.category || '').trim();
-        const targetCategory = (originalCategory || '').trim();
-        
-        if (dishCategory.toLowerCase() !== targetCategory.toLowerCase()) {
+      // Si NO hay búsqueda, filtrar por la etiqueta seleccionada
+      if (!hasSearchQuery && selectedTagAsCategory) {
+        // Filtro por etiqueta solo si NO hay búsqueda y hay una etiqueta seleccionada
+        // Verificar si el producto tiene la etiqueta seleccionada en sus badges
+        if (!dish.badges || !dish.badges.includes(selectedTagAsCategory)) {
           return false;
         }
       }
@@ -773,9 +834,35 @@ const MenuScreen: React.FC = () => {
     });
   }, [selectedCategory, searchQuery, selectedOrigin, dishes]);
 
-  const originalCategory = getOriginalCategory(selectedCategory);
-  const suggestions = chefSuggestions[originalCategory] || [];
-  const highlights = todayHighlights[originalCategory] || [];
+  // La categoría seleccionada ahora es directamente la etiqueta
+  const selectedTagAsCategory = selectedCategory || '';
+  
+  // Obtener sugerencias y destacados para la categoría actual (etiqueta seleccionada)
+  // Si hay restaurante seleccionado, usar datos de BD; si no, usar valores por defecto
+  const suggestions = chefSuggestions[selectedTagAsCategory] || [];
+  const highlights = todayHighlights[selectedTagAsCategory] || [];
+  
+  // Debug: Log para ver qué está pasando con las secciones
+  useEffect(() => {
+    console.log('[MenuScreen] Debug secciones:', {
+      selectedRestaurantId,
+      hasLoadedSections,
+      selectedCategory,
+      selectedTagAsCategory,
+      chefSuggestionsKeys: Object.keys(chefSuggestions),
+      highlightsKeys: Object.keys(todayHighlights),
+      chefSuggestionsByCategoryKeys: Object.keys(chefSuggestionsByCategory),
+      highlightsByCategoryKeys: Object.keys(highlightsByCategory),
+      chefSuggestionsForCategory: chefSuggestions[selectedTagAsCategory],
+      highlightsForCategory: todayHighlights[selectedTagAsCategory],
+      suggestions: suggestions.length,
+      highlights: highlights.length,
+      showSuggestions,
+      showHighlights,
+      searchQuery: searchQuery.trim(),
+      productsCount: products.length
+    });
+  }, [selectedRestaurantId, hasLoadedSections, selectedCategory, selectedTagAsCategory, chefSuggestions, todayHighlights, chefSuggestionsByCategory, highlightsByCategory, suggestions.length, highlights.length, showSuggestions, showHighlights, searchQuery, products.length]);
 
   const hasActiveFilters = selectedOrigin !== '';
 
@@ -789,7 +876,8 @@ const MenuScreen: React.FC = () => {
       {/* Header Section */}
       <TopNavbar title="DONK RESTAURANT" showAvatar={true} />
       <div className="sticky top-[73px] z-40 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
-        {/* Categories Chips */}
+        {/* Categories Chips - Solo mostrar si hay restaurante seleccionado y categorías disponibles */}
+        {selectedRestaurantId && categories.length > 0 && (
         <div className="flex gap-3 p-4 overflow-x-auto no-scrollbar">
           {categories.map((category) => (
             <button
@@ -815,6 +903,7 @@ const MenuScreen: React.FC = () => {
             </button>
           ))}
         </div>
+        )}
       </div>
 
       {/* Search Input */}
@@ -861,8 +950,12 @@ const MenuScreen: React.FC = () => {
             <div className="flex gap-4">
               {suggestions.map((dishId) => {
                 const dish = dishes.find(d => d.id === dishId);
-                // Verificar que el plato existe y pertenece a la categoría correcta
-                if (!dish || dish.category !== originalCategory) return null;
+                // Verificar que el plato existe
+                // NOTA: No filtrar por categoría aquí porque los productos ya están organizados por categoría en la BD
+                if (!dish) {
+                  console.warn('[MenuScreen] Producto no encontrado en dishes:', dishId);
+                  return null;
+                }
                 return (
                   <div 
                     key={dish.id}
@@ -894,8 +987,12 @@ const MenuScreen: React.FC = () => {
           <div className="flex flex-col gap-3">
             {highlights.map((dishId) => {
               const dish = dishes.find(d => d.id === dishId);
-              // Verificar que el plato existe y pertenece a la categoría correcta
-              if (!dish || dish.category !== originalCategory) return null;
+              // Verificar que el plato existe
+              // NOTA: No filtrar por categoría aquí porque los productos ya están organizados por categoría en la BD
+              if (!dish) {
+                console.warn('[MenuScreen] Producto destacado no encontrado en dishes:', dishId);
+                return null;
+              }
               return (
                 <div 
                   key={dish.id}
@@ -925,43 +1022,6 @@ const MenuScreen: React.FC = () => {
           <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">{t('navigation.menu')}</h3>
         </div>
         
-        {/* Origin Filters Chips - Ocultar cuando hay búsqueda activa */}
-        {!searchQuery.trim() && (
-          <div className="flex gap-2 pb-4 overflow-x-auto no-scrollbar">
-            {getFiltersForCategory(selectedCategory).map((filter) => (
-            <button
-              key={filter.value}
-              onClick={() => setSelectedOrigin(selectedOrigin === filter.value ? '' : filter.value)}
-              className={`flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full px-4 transition-all ${
-                selectedOrigin === filter.value
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-white dark:bg-[#322a1a] border border-[#f4f3f0] dark:border-[#3d3321] text-[#181611] dark:text-stone-300'
-              }`}
-            >
-              <span className={`material-symbols-outlined text-base ${
-                selectedOrigin === filter.value ? 'text-white' : 'text-primary'
-              }`}>
-                {filter.icon}
-              </span>
-              <span className={`text-xs font-medium ${
-                selectedOrigin === filter.value ? 'text-white' : 'text-[#181611] dark:text-stone-300'
-              }`}>
-                {t(getFilterTranslationKey(filter.value))}
-              </span>
-            </button>
-          ))}
-          {selectedOrigin && (
-            <button
-              onClick={() => setSelectedOrigin('')}
-              className="flex h-9 shrink-0 items-center justify-center gap-1 rounded-full px-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                  title={t('menu.clearFilter')}
-            >
-              <span className="material-symbols-outlined text-sm">close</span>
-            </button>
-          )}
-        </div>
-        )}
-
         <div className="flex flex-col gap-4">
           {filteredDishes.length > 0 ? (
             filteredDishes.map((dish) => (

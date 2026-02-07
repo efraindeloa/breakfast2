@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import TopNavbar from '../components/TopNavbar';
 import { useAuth } from '../contexts/AuthContext';
+import { useRestaurant } from '../contexts/RestaurantContext';
 import CurrencyWidget from '../components/widgets/CurrencyWidget';
 import WeatherWidget from '../components/widgets/WeatherWidget';
 import GuestRestrictionModal from '../components/GuestRestrictionModal';
+import RestaurantSelector from '../components/RestaurantSelector';
 import { playClickSound } from '../utils/sound';
 
 interface ButtonConfig {
@@ -22,6 +24,7 @@ const HomeScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { accountType, userType } = useAuth();
+  const { selectedRestaurantId } = useRestaurant();
   
   // Estados para controlar la opacidad de los botones (efecto fade-in)
   const [buttonOpacities, setButtonOpacities] = useState<Record<string, number>>({
@@ -418,7 +421,10 @@ const HomeScreen: React.FC = () => {
     
     // Verificar si el botón está deshabilitado para usuarios invitados
     const isGuestRestricted = userType === 'guest' && button.id !== 'menu';
-    const isDisabled = isGuestRestricted;
+    // Verificar si el botón está deshabilitado por falta de restaurante seleccionado (solo para comensales)
+    const restaurantRequiredButtons = ['menu', 'waitlist', 'joinTable', 'invite', 'reservations'];
+    const isRestaurantRequired = accountType === 'diner' && restaurantRequiredButtons.includes(button.id) && !selectedRestaurantId;
+    const isDisabled = isGuestRestricted || isRestaurantRequired;
 
     const handleClick = () => {
       if (isDisabled) {
@@ -470,7 +476,10 @@ const HomeScreen: React.FC = () => {
           }`}>{t(button.titleKey)}</h2>
           {isDisabled && (
             <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-              {t('guest.registeredOnly')}
+              {isRestaurantRequired 
+                ? (t('restaurant.selectRestaurantHint') || 'Selecciona un restaurante')
+                : t('guest.registeredOnly')
+              }
             </p>
           )}
           {shouldShowDescription && (
@@ -505,9 +514,12 @@ const HomeScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background-light dark:bg-background-dark">
-      <TopNavbar showWelcome={true} showFavorites={false} />
+      <TopNavbar showWelcome={true} showFavorites={true} />
 
       <main className="flex-1 overflow-y-auto pb-32 hide-scrollbar safe-bottom" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 85px + 60px)' }}>
+        {/* Selector de restaurante solo para comensales */}
+        {accountType === 'diner' && <RestaurantSelector />}
+        
         <h3 
           className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6 transition-opacity duration-500 ease-out pointer-events-none"
           style={{ opacity: titleOpacity }}

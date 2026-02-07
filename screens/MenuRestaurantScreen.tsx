@@ -68,17 +68,21 @@ const MenuRestaurantScreen: React.FC = () => {
   const { selectedRestaurant } = useRestaurant();
   const { user, accountType } = useAuth();
 
-  const categories = useMemo(
-    () => [
-      t('menu.categories.appetizers'),
-      t('menu.categories.mains'),
-      t('menu.categories.drinks'),
-      t('menu.categories.desserts'),
-      t('menu.categories.cocktails'),
-      t('menu.categories.miscellaneous'),
-    ],
-    [t]
-  );
+  // Obtener categorías dinámicamente desde las etiquetas (badges) de los productos
+  const categories = useMemo(() => {
+    const tagsSet = new Set<string>();
+    products?.forEach((product) => {
+      if (product.badges && Array.isArray(product.badges)) {
+        product.badges.forEach((badge) => {
+          if (typeof badge === 'string' && badge.trim() !== '') {
+            tagsSet.add(badge.trim());
+          }
+        });
+      }
+    });
+    // Convertir a array y ordenar alfabéticamente
+    return Array.from(tagsSet).sort();
+  }, [products]);
 
   const categoryMap: Record<string, string> = useMemo(
     () => ({
@@ -92,17 +96,12 @@ const MenuRestaurantScreen: React.FC = () => {
     [t]
   );
 
-  const getOriginalCategory = (translatedCategory: string): string => {
-    for (const [original, translated] of Object.entries(categoryMap)) {
-      if (translated === translatedCategory) return original;
-    }
-    return translatedCategory;
+  // Ya no necesitamos getOriginalCategory porque las categorías ahora son las etiquetas directamente
+  const getOriginalCategory = (category: string): string => {
+    return category; // Las categorías ahora son las etiquetas directamente
   };
 
-  const [selectedCategory, setSelectedCategory] = useState(() => {
-    const initial = location.state?.selectedCategory;
-    return initial && categories.includes(initial) ? initial : categories[0];
-  });
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [selectedOrigin, setSelectedOrigin] = useState<OriginType>('');
@@ -245,9 +244,9 @@ const MenuRestaurantScreen: React.FC = () => {
     };
   }, [chefSuggestionsByCategory, highlightsByCategory, menuItemsByCategory, selectedRestaurant, accountType]);
 
-  // Recalcular selectedCategory si cambia idioma
+  // Establecer la primera categoría disponible si no hay ninguna seleccionada
   useEffect(() => {
-    if (!categories.includes(selectedCategory)) {
+    if (categories.length > 0 && !selectedCategory) {
       setSelectedCategory(categories[0]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -286,10 +285,11 @@ const MenuRestaurantScreen: React.FC = () => {
     return productsFromContext;
   }, [products]);
 
-  const originalCategory = getOriginalCategory(selectedCategory);
-  const chefIds = chefSuggestionsByCategory[originalCategory] || [];
-  const highlightIds = highlightsByCategory[originalCategory] || [];
-  const menuIds = menuItemsByCategory[originalCategory] || [];
+  // La categoría seleccionada ahora es directamente la etiqueta
+  const selectedTagAsCategory = selectedCategory || '';
+  const chefIds = chefSuggestionsByCategory[selectedTagAsCategory] || [];
+  const highlightIds = highlightsByCategory[selectedTagAsCategory] || [];
+  const menuIds = menuItemsByCategory[selectedTagAsCategory] || [];
 
   // Función para obtener el texto del botón según la categoría seleccionada
   const getAddButtonText = useMemo(() => {
@@ -305,16 +305,19 @@ const MenuRestaurantScreen: React.FC = () => {
     };
   }, [t]);
 
-  // Extraer todas las etiquetas únicas de los productos de la categoría actual
+  // Extraer todas las etiquetas únicas de los productos que tienen la etiqueta seleccionada como categoría
   const availableTags = useMemo(() => {
     const tagsSet = new Set<string>();
     dishes.forEach((dish) => {
-      if (dish.category === originalCategory && dish.badges && dish.badges.length > 0) {
-        dish.badges.forEach((tag) => tagsSet.add(tag));
+      if (dish.badges && dish.badges.length > 0) {
+        // Si el producto tiene la etiqueta seleccionada, mostrar todas sus etiquetas
+        if (selectedTagAsCategory && dish.badges.includes(selectedTagAsCategory)) {
+          dish.badges.forEach((tag) => tagsSet.add(tag));
+        }
       }
     });
     return Array.from(tagsSet).sort();
-  }, [dishes, originalCategory]);
+  }, [dishes, selectedTagAsCategory]);
 
   // Función para obtener los filtros según la categoría seleccionada
   const getFiltersForCategory = (category: string): Array<{ value: OriginType; icon: string }> => {
@@ -397,10 +400,11 @@ const MenuRestaurantScreen: React.FC = () => {
     return keyMap[value] || '';
   };
 
+  // Filtrar productos que tienen la etiqueta seleccionada como badge
   const categoryDishes = useMemo(() => {
-    // Para el modal, limitar a la categoría actual
-    return dishes.filter((d) => (d.category || '').trim().toLowerCase() === originalCategory.trim().toLowerCase());
-  }, [dishes, originalCategory]);
+    if (!selectedTagAsCategory) return [];
+    return dishes.filter((d) => d.badges && d.badges.includes(selectedTagAsCategory));
+  }, [dishes, selectedTagAsCategory]);
 
   // Función de búsqueda fuzzy (igual que en MenuScreen)
   const fuzzyMatch = (text: string, query: string): boolean => {
@@ -531,13 +535,10 @@ const MenuRestaurantScreen: React.FC = () => {
       return menuIds
         .map((dishId) => dishes.find((d) => d.id === dishId))
         .filter((dish): dish is Dish => {
-          if (!dish || dish.category !== originalCategory) return false;
-          if (selectedOrigin) {
-            if (selectedOrigin === 'vegano') {
-              return dish.badges?.includes('vegano') || false;
-            }
-            return dish.origin === selectedOrigin;
-          }
+          if (!dish) return false;
+          // Filtrar por la etiqueta seleccionada como categoría
+          if (!selectedTagAsCategory || !dish.badges || !dish.badges.includes(selectedTagAsCategory)) return false;
+          // Si hay un filtro de etiqueta adicional, aplicarlo
           if (selectedTag) {
             return dish.badges?.includes(selectedTag) || false;
           }
@@ -545,19 +546,15 @@ const MenuRestaurantScreen: React.FC = () => {
         }).length;
     }
     return dishes.filter((dish) => {
-      if (dish.category !== originalCategory) return false;
-      if (selectedOrigin) {
-        if (selectedOrigin === 'vegano') {
-          return dish.badges?.includes('vegano') || false;
-        }
-        return dish.origin === selectedOrigin;
-      }
+      // Filtrar por la etiqueta seleccionada como categoría
+      if (!selectedTagAsCategory || !dish.badges || !dish.badges.includes(selectedTagAsCategory)) return false;
+      // Si hay un filtro de etiqueta adicional, aplicarlo
       if (selectedTag) {
         return dish.badges?.includes(selectedTag) || false;
       }
       return true;
     }).length;
-  }, [dishes, menuIds, originalCategory, selectedOrigin, selectedTag, searchQuery, filteredDishes]);
+  }, [dishes, menuIds, selectedTagAsCategory, selectedTag, searchQuery, filteredDishes]);
 
   const openPicker = (section: 'chef' | 'highlights' | 'menu', editingId?: number) => {
     setPickerSection(section);
@@ -740,6 +737,15 @@ const MenuRestaurantScreen: React.FC = () => {
     setComplements(complements.filter(c => c.id !== id));
   };
 
+  // Función helper para convertir texto a Title Case
+  const toTitleCase = (str: string): string => {
+    return str
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   // Funciones CRUD para etiquetas
   const addTag = () => {
     console.log('[MenuRestaurantScreen] addTag llamado, newTagName:', newTagName);
@@ -747,9 +753,9 @@ const MenuRestaurantScreen: React.FC = () => {
       console.warn('[MenuRestaurantScreen] No se puede agregar etiqueta: el nombre está vacío');
       return; // No hacer nada si no hay nombre
     }
-    const tagName = newTagName.trim().toLowerCase();
+    const tagName = toTitleCase(newTagName.trim());
     // Evitar duplicados (case-insensitive)
-    if (!productTags.some(tag => tag.toLowerCase() === tagName)) {
+    if (!productTags.some(tag => tag.toLowerCase() === tagName.toLowerCase())) {
       console.log('[MenuRestaurantScreen] Agregando etiqueta:', tagName);
       setProductTags([...productTags, tagName]);
       setNewTagName('');
@@ -938,22 +944,21 @@ const MenuRestaurantScreen: React.FC = () => {
         return;
       }
       
-      // Validar que la categoría esté definida
-      console.log('[MenuRestaurantScreen] Validando categoría:', originalCategory);
-      if (!originalCategory || originalCategory.trim() === '') {
-        console.error('[MenuRestaurantScreen] Categoría no definida');
-        alert(t('restaurant.menu.errors.invalidCategory'));
+      // Validar que haya al menos una etiqueta (categoría)
+      console.log('[MenuRestaurantScreen] Validando etiquetas:', productTags);
+      if (!productTags || productTags.length === 0) {
+        console.error('[MenuRestaurantScreen] No hay etiquetas definidas');
+        alert('Debes agregar al menos una etiqueta al producto. Las etiquetas funcionan como categorías.');
         return;
       }
 
-      console.log('[MenuRestaurantScreen] Guardando producto:', {
+        console.log('[MenuRestaurantScreen] Guardando producto:', {
         restaurantId,
         name: editingProductName.trim(),
         description: editingProductDescription.trim(),
         price: priceValue,
         image_url: imageUrl || 'sin imagen',
-        category: originalCategory,
-        badges: productTags,
+        badges: productTags, // Las etiquetas ahora son las categorías
         complements: complements,
       });
 
@@ -971,9 +976,9 @@ const MenuRestaurantScreen: React.FC = () => {
           price: priceValue,
           image_url: imageUrl || undefined,
           image_urls: allImageUrls, // Enviar todas las URLs de imágenes
-          category: originalCategory,
-          origin: editingProduct.origin || '',
-          badges: productTags || [], // Siempre enviar el array, incluso si está vacío
+          category: productTags && productTags.length > 0 ? productTags[0] : '', // Usar la primera etiqueta como categoría para compatibilidad
+          origin: '', // Ya no usamos origin
+          badges: productTags || [], // Las etiquetas son las categorías
           complements: complements, // Siempre enviar el array, incluso si está vacío
           allow_custom_complements: allowCustomComplements,
           allow_special_instructions: allowSpecialInstructions,
@@ -999,10 +1004,10 @@ const MenuRestaurantScreen: React.FC = () => {
           price: priceValue,
           image_url: imageUrl || undefined,
           image_urls: allImageUrls,
-          category: originalCategory,
-          origin: '',
+          category: productTags && productTags.length > 0 ? productTags[0] : '', // Usar la primera etiqueta como categoría para compatibilidad
+          origin: '', // Ya no usamos origin
           is_active: true,
-          badges: productTags || [],
+          badges: productTags || [], // Las etiquetas son las categorías
           complements: complements || [],
           allow_custom_complements: allowCustomComplements,
           allow_special_instructions: allowSpecialInstructions,
@@ -1014,9 +1019,9 @@ const MenuRestaurantScreen: React.FC = () => {
           price: priceValue,
           image_url: imageUrl || undefined,
           image_urls: allImageUrls, // Enviar todas las URLs de imágenes
-          category: originalCategory,
-          origin: '',
-          badges: productTags || [], // Siempre enviar el array, incluso si está vacío
+          category: productTags && productTags.length > 0 ? productTags[0] : '', // Usar la primera etiqueta como categoría para compatibilidad
+          origin: '', // Ya no usamos origin
+          badges: productTags || [], // Las etiquetas son las categorías
           complements: complements, // Siempre enviar el array, incluso si está vacío
           allow_custom_complements: allowCustomComplements,
           allow_special_instructions: allowSpecialInstructions,
@@ -1031,33 +1036,37 @@ const MenuRestaurantScreen: React.FC = () => {
           // Agregar el producto solo a la sección "Menú" (no a "Sugerencias del chef" ni "Destacados")
           if (created.id) {
             // Si el producto está en "Sugerencias del chef" o "Destacados" (por valores por defecto o localStorage), eliminarlo
-            setChefSuggestionsByCategory((prev) => {
-              const current = prev[originalCategory] || [];
-              if (current.includes(created.id)) {
-                console.log('[MenuRestaurantScreen] Producto removido de Sugerencias del chef (estaba presente)');
-                return { ...prev, [originalCategory]: current.filter((id) => id !== created.id) };
-              }
-              return prev;
-            });
-            
-            setHighlightsByCategory((prev) => {
-              const current = prev[originalCategory] || [];
-              if (current.includes(created.id)) {
-                console.log('[MenuRestaurantScreen] Producto removido de Destacados (estaba presente)');
-                return { ...prev, [originalCategory]: current.filter((id) => id !== created.id) };
-              }
-              return prev;
-            });
-            
-            // Agregar solo a "Menú" si no está ya presente
-            setMenuItemsByCategory((prev) => {
-              const current = prev[originalCategory] || [];
-              if (!current.includes(created.id)) {
-                console.log('[MenuRestaurantScreen] Producto agregado a Menú');
-                return { ...prev, [originalCategory]: [...current, created.id] };
-              }
-              return prev;
-            });
+            // Usar la primera etiqueta del producto como categoría para las secciones
+            const productCategory = productTags && productTags.length > 0 ? productTags[0] : '';
+            if (productCategory) {
+              setChefSuggestionsByCategory((prev) => {
+                const current = prev[productCategory] || [];
+                if (current.includes(created.id)) {
+                  console.log('[MenuRestaurantScreen] Producto removido de Sugerencias del chef (estaba presente)');
+                  return { ...prev, [productCategory]: current.filter((id) => id !== created.id) };
+                }
+                return prev;
+              });
+              
+              setHighlightsByCategory((prev) => {
+                const current = prev[productCategory] || [];
+                if (current.includes(created.id)) {
+                  console.log('[MenuRestaurantScreen] Producto removido de Destacados (estaba presente)');
+                  return { ...prev, [productCategory]: current.filter((id) => id !== created.id) };
+                }
+                return prev;
+              });
+              
+              // Agregar solo a "Menú" si no está ya presente
+              setMenuItemsByCategory((prev) => {
+                const current = prev[productCategory] || [];
+                if (!current.includes(created.id)) {
+                  console.log('[MenuRestaurantScreen] Producto agregado a Menú');
+                  return { ...prev, [productCategory]: [...current, created.id] };
+                }
+                return prev;
+              });
+            }
           }
         } else {
           console.error('[MenuRestaurantScreen] Error al crear el producto:', createResult.error);
@@ -1088,33 +1097,40 @@ const MenuRestaurantScreen: React.FC = () => {
   };
 
   const addOrReplacePick = (dishId: number) => {
+    // Usar la etiqueta seleccionada como categoría
+    const categoryKey = selectedTagAsCategory || '';
+    if (!categoryKey) {
+      console.warn('[MenuRestaurantScreen] No hay categoría seleccionada para agregar producto');
+      return;
+    }
+    
     if (pickerSection === 'chef') {
       setChefSuggestionsByCategory((prev) => {
-        const current = prev[originalCategory] || [];
+        const current = prev[categoryKey] || [];
         const next = pickerEditingId
           ? current.map((id) => (id === pickerEditingId ? dishId : id))
           : [...current, dishId];
         // evitar duplicados
         const uniq = Array.from(new Set(next));
-        return { ...prev, [originalCategory]: uniq };
+        return { ...prev, [categoryKey]: uniq };
       });
     } else if (pickerSection === 'highlights') {
       setHighlightsByCategory((prev) => {
-        const current = prev[originalCategory] || [];
+        const current = prev[categoryKey] || [];
         const next = pickerEditingId
           ? current.map((id) => (id === pickerEditingId ? dishId : id))
           : [...current, dishId];
         const uniq = Array.from(new Set(next));
-        return { ...prev, [originalCategory]: uniq };
+        return { ...prev, [categoryKey]: uniq };
       });
     } else {
       setMenuItemsByCategory((prev) => {
-        const current = prev[originalCategory] || [];
+        const current = prev[categoryKey] || [];
         const next = pickerEditingId
           ? current.map((id) => (id === pickerEditingId ? dishId : id))
           : [...current, dishId];
         const uniq = Array.from(new Set(next));
-        return { ...prev, [originalCategory]: uniq };
+        return { ...prev, [categoryKey]: uniq };
       });
     }
     closePicker();
@@ -1175,18 +1191,25 @@ const MenuRestaurantScreen: React.FC = () => {
       } else {
         // Si se elimina desde "chef" o "highlights": solo remover de esa sección específica
         // NO eliminar de la base de datos ni de "menu"
-        if (section === 'chef') {
-          setChefSuggestionsByCategory((prev) => {
-            const current = prev[originalCategory] || [];
-            return { ...prev, [originalCategory]: current.filter((id) => id !== dishId) };
-          });
-          console.log('[MenuRestaurantScreen] Producto removido de Sugerencias del chef');
-        } else if (section === 'highlights') {
-          setHighlightsByCategory((prev) => {
-            const current = prev[originalCategory] || [];
-            return { ...prev, [originalCategory]: current.filter((id) => id !== dishId) };
-          });
-          console.log('[MenuRestaurantScreen] Producto removido de Destacados');
+        // Encontrar la categoría del producto eliminado para removerlo de la sección correcta
+        const dishToRemove = dishes.find((d) => d.id === dishId);
+        if (dishToRemove && dishToRemove.badges && dishToRemove.badges.length > 0) {
+          // Usar la primera etiqueta del producto como categoría
+          const productCategory = dishToRemove.badges[0];
+          
+          if (section === 'chef') {
+            setChefSuggestionsByCategory((prev) => {
+              const current = prev[productCategory] || [];
+              return { ...prev, [productCategory]: current.filter((id) => id !== dishId) };
+            });
+            console.log('[MenuRestaurantScreen] Producto removido de Sugerencias del chef');
+          } else if (section === 'highlights') {
+            setHighlightsByCategory((prev) => {
+              const current = prev[productCategory] || [];
+              return { ...prev, [productCategory]: current.filter((id) => id !== dishId) };
+            });
+            console.log('[MenuRestaurantScreen] Producto removido de Destacados');
+          }
         }
       }
     } catch (error) {
@@ -1332,7 +1355,8 @@ const MenuRestaurantScreen: React.FC = () => {
             <div className="flex gap-4">
               {chefIds.map((dishId) => {
                 const dish = dishes.find((d) => d.id === dishId);
-                if (!dish || dish.category !== originalCategory) return null;
+                // Filtrar por la etiqueta seleccionada como categoría
+                if (!dish || !selectedTagAsCategory || !dish.badges || !dish.badges.includes(selectedTagAsCategory)) return null;
                 return (
                   <div
                     key={dish.id}
@@ -1403,7 +1427,8 @@ const MenuRestaurantScreen: React.FC = () => {
           <div className="flex flex-col gap-3">
             {highlightIds.map((dishId) => {
               const dish = dishes.find((d) => d.id === dishId);
-              if (!dish || dish.category !== originalCategory) return null;
+              // Filtrar por la etiqueta seleccionada como categoría
+              if (!dish || !selectedTagAsCategory || !dish.badges || !dish.badges.includes(selectedTagAsCategory)) return null;
               return (
                 <div
                   key={dish.id}
@@ -1461,79 +1486,6 @@ const MenuRestaurantScreen: React.FC = () => {
           </h3>
         </div>
 
-          {/* Origin Filters - Ocultar cuando hay búsqueda activa */}
-          {!searchQuery.trim() && (
-            <div className="flex gap-2 pb-4 overflow-x-auto no-scrollbar">
-            {getFiltersForCategory(selectedCategory).map((filter) => (
-              <button
-                key={filter.value}
-                onClick={() => setSelectedOrigin(selectedOrigin === filter.value ? '' : filter.value)}
-                className={`flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full px-4 transition-all ${
-                  selectedOrigin === filter.value
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'bg-white dark:bg-[#322a1a] border border-[#f4f3f0] dark:border-[#3d3321] text-[#181611] dark:text-stone-300'
-                }`}
-              >
-                <span className={`material-symbols-outlined text-base ${
-                  selectedOrigin === filter.value ? 'text-white' : 'text-primary'
-                }`}>
-                  {filter.icon}
-                </span>
-                <span className={`text-xs font-medium ${
-                  selectedOrigin === filter.value ? 'text-white' : 'text-[#181611] dark:text-stone-300'
-                }`}>
-                  {t(getFilterTranslationKey(filter.value))}
-                </span>
-              </button>
-            ))}
-            {selectedOrigin && (
-              <button
-                onClick={() => setSelectedOrigin('')}
-                className="flex h-9 shrink-0 items-center justify-center gap-1 rounded-full px-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                title={t('menu.clearFilter')}
-              >
-                <span className="material-symbols-outlined text-sm">close</span>
-              </button>
-            )}
-            </div>
-          )}
-
-          {/* Tag Filters */}
-          {availableTags.length > 0 && (
-            <div className="flex gap-2 pb-4 overflow-x-auto no-scrollbar">
-              {availableTags.map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => setSelectedTag(selectedTag === tag ? '' : tag)}
-                  className={`flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full px-4 transition-all ${
-                    selectedTag === tag
-                      ? 'bg-primary text-white shadow-sm'
-                      : 'bg-white dark:bg-[#322a1a] border border-[#f4f3f0] dark:border-[#3d3321] text-[#181611] dark:text-stone-300'
-                  }`}
-                >
-                  <span className={`material-symbols-outlined text-base ${
-                    selectedTag === tag ? 'text-white' : 'text-primary'
-                  }`}>
-                    label
-                  </span>
-                  <span className={`text-xs font-medium ${
-                    selectedTag === tag ? 'text-white' : 'text-[#181611] dark:text-stone-300'
-                  }`}>
-                    {tag}
-                  </span>
-                </button>
-              ))}
-              {selectedTag && (
-                <button
-                  onClick={() => setSelectedTag('')}
-                  className="flex h-9 shrink-0 items-center justify-center gap-1 rounded-full px-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                  title={t('restaurant.menu.clearTagFilter')}
-                >
-                  <span className="material-symbols-outlined text-sm">close</span>
-                </button>
-              )}
-            </div>
-          )}
 
           {/* Menu Items */}
           <div className="flex flex-col gap-4">
@@ -1543,27 +1495,19 @@ const MenuRestaurantScreen: React.FC = () => {
                   ? menuIds
                       .map((dishId) => dishes.find((d) => d.id === dishId))
                       .filter((dish): dish is Dish => {
-                        if (!dish || dish.category !== originalCategory) return false;
-                        if (selectedOrigin) {
-                          if (selectedOrigin === 'vegano') {
-                            return dish.badges?.includes('vegano') || false;
-                          }
-                          return dish.origin === selectedOrigin;
-                        }
+                        if (!dish) return false;
+                        // Filtrar por la etiqueta seleccionada como categoría
+                        if (!selectedTagAsCategory || !dish.badges || !dish.badges.includes(selectedTagAsCategory)) return false;
+                        // Si hay un filtro de etiqueta adicional, aplicarlo
                         if (selectedTag) {
                           return dish.badges?.includes(selectedTag) || false;
                         }
                         return true;
                       })
                   : dishes.filter((dish) => {
-                      // Si no hay productos en menuItemsByCategory, mostrar todos los de la categoría
-                      if (dish.category !== originalCategory) return false;
-                      if (selectedOrigin) {
-                        if (selectedOrigin === 'vegano') {
-                          return dish.badges?.includes('vegano') || false;
-                        }
-                        return dish.origin === selectedOrigin;
-                      }
+                      // Si no hay productos en menuItemsByCategory, mostrar todos los que tienen la etiqueta seleccionada
+                      if (!selectedTagAsCategory || !dish.badges || !dish.badges.includes(selectedTagAsCategory)) return false;
+                      // Si hay un filtro de etiqueta adicional, aplicarlo
                       if (selectedTag) {
                         return dish.badges?.includes(selectedTag) || false;
                       }
@@ -1677,7 +1621,7 @@ const MenuRestaurantScreen: React.FC = () => {
                   ? t('restaurant.menu.chefSuggestions')
                   : pickerSection === 'highlights' 
                   ? t('restaurant.menu.highlights')
-                  : t('restaurant.menu.menu')} • {originalCategory}
+                  : t('restaurant.menu.menu')} • {selectedTagAsCategory || 'Sin categoría'}
               </h3>
               <button
                 onClick={closePicker}
@@ -1839,10 +1783,6 @@ const MenuRestaurantScreen: React.FC = () => {
                         {t(getFilterTranslationKey(editingProduct.origin))}
                       </div>
                     )}
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-medium">
-                      <span className="material-symbols-outlined text-sm">restaurant_menu</span>
-                      {selectedCategory}
-                    </div>
                     {productTags.map((tag) => (
                       <div key={tag} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs font-medium">
                         <span className="material-symbols-outlined text-sm">label</span>

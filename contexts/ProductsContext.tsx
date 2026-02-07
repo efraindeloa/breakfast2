@@ -19,7 +19,7 @@ const ProductsContext = createContext<ProductsContextType | undefined>(undefined
 export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { selectedRestaurant } = useRestaurant();
+  const { selectedRestaurantId } = useRestaurant();
   const { language } = useLanguage(); // Escuchar cambios de idioma
   const { accountType } = useAuth(); // Para saber si es restaurante o comensal
 
@@ -47,12 +47,18 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
     try {
       setIsLoading(true);
       
-      // Si el usuario es un restaurante, cargar solo sus productos
-      // Si es un comensal, cargar todos los productos activos
+      // Determinar qué restaurant_id usar:
+      // - Si es restaurante: usar su propio restaurant_id
+      // - Si es comensal: usar el restaurante seleccionado (selectedRestaurantId)
       let restaurantId: string | undefined = undefined;
       if (accountType === 'restaurant') {
         restaurantId = await getCurrentUserRestaurantId() || undefined;
+      } else if (accountType === 'diner' && selectedRestaurantId) {
+        // Para comensales, usar el restaurante seleccionado
+        restaurantId = selectedRestaurantId;
       }
+      
+      console.log('[ProductsContext] Loading products for restaurantId:', restaurantId, 'accountType:', accountType);
       
       const supabaseProducts = await getProducts({ 
         isActive: true,
@@ -88,7 +94,7 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   useEffect(() => {
     loadProducts();
-  }, [language, selectedRestaurant, accountType]); // Recargar cuando cambie el idioma, el restaurante o el tipo de cuenta
+  }, [language, selectedRestaurantId, accountType]); // Recargar cuando cambie el idioma, el restaurante seleccionado o el tipo de cuenta
 
   const getProduct = (id: number): Product | undefined => {
     return products.find(p => p.id === id);

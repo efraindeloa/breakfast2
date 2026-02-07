@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { CartItem } from './CartContext';
+import { getFavorites, addFavorite as addFavoriteDB, removeFavorite as removeFavoriteDB } from '../services/database';
+import { useRestaurant } from './RestaurantContext';
 
 export interface FavoriteDish {
   id: number;
@@ -57,85 +59,172 @@ const FAVORITES_STORAGE_KEY = 'favorite_dishes';
 const COMBINATIONS_STORAGE_KEY = 'saved_combinations';
 const PROMOTIONS_STORAGE_KEY = 'favorite_promotions';
 
+// Función helper para cargar favoritos desde localStorage
+const loadFavoritesFromStorage = (storageKey?: string): FavoriteDish[] => {
+  try {
+    const key = storageKey || FAVORITES_STORAGE_KEY;
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error('Error loading favorites:', error);
+  }
+  return [];
+};
+
+// Función helper para cargar combinaciones desde localStorage
+const loadCombinationsFromStorage = (): SavedCombination[] => {
+  try {
+    const stored = localStorage.getItem(COMBINATIONS_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Convertir fechas de string a Date
+      return parsed.map((comb: any) => ({
+        ...comb,
+        createdAt: new Date(comb.createdAt),
+        lastUsed: comb.lastUsed ? new Date(comb.lastUsed) : undefined,
+      }));
+    }
+  } catch (error) {
+    console.error('Error loading combinations:', error);
+  }
+  return [];
+};
+
+// Función helper para cargar promociones favoritas desde localStorage
+const loadPromotionsFromStorage = (): FavoritePromotion[] => {
+  try {
+    const stored = localStorage.getItem(PROMOTIONS_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error('Error loading favorite promotions:', error);
+  }
+  return [];
+};
+
 export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [favoriteDishes, setFavoriteDishes] = useState<FavoriteDish[]>([]);
-  const [savedCombinations, setSavedCombinations] = useState<SavedCombination[]>([]);
-  const [favoritePromotions, setFavoritePromotions] = useState<FavoritePromotion[]>([]);
+  const { selectedRestaurantId } = useRestaurant();
+  
+  // Inicializar estado directamente desde localStorage (fallback)
+  const [favoriteDishes, setFavoriteDishes] = useState<FavoriteDish[]>(() => loadFavoritesFromStorage());
+  const [savedCombinations, setSavedCombinations] = useState<SavedCombination[]>(() => loadCombinationsFromStorage());
+  const [favoritePromotions, setFavoritePromotions] = useState<FavoritePromotion[]>(() => loadPromotionsFromStorage());
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Cargar favoritos desde localStorage al iniciar
+  // Cargar favoritos desde la base de datos cuando cambia el restaurante seleccionado
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(FAVORITES_STORAGE_KEY);
-      if (stored) {
-        setFavoriteDishes(JSON.parse(stored));
+    const loadFavoritesFromDB = async () => {
+      try {
+        setIsLoading(true);
+        // Cargar favoritos filtrados por restaurant_id
+        const favorites = await getFavorites(selectedRestaurantId);
+        if (favorites && favorites.length > 0) {
+          setFavoriteDishes(favorites);
+          // También guardar en localStorage como backup (con clave por restaurante)
+          const storageKey = selectedRestaurantId 
+            ? `${FAVORITES_STORAGE_KEY}_${selectedRestaurantId}`
+            : FAVORITES_STORAGE_KEY;
+          localStorage.setItem(storageKey, JSON.stringify(favorites));
+        } else {
+          // Si no hay favoritos en la BD para este restaurante, intentar cargar desde localStorage
+          const storageKey = selectedRestaurantId 
+            ? `${FAVORITES_STORAGE_KEY}_${selectedRestaurantId}`
+            : FAVORITES_STORAGE_KEY;
+          const localFavorites = loadFavoritesFromStorage(storageKey);
+          if (localFavorites.length > 0) {
+            setFavoriteDishes(localFavorites);
+            // Intentar sincronizar con la BD
+            for (const favorite of localFavorites) {
+              await addFavoriteDB(favorite);
+            }
+          } else {
+            // Si no hay favoritos locales para este restaurante, limpiar
+            setFavoriteDishes([]);
+          }
+        }
+      } catch (error) {
+        console.error('[FavoritesContext] Error loading favorites from DB:', error);
+        // Fallback a localStorage
+        const storageKey = selectedRestaurantId 
+          ? `${FAVORITES_STORAGE_KEY}_${selectedRestaurantId}`
+          : FAVORITES_STORAGE_KEY;
+        const localFavorites = loadFavoritesFromStorage(storageKey);
+        if (localFavorites.length > 0) {
+          setFavoriteDishes(localFavorites);
+        } else {
+          setFavoriteDishes([]);
+        }
+      } finally {
+        setIsLoading(false);
+        setIsInitialized(true);
       }
-    } catch (error) {
-      console.error('Error loading favorites:', error);
+    };
+
+    loadFavoritesFromDB();
+  }, [selectedRestaurantId]);
+
+  // Guardar favoritos en localStorage cuando cambian (solo después de la inicialización, como backup)
+  // Usar una clave específica por restaurante
+  useEffect(() => {
+    if (isInitialized && !isLoading) {
+      const storageKey = selectedRestaurantId 
+        ? `${FAVORITES_STORAGE_KEY}_${selectedRestaurantId}`
+        : FAVORITES_STORAGE_KEY;
+      localStorage.setItem(storageKey, JSON.stringify(favoriteDishes));
     }
-  }, []);
+  }, [favoriteDishes, isInitialized, isLoading, selectedRestaurantId]);
 
-  // Cargar combinaciones desde localStorage al iniciar
+  // Guardar combinaciones en localStorage cuando cambian (solo después de la inicialización)
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(COMBINATIONS_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        // Convertir fechas de string a Date
-        const combinations = parsed.map((comb: any) => ({
-          ...comb,
-          createdAt: new Date(comb.createdAt),
-          lastUsed: comb.lastUsed ? new Date(comb.lastUsed) : undefined,
-        }));
-        setSavedCombinations(combinations);
-      }
-    } catch (error) {
-      console.error('Error loading combinations:', error);
+    if (isInitialized) {
+      const toStore = savedCombinations.map(comb => ({
+        ...comb,
+        createdAt: comb.createdAt.toISOString(),
+        lastUsed: comb.lastUsed?.toISOString(),
+      }));
+      localStorage.setItem(COMBINATIONS_STORAGE_KEY, JSON.stringify(toStore));
     }
-  }, []);
+  }, [savedCombinations, isInitialized]);
 
-  // Cargar promociones favoritas desde localStorage al iniciar
+  // Guardar promociones favoritas en localStorage cuando cambian (solo después de la inicialización)
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(PROMOTIONS_STORAGE_KEY);
-      if (stored) {
-        setFavoritePromotions(JSON.parse(stored));
-      }
-    } catch (error) {
-      console.error('Error loading favorite promotions:', error);
+    if (isInitialized) {
+      localStorage.setItem(PROMOTIONS_STORAGE_KEY, JSON.stringify(favoritePromotions));
     }
-  }, []);
+  }, [favoritePromotions, isInitialized]);
 
-  // Guardar favoritos en localStorage cuando cambian
-  useEffect(() => {
-    localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favoriteDishes));
-  }, [favoriteDishes]);
+  const addFavorite = async (dish: FavoriteDish) => {
+    // Verificar si ya existe localmente
+    if (favoriteDishes.find(f => f.id === dish.id)) {
+      return; // Ya existe
+    }
 
-  // Guardar combinaciones en localStorage cuando cambian
-  useEffect(() => {
-    const toStore = savedCombinations.map(comb => ({
-      ...comb,
-      createdAt: comb.createdAt.toISOString(),
-      lastUsed: comb.lastUsed?.toISOString(),
-    }));
-    localStorage.setItem(COMBINATIONS_STORAGE_KEY, JSON.stringify(toStore));
-  }, [savedCombinations]);
-
-  // Guardar promociones favoritas en localStorage cuando cambian
-  useEffect(() => {
-    localStorage.setItem(PROMOTIONS_STORAGE_KEY, JSON.stringify(favoritePromotions));
-  }, [favoritePromotions]);
-
-  const addFavorite = (dish: FavoriteDish) => {
-    setFavoriteDishes(prev => {
-      if (prev.find(f => f.id === dish.id)) {
-        return prev; // Ya existe
-      }
-      return [...prev, dish];
-    });
+    // Agregar a la base de datos (el formato ya es correcto: price es string)
+    const success = await addFavoriteDB(dish);
+    
+    if (success) {
+      // Si se guardó en la BD, actualizar el estado local
+      setFavoriteDishes(prev => [...prev, dish]);
+    } else {
+      // Si falló la BD, agregar solo localmente (fallback)
+      setFavoriteDishes(prev => [...prev, dish]);
+    }
   };
 
-  const removeFavorite = (dishId: number) => {
+  const removeFavorite = async (dishId: number) => {
+    // Eliminar de la base de datos
+    const success = await removeFavoriteDB(dishId);
+    
+    // Actualizar el estado local independientemente del resultado de la BD
     setFavoriteDishes(prev => prev.filter(f => f.id !== dishId));
+    
+    if (!success) {
+      console.warn('[FavoritesContext] Error removing favorite from DB, but removed from local state');
+    }
   };
 
   const isFavorite = (dishId: number): boolean => {

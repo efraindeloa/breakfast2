@@ -2461,12 +2461,22 @@ export const updateProduct = async (
   }
 
   try {
-    // Primero, obtener el producto actual para comparar
-    const { data: currentProduct, error: fetchError } = await supabase
-      .from('products')
-      .select('name, restaurant_id')
-      .eq('id', productId)
-      .single();
+    // // Primero, obtener el producto actual para comparar
+    // const { data: currentProduct, error: fetchError } = await supabase
+    //   .from('products')
+    //   .select('name, restaurant_id')
+    //   .eq('id', productId)
+    //   .single();
+
+    const { data: productRows, error: fetchError } = await supabase
+    .from('products')
+    .select('name, restaurant_id')
+    .eq('id', productId)
+    .limit(1);
+  
+  const currentProduct = productRows?.[0];
+  
+
 
     if (fetchError) {
       console.error('[updateProduct] Error al obtener producto actual:', fetchError);

@@ -5,6 +5,7 @@ import { useTranslation, useLanguage } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { formatPrice } from '../utils/currency';
 import { playClickSound, playBackspaceSound } from '../utils/sound';
+import { toTitleCase } from '../utils/text';
 import TopNavbar from '../components/TopNavbar';
 
 type OriginType = 'mar' | 'tierra' | 'aire' | 'vegetariano' | 'vegano' | 
@@ -304,7 +305,7 @@ const FavoritesScreen: React.FC = () => {
         const matchesDescription = fuzzyMatch(productDescription, query);
         
         // Buscar en categorías/badges
-        const productBadges = (dish.badges || []).map(badge => badge.toLowerCase()).join(' ');
+        const productBadges = (dish.badges || []).map(badge => toTitleCase(badge)).join(' ');
         const matchesBadges = fuzzyMatch(productBadges, query);
         
         // Buscar en categoría

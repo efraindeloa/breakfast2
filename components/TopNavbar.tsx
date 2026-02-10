@@ -34,7 +34,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
 
   // Manejar usuarios invitados
   useEffect(() => {
-    if (userType === 'guest' && !propUserName) {
+    if ((userType as any) === 'guest' && !propUserName) {
       setUserName(t('register.userType'));
     }
   }, [userType, propUserName, t]);
@@ -42,7 +42,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
   // Cargar datos del usuario si no se proporcionaron
   useEffect(() => {
     const loadUserData = async () => {
-      if (!isSupabaseConfigured() || !user?.id || propUserName || userType === 'guest') {
+      if (!isSupabaseConfigured() || !user?.id || propUserName || (userType as any) === 'guest') {
         return;
       }
 
@@ -70,7 +70,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
         }
 
         // Si es un usuario invitado, mostrar "Usuario no registrado"
-        if (userType === 'guest') {
+        if ((userType as any) === 'guest') {
           setUserName(t('register.userType'));
         } else {
           setUserName(name.split(' ')[0] || t('register.userType'));
@@ -105,7 +105,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
                          user?.email?.split('@')[0] || 
                          '';
         // Si es un usuario invitado, mostrar "Usuario no registrado"
-        if (userType === 'guest') {
+        if ((userType as any) === 'guest') {
           setUserName(t('register.userType'));
         } else {
           setUserName(firstName || t('register.userType'));
@@ -204,7 +204,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
             <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">notifications</span>
           </button>
           
-          {showFavorites && accountType !== 'restaurant' && userType === 'registered' && (
+          {showFavorites && accountType !== 'restaurant' && (userType as any) === 'registered' && (
             <button 
               onClick={() => navigate('/favorites')}
               className={`flex size-10 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm border transition-colors ${
@@ -236,7 +236,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
                 ? 'text-primary'
                 : 'text-gray-600 dark:text-gray-300'
             }`}>
-              {userType === 'guest' ? 'person_outline' : 'person'}
+              {(userType as any) === 'guest' ? 'person_outline' : 'person'}
             </span>
           </button>
         </div>

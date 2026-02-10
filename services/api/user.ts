@@ -127,8 +127,10 @@ export async function updateUserData(
       }
     }
 
-    // Obtener datos actualizados
-    return await getUserData(targetUserId);
+    // Obtener datos actualizados (desempaquetar respuesta de getUserData)
+    const updated = await getUserData(targetUserId);
+    if (!updated.success) throw new Error(updated.error || 'Error obteniendo datos de usuario');
+    return updated.data;
   }, 'Error al actualizar datos del usuario');
 }
 
@@ -325,14 +327,6 @@ export async function getUserBillingProfile(
     }
 
     return selectedProfile as UserBillingProfile;
-
-    if (error) {
-      if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
-        return null;
-      }
-      throw error;
-    }
-    return (data || null) as UserBillingProfile | null;
   }, 'Error al obtener perfil de facturación');
 }
 

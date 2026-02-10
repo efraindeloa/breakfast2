@@ -87,10 +87,7 @@ export async function createReservation(
 
     if (error) throw error;
 
-    return {
-      data: data as Reservation,
-      error: null
-    };
+    return data as Reservation;
   });
 }
 
@@ -122,10 +119,7 @@ export async function getUserReservations(
 
     if (error) throw error;
 
-    return {
-      data: (data || []) as Reservation[],
-      error: null
-    };
+    return (data || []) as Reservation[];
   });
 }
 
@@ -152,18 +146,12 @@ export async function getReservation(
     if (error) {
       if (error.code === 'PGRST116') {
         // No se encontró la reservación
-        return {
-          data: null,
-          error: null
-        };
+        return null;
       }
       throw error;
     }
 
-    return {
-      data: data as Reservation,
-      error: null
-    };
+    return data as Reservation;
   });
 }
 
@@ -202,10 +190,7 @@ export async function updateReservation(
 
     if (error) throw error;
 
-    return {
-      data: data as Reservation,
-      error: null
-    };
+    return data as Reservation;
   });
 }
 
@@ -252,9 +237,6 @@ export async function getRestaurantReservations(
 
     if (error) throw error;
 
-    return {
-      data: (data || []) as Reservation[],
-      error: null
-    };
+    return (data || []) as Reservation[];
   });
 }

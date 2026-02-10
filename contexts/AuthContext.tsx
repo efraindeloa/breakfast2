@@ -113,7 +113,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             full_name: userData.name,
             name: userData.name
           }
-        } as User;
+        } as unknown as User;
         setUser(simpleUser);
         setSession({
           user: simpleUser,
@@ -146,7 +146,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             full_name: 'Usuario Invitado',
             name: 'Usuario Invitado'
           }
-        } as User;
+        } as unknown as User;
         setUser(guestUser);
         setSession({
           user: guestUser,

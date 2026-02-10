@@ -352,7 +352,7 @@ const PromotionsRestaurantScreen: React.FC = () => {
         : await getCurrentUserRestaurantId();
       
       if (!restaurantIdResult.success || !restaurantIdResult.data) {
-        throw new Error(restaurantIdResult.error || 'No se pudo obtener el ID del restaurante');
+        throw new Error(((restaurantIdResult as any).error) || 'No se pudo obtener el ID del restaurante');
       }
       
       const restaurantId = restaurantIdResult.data;

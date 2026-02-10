@@ -58,8 +58,6 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
         restaurantId = selectedRestaurantId;
       }
       
-      console.log('[ProductsContext] Loading products for restaurantId:', restaurantId, 'accountType:', accountType);
-      
       const supabaseProducts = await getProducts({ 
         isActive: true,
         restaurantId: restaurantId,

@@ -125,7 +125,7 @@ export async function createOrder(orderData: CreateOrderRequest, userId?: string
     if (guestSession) {
       const guestUser = JSON.parse(guestSession);
       const orderId = `guest-${Date.now()}`;
-      const newOrder: Order = {
+      const newOrder: any = {
         id: orderId,
         orderId: orderId, // Para compatibilidad con la definición antigua
         user_id: guestUser.id,

@@ -14,6 +14,7 @@ import {
 } from '../services/database';
 import { getUserProfile, updateUserProfile, getUserData, updateUserData } from '../services/api/user';
 import { playClickSound } from '../utils/sound';
+import GuestRestrictionModal from '../components/GuestRestrictionModal';
 
 interface Card {
   id: string; // Cambiar a string para usar UUID de la BD

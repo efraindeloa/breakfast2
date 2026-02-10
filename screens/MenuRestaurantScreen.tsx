@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { toTitleCase } from '../utils/text';
 import { useTranslation, useLanguage } from '../contexts/LanguageContext';
 import { useProducts } from '../contexts/ProductsContext';
 import TopNavbar from '../components/TopNavbar';
@@ -633,7 +634,7 @@ const MenuRestaurantScreen: React.FC = () => {
     const normalizedBadges = product?.badges 
       ? product.badges
           .filter((badge): badge is string => typeof badge === 'string' && badge.trim() !== '')
-          .map(badge => badge.trim().toLowerCase())
+          .map(badge => toTitleCase(badge.trim()))
       : [];
     setProductTags(normalizedBadges); // Inicializar con las etiquetas del producto normalizadas
     setNewTagName('');
@@ -885,49 +886,42 @@ const MenuRestaurantScreen: React.FC = () => {
         const existingProduct = products?.find(p => p.id === editingProduct.id);
         const existingImageUrls = existingProduct?.image_urls || [];
         
-        // Filtrar las imágenes que no fueron eliminadas (las que están en productImages)
-        // productImages contiene las imágenes que el usuario quiere mantener (nuevas + existentes no eliminadas)
+        // Filtrar las imágenes existentes que el usuario NO eliminó
+        // productImageFiles contiene SOLO las imágenes nuevas (archivos subidos)
+        // Las imágenes en productImages que no estén en productImageFiles son las existentes que se mantienen
         const existingImagesToKeep: string[] = [];
         
-        // Crear un mapa de paths a URLs completas para comparación
-        const pathToFullUrl = new Map<string, string>();
-        existingImageUrls.forEach(path => {
-          pathToFullUrl.set(path, getProductImageUrl(path));
-        });
+        // Convertir existingImageUrls a URLs completas para comparación
+        const existingUrlsComplete = existingImageUrls.map(path => getProductImageUrl(path));
         
+        // Filtrar las imágenes existentes que están en productImages (las que NO fueron eliminadas)
         productImages.forEach((img) => {
-          // Si la imagen es una URL completa de Supabase, extraer el path y verificar si está en las existentes
-          if (img.startsWith('http')) {
+          // Si la imagen es una URL completa de Supabase y está en las existentes, mantenerla
+          if (img.startsWith('http') && existingUrlsComplete.includes(img)) {
+            // Extraer el path relativo de la URL completa
             const urlParts = img.split('/storage/v1/object/public/product-images/');
             const imagePath = urlParts.length > 1 ? urlParts[1] : '';
-            if (imagePath && existingImageUrls.includes(imagePath)) {
+            if (imagePath) {
               existingImagesToKeep.push(imagePath);
             }
-          } else if (img && !img.startsWith('data:')) {
-            // Si es un path relativo (no base64), verificar si está en las existentes
-            if (existingImageUrls.includes(img)) {
-              existingImagesToKeep.push(img);
-            }
           }
-          // Si es base64 (data:), es una imagen nueva que se subirá, no la agregamos aquí
         });
         
-        // Combinar: primero las existentes que se mantienen, luego las nuevas
+        // Combinar: primero las existentes que se mantienen, luego las nuevas subidas
         allImageUrls = [...existingImagesToKeep, ...uploadedImageUrls];
       } else {
         // Al crear: solo usar las imágenes nuevas subidas
         allImageUrls = uploadedImageUrls;
       }
       
-      // Si no hay imágenes nuevas pero hay imágenes en productImages que no son archivos (URLs existentes)
+      // Si no hay imágenes en allImageUrls pero hay en productImages, significa que son base64 sin subir
+      // (lo cual no debería pasar porque ya se subieron, pero por si acaso)
       if (allImageUrls.length === 0 && productImages.length > 0) {
         productImages.forEach((img) => {
           if (img.startsWith('http')) {
             const urlParts = img.split('/storage/v1/object/public/product-images/');
             const imagePath = urlParts.length > 1 ? urlParts[1] : '';
             if (imagePath) allImageUrls.push(imagePath);
-          } else if (img) {
-            allImageUrls.push(img);
           }
         });
       }
@@ -969,16 +963,18 @@ const MenuRestaurantScreen: React.FC = () => {
       if (editingProduct && editingProduct.id) {
         console.log('[MenuRestaurantScreen] Modo: EDITAR producto existente');
         // Estamos editando un producto existente
-        console.log('[MenuRestaurantScreen] Guardando producto con badges:', productTags);
+        // Convertir las etiquetas a Title Case
+        const titleCaseBadges = (productTags || []).map(badge => toTitleCase(badge.trim()));
+        console.log('[MenuRestaurantScreen] Guardando producto con badges:', titleCaseBadges);
         const updateResult = await updateProduct(editingProduct.id, {
           name: editingProductName.trim(),
           description: editingProductDescription.trim(),
           price: priceValue,
           image_url: imageUrl || undefined,
           image_urls: allImageUrls, // Enviar todas las URLs de imágenes
-          category: productTags && productTags.length > 0 ? productTags[0] : '', // Usar la primera etiqueta como categoría para compatibilidad
+          category: titleCaseBadges && titleCaseBadges.length > 0 ? titleCaseBadges[0] : '', // Usar la primera etiqueta como categoría para compatibilidad
           origin: '', // Ya no usamos origin
-          badges: productTags || [], // Las etiquetas son las categorías
+          badges: titleCaseBadges || [], // Las etiquetas son las categorías
           complements: complements, // Siempre enviar el array, incluso si está vacío
           allow_custom_complements: allowCustomComplements,
           allow_special_instructions: allowSpecialInstructions,
@@ -995,8 +991,10 @@ const MenuRestaurantScreen: React.FC = () => {
         }
       } else {
         // Estamos creando un nuevo producto
+        // Convertir las etiquetas a Title Case
+        const titleCaseBadges = (productTags || []).map(badge => toTitleCase(badge.trim()));
         console.log('[MenuRestaurantScreen] Modo: CREAR nuevo producto');
-        console.log('[MenuRestaurantScreen] Creando producto con badges:', productTags);
+        console.log('[MenuRestaurantScreen] Creando producto con badges:', titleCaseBadges);
         console.log('[MenuRestaurantScreen] Datos del producto a crear:', {
           restaurant_id: restaurantId,
           name: editingProductName.trim(),
@@ -1004,10 +1002,10 @@ const MenuRestaurantScreen: React.FC = () => {
           price: priceValue,
           image_url: imageUrl || undefined,
           image_urls: allImageUrls,
-          category: productTags && productTags.length > 0 ? productTags[0] : '', // Usar la primera etiqueta como categoría para compatibilidad
+          category: titleCaseBadges && titleCaseBadges.length > 0 ? titleCaseBadges[0] : '', // Usar la primera etiqueta como categoría para compatibilidad
           origin: '', // Ya no usamos origin
           is_active: true,
-          badges: productTags || [], // Las etiquetas son las categorías
+          badges: titleCaseBadges || [], // Las etiquetas son las categorías
           complements: complements || [],
           allow_custom_complements: allowCustomComplements,
           allow_special_instructions: allowSpecialInstructions,
@@ -1019,9 +1017,9 @@ const MenuRestaurantScreen: React.FC = () => {
           price: priceValue,
           image_url: imageUrl || undefined,
           image_urls: allImageUrls, // Enviar todas las URLs de imágenes
-          category: productTags && productTags.length > 0 ? productTags[0] : '', // Usar la primera etiqueta como categoría para compatibilidad
+          category: titleCaseBadges && titleCaseBadges.length > 0 ? titleCaseBadges[0] : '', // Usar la primera etiqueta como categoría para compatibilidad
           origin: '', // Ya no usamos origin
-          badges: productTags || [], // Las etiquetas son las categorías
+          badges: titleCaseBadges || [], // Las etiquetas son las categorías
           complements: complements, // Siempre enviar el array, incluso si está vacío
           allow_custom_complements: allowCustomComplements,
           allow_special_instructions: allowSpecialInstructions,
@@ -1037,7 +1035,7 @@ const MenuRestaurantScreen: React.FC = () => {
           if (created.id) {
             // Si el producto está en "Sugerencias del chef" o "Destacados" (por valores por defecto o localStorage), eliminarlo
             // Usar la primera etiqueta del producto como categoría para las secciones
-            const productCategory = productTags && productTags.length > 0 ? productTags[0] : '';
+            const productCategory = titleCaseBadges && titleCaseBadges.length > 0 ? titleCaseBadges[0] : '';
             if (productCategory) {
               setChefSuggestionsByCategory((prev) => {
                 const current = prev[productCategory] || [];
@@ -1267,6 +1265,33 @@ const MenuRestaurantScreen: React.FC = () => {
 
       {/* Categories */}
       <div className="sticky top-[73px] z-40 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
+        {/* Static category buttons as requested */}
+        <div className="flex gap-3 p-3 px-4 overflow-x-auto no-scrollbar">
+          {['Alimentos', 'Bebidas', 'Postres', 'Vinos y Licores'].map((cat) => (
+            <button
+              key={cat}
+              onClick={() => {
+                setSelectedCategory(cat);
+                setSelectedOrigin('');
+                setSelectedTag('');
+              }}
+              className={`flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full px-4 ${
+                !searchQuery.trim() && selectedCategory === cat
+                  ? 'bg-primary shadow-md shadow-primary/20'
+                  : 'bg-white dark:bg-[#322a1a] border border-[#f4f3f0] dark:border-[#3d3321]'
+              }`}
+            >
+              <p
+                className={`text-sm ${
+                  !searchQuery.trim() && selectedCategory === cat ? 'font-semibold text-white' : 'font-medium text-[#181611] dark:text-stone-300'
+                }`}
+              >
+                {cat}
+              </p>
+            </button>
+          ))}
+        </div>
+
         <div className="flex gap-3 p-4 overflow-x-auto no-scrollbar">
           {categories.map((category) => (
             <button

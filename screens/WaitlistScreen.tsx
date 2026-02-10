@@ -599,7 +599,7 @@ const WaitlistScreen: React.FC = () => {
                     <h1 className="text-4xl font-extrabold tracking-tight font-display mb-2">
                       {t('waitlist.yourTurn')} <span className="text-primary">
                         {Object.keys(userPositionsByZone).length > 0 
-                          ? `#${Math.min(...Object.values(userPositionsByZone).map(p => p.position))}`
+                          ? `#${Math.min(...Object.values(userPositionsByZone).map(p => (p as any).position))}`
                           : '#1'}
                       </span>
                     </h1>
@@ -979,7 +979,7 @@ const WaitlistScreen: React.FC = () => {
               <button
                 onClick={() => {
                   setShowChangeZoneModal(false);
-                  setNewZoneSelected('');
+                  setNewZonesSelected('');
                 }}
                 className="flex-1 py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >

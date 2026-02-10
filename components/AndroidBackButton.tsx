@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
@@ -31,13 +31,24 @@ const AndroidBackButton: React.FC = () => {
     };
 
     // Agregar listener para el botón de retroceso
-    const backButtonListener = App.addListener('backButton', () => {
+    let backButtonListener: any = null;
+    App.addListener('backButton', () => {
       handleBackButton();
+    }).then((l) => {
+      backButtonListener = l;
+    }).catch(() => {
+      /* ignore */
     });
 
     // Limpiar listener al desmontar
     return () => {
-      backButtonListener.remove();
+      if (backButtonListener && typeof backButtonListener.remove === 'function') {
+        try {
+          backButtonListener.remove();
+        } catch (e) {
+          // ignore
+        }
+      }
     };
   }, [navigate, location.pathname]);
 

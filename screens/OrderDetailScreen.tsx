@@ -5,7 +5,7 @@ import { useGroupOrder } from '../contexts/GroupOrderContext';
 import { useTranslation, useLanguage } from '../contexts/LanguageContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { Order, OrderStatus } from '../types/order';
-import { getOrders, updateOrder } from '../services/api';
+import { getOrders, updateOrder, createOrder as createOrderAPI } from '../services/api';
 import { formatPrice } from '../utils/currency';
 
 interface StatusHistory {
@@ -239,7 +239,7 @@ const OrderDetailScreen: React.FC = () => {
       try {
         const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         
-        const createResult = await createOrder({
+        const createResult = await createOrderAPI({
           restaurant_id: selectedRestaurantId || '00000000-0000-0000-0000-000000000001', // Usar restaurante seleccionado o ID por defecto
           status: 'orden_enviada',
           total: total,

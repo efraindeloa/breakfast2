@@ -192,20 +192,36 @@ export async function updateProduct(
     }
     // complements, allow_custom_complements y allow_special_instructions removidos - columnas no existen en la BD
 
-    // Manejar imágenes (solo image_url, image_urls no existe en la BD)
-    if (updates.image_url) {
+    // Manejar imágenes
+    if (updates.image_url !== undefined) {
       updateData.image_url = updates.image_url;
     }
+    
+    // Guardar el array de múltiples imágenes
+    if (updates.image_urls !== undefined) {
+      updateData.image_urls = updates.image_urls;
+    }
+
+    console.log('[updateProduct] Actualizando producto:', { productId, updateData, userId });
 
     const { data, error } = await supabase
       .from('products')
       .update(updateData)
       .eq('id', productId)
-      .select()
-      .single();
+      .select();
 
-    if (error) throw error;
-    return data as Product;
+    if (error) {
+      console.error('[updateProduct] Error de Supabase:', { code: error.code, message: error.message, productId });
+      throw error;
+    }
+    
+    if (!data || data.length === 0) {
+      console.warn('[updateProduct] Producto no encontrado después de actualizar:', productId);
+      throw new Error(`Producto con ID ${productId} no encontrado o no tiene permisos para actualizarlo`);
+    }
+    
+    console.log('[updateProduct] Producto actualizado exitosamente:', data[0]);
+    return data[0] as Product;
   }, 'Error al actualizar producto');
 }
 

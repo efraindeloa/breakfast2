@@ -194,7 +194,7 @@ const AddCardScreen: React.FC = () => {
       // Configurar parámetros para mejor reconocimiento de tarjetas
       await worker.setParameters({
         tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ /',
-        tessedit_pageseg_mode: '6' // Asumir un bloque uniforme de texto
+        tessedit_pageseg_mode: 6 as any // Asumir un bloque uniforme de texto
       });
 
       // Obtener imagen del canvas

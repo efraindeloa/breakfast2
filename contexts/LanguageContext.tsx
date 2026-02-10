@@ -17,10 +17,10 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 const allStaticTranslations: Record<Language, Record<string, any>> = {
-  es: esTranslations.default || esTranslations,
-  en: enTranslations.default || enTranslations,
-  pt: ptTranslations.default || ptTranslations,
-  fr: frTranslations.default || frTranslations,
+  es: (esTranslations as any).default || esTranslations,
+  en: (enTranslations as any).default || enTranslations,
+  pt: (ptTranslations as any).default || ptTranslations,
+  fr: (frTranslations as any).default || frTranslations,
 };
 
 export const useLanguage = () => {

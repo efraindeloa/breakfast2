@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured, getSupabaseUrl } from '../config/supabase';
-import { HistoricalOrder, HistoricalOrderItem, Order, OrderStatus } from '../types/order';
+import { HistoricalOrder, HistoricalOrderItem, Order as AppOrder, OrderStatus } from '../types/order';
 import { getAuthenticatedUserId } from './api/base';
 
 // Helper para obtener el idioma actual desde localStorage
@@ -17,20 +17,20 @@ const getCurrentLanguage = (): string => {
 };
 
 // ==================== TIPOS ====================
-
-export interface Order {
+// Tipos locales para representar la forma de las órdenes en la base de datos
+export interface DBOrder {
   id: string;
   user_id: string;
   restaurant_id: string;
   status: string;
   total: number;
-  items: OrderItem[];
+  items: DBOrderItem[];
   notes?: string;
   created_at: string;
   updated_at: string;
 }
 
-export interface OrderItem {
+export interface DBOrderItem {
   id: number;
   name: string;
   price: number;
@@ -38,7 +38,6 @@ export interface OrderItem {
   notes?: string;
   image?: string;
 }
-
 export interface CartItem {
   id: number;
   name: string;
@@ -237,29 +236,7 @@ const isValidUUID = (str: string): boolean => {
   return uuidRegex.test(str);
 };
 
-// Función para obtener el ID del usuario autenticado (requiere autenticación)
-const getAuthenticatedUserId = async (): Promise<string | null> => {
-  if (!isSupabaseConfigured()) {
-    return null;
-  }
-
-  try {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) {
-      console.warn('[getAuthenticatedUserId] Error getting session:', error);
-      return null;
-    }
-    
-    if (session?.user?.id) {
-      return session.user.id;
-    }
-    
-    return null;
-  } catch (error) {
-    console.warn('[getAuthenticatedUserId] Error:', error);
-    return null;
-  }
-};
+// `getAuthenticatedUserId` se importa desde `services/api/base.ts`
 
 // Función para verificar que el usuario autenticado existe en la tabla users
 // Si no existe, lanza un error (el usuario debe registrarse primero)
@@ -310,7 +287,7 @@ const fallbackToLocalStorage = <T>(
 
 // ==================== ÓRDENES ====================
 
-export const getOrders = async (): Promise<Order[]> => {
+export const getOrders = async (): Promise<AppOrder[]> => {
   if (!isSupabaseConfigured()) {
     console.warn('Supabase not configured. Cannot fetch orders.');
     return [];
@@ -463,7 +440,7 @@ export const getOrders = async (): Promise<Order[]> => {
   }
 };
 
-export const createOrder = async (order: Omit<Order, 'id' | 'created_at' | 'updated_at'>): Promise<Order | null> => {
+export const createOrder = async (order: Omit<DBOrder, 'id' | 'created_at' | 'updated_at'>): Promise<DBOrder | null> => {
   if (!isSupabaseConfigured()) {
     console.warn('Supabase not configured. Cannot create order.');
     return null;
@@ -475,10 +452,9 @@ export const createOrder = async (order: Omit<Order, 'id' | 'created_at' | 'upda
     console.log('[createOrder] Guest user detected, saving to localStorage');
     const guestUser = JSON.parse(guestSession);
     const orderId = `guest-${Date.now()}`;
-    const newOrder: Order = {
+    const newOrder: DBOrder = {
       ...order,
       id: orderId,
-      orderId: orderId, // Para compatibilidad con la definición antigua
       user_id: guestUser.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -776,7 +752,7 @@ export const getOrderHistoryById = async (orderId: string): Promise<HistoricalOr
   }
 };
 
-export const updateOrder = async (orderId: string, updates: Partial<Order>): Promise<Order | null> => {
+export const updateOrder = async (orderId: string, updates: Partial<DBOrder>): Promise<DBOrder | null> => {
   if (!isSupabaseConfigured()) {
     console.warn('Supabase not configured. Cannot update order.');
     return null;
@@ -807,7 +783,7 @@ export const updateOrder = async (orderId: string, updates: Partial<Order>): Pro
 /**
  * Mueve una orden activa al historial usando la función de PostgreSQL
  */
-export const moveOrderToHistory = async (orderId: string, status: 'entregada' | 'cancelada' = 'entregada'): Promise<Order | null> => {
+export const moveOrderToHistory = async (orderId: string, status: 'entregada' | 'cancelada' = 'entregada'): Promise<DBOrder | null> => {
   if (!isSupabaseConfigured()) {
     console.warn('Supabase not configured. Cannot move order to history.');
     return null;
@@ -893,17 +869,12 @@ export const getCart = async (): Promise<CartItem[]> => {
   // Verificar si es un usuario invitado
   const guestSession = localStorage.getItem('guestSession');
   if (guestSession) {
-    console.log('[getCart] Guest user detected, using localStorage');
     return fallbackToLocalStorage<CartItem[]>('cart', [], 'get') || [];
   }
 
   try {
     // Obtener el usuario autenticado (compatible con autenticación simple)
-    console.log('[getCart] Llamando getAuthenticatedUserId()...');
     const userId = await getAuthenticatedUserId();
-    
-    console.log('[getCart] userId obtenido:', userId);
-    console.log('[getCart] simpleAuthUser en localStorage:', localStorage.getItem('simpleAuthUser'));
     
     if (!userId) {
       // Intentar obtener el userId directamente desde localStorage como fallback
@@ -913,7 +884,6 @@ export const getCart = async (): Promise<CartItem[]> => {
           const userData = JSON.parse(simpleAuthUser);
           const directUserId = userData.id || null;
           if (directUserId) {
-            console.log('[getCart] Usuario encontrado directamente desde localStorage:', directUserId);
             // Usar el userId obtenido directamente
             const fallbackUserId = directUserId;
             
@@ -1450,7 +1420,6 @@ export const getFavorites = async (restaurantId?: string | null): Promise<Favori
   try {
     const userId = await getAuthenticatedUserId();
     if (!userId) {
-      console.warn('[getFavorites] No authenticated user - login required');
       return fallbackToLocalStorage<FavoriteDishFull[]>('favorite_dishes', [], 'get') || [];
     }
 
@@ -2347,7 +2316,7 @@ export const createProduct = async (product: {
   restaurant_id: string;
   name: string;
   description?: string;
-  price: number;
+  price: number | string;
   image_url?: string;
   image_urls?: string[];
   badges?: string[];
@@ -2461,22 +2430,12 @@ export const updateProduct = async (
   }
 
   try {
-    // // Primero, obtener el producto actual para comparar
-    // const { data: currentProduct, error: fetchError } = await supabase
-    //   .from('products')
-    //   .select('name, restaurant_id')
-    //   .eq('id', productId)
-    //   .single();
-
-    const { data: productRows, error: fetchError } = await supabase
-    .from('products')
-    .select('name, restaurant_id')
-    .eq('id', productId)
-    .limit(1);
-  
-  const currentProduct = productRows?.[0];
-  
-
+    // Primero, obtener el producto actual para comparar
+    const { data: currentProduct, error: fetchError } = await supabase
+      .from('products')
+      .select('name, restaurant_id')
+      .eq('id', productId)
+      .single();
 
     if (fetchError) {
       console.error('[updateProduct] Error al obtener producto actual:', fetchError);
@@ -2607,12 +2566,12 @@ export const updateProduct = async (
 
       if (existingProduct) {
         console.log('[updateProduct] Detectado producto con nombre similar:', existingProduct);
-        console.log('[updateProduct] El nombre actual es:', currentName, 'y el nuevo es:', newName);
-        console.log('[updateProduct] Ambos son iguales (case-insensitive):', currentName.toLowerCase() === newName.toLowerCase());
+          console.log('[updateProduct] El nombre actual es:', originalNameForRollback, 'y el nuevo es:', newName);
+          console.log('[updateProduct] Ambos son iguales (case-insensitive):', originalNameForRollback?.toLowerCase() === newName.toLowerCase());
         
         // Si el otro producto tiene el mismo nombre (case-insensitive), es un duplicado
         // En este caso, permitimos la actualización y eliminamos el duplicado
-        if (existingProduct.name.toLowerCase() === currentName.toLowerCase()) {
+        if (existingProduct.name.toLowerCase() === (originalNameForRollback || '').toLowerCase()) {
           console.log('[updateProduct] Es un duplicado (mismo nombre case-insensitive), eliminando el duplicado y permitiendo actualización');
           
           // Eliminar el producto duplicado (soft delete)
@@ -4767,7 +4726,7 @@ export const saveRestaurantMenuSections = async (
       .eq('restaurant_id', restaurantId);
 
     // Crear un mapa de secciones existentes para búsqueda rápida
-    const existingSectionsMap = new Map<string, RestaurantMenuSection>();
+    const existingSectionsMap = new Map<string, any>();
     if (existingSections) {
       existingSections.forEach(section => {
         const key = `${section.restaurant_id}-${section.section_type}-${section.category}`;
@@ -4804,7 +4763,7 @@ export const saveRestaurantMenuSections = async (
 
     // Procesar cada registro: actualizar si existe, insertar si no existe
     if (records.length > 0) {
-      const updatePromises: Promise<any>[] = [];
+      const updatePromises: PromiseLike<any>[] = [];
       const insertRecords: typeof records = [];
 
       for (const record of records) {
@@ -4814,6 +4773,7 @@ export const saveRestaurantMenuSections = async (
         if (existing) {
           // Actualizar registro existente
           updatePromises.push(
+            // Ejecutar la query y obtener una Promise
             supabase
               .from('restaurant_menu_sections')
               .update({
@@ -4821,6 +4781,7 @@ export const saveRestaurantMenuSections = async (
                 updated_at: new Date().toISOString()
               })
               .eq('id', existing.id)
+              .then((res: any) => res)
           );
         } else {
           // Insertar nuevo registro

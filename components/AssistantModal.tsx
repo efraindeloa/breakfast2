@@ -126,7 +126,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
             setSpeechSupported(true);
             // Solicitar permisos
             const permission = await SpeechRecognition.checkPermissions();
-            if (permission.microphone !== 'granted') {
+            if ((permission as any).microphone !== 'granted') {
               await SpeechRecognition.requestPermissions();
             }
           }
@@ -528,7 +528,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
           alert('Permisos iniciales: ' + JSON.stringify(permission));
           
           // El plugin puede devolver 'microphone' o 'speechRecognition' como clave
-          const hasPermission = permission.microphone === 'granted' || permission.speechRecognition === 'granted';
+          const hasPermission = (permission as any).microphone === 'granted' || (permission as any).speechRecognition === 'granted';
           
           // Si no está otorgado, solicitar
           if (!hasPermission) {
@@ -546,7 +546,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
             console.log('Permisos después de solicitar:', permission);
             alert('Permisos después de solicitar: ' + JSON.stringify(permission));
             
-            const hasPermissionAfterRequest = permission.microphone === 'granted' || permission.speechRecognition === 'granted';
+            const hasPermissionAfterRequest = (permission as any).microphone === 'granted' || (permission as any).speechRecognition === 'granted';
             if (!hasPermissionAfterRequest) {
               alert(t('assistant.microphonePermissionDenied') + '\n\nPermisos recibidos: ' + JSON.stringify(permission));
               return;
@@ -558,7 +558,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
           console.log('Verificación final de permisos:', finalCheck);
           alert('Verificación final: ' + JSON.stringify(finalCheck));
           
-          const hasFinalPermission = finalCheck.microphone === 'granted' || finalCheck.speechRecognition === 'granted';
+          const hasFinalPermission = (finalCheck as any).microphone === 'granted' || (finalCheck as any).speechRecognition === 'granted';
           if (!hasFinalPermission) {
             console.error('Permisos no otorgados en verificación final');
             alert(t('assistant.microphonePermissionDenied') + '\n\nPermisos recibidos: ' + JSON.stringify(finalCheck));
@@ -588,13 +588,13 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
           };
 
           // Configurar listeners antes de iniciar
-          partialListener = await SpeechRecognition.addListener('partialResults', (data: any) => {
+          partialListener = await (SpeechRecognition as any).addListener('partialResults', (data: any) => {
             if (data.matches && data.matches.length > 0) {
               setInputValue(prev => prev + (prev ? ' ' : '') + data.matches[0]);
             }
           });
 
-          resultsListener = await SpeechRecognition.addListener('results', (data: any) => {
+          resultsListener = await (SpeechRecognition as any).addListener('results', (data: any) => {
             if (data.matches && data.matches.length > 0) {
               setInputValue(prev => prev + (prev ? ' ' : '') + data.matches[0]);
             }
@@ -602,7 +602,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
             removeAllListeners();
           });
 
-          errorListener = await SpeechRecognition.addListener('error', async (error: any) => {
+          errorListener = await (SpeechRecognition as any).addListener('error', async (error: any) => {
             console.error('Native speech recognition error:', error);
             console.error('Error completo:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
             setIsListening(false);
@@ -624,7 +624,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
             const errorMessage = (error?.message || '').toLowerCase();
             if (errorMessage.includes('permission') || errorMessage.includes('microphone') || errorMessage.includes('micrófono') || errorMessage.includes('permiso')) {
               // Si el error es de permisos, verificar si realmente están otorgados
-              const hasPermission = permissionCheck.microphone === 'granted' || permissionCheck.speechRecognition === 'granted';
+              const hasPermission = (permissionCheck as any).microphone === 'granted' || (permissionCheck as any).speechRecognition === 'granted';
               if (!hasPermission) {
                 alert(t('assistant.microphonePermissionDenied') + '\n\nPermisos actuales: ' + JSON.stringify(permissionCheck));
               } else {
@@ -699,7 +699,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
               const recheckPermission = await SpeechRecognition.checkPermissions();
               console.log('Re-verificación de permisos:', recheckPermission);
               
-              if (recheckPermission.microphone !== 'granted') {
+              if ((recheckPermission as any).microphone !== 'granted') {
                 // Solicitar permisos nuevamente
                 const retryPermission = await SpeechRecognition.requestPermissions();
                 console.log('Resultado de nueva solicitud:', retryPermission);
@@ -709,7 +709,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
                 const finalPermissionCheck = await SpeechRecognition.checkPermissions();
                 console.log('Verificación final después de nueva solicitud:', finalPermissionCheck);
                 
-                if (finalPermissionCheck.microphone !== 'granted') {
+                if ((finalPermissionCheck as any).microphone !== 'granted') {
                   alert(t('assistant.microphonePermissionDenied') + '\n\nPor favor, verifica los permisos en Configuración > Apps > ' + (Capacitor.getPlatform() === 'android' ? 'appsistente' : 'la app'));
                   return;
                 }

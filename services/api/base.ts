@@ -47,43 +47,26 @@ export async function handleSupabaseError<T>(
 export async function getAuthenticatedUserId(): Promise<string | null> {
   // Primero intentar autenticación simple
   const simpleAuthUser = localStorage.getItem('simpleAuthUser');
-  console.log('[getAuthenticatedUserId] simpleAuthUser raw:', simpleAuthUser);
   if (simpleAuthUser) {
     try {
       const userData = JSON.parse(simpleAuthUser);
-      console.log('[getAuthenticatedUserId] userData parsed:', userData);
       const userId = userData.id || null;
-      console.log('[getAuthenticatedUserId] userId extracted:', userId);
-      if (userId) {
-        console.log('[getAuthenticatedUserId] Usuario encontrado (simple auth):', userId);
-      } else {
-        console.warn('[getAuthenticatedUserId] userData.id es null o undefined:', userData);
-      }
       return userId;
     } catch (error) {
       console.error('[API] Error parsing simple auth user:', error, 'Raw value:', simpleAuthUser);
       localStorage.removeItem('simpleAuthUser');
       return null;
     }
-  } else {
-    console.log('[getAuthenticatedUserId] No hay simpleAuthUser en localStorage');
   }
 
   // Si no hay autenticación simple, intentar Supabase Auth
   if (!isSupabaseConfigured()) {
-    console.log('[getAuthenticatedUserId] Supabase no configurado');
     return null;
   }
 
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id || null;
-    if (userId) {
-      console.log('[getAuthenticatedUserId] Usuario encontrado (Supabase Auth):', userId);
-    } else {
-      console.log('[getAuthenticatedUserId] No se encontró usuario autenticado');
-    }
-    return userId;
+    return user?.id || null;
   } catch (error) {
     console.error('[API] Error getting authenticated user:', error);
     return null;

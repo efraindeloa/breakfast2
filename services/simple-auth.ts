@@ -55,45 +55,47 @@ export async function simpleSignUp(params: {
   }
 }
 
-/**
- * Iniciar sesión verificando contraseña directamente
- */
 export async function simpleSignIn(
-  identifier: string, // email, phone o name
+  identifier: string,
   password: string
 ): Promise<{ success: boolean; error?: string; user?: any }> {
   try {
-    // Buscar usuario por email, phone o name
+    const normalizedIdentifier = identifier.trim();
+    const lowerIdentifier = normalizedIdentifier.toLowerCase();
+
     let query = supabase
       .from('users')
       .select('id, email, name, phone, password_hash, is_active')
       .eq('is_active', true);
 
-    // Intentar por email primero
-    let { data: user, error } = await query.eq('email', identifier).maybeSingle();
+    // Buscar por email (case-insensitive)
+    let { data: user, error } = await query
+      .ilike('email', lowerIdentifier)
+      .maybeSingle();
 
-    // Si no se encuentra, buscar por phone
+    // Buscar por phone
     if (!user && !error) {
-      const phoneQuery = supabase
+      const { data, error: phoneError } = await supabase
         .from('users')
         .select('id, email, name, phone, password_hash, is_active')
         .eq('is_active', true)
-        .eq('phone', identifier);
-      const result = await phoneQuery.maybeSingle();
-      user = result.data;
-      error = result.error;
+        .eq('phone', normalizedIdentifier)
+        .maybeSingle();
+
+      user = data;
+      error = phoneError;
     }
 
-    // Si no se encuentra, buscar por name
+    // Buscar por name (case-insensitive)
     if (!user && !error) {
-      const nameQuery = supabase
+      const { data, error: nameError } = await supabase
         .from('users')
         .select('id, email, name, phone, password_hash, is_active')
-        .eq('is_active', true)
-        .eq('name', identifier);
-      const result = await nameQuery.maybeSingle();
-      user = result.data;
-      error = result.error;
+        .ilike('name', lowerIdentifier)
+        .maybeSingle();
+
+      user = data;
+      error = nameError;
     }
 
     if (error || !user) {
@@ -104,20 +106,16 @@ export async function simpleSignIn(
       return { success: false, error: 'Usuario sin contraseña configurada' };
     }
 
-    // Verificar contraseña
     const isValid = await verifyPassword(password, user.password_hash);
-
     if (!isValid) {
       return { success: false, error: 'La contraseña es incorrecta' };
     }
 
-    // Actualizar last_login_at
     await supabase
       .from('users')
       .update({ last_login_at: new Date().toISOString() })
       .eq('id', user.id);
 
-    // Retornar usuario sin password_hash
     const { password_hash, ...userWithoutPassword } = user;
     return { success: true, user: userWithoutPassword };
   } catch (error: any) {

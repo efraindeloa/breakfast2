@@ -72,7 +72,8 @@ const RestaurantSelector: React.FC = () => {
           <img 
             src={selectedRestaurant.image} 
             alt={selectedRestaurant.name}
-            className="w-10 h-10 rounded-lg object-cover"
+            className="w-10 h-10 rounded-lg object-contain bg-white"
+            //className="w-10 h-10 rounded-lg object-cover"
           />
         ) : (
           <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -117,7 +118,8 @@ const RestaurantSelector: React.FC = () => {
                   <img 
                     src={restaurant.image} 
                     alt={restaurant.name}
-                    className="w-10 h-10 rounded-lg object-cover"
+                    className="w-10 h-10 rounded-lg object-contain bg-white"
+                    //className="w-10 h-10 rounded-lg object-cover"
                   />
                 ) : (
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">

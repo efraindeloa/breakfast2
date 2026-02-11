@@ -15,6 +15,20 @@ interface TopNavbarProps {
   showFavorites?: boolean;
 }
 
+const getInitials = (name: string, email?: string) => {
+  const words = name.trim().split(' ').filter(Boolean);
+
+  if (words.length >= 2) {
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  }
+
+  if (words.length === 1) {
+    return words[0].substring(0, 2).toUpperCase();
+  }
+
+  return (email?.substring(0, 2) || 'U').toUpperCase();
+};
+
 const TopNavbar: React.FC<TopNavbarProps> = ({
   showAvatar = true,
   showWelcome = false,
@@ -28,224 +42,112 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
   const location = useLocation();
   const { t } = useTranslation();
   const { user, accountType, userType } = useAuth();
-  const [userName, setUserName] = useState<string>(propUserName || '');
+
+  const [userName, setUserName] = useState(propUserName || '');
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
-  const [userInitials, setUserInitials] = useState<string>('');
+  const [userInitials, setUserInitials] = useState('U');
 
-  // Manejar usuarios invitados
+  // Usuario invitado
   useEffect(() => {
-    if ((userType as any) === 'guest' && !propUserName) {
+    if ((userType as any) === 'guest') {
       setUserName(t('register.userType'));
+      setUserInitials('UR');
     }
-  }, [userType, propUserName, t]);
+  }, [userType, t]);
 
-  // Cargar datos del usuario si no se proporcionaron
+  // Cargar datos del usuario registrado
   useEffect(() => {
-    const loadUserData = async () => {
-      if (!isSupabaseConfigured() || !user?.id || propUserName || (userType as any) === 'guest') {
-        return;
-      }
+    if (
+      !isSupabaseConfigured() ||
+      !user?.id ||
+      propUserName ||
+      (userType as any) !== 'registered'
+    ) {
+      return;
+    }
 
+    const loadUserData = async () => {
       try {
-        // Cargar nombre del usuario
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('users')
           .select('name')
           .eq('id', user.id)
           .single();
 
-        let name = '';
-        if (error) {
-          name = user.user_metadata?.full_name || 
-                 user.user_metadata?.name || 
-                 user.email || 
-                 '';
-        } else if (data?.name) {
-          name = data.name;
-        } else {
-          name = user.user_metadata?.full_name || 
-                 user.user_metadata?.name || 
-                 user.email || 
-                 '';
-        }
+        const name =
+          data?.name ||
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          user.email ||
+          '';
 
-        // Si es un usuario invitado, mostrar "Usuario no registrado"
-        if ((userType as any) === 'guest') {
-          setUserName(t('register.userType'));
-        } else {
-          setUserName(name.split(' ')[0] || t('register.userType'));
-        }
+        //setUserName(name.split(' ')[0]);
+        setUserName(name);
+        setUserInitials(getInitials(name, user.email));
 
-        // Generar iniciales (2 letras)
-        const words = name.trim().split(' ').filter(w => w.length > 0);
-        if (words.length >= 2) {
-          setUserInitials((words[0][0] + words[words.length - 1][0]).toUpperCase());
-        } else if (words.length === 1 && words[0].length >= 2) {
-          setUserInitials(words[0].substring(0, 2).toUpperCase());
-        } else if (words.length === 1) {
-          setUserInitials((words[0][0] + words[0][0]).toUpperCase());
-        } else {
-          const emailPrefix = user.email?.split('@')[0] || '';
-          setUserInitials(emailPrefix.substring(0, 2).toUpperCase());
-        }
-
-        // Cargar avatar del usuario
         if (showAvatar) {
-          const profileResult = await getUserProfile(user.id);
-          if (profileResult.success && profileResult.data?.avatar_url) {
-            setUserAvatar(profileResult.data.avatar_url);
-          } else {
-            setUserAvatar(null);
-          }
+          const profile = await getUserProfile(user.id);
+          setUserAvatar(profile.success ? profile.data?.avatar_url : null);
         }
       } catch (error) {
         console.error('[TopNavbar] Error loading user data:', error);
-        const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 
-                         user?.user_metadata?.name?.split(' ')[0] || 
-                         user?.email?.split('@')[0] || 
-                         '';
-        // Si es un usuario invitado, mostrar "Usuario no registrado"
-        if ((userType as any) === 'guest') {
-          setUserName(t('register.userType'));
-        } else {
-          setUserName(firstName || t('register.userType'));
-        }
-        
-        const name = user?.user_metadata?.full_name || 
-                    user?.user_metadata?.name || 
-                    user?.email?.split('@')[0] || 
-                    '';
-        const words = name.trim().split(' ').filter(w => w.length > 0);
-        if (words.length >= 2) {
-          setUserInitials((words[0][0] + words[words.length - 1][0]).toUpperCase());
-        } else if (words.length === 1 && words[0].length >= 2) {
-          setUserInitials(words[0].substring(0, 2).toUpperCase());
-        } else {
-          const emailPrefix = user?.email?.split('@')[0] || 'U';
-          setUserInitials(emailPrefix.substring(0, 2).toUpperCase());
-        }
       }
     };
 
     loadUserData();
-  }, [user?.id, propUserName, showAvatar]);
+  }, [user?.id, propUserName, showAvatar, userType]);
 
   const handleBack = () => {
-    if (onBack) {
-      onBack();
-    } else {
-      navigate(-1);
-    }
+    onBack ? onBack() : navigate(-1);
   };
 
   return (
     <header className="sticky top-0 z-20 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 safe-top">
       <div className="flex items-center p-4 pb-2 justify-between">
-        {/* Left side: Back button or Avatar */}
         <div className="flex items-center gap-2 shrink-0">
           {showBackButton ? (
-            <button
-              onClick={handleBack}
-              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors active:scale-95"
-              title={t('common.back') || 'Volver'}
-            >
-              <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">chevron_left</span>
+            <button onClick={handleBack} className="size-10 rounded-full bg-white dark:bg-gray-800 border">
+              <span className="material-symbols-outlined">chevron_left</span>
             </button>
           ) : showAvatar ? (
-            <button
-              onClick={() => navigate('/profile')}
-              className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 transition-all hover:border-primary/40 active:scale-95"
-            >
+            <button onClick={() => navigate('/profile')} className="size-10 rounded-full overflow-hidden border">
               {userAvatar ? (
-                <img 
-                  src={userAvatar} 
-                  alt={userName || 'Usuario'}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    if (target.parentElement) {
-                      const initialsDiv = document.createElement('div');
-                      initialsDiv.className = 'w-full h-full flex items-center justify-center text-primary dark:text-primary/90 font-bold text-sm';
-                      initialsDiv.textContent = userInitials || 'U';
-                      target.parentElement.appendChild(initialsDiv);
-                    }
-                  }}
-                />
+                <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-primary dark:text-primary/90 font-bold text-sm">
-                  {userInitials || 'U'}
+                <div className="w-full h-full flex items-center justify-center font-bold">
+                  {userInitials}
                 </div>
               )}
             </button>
           ) : null}
         </div>
 
-        {/* Center: Title or Welcome message */}
         <div className="flex-1 px-3 min-w-0">
-          {showWelcome ? (
+          {showWelcome && (
             <>
-              <p className="text-primary/80 dark:text-primary/70 text-xs font-semibold uppercase tracking-wider truncate">
-                {t('home.welcome')}
-              </p>
-              <h2 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] truncate">
-                {userName ? (userName.length > 10 ? userName.substring(0, 10) : userName) : ''}
-              </h2>
+              <p className="text-xs uppercase truncate">{t('home.welcome')}</p>
+              <h2 className="text-lg font-bold truncate">{userName}</h2>
             </>
-          ) : null}
+          )}
         </div>
 
-        {/* Right side: Notifications, Favorites, Profile */}
         <div className="flex items-center gap-2 shrink-0">
-          <button 
-            className="flex size-10 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            title={t('navigation.notifications') || 'Notificaciones'}
-          >
-            <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">notifications</span>
-          </button>
-          
           {showFavorites && accountType !== 'restaurant' && (userType as any) === 'registered' && (
-            <button 
-              onClick={() => navigate('/favorites')}
-              className={`flex size-10 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm border transition-colors ${
-                location.pathname === '/favorites'
-                  ? 'border-primary bg-primary/10'
-                  : 'border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-              }`}
-              title={t('navigation.favorites') || 'Favoritos'}
-            >
-              <span className={`material-symbols-outlined ${
-                location.pathname === '/favorites'
-                  ? 'text-primary'
-                  : 'text-gray-600 dark:text-gray-300'
-              }`}>favorite</span>
+            <button onClick={() => navigate('/favorites')}>
+              <span className="material-symbols-outlined">favorite</span>
             </button>
           )}
-          
-          <button 
-            onClick={() => navigate('/profile')}
-            className={`flex size-10 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm border transition-colors ${
-              location.pathname === '/profile' || location.pathname.includes('billing')
-                ? 'border-primary bg-primary/10'
-                : 'border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-            }`}
-            title={t('navigation.profile') || 'Perfil'}
-          >
-            <span className={`material-symbols-outlined ${
-              location.pathname === '/profile' || location.pathname.includes('billing')
-                ? 'text-primary'
-                : 'text-gray-600 dark:text-gray-300'
-            }`}>
+          <button onClick={() => navigate('/profile')}>
+            <span className="material-symbols-outlined">
               {(userType as any) === 'guest' ? 'person_outline' : 'person'}
             </span>
           </button>
         </div>
       </div>
+
       {title && !showWelcome && (
         <div className="px-4 pb-2">
-          <h2 className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] truncate text-center">
-            {title}
-          </h2>
+          <h2 className="text-lg font-bold truncate text-center">{title}</h2>
         </div>
       )}
     </header>

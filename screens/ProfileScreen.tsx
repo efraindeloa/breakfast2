@@ -295,12 +295,12 @@ const ProfileScreen: React.FC = () => {
     if (editingField && user?.id) {
       try {
         // No permitir actualizar email desde aquí (debe hacerse a través de Supabase Auth)
-        if (editingField === 'email') {
-          console.warn('[ProfileScreen] Email cannot be updated from profile screen');
-          setEditingField(null);
-          setEditValue('');
-          return;
-        }
+        // if (editingField === 'email') {
+        //   console.warn('[ProfileScreen] Email cannot be updated from profile screen');
+        //   setEditingField(null);
+        //   setEditValue('');
+        //   return;
+        // }
 
         // Actualizar a través de la API
         if (isSupabaseConfigured()) {
@@ -633,10 +633,10 @@ const ProfileScreen: React.FC = () => {
             <p className="text-[24px] font-bold">
               {(() => {
                 // Obtener el primer nombre del usuario
-                const firstName = userData.name?.split(' ')[0] || 
-                                 user?.user_metadata?.full_name?.split(' ')[0] || 
-                                 user?.user_metadata?.name?.split(' ')[0] || 
-                                 user?.email?.split('@')[0] || 
+                const firstName = userData.name || 
+                                 user?.user_metadata?.full_name || 
+                                 user?.user_metadata?.name || 
+                                 user?.email || 
                                  'Usuario';
                 // Limitar a 10 caracteres (sin contar "¡Hola,")
                 const limitedFirstName = firstName.length > 10 ? firstName.substring(0, 10) : firstName;

@@ -836,7 +836,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
                 )}
               </div>
 
-              {/* RFC (opcional) */}
+              {/* RFC (opcional)
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
                   RFC <span className="text-gray-500 text-xs">(Opcional)</span>
@@ -867,7 +867,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
                     ✓ RFC válido
                   </p>
                 )}
-              </div>
+              </div> */}
             </>
           )}
             </>

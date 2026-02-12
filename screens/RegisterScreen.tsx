@@ -3,9 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
-import { validateRFC, checkRestaurantNameExists, registerRestaurant } from '../services/database';
-import { simpleSignUp } from '../services/simple-auth';
-import { supabase } from '../config/supabase';
+import { validateRFC, checkRestaurantNameExists } from '../services/database';
 
 interface RegisterScreenProps {
   onLogin: () => void;
@@ -332,84 +330,59 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
         let email: string | undefined;
         let phone: string | undefined;
         
-        // Preservar espacios internos pero eliminar espacios al inicio y final
         const identifier = emailOrPhone.trim();
-        let username: string | undefined; // Username original (puede tener espacios)
         
-        // Si contiene @, usar como email (sin espacios internos)
+        // Validar que no contenga espacios
+        if (identifier.includes(' ')) {
+          setEmailOrPhoneError(t('register.noSpacesAllowed') || 'El identificador no puede contener espacios');
+          setIsLoading(false);
+          return;
+        }
+        
+        // Si contiene @, usar como email
         if (identifier.includes('@')) {
-          // Los emails no pueden tener espacios, eliminar espacios internos
-          email = identifier.replace(/\s+/g, '');
+          email = identifier;
         } else {
-          // Si solo tiene números, espacios, + y guiones, intentar como teléfono
-          if (/^[\d\s+\-()]+$/.test(identifier) && !/[a-zA-Z]/.test(identifier)) {
+          // Si solo tiene números, + y guiones (sin espacios), intentar como teléfono
+          if (/^[\d+\-()]+$/.test(identifier) && !/[a-zA-Z]/.test(identifier)) {
             // Normalizar a formato E.164 usando el código de país seleccionado
-            const raw = identifier;
-            const digits = raw.replace(/[^\d+]/g, '');
+            const digits = identifier.replace(/[^\d+]/g, '');
             const dialDigits = selectedCountryCode.dialCode.replace('+', '');
             const withoutPlus = digits.startsWith('+') ? digits.slice(1) : digits;
             const withoutCode = withoutPlus.startsWith(dialDigits) ? withoutPlus.slice(dialDigits.length) : withoutPlus;
             const onlyDigits = withoutCode.replace(/\D/g, '');
             phone = `${selectedCountryCode.dialCode}${onlyDigits}`;
           } else {
-            // Si es un username (puede tener espacios), guardar el username original
-            username = identifier; // Preservar espacios
+            // Si es un username (sin espacios)
+            const username = identifier;
             // Para Supabase Auth necesitamos un email válido, así que generamos uno temporal
-            const usernameForEmail = identifier.replace(/\s+/g, '.').toLowerCase();
-            // Generar un email único basado en el username y timestamp
             const timestamp = Date.now();
-            email = `${usernameForEmail}.${timestamp}@temp.local`;
+            email = `${username.toLowerCase()}.${timestamp}@temp.local`;
           }
         }
 
-        // Usar registro simple
-        const userName = username || email?.split('@')[0] || 'Usuario';
-        const result = await simpleSignUp({
-          email: email!,
+        // Usar Supabase Auth
+        const userName = email?.includes('@temp.local') 
+          ? email.split('.')[0] // Usar la parte antes del timestamp para usernames
+          : email?.split('@')[0] || 'Usuario';
+        const result = await signUp({
+          email: email,
+          phone: phone,
           password,
           name: userName,
-          phone: phone,
-          account_type: registerType === 'restaurant' ? 'owner' : 'customer'
+          restaurantName: registerType === 'restaurant' ? restaurantName.trim() : undefined,
+          rfc: registerType === 'restaurant' ? rfc?.trim() : undefined
         });
 
-        if (!result.success) {
+        if (result.error) {
           console.error('Registration error:', result.error);
-          if (result.error?.includes('ya existe')) {
+          if (result.error.message?.includes('already registered') || result.error.message?.includes('ya existe')) {
             setEmailOrPhoneError('El usuario ya existe');
           } else {
-            setEmailOrPhoneError(result.error || t('register.registrationError') || 'Error al registrarse');
+            setEmailOrPhoneError(result.error.message || t('register.registrationError') || 'Error al registrarse');
           }
           setIsLoading(false);
           return;
-        }
-
-        // Si es registro de restaurante, crear el restaurante
-        if (registerType === 'restaurant' && restaurantName.trim() && result.userId) {
-          try {
-            await registerRestaurant(
-              result.userId,
-              restaurantName.trim(),
-              rfc?.trim() || undefined
-            );
-            console.log('[RegisterScreen] Restaurante creado exitosamente');
-          } catch (restaurantError: any) {
-            console.error('[RegisterScreen] Error al crear restaurante:', restaurantError);
-            setEmailOrPhoneError('Usuario creado pero error al crear restaurante: ' + (restaurantError.message || 'Error desconocido'));
-            setIsLoading(false);
-            return;
-          }
-        }
-
-        // Guardar usuario en localStorage para sesión simple
-        if (result.userId) {
-          const userData = {
-            id: result.userId,
-            email: email!,
-            name: userName,
-            phone: phone || null
-          };
-          localStorage.setItem('simpleAuthUser', JSON.stringify(userData));
-          console.log('[RegisterScreen] Usuario guardado en sesión simple');
         }
 
         // Migrar carrito de invitado si existe

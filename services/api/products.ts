@@ -13,11 +13,10 @@ export interface CreateProductRequest {
   name: string;
   description?: string;
   price: number;
-  image_url?: string;
   image_urls?: string[];
   badges?: string[];
   category: string;
-  origin?: string;
+  subcategories?: string[];
   complements?: ProductComplement[];
   allow_custom_complements?: boolean;
   allow_special_instructions?: boolean;
@@ -27,11 +26,10 @@ export interface UpdateProductRequest {
   name?: string;
   description?: string;
   price?: number;
-  image_url?: string;
   image_urls?: string[];
   badges?: string[];
   category?: string;
-  origin?: string;
+  subcategories?: string[];
   complements?: ProductComplement[];
   allow_custom_complements?: boolean;
   allow_special_instructions?: boolean;
@@ -44,7 +42,6 @@ export async function getProducts(
   restaurantId?: string,
   filters?: {
     category?: string;
-    origin?: string;
     isActive?: boolean;
   }
 ): Promise<ApiResponse<Product[]>> {
@@ -65,10 +62,6 @@ export async function getProducts(
 
     if (filters?.category) {
       query = query.eq('category', filters.category);
-    }
-
-    if (filters?.origin) {
-      query = query.eq('origin', filters.origin);
     }
 
     const { data, error } = await query;
@@ -128,15 +121,15 @@ export async function createProduct(
       description: product.description?.trim() || '', // NOT NULL, usar cadena vacía en lugar de null
       price: product.price,
       category: product.category,
-      origin: product.origin || '', // NOT NULL DEFAULT '', usar cadena vacía en lugar de null
       badges: product.badges || [],
+      subcategories: product.subcategories || [],
       // complements, allow_custom_complements y allow_special_instructions removidos - columnas no existen en la BD
       is_active: true,
     };
 
-    // Manejar imágenes (solo image_url, image_urls no existe en la BD)
-    if (product.image_url) {
-      productData.image_url = product.image_url;
+    // Manejar imágenes: usar image_urls (array)
+    if (product.image_urls && product.image_urls.length > 0) {
+      productData.image_urls = product.image_urls;
     }
 
     const { data, error } = await supabase
@@ -184,22 +177,17 @@ export async function updateProduct(
     if (updates.category !== undefined) {
       updateData.category = updates.category;
     }
-    if (updates.origin !== undefined) {
-      updateData.origin = updates.origin || ''; // NOT NULL DEFAULT '', usar cadena vacía en lugar de null
-    }
     if (updates.badges !== undefined) {
       updateData.badges = updates.badges;
     }
+    if (updates.subcategories !== undefined) {
+      updateData.subcategories = updates.subcategories || [];
+    }
     // complements, allow_custom_complements y allow_special_instructions removidos - columnas no existen en la BD
 
-    // Manejar imágenes
-    if (updates.image_url !== undefined) {
-      updateData.image_url = updates.image_url;
-    }
-    
-    // Guardar el array de múltiples imágenes
+    // Manejar imágenes: usar solo image_urls
     if (updates.image_urls !== undefined) {
-      updateData.image_urls = updates.image_urls;
+      updateData.image_urls = updates.image_urls.length > 0 ? updates.image_urls : [];
     }
 
     console.log('[updateProduct] Actualizando producto:', { productId, updateData, userId });

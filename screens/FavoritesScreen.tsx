@@ -210,7 +210,6 @@ const FavoritesScreen: React.FC = () => {
       image: dish.image,
       badges: dish.badges || [],
       category: dish.category,
-      origin: dish.origin as OriginType,
     }));
   }, [favoriteDishes]);
 
@@ -330,15 +329,10 @@ const FavoritesScreen: React.FC = () => {
       }
       // Si no hay categorías seleccionadas y no hay búsqueda, mostrar todos los productos
       
-      // Filtro por origen (solo aplicar si NO hay búsqueda)
-      if (selectedOrigin) {
-        if (selectedOrigin === 'vegano') {
-          // Para vegano, verificar si tiene el badge 'vegano'
-          if (!dish.badges || !dish.badges.includes('vegano')) return false;
-        } else {
-          // Para otros orígenes, verificar el campo origin
-          if (dish.origin !== selectedOrigin) return false;
-        }
+      // Filtro por origen (solo vegano usando badges)
+      if (selectedOrigin === 'vegano') {
+        // Para vegano, verificar si tiene el badge 'vegano'
+        if (!dish.badges || !dish.badges.includes('vegano')) return false;
       }
       
       return true;

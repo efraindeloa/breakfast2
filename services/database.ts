@@ -55,7 +55,6 @@ export interface FavoriteDish {
   image?: string;
   category: string;
   description?: string;
-  origin?: string;
   badges?: string[];
 }
 
@@ -67,7 +66,6 @@ export interface FavoriteDishFull {
   price: string;
   image: string;
   category: string;
-  origin: string;
   badges?: string[];
 }
 
@@ -145,15 +143,12 @@ export interface Product {
   name: string;
   description: string;
   price: string;
-  image_url?: string;
-  image_urls?: string[]; // Array de URLs de imágenes
-  image?: string; // Para compatibilidad
+  image_urls?: string[]; // Array de URLs de imágenes (única columna para imágenes)
+  image?: string; // Para compatibilidad (campo calculado, no se guarda en BD)
   badges?: string[];
   category: string;
-  origin: string;
+  subcategories?: string[]; // Array de subcategorías
   is_active: boolean;
-  is_featured?: boolean;
-  sort_order?: number;
   complements?: ProductComplement[]; // Array de complementos disponibles
   allow_custom_complements?: boolean; // Permitir complementos personalizados
   allow_special_instructions?: boolean; // Permitir instrucciones especiales
@@ -238,17 +233,42 @@ const isValidUUID = (str: string): boolean => {
 
 // `getAuthenticatedUserId` se importa desde `services/api/base.ts`
 
+// Función para obtener el user_id del usuario autenticado
+const getCurrentUserId = async (): Promise<string> => {
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase no está configurado');
+  }
+
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+    if (error) {
+    console.error('[getCurrentUserId] Error getting authenticated user:', error);
+    throw new Error('Error obteniendo usuario autenticado');
+    }
+    
+  if (!user) {
+    throw new Error('Usuario no autenticado');
+    }
+    
+  return user.id;
+};
+
 // Función para verificar que el usuario autenticado existe en la tabla users
 // Si no existe, lanza un error (el usuario debe registrarse primero)
-const ensureUserExists = async (userId: string): Promise<void> => {
-  if (!isSupabaseConfigured()) return;
+const ensureUserExists = async (userId?: string): Promise<string> => {
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase no está configurado');
+  }
+  
+  // Si no se proporciona userId, obtener el del usuario autenticado
+  const finalUserId = userId || await getCurrentUserId();
   
   try {
     // Verificar si el usuario existe en la tabla users
     const { data: existingUser, error: checkError } = await supabase
       .from('users')
       .select('id')
-      .eq('id', userId)
+      .eq('id', finalUserId)
       .maybeSingle();
     
     if (checkError && checkError.code !== 'PGRST116') {
@@ -256,13 +276,13 @@ const ensureUserExists = async (userId: string): Promise<void> => {
       throw new Error('Error verificando usuario en la base de datos');
     }
     
-    // Si el usuario existe, no hacer nada
+    // Si el usuario existe, retornar el userId
     if (existingUser) {
-      return;
+      return finalUserId;
     }
     
     // Si no existe, lanzar error - el usuario debe registrarse primero
-    console.error('[ensureUserExists] Authenticated user does not exist in database:', userId);
+    console.error('[ensureUserExists] Authenticated user does not exist in database:', finalUserId);
     throw new Error('Usuario no registrado. Por favor, completa el registro primero.');
   } catch (error) {
     console.error('[ensureUserExists] Error:', error);
@@ -321,19 +341,14 @@ export const getOrders = async (): Promise<AppOrder[]> => {
     }
     
     if (!userId) {
-      console.warn('[getOrders] No authenticated user - returning empty orders');
+      // Solo mostrar warning en desarrollo para evitar ruido en producción
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[getOrders] No authenticated user - returning empty orders');
+      }
       return [];
     }
     
-    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
-    try {
-      await supabase.rpc('set_config', {
-        setting_name: 'app.user_id',
-        setting_value: userId
-      });
-    } catch (error) {
-      console.warn('[getOrders] No se pudo establecer app.user_id, continuando...', error);
-    }
+    // Con Supabase Auth, las políticas RLS usan auth.uid() automáticamente
     
     // Verificar si hay datos pendientes de migración (después de cerrar sesión)
     const pendingOrders = localStorage.getItem('pending_orders_migration');
@@ -493,15 +508,7 @@ export const createOrder = async (order: Omit<DBOrder, 'id' | 'created_at' | 'up
       throw new Error('Authentication required');
     }
     
-    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
-    try {
-      await supabase.rpc('set_config', {
-        setting_name: 'app.user_id',
-        setting_value: userId
-      });
-    } catch (error) {
-      console.warn('[createOrder] No se pudo establecer app.user_id, continuando...', error);
-    }
+    // Con Supabase Auth, las políticas RLS usan auth.uid() automáticamente
     
     // Validar que el status sea de una orden activa (no 'entregada' o 'cancelada')
     const activeStatuses = ['pending', 'orden_enviada', 'orden_recibida', 'en_preparacion', 'lista_para_entregar', 'en_entrega', 'con_incidencias'];
@@ -886,16 +893,9 @@ export const getCart = async (): Promise<CartItem[]> => {
           if (directUserId) {
             // Usar el userId obtenido directamente
             const fallbackUserId = directUserId;
-            
+    
             // Establecer la variable de sesión para RLS
-            try {
-              await supabase.rpc('set_config', {
-                setting_name: 'app.user_id',
-                setting_value: fallbackUserId
-              });
-            } catch (error) {
-              console.warn('[getCart] No se pudo establecer app.user_id, continuando...', error);
-            }
+            // Con Supabase Auth, las políticas RLS usan auth.uid() automáticamente
             
             // Continuar con el userId obtenido directamente
             const { data: cartItemsData, error: cartError } = await supabase
@@ -930,8 +930,8 @@ export const getCart = async (): Promise<CartItem[]> => {
               productsData?.forEach((product: any) => {
                 productsMap[product.id] = product;
               });
-            }
-            
+    }
+    
             // Combinar cart_items con productos
             const cartItems: CartItem[] = cartItemsData.map((item: any) => {
               const product = productsMap[item.product_id];
@@ -941,7 +941,7 @@ export const getCart = async (): Promise<CartItem[]> => {
                 price: parseFloat(product?.price || item.price || '0'),
                 quantity: item.quantity,
                 notes: item.notes || undefined,
-                image: product?.image_url || undefined,
+                image: product?.image_urls && product.image_urls.length > 0 ? getProductImageUrl(product.image_urls[0]) : undefined,
               };
             });
             
@@ -956,15 +956,7 @@ export const getCart = async (): Promise<CartItem[]> => {
       return fallbackToLocalStorage<CartItem[]>('cart', [], 'get') || [];
     }
     
-    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
-    try {
-      await supabase.rpc('set_config', {
-        setting_name: 'app.user_id',
-        setting_value: userId
-      });
-    } catch (error) {
-      console.warn('[getCart] No se pudo establecer app.user_id, continuando...', error);
-    }
+    // Con Supabase Auth, las políticas RLS usan auth.uid() automáticamente
     
     // Obtener cart_items primero (sin JOIN para evitar problemas de RLS)
     const { data: cartItemsData, error: cartError } = await supabase
@@ -989,7 +981,7 @@ export const getCart = async (): Promise<CartItem[]> => {
     if (productIds.length > 0) {
       const { data: productsData, error: productsError } = await supabase
         .from('products')
-        .select('id, name, price, image_url')
+        .select('id, name, price, image_urls')
         .in('id', productIds);
       
       if (productsError) {
@@ -1010,7 +1002,7 @@ export const getCart = async (): Promise<CartItem[]> => {
         price: typeof product.price === 'number' ? product.price : parseFloat(product.price || '0'),
         quantity: item.quantity,
         notes: item.notes || '',
-        image: product.image_url ? getProductImageUrl(product.image_url) : (product.image || ''),
+        image: product.image_urls && product.image_urls.length > 0 ? getProductImageUrl(product.image_urls[0]) : (product.image || ''),
       };
     });
     
@@ -1038,15 +1030,7 @@ export const setCart = async (items: CartItem[]): Promise<boolean> => {
       return true;
     }
     
-    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
-    try {
-      await supabase.rpc('set_config', {
-        setting_name: 'app.user_id',
-        setting_value: userId
-      });
-    } catch (error) {
-      console.warn('[setCart] No se pudo establecer app.user_id, continuando...', error);
-    }
+    // Con Supabase Auth, las políticas RLS usan auth.uid() automáticamente
     
     // Agrupar items por (product_id, notes) para evitar duplicados
     const groupedItems = items.reduce((acc: CartItem[], item) => {
@@ -1237,15 +1221,7 @@ export const addToCart = async (item: CartItem): Promise<boolean> => {
       return true;
     }
     
-    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
-    try {
-      await supabase.rpc('set_config', {
-        setting_name: 'app.user_id',
-        setting_value: userId
-      });
-    } catch (error) {
-      console.warn('[addToCart] No se pudo establecer app.user_id, continuando...', error);
-    }
+    // Con Supabase Auth, las políticas RLS usan auth.uid() automáticamente
     
     // Asegurar que el usuario existe en la tabla users antes de agregar al carrito
     try {
@@ -1377,15 +1353,7 @@ export const removeFromCart = async (itemId: number, notes?: string): Promise<bo
       return true;
     }
     
-    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
-    try {
-      await supabase.rpc('set_config', {
-        setting_name: 'app.user_id',
-        setting_value: userId
-      });
-    } catch (error) {
-      console.warn('[removeFromCart] No se pudo establecer app.user_id, continuando...', error);
-    }
+    // Con Supabase Auth, las políticas RLS usan auth.uid() automáticamente
     
     let query = supabase
       .from('cart_items')
@@ -1423,8 +1391,7 @@ export const getFavorites = async (restaurantId?: string | null): Promise<Favori
       return fallbackToLocalStorage<FavoriteDishFull[]>('favorite_dishes', [], 'get') || [];
     }
 
-    // Establecer app.user_id para RLS
-    await supabase.rpc('set_config', { setting_name: 'app.user_id', setting_value: userId });
+    // Con Supabase Auth, las políticas RLS usan auth.uid() automáticamente
 
     // Construir query base
     let query = supabase
@@ -1437,9 +1404,8 @@ export const getFavorites = async (restaurantId?: string | null): Promise<Favori
           name,
           description,
           price,
-          image_url,
+          image_urls,
           category,
-          origin,
           badges
         )
       `)
@@ -1474,9 +1440,8 @@ export const getFavorites = async (restaurantId?: string | null): Promise<Favori
           name: product.name || '',
           description: product.description || '',
           price: priceString,
-          image: product.image_url ? getProductImageUrl(product.image_url) : '',
+          image: product.image_urls && product.image_urls.length > 0 ? getProductImageUrl(product.image_urls[0]) : '',
           category: product.category || '',
-          origin: product.origin || '',
           badges: product.badges || [],
         };
       });
@@ -1520,12 +1485,11 @@ export const addFavorite = async (dish: FavoriteDishFull): Promise<boolean> => {
       if (!favorites.find(f => f.id === dish.id)) {
         favorites.push(dish);
         fallbackToLocalStorage('favorite_dishes', favorites, 'set', favorites);
-      }
+    }
       return true;
     }
 
-    // Establecer app.user_id para RLS
-    await supabase.rpc('set_config', { setting_name: 'app.user_id', setting_value: userId });
+    // Con Supabase Auth, las políticas RLS usan auth.uid() automáticamente
 
     // Insertar solo product_id y restaurant_id (los demás datos vienen del producto)
     const { error } = await supabase
@@ -1580,8 +1544,7 @@ export const removeFavorite = async (dishId: number): Promise<boolean> => {
       return true;
     }
 
-    // Establecer app.user_id para RLS
-    await supabase.rpc('set_config', { setting_name: 'app.user_id', setting_value: userId });
+    // Con Supabase Auth, las políticas RLS usan auth.uid() automáticamente
 
     // Eliminar por product_id (no por id de la tabla favorite_dishes)
     const { error } = await supabase
@@ -2062,7 +2025,6 @@ export const updateReview = async (
 export const getProducts = async (filters?: {
   restaurantId?: string;
   category?: string;
-  origin?: string;
   isActive?: boolean;
   limit?: number;
   offset?: number;
@@ -2080,7 +2042,6 @@ export const getProducts = async (filters?: {
     let query = supabase
       .from('products')
       .select('*')
-      .order('sort_order', { ascending: true })
       .order('id', { ascending: true });
 
     if (filters) {
@@ -2089,9 +2050,6 @@ export const getProducts = async (filters?: {
       }
       if (filters.category) {
         query = query.eq('category', filters.category);
-      }
-      if (filters.origin) {
-        query = query.eq('origin', filters.origin);
       }
       if (filters.isActive !== undefined) {
         query = query.eq('is_active', filters.isActive);
@@ -2119,7 +2077,7 @@ export const getProducts = async (filters?: {
         ...p,
         name: p.name,
         description: p.description || '',
-        image: p.image_url ? getProductImageUrl(p.image_url) : (p.image || ''),
+        image: p.image_urls && p.image_urls.length > 0 ? getProductImageUrl(p.image_urls[0]) : (p.image || ''),
       };
     });
   } catch (error) {
@@ -2301,7 +2259,7 @@ export const getProductById = async (productId: number, restaurantId?: string, l
       ...data,
       name: data.name,
       description: data.description || '',
-      image: data.image_url ? getProductImageUrl(data.image_url) : (data.image || ''),
+      image: data.image_urls && data.image_urls.length > 0 ? getProductImageUrl(data.image_urls[0]) : (data.image || ''),
     };
   } catch (error) {
     console.error('Error fetching product:', error);
@@ -2321,10 +2279,8 @@ export const createProduct = async (product: {
   image_urls?: string[];
   badges?: string[];
   category: string;
-  origin?: string;
+  subcategories?: string[];
   is_active?: boolean;
-  is_featured?: boolean;
-  sort_order?: number;
   complements?: ProductComplement[];
   allow_custom_complements?: boolean;
   allow_special_instructions?: boolean;
@@ -2341,27 +2297,21 @@ export const createProduct = async (product: {
       throw new Error(`Precio inválido: ${product.price}`);
     }
 
-    // Procesar imágenes: si hay image_urls, usarlas; si no, usar image_url
+    // Procesar imágenes: usar image_urls (array)
     const imageUrls = product.image_urls && product.image_urls.length > 0 
       ? product.image_urls 
-      : (product.image_url ? [product.image_url] : []);
-    
-    // image_url debe tener la primera imagen para compatibilidad
-    const firstImageUrl = imageUrls.length > 0 ? imageUrls[0] : null;
+      : [];
 
     const insertData: any = {
       restaurant_id: product.restaurant_id,
       name: product.name,
       description: product.description || '',
       price: priceValue,
-      image_url: firstImageUrl,
       image_urls: imageUrls.length > 0 ? imageUrls : [],
       badges: Array.isArray(product.badges) ? product.badges : [],
       category: product.category,
-      origin: product.origin || '',
+      subcategories: Array.isArray(product.subcategories) ? product.subcategories : [],
       is_active: product.is_active !== undefined ? product.is_active : true,
-      is_featured: product.is_featured || false,
-      sort_order: product.sort_order || 0,
       // complements, allow_custom_complements y allow_special_instructions removidos - columnas no existen en la BD
     };
 
@@ -2388,7 +2338,7 @@ export const createProduct = async (product: {
     
     return {
       ...data,
-      image: data.image_url ? getProductImageUrl(data.image_url) : '',
+      image: data.image_urls && data.image_urls.length > 0 ? getProductImageUrl(data.image_urls[0]) : '',
     };
   } catch (error: any) {
     console.error('[createProduct] Error creating product:', error);
@@ -2415,10 +2365,8 @@ export const updateProduct = async (
     image_urls?: string[];
     badges?: string[];
     category?: string;
-    origin?: string;
+    subcategories?: string[];
     is_active?: boolean;
-    is_featured?: boolean;
-    sort_order?: number;
     complements?: ProductComplement[];
     allow_custom_complements?: boolean;
     allow_special_instructions?: boolean;
@@ -2494,15 +2442,9 @@ export const updateProduct = async (
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.price !== undefined) updateData.price = updates.price.toString();
     
-    // Procesar imágenes: si hay image_urls, usarlas; si no, usar image_url
+    // Procesar imágenes: usar solo image_urls
     if (updates.image_urls !== undefined) {
       updateData.image_urls = updates.image_urls.length > 0 ? updates.image_urls : [];
-      // image_url debe tener la primera imagen para compatibilidad
-      updateData.image_url = updates.image_urls.length > 0 ? updates.image_urls[0] : null;
-    } else if (updates.image_url !== undefined) {
-      // Si solo se actualiza image_url, mantener image_urls si existe, o crear array con image_url
-      updateData.image_url = updates.image_url || null;
-      // No actualizar image_urls si no se proporciona explícitamente
     }
     
     if (updates.badges !== undefined) {
@@ -2511,10 +2453,7 @@ export const updateProduct = async (
       console.log('[updateProduct] Guardando badges:', updateData.badges);
     }
     if (updates.category !== undefined) updateData.category = updates.category;
-    if (updates.origin !== undefined) updateData.origin = updates.origin;
     if (updates.is_active !== undefined) updateData.is_active = updates.is_active;
-    if (updates.is_featured !== undefined) updateData.is_featured = updates.is_featured;
-    if (updates.sort_order !== undefined) updateData.sort_order = updates.sort_order;
     // complements, allow_custom_complements y allow_special_instructions removidos - columnas no existen en la BD
 
     // Si solo cambió la capitalización, usar actualización en dos pasos
@@ -2638,7 +2577,7 @@ export const updateProduct = async (
     
     return {
       ...data,
-      image: data.image_url ? getProductImageUrl(data.image_url) : '',
+      image: data.image_urls && data.image_urls.length > 0 ? getProductImageUrl(data.image_urls[0]) : '',
     };
   } catch (error) {
     console.error('Error updating product:', error);
@@ -2765,15 +2704,7 @@ export const getCurrentUserRestaurantId = async (): Promise<string | null> => {
 
     if (!userId) return null;
 
-    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
-    try {
-      await supabase.rpc('set_config', {
-        setting_name: 'app.user_id',
-        setting_value: userId
-      });
-    } catch (error) {
-      console.warn('[getCurrentUserRestaurantId] No se pudo establecer app.user_id, continuando...', error);
-    }
+    // Con Supabase Auth, las políticas RLS usan auth.uid() automáticamente
 
     const { data: staffRow, error } = await supabase
       .from('restaurant_staff')
@@ -2922,19 +2853,7 @@ export const registerRestaurant = async (
   }
 
   // Establecer la variable de sesión para RLS (compatible con autenticación simple)
-  try {
-    const { error: configError } = await supabase.rpc('set_config', {
-      setting_name: 'app.user_id',
-      setting_value: userId
-    });
-    if (configError) {
-      console.warn('[registerRestaurant] Error al establecer app.user_id:', configError);
-    } else {
-      console.log('[registerRestaurant] app.user_id establecido correctamente:', userId);
-    }
-  } catch (error) {
-    console.warn('[registerRestaurant] Excepción al establecer app.user_id, continuando...', error);
-  }
+  // Con Supabase Auth, las políticas RLS usan auth.uid() automáticamente
 
   // Asociar al usuario como owner del restaurante
   const { data: staff, error: staffError } = await supabase
@@ -4445,15 +4364,7 @@ export const getRestaurantStaffByUser = async (userId: string): Promise<Restaura
   if (!isSupabaseConfigured()) return [];
 
   try {
-    // Establecer la variable de sesión para RLS (compatible con autenticación simple)
-    try {
-      await supabase.rpc('set_config', {
-        setting_name: 'app.user_id',
-        setting_value: userId
-      });
-    } catch (error) {
-      console.warn('[getRestaurantStaffByUser] No se pudo establecer app.user_id, continuando...', error);
-    }
+    // Con Supabase Auth, las políticas RLS usan auth.uid() automáticamente
 
     const { data, error } = await supabase
       .from('restaurant_staff')

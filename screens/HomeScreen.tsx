@@ -23,7 +23,7 @@ interface ButtonConfig {
 const HomeScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { accountType, userType } = useAuth();
+  const { accountType, userType, user } = useAuth();
   const { selectedRestaurantId } = useRestaurant();
   
   // Estados para controlar la opacidad de los botones (efecto fade-in)
@@ -520,12 +520,40 @@ const HomeScreen: React.FC = () => {
         {/* Selector de restaurante solo para comensales */}
         {accountType === 'diner' && <RestaurantSelector />}
         
-        <h3 
-          className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6 transition-opacity duration-500 ease-out pointer-events-none"
-          style={{ opacity: titleOpacity }}
-        >
-          {t('home.quickActions')}
-        </h3>
+        <div className="flex items-center justify-between px-4 pb-2 pt-6">
+          <h3 
+            className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] transition-opacity duration-500 ease-out pointer-events-none"
+            style={{ opacity: titleOpacity }}
+          >
+            {t('home.quickActions')}
+          </h3>
+          
+          {/* Debug: Botón temporal para refrescar tipo de cuenta */}
+          {process.env.NODE_ENV === 'development' && (
+            <button
+              onClick={async () => {
+                if (user?.id) {
+                  console.log('[DEBUG] Refreshing account type for user:', user.id);
+                  console.log('[DEBUG] Current account type:', accountType);
+                  
+                  // Importar AuthContext dinámicamente para acceder a refreshAccountType
+                  const { supabase } = await import('../config/supabase');
+                  const { data: staffRow, error } = await supabase
+                    .from('restaurant_staff')
+                    .select('id, role, restaurant_id')
+                    .eq('user_id', user.id)
+                    .eq('is_active', true);
+                  
+                  console.log('[DEBUG] Restaurant staff query result:', { staffRow, error });
+                  alert(`Account Type: ${accountType}\nStaff Records: ${JSON.stringify(staffRow, null, 2)}`);
+                }
+              }}
+              className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded border"
+            >
+              Debug Account
+            </button>
+          )}
+        </div>
         <div className="w-full px-4 pb-4">
           {/* Botón QR que ocupa todo el ancho */}
           {qrButton && (

@@ -32,7 +32,7 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
       description: dish.description,
       price: dish.price,
       image: dish.image,
-      image_url: dish.image,
+      image_urls: dish.image ? [dish.image] : [],
       badges: dish.badges || [],
       category: dish.category,
       origin: dish.origin || '',

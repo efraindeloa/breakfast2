@@ -819,15 +819,10 @@ const MenuScreen: React.FC = () => {
         }
       }
       
-      // Filtro por origen (aplicar solo si no hay búsqueda o si hay búsqueda y el producto coincide)
-      if (selectedOrigin) {
-        if (selectedOrigin === 'vegano') {
-          // Para vegano, verificar si tiene el badge 'vegano'
-          if (!dish.badges || !dish.badges.includes('vegano')) return false;
-        } else {
-          // Para otros orígenes, verificar el campo origin
-          if (dish.origin !== selectedOrigin) return false;
-        }
+      // Filtro por origen (solo vegano usando badges)
+      if (selectedOrigin === 'vegano') {
+        // Para vegano, verificar si tiene el badge 'vegano'
+        if (!dish.badges || !dish.badges.includes('vegano')) return false;
       }
       
       return true;

@@ -42,35 +42,36 @@ export async function handleSupabaseError<T>(
 }
 
 /**
- * Obtener el ID del usuario autenticado (compatible con autenticación simple)
+ * Obtener el ID del usuario autenticado (usa Supabase Auth)
  */
 export async function getAuthenticatedUserId(): Promise<string | null> {
-  // Primero intentar autenticación simple
+  // Primero intentar Supabase Auth
+  if (isSupabaseConfigured()) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.id) {
+        return user.id;
+      }
+    } catch (error) {
+      console.error('[API] Error getting authenticated user from Supabase Auth:', error);
+    }
+  }
+
+  // Fallback: autenticación simple (para compatibilidad durante migración)
   const simpleAuthUser = localStorage.getItem('simpleAuthUser');
   if (simpleAuthUser) {
     try {
       const userData = JSON.parse(simpleAuthUser);
       const userId = userData.id || null;
+      console.warn('[API] Using simple auth fallback for user:', userId);
       return userId;
     } catch (error) {
       console.error('[API] Error parsing simple auth user:', error, 'Raw value:', simpleAuthUser);
       localStorage.removeItem('simpleAuthUser');
-      return null;
     }
   }
 
-  // Si no hay autenticación simple, intentar Supabase Auth
-  if (!isSupabaseConfigured()) {
-    return null;
-  }
-
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    return user?.id || null;
-  } catch (error) {
-    console.error('[API] Error getting authenticated user:', error);
-    return null;
-  }
+  return null;
 }
 
 /**

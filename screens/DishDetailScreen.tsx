@@ -34,7 +34,6 @@ interface Dish {
   image: string;
   badges?: string[];
   category: string;
-  origin: OriginType;
 }
 
 // Datos de ejemplo - en producción vendrían de una API o contexto
@@ -384,9 +383,8 @@ const DishDetailScreen: React.FC = () => {
       if (productFromDB.image_urls && productFromDB.image_urls.length > 0) {
         return productFromDB.image_urls.map(url => getProductImageUrl(url));
       }
-      // Si solo tiene image_url o image, usar esa
-      const singleImage = productFromDB.image || productFromDB.image_url;
-      return singleImage ? [getProductImageUrl(singleImage)] : [];
+      // Si solo tiene image (compatibilidad), usar esa
+      return productFromDB.image ? [getProductImageUrl(productFromDB.image)] : [];
     }
     // Si es un platillo hardcodeado, usar su imagen
     if (dishFromCode) {
@@ -411,10 +409,9 @@ const DishDetailScreen: React.FC = () => {
     price: typeof productFromDB.price === 'number' 
       ? formatPrice(productFromDB.price, selectedLanguage)
       : productFromDB.price,
-    image: productImages[0] || productFromDB.image || productFromDB.image_url || '',
+    image: productImages[0] || productFromDB.image || '',
     badges: productFromDB.badges,
     category: productFromDB.category,
-    origin: productFromDB.origin as OriginType,
   } : dishFromCode;
   
   // Verificar si el platillo es favorito
@@ -614,16 +611,6 @@ const DishDetailScreen: React.FC = () => {
 
   const cartQuantity = cart.filter(item => item.id === dish.id).reduce((sum, item) => sum + item.quantity, 0);
 
-  // Obtener icono según el origen
-  const getOriginIcon = (origin: OriginType) => {
-    switch (origin) {
-      case 'mar': return 'waves';
-      case 'tierra': return 'agriculture';
-      case 'aire': return 'air';
-      case 'vegetariano': return 'local_florist';
-      default: return null;
-    }
-  };
 
   // Funciones para navegar el carrusel
   const goToPreviousImage = () => {
@@ -753,7 +740,6 @@ const DishDetailScreen: React.FC = () => {
                         price: typeof dish.price === 'string' ? dish.price : `$${dish.price.toFixed(2)}`,
                         image: dish.image,
                         category: dish.category,
-                        origin: dish.origin,
                         badges: dish.badges,
                       });
                     }
@@ -838,15 +824,6 @@ const DishDetailScreen: React.FC = () => {
                 </div>
               )}
               <div className="flex items-center gap-2 flex-wrap">
-                {dish.origin && getOriginIcon(dish.origin) && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs font-medium">
-                    <span className="material-symbols-outlined text-sm">{getOriginIcon(dish.origin)}</span>
-                    {dish.origin === 'mar' && t('dishDetail.fromSea')}
-                    {dish.origin === 'tierra' && t('dishDetail.fromLand')}
-                    {dish.origin === 'aire' && t('dishDetail.fromAir')}
-                    {dish.origin === 'vegetariano' && t('dishDetail.vegetarian')}
-                  </div>
-                )}
                 <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-medium">
                   <span className="material-symbols-outlined text-sm">restaurant_menu</span>
                   {dish.category}
@@ -1007,7 +984,7 @@ const DishDetailScreen: React.FC = () => {
           </div>
 
           {/* Aviso de Alérgenos */}
-          {(dish.badges?.includes('vegano') || dish.origin === 'vegetariano') ? (
+          {(dish.badges?.includes('vegano') || dish.badges?.includes('vegetariano')) ? (
             <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 flex gap-3 mb-6">
               <span className="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>
               <p className="text-xs text-green-700 dark:text-green-300 leading-relaxed">

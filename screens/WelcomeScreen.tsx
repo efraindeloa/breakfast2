@@ -3,9 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation, useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
-import { simpleSignIn } from '../services/simple-auth';
 import { languagesData, allLanguages, popularLanguages } from '../content/languages';
-import { supabase } from '../config/supabase';
 
 interface WelcomeScreenProps {
   onLogin: () => void;
@@ -258,79 +256,79 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
 
     try {
       const identifier = emailOrPhone.trim();
-      let email = identifier;
       
-      // Si contiene @, usar directamente como email
-      // Si no contiene @, buscar en la BD por email, phone o name (username)
-      if (!identifier.includes('@')) {
-        console.log('[WelcomeScreen] Buscando usuario por identificador (no es email):', identifier);
-        
-        // 1. Buscar por email (por si acaso el usuario ingresó email sin @)
-        const { data: userDataByEmail, error: emailError } = await supabase
-          .from('users')
-          .select('email')
-          .eq('email', identifier)
-          .eq('is_active', true)
-          .maybeSingle();
-        
-        if (!emailError && userDataByEmail) {
-          console.log('[WelcomeScreen] Usuario encontrado por email:', userDataByEmail.email);
-          email = userDataByEmail.email;
-        } else {
-          // 2. Si no se encontró por email, buscar por phone
-          const { data: userDataByPhone, error: phoneError } = await supabase
-            .from('users')
-            .select('email')
-            .eq('phone', identifier)
-            .eq('is_active', true)
-            .maybeSingle();
-          
-          if (!phoneError && userDataByPhone) {
-            console.log('[WelcomeScreen] Usuario encontrado por teléfono:', userDataByPhone.email);
-            email = userDataByPhone.email;
-          } else {
-            // 3. Si no se encontró por phone, buscar por name (username)
-            const { data: userDataByName, error: nameError } = await supabase
-              .from('users')
-              .select('email')
-              .eq('name', identifier)
-              .eq('is_active', true)
-              .maybeSingle();
-            
-            if (!nameError && userDataByName) {
-              console.log('[WelcomeScreen] Usuario encontrado por nombre:', userDataByName.email);
-              email = userDataByName.email;
-            } else {
-              console.log('[WelcomeScreen] Usuario no encontrado por ningún método (email, teléfono o nombre):', identifier);
-              setError('El usuario no existe');
-              setIsLoading(false);
-              return;
-            }
-          }
-        }
-      }
-
-      // Usar login simple - busca por email, phone o name automáticamente
-      console.log('[WelcomeScreen] Intentando login simple con:', { identifier, passwordLength: password.length });
-      const result = await simpleSignIn(identifier, password);
-
-      if (!result.success) {
-        console.log('[WelcomeScreen] Error en login:', result.error);
-        setError(result.error || 'Error al iniciar sesión');
+      // Validar que no contenga espacios
+      if (identifier.includes(' ')) {
+        setError(t('register.noSpacesAllowed') || 'El identificador no puede contener espacios');
         setIsLoading(false);
         return;
       }
-
-      // Guardar usuario en localStorage para sesión simple
-      if (result.user) {
-        localStorage.setItem('simpleAuthUser', JSON.stringify(result.user));
-        console.log('[WelcomeScreen] ✓ Login exitoso, usuario guardado:', result.user);
+      
+      // Si contiene @, usar directamente como email para Supabase Auth
+      if (identifier.includes('@')) {
+        const result = await signIn(identifier, password);
         
-        // Disparar evento para que AuthContext detecte el cambio
-        window.dispatchEvent(new Event('simpleAuthLogin'));
+        if (result.error) {
+          console.log('[WelcomeScreen] Error en login:', result.error);
+          setError(result.error.message || 'Error al iniciar sesión');
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        // Si no contiene @, necesitamos buscar el email asociado al username/phone
+        // porque Supabase Auth requiere email para signIn
+        console.log('[WelcomeScreen] Buscando email para identificador:', identifier);
+        
+        // Importar supabase dinámicamente para evitar errores de importación
+        const { supabase } = await import('../config/supabase');
+        
+        // Buscar el email asociado al username o phone
+        let userEmail = null;
+        
+        // 1. Buscar por phone
+        const { data: userDataByPhone } = await supabase
+          .from('users')
+          .select('email')
+          .eq('phone', identifier)
+          .eq('is_active', true)
+          .maybeSingle();
+        
+        if (userDataByPhone?.email) {
+          userEmail = userDataByPhone.email;
+        } else {
+          // 2. Buscar por name (username)
+          const { data: userDataByName } = await supabase
+            .from('users')
+            .select('email')
+            .eq('name', identifier)
+            .eq('is_active', true)
+            .maybeSingle();
+          
+          if (userDataByName?.email) {
+            userEmail = userDataByName.email;
+          }
+        }
+        
+        if (!userEmail) {
+          console.log('[WelcomeScreen] Usuario no encontrado:', identifier);
+          setError('El usuario no existe');
+          setIsLoading(false);
+          return;
+        }
+        
+        // Usar el email encontrado para hacer login con Supabase Auth
+        const result = await signIn(userEmail, password);
+        
+        if (result.error) {
+          console.log('[WelcomeScreen] Error en login:', result.error);
+          setError(result.error.message || 'Error al iniciar sesión');
+          setIsLoading(false);
+          return;
+        }
       }
 
-      // Login exitoso
+      // Login exitoso - AuthContext se encargará del resto
+      console.log('[WelcomeScreen] ✓ Login exitoso');
       onLogin();
       navigate('/home');
     } catch (err) {

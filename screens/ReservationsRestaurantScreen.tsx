@@ -281,7 +281,7 @@ const ReservationsRestaurantScreen: React.FC = () => {
 
       const existingItem = reservationItems.find(item => item.id === productId);
       const productPrice = typeof product.price === 'number' ? product.price : parseFloat(product.price || '0');
-      const productImage = product.image || product.image_url || '';
+      const productImage = product.image || (product.image_urls && product.image_urls.length > 0 ? product.image_urls[0] : '') || '';
       
       if (existingItem) {
         setReservationItems(prev =>
@@ -316,14 +316,13 @@ const ReservationsRestaurantScreen: React.FC = () => {
   // Productos destacados para pedido anticipado
   const featuredProducts = useMemo(() => {
     if (products.length === 0) return [];
-    // Mostrar productos destacados o los primeros productos de platos fuertes
-    const featured = products.filter(p => p.is_featured);
-    if (featured.length >= 2) {
-      return featured.slice(0, 2);
+    // Mostrar los primeros productos de platos fuertes
+    const mainCourses = products.filter(p => p.category === 'main_courses' || p.category === 'Alimentos');
+    if (mainCourses.length >= 2) {
+      return mainCourses.slice(0, 2);
     }
-    // Si no hay suficientes destacados, agregar platos fuertes
-    const mainCourses = products.filter(p => p.category === 'main_courses' && !p.is_featured);
-    return [...featured, ...mainCourses].slice(0, 2);
+    // Si no hay suficientes platos fuertes, usar los primeros productos disponibles
+    return products.slice(0, 2);
   }, [products]);
 
   // Confirmar reservación
@@ -871,11 +870,11 @@ const ReservationsRestaurantScreen: React.FC = () => {
                   className="flex items-center gap-4 bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-800"
                 >
                   <div className="size-20 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0">
-                    {(product.image || product.image_url) ? (
+                    {(product.image || (product.image_urls && product.image_urls.length > 0)) ? (
                       <img
                         alt={product.name}
                         className="size-full object-cover"
-                        src={product.image || product.image_url || ''}
+                        src={product.image || (product.image_urls && product.image_urls.length > 0 ? product.image_urls[0] : '') || ''}
                       />
                     ) : (
                       <div className="size-full flex items-center justify-center text-gray-400">

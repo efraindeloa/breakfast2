@@ -6,11 +6,11 @@ import { useProducts } from '../contexts/ProductsContext';
 import TopNavbar from '../components/TopNavbar';
 import { formatPrice } from '../utils/currency';
 import { useRestaurant } from '../contexts/RestaurantContext';
-import {
-  createProduct,
-  updateProduct,
-  deleteProduct,
-  getCurrentUserRestaurantId,
+import { 
+  createProduct, 
+  updateProduct, 
+  deleteProduct, 
+  getCurrentUserRestaurantId, 
   uploadProductImage,
   getMenuSections,
   saveMenuSections as saveMenuSectionsAPI
@@ -159,7 +159,7 @@ const MenuRestaurantScreen: React.FC = () => {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSection, setPickerSection] = useState<'chef' | 'highlights' | 'menu'>('chef');
   const [pickerEditingId, setPickerEditingId] = useState<number | null>(null); // dishId actual a reemplazar
-
+  
   // Pantalla de edición de producto
   const [editProductOpen, setEditProductOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Dish | null>(null);
@@ -174,7 +174,7 @@ const MenuRestaurantScreen: React.FC = () => {
   const [allowCustomComplements, setAllowCustomComplements] = useState(false);
   const [productImages, setProductImages] = useState<string[]>([]);
   const [productImageFiles, setProductImageFiles] = useState<File[]>([]);
-
+  
   // Complementos
   type Complement = {
     id: string;
@@ -186,27 +186,31 @@ const MenuRestaurantScreen: React.FC = () => {
   const [newComplementName, setNewComplementName] = useState('');
   const [newComplementPrice, setNewComplementPrice] = useState('');
   const [showSinCosto, setShowSinCosto] = useState(false);
-
+  
   // Categoría del producto (una sola)
   const [productCategory, setProductCategory] = useState<string>('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isCreatingNewCategory, setIsCreatingNewCategory] = useState(false);
 
-  // Subcategorías del producto
+  // Subcategorías del producto (estructura jerárquica)
   const [productSubcategories, setProductSubcategories] = useState<string[]>([]);
+  const [selectedSubcategoryPath, setSelectedSubcategoryPath] = useState<string>(''); // Ruta de la última subcategoría seleccionada
   const [newSubcategoryName, setNewSubcategoryName] = useState('');
   const [isCreatingNewSubcategory, setIsCreatingNewSubcategory] = useState(false);
-
+  const [subcategoryModalOpen, setSubcategoryModalOpen] = useState(false);
+  const [modalCurrentPath, setModalCurrentPath] = useState<string>(''); // Path actual en el modal
+  
   // Modal de confirmación
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmModalMessage, setConfirmModalMessage] = useState('');
   const [confirmModalCallback, setConfirmModalCallback] = useState<(() => void) | null>(null);
-
+  
   // Estado para prevenir múltiples guardados simultáneos
   const [isSaving, setIsSaving] = useState(false);
-
+  
   // Los productos ahora se guardan en Supabase, no localmente
 
+  
   // Cargar picks desde la base de datos
   useEffect(() => {
     const loadMenuSections = async () => {
@@ -283,7 +287,7 @@ const MenuRestaurantScreen: React.FC = () => {
     };
 
     saveMenuSectionsToDB();
-
+    
     return () => {
       if (timeoutId) {
         clearTimeout(timeoutId);
@@ -397,7 +401,7 @@ const MenuRestaurantScreen: React.FC = () => {
       if (dish.badges && dish.badges.length > 0) {
         // Si el producto pertenece a la categoría seleccionada, mostrar sus etiquetas informativas
         if (selectedTagAsCategory && dish.category === selectedTagAsCategory) {
-          dish.badges.forEach((tag) => tagsSet.add(tag));
+        dish.badges.forEach((tag) => tagsSet.add(tag));
         }
       }
     });
@@ -407,7 +411,7 @@ const MenuRestaurantScreen: React.FC = () => {
   // Función para obtener los filtros según la categoría seleccionada
   const getFiltersForCategory = (category: string): Array<{ value: OriginType; icon: string }> => {
     const origCat = getOriginalCategory(category);
-
+    
     if (origCat === 'Entradas' || origCat === 'Platos Fuertes') {
       return [
         { value: 'tierra' as OriginType, icon: 'agriculture' },
@@ -417,7 +421,7 @@ const MenuRestaurantScreen: React.FC = () => {
         { value: 'vegano' as OriginType, icon: 'eco' },
       ];
     }
-
+    
     if (origCat === 'Bebidas') {
       return [
         { value: 'cafe' as OriginType, icon: 'local_cafe' },
@@ -428,7 +432,7 @@ const MenuRestaurantScreen: React.FC = () => {
         { value: 'energizantes' as OriginType, icon: 'bolt' },
       ];
     }
-
+    
     if (origCat === 'Postres') {
       return [
         { value: 'pastel' as OriginType, icon: 'cake' },
@@ -438,7 +442,7 @@ const MenuRestaurantScreen: React.FC = () => {
         { value: 'fruta' as OriginType, icon: 'apple' },
       ];
     }
-
+    
     if (origCat === 'Coctelería') {
       return [
         { value: 'digestivos' as OriginType, icon: 'liquor' },
@@ -448,7 +452,7 @@ const MenuRestaurantScreen: React.FC = () => {
         { value: 'gin' as OriginType, icon: 'local_bar' },
       ];
     }
-
+    
     return [
       { value: 'tierra' as OriginType, icon: 'agriculture' },
       { value: 'mar' as OriginType, icon: 'waves' },
@@ -489,13 +493,29 @@ const MenuRestaurantScreen: React.FC = () => {
   // Obtener productos filtrados por categoría (usando el campo 'category', no 'badges')
   const categoryDishes = useMemo(() => {
     if (!selectedTagAsCategory) return [];
-    return dishes.filter((d) => d.category === selectedTagAsCategory);
-  }, [dishes, selectedTagAsCategory]);
+    return dishes.filter((d) => {
+      // Filtrar por categoría
+      if (d.category !== selectedTagAsCategory) return false;
+      
+      // Si hay una subcategoría seleccionada, filtrar por subcategoría
+      if (selectedSubcategory) {
+        // Mostrar productos que tienen la subcategoría seleccionada O que no tienen subcategorías
+        if (d.subcategories && d.subcategories.length > 0) {
+          return d.subcategories.includes(selectedSubcategory);
+        }
+        // Si no tiene subcategorías, no mostrarlo cuando hay una subcategoría seleccionada
+        return false;
+      }
+      
+      // Si no hay subcategoría seleccionada, mostrar todos los productos de la categoría
+      return true;
+    });
+  }, [dishes, selectedTagAsCategory, selectedSubcategory]);
 
   // Función de búsqueda fuzzy (igual que en MenuScreen)
   const fuzzyMatch = (text: string, query: string): boolean => {
     if (!text || !query) return false;
-
+    
     const normalizedText = text
       .toLowerCase()
       .normalize('NFD')
@@ -569,7 +589,7 @@ const MenuRestaurantScreen: React.FC = () => {
   // Filtrar productos por búsqueda (buscar en todas las categorías cuando hay búsqueda)
   const filteredDishes = useMemo(() => {
     const hasSearchQuery = searchQuery.trim().length > 0;
-
+    
     if (!hasSearchQuery) {
       // Sin búsqueda, retornar todos los productos (se filtrarán por categoría en la renderización)
       return dishes;
@@ -580,10 +600,10 @@ const MenuRestaurantScreen: React.FC = () => {
     const filtered = dishes.filter((dish) => {
       const productName = (dish.name || '').toLowerCase();
       const productDescription = (dish.description || '').toLowerCase();
-
+      
       const matchesName = fuzzyMatch(productName, query);
       const matchesDescription = fuzzyMatch(productDescription, query);
-
+      
       // Debug en desarrollo
       if (process.env.NODE_ENV === 'development') {
         console.log('[MenuRestaurantScreen] Filtering dish:', {
@@ -595,10 +615,10 @@ const MenuRestaurantScreen: React.FC = () => {
           result: matchesName || matchesDescription
         });
       }
-
+      
       return matchesName || matchesDescription;
     });
-
+    
     // Debug en desarrollo
     if (process.env.NODE_ENV === 'development') {
       console.log('[MenuRestaurantScreen] Filtered dishes:', {
@@ -608,7 +628,7 @@ const MenuRestaurantScreen: React.FC = () => {
         filteredNames: filtered.map(d => d.name)
       });
     }
-
+    
     return filtered;
   }, [dishes, searchQuery]);
 
@@ -666,7 +686,7 @@ const MenuRestaurantScreen: React.FC = () => {
     setEditingProductName(product?.name || '');
     setEditingProductPrice(product?.price ? product.price.toString() : '0');
     setEditingProductDescription(product?.description || '');
-
+    
     // Cargar todas las imágenes del producto
     if (product?.id) {
       const fullProduct = products?.find(p => p.id === product.id);
@@ -690,7 +710,7 @@ const MenuRestaurantScreen: React.FC = () => {
     setAllowSpecialInstructions(true);
     setSpecialInstructions('');
     setAllowCustomComplements(false);
-
+    
     // Cargar complementos desde el producto si existe, o usar array vacío
     // Necesitamos obtener el producto completo desde la base de datos para tener los complementos
     if (product?.id) {
@@ -718,7 +738,7 @@ const MenuRestaurantScreen: React.FC = () => {
       setAllowCustomComplements(false);
       setAllowSpecialInstructions(true);
     }
-
+    
     setEditingComplementId(null);
     setNewComplementName('');
     setNewComplementPrice('');
@@ -738,14 +758,62 @@ const MenuRestaurantScreen: React.FC = () => {
     // Cargar subcategorías del producto
     if (fullProduct?.subcategories && Array.isArray(fullProduct.subcategories) && fullProduct.subcategories.length > 0) {
       setProductSubcategories(fullProduct.subcategories.map(sub => sub.trim()).filter(sub => sub !== ''));
+      // Establecer la última subcategoría como ruta seleccionada si hay alguna
+      const lastSubcategory = fullProduct.subcategories[fullProduct.subcategories.length - 1];
+      if (lastSubcategory) {
+        setSelectedSubcategoryPath(lastSubcategory.trim());
+      } else {
+        setSelectedSubcategoryPath('');
+      }
     } else {
       setProductSubcategories([]);
+      setSelectedSubcategoryPath('');
     }
     setNewSubcategoryName('');
     setIsCreatingNewSubcategory(false);
     setEditProductOpen(true);
     closePicker(); // Cerrar el picker si está abierto
   };
+  
+  // Leer parámetros de URL para prellenar categoría y subcategoría (después de definir openEditProduct)
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const categoryParam = searchParams.get('category');
+    const subcategoryParam = searchParams.get('subcategory');
+    const createParam = searchParams.get('create');
+    const editParam = searchParams.get('edit');
+    
+    // Si hay parámetro create=true, abrir el diálogo de creación con categoría y subcategoría prellenadas
+    if (createParam === 'true' && categoryParam) {
+      setProductCategory(categoryParam);
+      if (subcategoryParam) {
+        setProductSubcategories([subcategoryParam]);
+        setSelectedSubcategoryPath(subcategoryParam);
+      }
+      // Abrir el diálogo de creación después de un pequeño delay para asegurar que el componente esté listo
+      setTimeout(() => {
+        openEditProduct();
+        // Limpiar los parámetros de URL
+        navigate(location.pathname, { replace: true });
+      }, 100);
+      return;
+    }
+    
+    // Si hay parámetro edit, abrir el diálogo de edición
+    if (editParam && dishes.length > 0) {
+      const productId = parseInt(editParam, 10);
+      if (!isNaN(productId)) {
+        const product = dishes.find(d => d.id === productId);
+        if (product) {
+          setTimeout(() => {
+            openEditProduct(product);
+            // Limpiar los parámetros de URL
+            navigate(location.pathname, { replace: true });
+          }, 100);
+        }
+      }
+    }
+  }, [location.search]);
 
   const closeEditProduct = () => {
     setEditProductOpen(false);
@@ -770,6 +838,7 @@ const MenuRestaurantScreen: React.FC = () => {
     setNewCategoryName('');
     setIsCreatingNewCategory(false);
     setProductSubcategories([]);
+    setSelectedSubcategoryPath('');
     setNewSubcategoryName('');
     setIsCreatingNewSubcategory(false);
   };
@@ -801,10 +870,10 @@ const MenuRestaurantScreen: React.FC = () => {
     if (!newComplementName.trim()) {
       return; // No hacer nada si no hay nombre
     }
-
+    
     const priceValue = parseFloat(newComplementPrice) || 0;
     const isEmptyOrZero = !newComplementPrice.trim() || newComplementPrice.trim() === '0' || newComplementPrice.trim() === '0.00' || priceValue === 0 || isNaN(priceValue);
-
+    
     // Agregar complemento (con precio 0 si está vacío o es 0)
     const newComplement: Complement = {
       id: Date.now().toString(),
@@ -825,8 +894,8 @@ const MenuRestaurantScreen: React.FC = () => {
 
   const saveEditComplement = () => {
     if (editingComplementId && newComplementName.trim() && newComplementPrice.trim()) {
-      setComplements(complements.map(c =>
-        c.id === editingComplementId
+      setComplements(complements.map(c => 
+        c.id === editingComplementId 
           ? { ...c, name: newComplementName.trim(), price: parseFloat(newComplementPrice) || 0 }
           : c
       ));
@@ -861,8 +930,9 @@ const MenuRestaurantScreen: React.FC = () => {
     setProductCategory(category);
     setIsCreatingNewCategory(false);
     setNewCategoryName('');
-    // Limpiar subcategorías cuando cambia la categoría
+    // Limpiar subcategorías y ruta cuando cambia la categoría
     setProductSubcategories([]);
+    setSelectedSubcategoryPath('');
   };
 
   const createNewCategory = () => {
@@ -873,10 +943,12 @@ const MenuRestaurantScreen: React.FC = () => {
     setNewCategoryName('');
   };
 
-  // Obtener subcategorías existentes para la categoría seleccionada
-  const availableSubcategories = useMemo(() => {
+  // Obtener todas las subcategorías existentes para la categoría seleccionada (sin filtrar por jerarquía)
+  const allAvailableSubcategories = useMemo(() => {
     if (!productCategory) return [];
     const subcategoriesSet = new Set<string>();
+
+    // Subcategorías que ya existen en la base de datos (a partir de los platos actuales)
     dishes.forEach((dish) => {
       if (dish.category === productCategory && dish.subcategories && dish.subcategories.length > 0) {
         dish.subcategories.forEach((subcat) => {
@@ -886,25 +958,114 @@ const MenuRestaurantScreen: React.FC = () => {
         });
       }
     });
-    return Array.from(subcategoriesSet).sort();
-  }, [dishes, productCategory]);
 
-  // Funciones CRUD para subcategorías
+    // Subcategorías que el usuario ha agregado en el formulario actual (productSubcategories)
+    productSubcategories.forEach((subcat) => {
+      if (subcat && subcat.trim() !== '') {
+        subcategoriesSet.add(subcat.trim());
+      }
+    });
+
+    return Array.from(subcategoriesSet).sort();
+  }, [dishes, productCategory, productSubcategories]);
+
+  // Obtener subcategorías disponibles en el nivel actual (basado en la ruta seleccionada)
+  const availableSubcategories = useMemo(() => {
+    if (!productCategory) return [];
+    
+    // Si no hay ruta seleccionada, mostrar todas las subcategorías de nivel raíz
+    if (!selectedSubcategoryPath) {
+      // Subcategorías de nivel raíz: las que no tienen " > " (no son hijas de otras)
+      return allAvailableSubcategories.filter(sub => !sub.includes(' > '));
+    }
+    
+    // Si hay una ruta seleccionada, mostrar solo las subcategorías hijas directas
+    // Una subcategoría hija directa es aquella que empieza con "ruta > " y no tiene más niveles
+    const parentPath = selectedSubcategoryPath + ' > ';
+    const children = allAvailableSubcategories.filter(sub => {
+      // Debe empezar con la ruta del padre
+      if (!sub.startsWith(parentPath)) return false;
+      // Debe ser hija directa (solo un nivel más profundo)
+      const remaining = sub.substring(parentPath.length);
+      return !remaining.includes(' > ');
+    });
+    
+    return children;
+  }, [allAvailableSubcategories, selectedSubcategoryPath]);
+
+  // Funciones CRUD para subcategorías (con soporte jerárquico)
+  const selectSubcategory = (subcategoryNameOrPath: string) => {
+    // Si la subcategoría ya tiene " > ", es una ruta completa, usarla directamente
+    // Si no, construir la ruta completa basándose en la ruta seleccionada actual
+    let fullPath: string;
+    if (subcategoryNameOrPath.includes(' > ')) {
+      fullPath = subcategoryNameOrPath;
+    } else {
+      fullPath = selectedSubcategoryPath 
+        ? `${selectedSubcategoryPath} > ${subcategoryNameOrPath}`
+        : subcategoryNameOrPath;
+    }
+    
+    // Agregar a la lista de subcategorías si no existe
+    if (!productSubcategories.some(sub => sub.toLowerCase() === fullPath.toLowerCase())) {
+      setProductSubcategories([...productSubcategories, fullPath]);
+    }
+    
+    // Actualizar la ruta seleccionada para mostrar las subcategorías hijas
+    setSelectedSubcategoryPath(fullPath);
+    setIsCreatingNewSubcategory(false);
+    setNewSubcategoryName('');
+  };
+
   const addSubcategory = () => {
     if (!newSubcategoryName.trim()) {
       return;
     }
     const subcategoryName = toTitleCase(newSubcategoryName.trim());
+    // Construir la ruta completa basada en el path actual
+    const fullPath = selectedSubcategoryPath 
+      ? `${selectedSubcategoryPath} > ${subcategoryName}`
+      : subcategoryName;
+    
     // Evitar duplicados (case-insensitive)
-    if (!productSubcategories.some(sub => sub.toLowerCase() === subcategoryName.toLowerCase())) {
-      setProductSubcategories([...productSubcategories, subcategoryName]);
-      setNewSubcategoryName('');
+    if (!productSubcategories.some(sub => sub.toLowerCase() === fullPath.toLowerCase())) {
+      setProductSubcategories([...productSubcategories, fullPath]);
+      // Actualizar selectedSubcategoryPath al nuevo path para que los dropdowns muestren correctamente la selección
+      setSelectedSubcategoryPath(fullPath);
     }
+    setNewSubcategoryName('');
+    setIsCreatingNewSubcategory(false);
   };
 
   const deleteSubcategory = (subcategoryToDelete: string) => {
     const normalizedSubcategoryToDelete = subcategoryToDelete.trim().toLowerCase();
-    setProductSubcategories(productSubcategories.filter(sub => sub.trim().toLowerCase() !== normalizedSubcategoryToDelete));
+    const updated = productSubcategories.filter(sub => sub.trim().toLowerCase() !== normalizedSubcategoryToDelete);
+    setProductSubcategories(updated);
+    
+    // Si la subcategoría eliminada era la seleccionada, volver al nivel padre
+    if (selectedSubcategoryPath.toLowerCase() === normalizedSubcategoryToDelete) {
+      const parentPath = selectedSubcategoryPath.includes(' > ')
+        ? selectedSubcategoryPath.substring(0, selectedSubcategoryPath.lastIndexOf(' > '))
+        : '';
+      setSelectedSubcategoryPath(parentPath);
+    }
+  };
+
+  const navigateToSubcategoryLevel = (path: string) => {
+    setSelectedSubcategoryPath(path);
+    setIsCreatingNewSubcategory(false);
+    setNewSubcategoryName('');
+  };
+
+  const navigateToParentLevel = () => {
+    if (selectedSubcategoryPath.includes(' > ')) {
+      const parentPath = selectedSubcategoryPath.substring(0, selectedSubcategoryPath.lastIndexOf(' > '));
+      setSelectedSubcategoryPath(parentPath);
+    } else {
+      setSelectedSubcategoryPath('');
+    }
+    setIsCreatingNewSubcategory(false);
+    setNewSubcategoryName('');
   };
 
   // Función para manejar la selección de imagen
@@ -941,7 +1102,7 @@ const MenuRestaurantScreen: React.FC = () => {
       if (editingProduct?.image && !productImages.includes(editingProduct.image)) {
         allImages.push(editingProduct.image);
       }
-
+      
       // Si el índice está dentro de productImages
       if (index < productImages.length) {
         setProductImages((prev) => prev.filter((_, i) => i !== index));
@@ -957,13 +1118,13 @@ const MenuRestaurantScreen: React.FC = () => {
     console.log('[MenuRestaurantScreen] editingProductName:', editingProductName);
     console.log('[MenuRestaurantScreen] editingProduct:', editingProduct);
     console.log('[MenuRestaurantScreen] isSaving:', isSaving);
-
+    
     // Prevenir múltiples ejecuciones simultáneas
     if (isSaving) {
       console.warn('[MenuRestaurantScreen] Ya se está guardando, ignorando click duplicado');
       return;
     }
-
+    
     if (!editingProductName.trim()) {
       console.warn('[MenuRestaurantScreen] No se puede guardar: el nombre está vacío');
       alert(t('restaurant.menu.errors.emptyName'));
@@ -986,7 +1147,7 @@ const MenuRestaurantScreen: React.FC = () => {
         alert(t('restaurant.menu.errors.invalidRestaurant'));
         return;
       }
-
+      
       const restaurantId = restaurantIdResult.data;
       console.log('[MenuRestaurantScreen] Restaurant ID:', restaurantId);
 
@@ -995,7 +1156,7 @@ const MenuRestaurantScreen: React.FC = () => {
       console.log('[MenuRestaurantScreen] productImageFiles.length:', productImageFiles.length);
       console.log('[MenuRestaurantScreen] productImages.length:', productImages.length);
       const uploadedImageUrls: string[] = [];
-
+      
       if (productImageFiles.length > 0) {
         console.log('[MenuRestaurantScreen] Subiendo', productImageFiles.length, 'imágenes...');
         // Subir todas las imágenes nuevas
@@ -1013,20 +1174,20 @@ const MenuRestaurantScreen: React.FC = () => {
           }
         }
       }
-
+      
       // Combinar imágenes: si estamos editando, combinar las existentes con las nuevas
       let allImageUrls: string[] = [];
-
+      
       if (editingProduct && editingProduct.id) {
         // Al editar: obtener imágenes existentes del producto
         const existingProduct = products?.find(p => p.id === editingProduct.id);
         const existingImageUrls = existingProduct?.image_urls || [];
-
+        
         // Filtrar las imágenes existentes que el usuario NO eliminó
         // productImageFiles contiene SOLO las imágenes nuevas (archivos subidos)
         // Las imágenes en productImages que no estén en productImageFiles son las existentes que se mantienen
         const existingImagesToKeep: string[] = [];
-
+        
         // Convertir existingImageUrls a URLs completas para comparación
         const existingUrlsComplete = existingImageUrls.map(path => getProductImageUrl(path));
 
@@ -1040,16 +1201,16 @@ const MenuRestaurantScreen: React.FC = () => {
             if (imagePath) {
               existingImagesToKeep.push(imagePath);
             }
-          }
+            }
         });
-
+        
         // Combinar: primero las existentes que se mantienen, luego las nuevas subidas
         allImageUrls = [...existingImagesToKeep, ...uploadedImageUrls];
       } else {
         // Al crear: solo usar las imágenes nuevas subidas
         allImageUrls = uploadedImageUrls;
       }
-
+      
       // Si no hay imágenes en allImageUrls pero hay en productImages, significa que son base64 sin subir
       // (lo cual no debería pasar porque ya se subieron, pero por si acaso)
       if (allImageUrls.length === 0 && productImages.length > 0) {
@@ -1061,18 +1222,18 @@ const MenuRestaurantScreen: React.FC = () => {
           }
         });
       }
-
+      
       // Usar image_urls (array) como única fuente de imágenes
 
       const priceValue = parseFloat(editingProductPrice) || 0;
-
+      
       // Validar que el precio sea válido
       if (isNaN(priceValue) || priceValue < 0) {
         console.error('[MenuRestaurantScreen] Precio inválido:', editingProductPrice);
         alert(t('restaurant.menu.errors.invalidPrice'));
         return;
       }
-
+      
       // Validar que haya una categoría seleccionada
       if (!productCategory || productCategory.trim() === '') {
         console.error('[MenuRestaurantScreen] No hay categoría definida');
@@ -1093,7 +1254,7 @@ const MenuRestaurantScreen: React.FC = () => {
       console.log('[MenuRestaurantScreen] Verificando si es edición o creación...');
       console.log('[MenuRestaurantScreen] editingProduct:', editingProduct);
       console.log('[MenuRestaurantScreen] editingProduct?.id:', editingProduct?.id);
-
+      
       if (editingProduct && editingProduct.id) {
         console.log('[MenuRestaurantScreen] Modo: EDITAR producto existente');
         // Estamos editando un producto existente
@@ -1154,6 +1315,7 @@ const MenuRestaurantScreen: React.FC = () => {
           price: priceValue,
           image_urls: allImageUrls, // Enviar todas las URLs de imágenes
           category: categoryName,
+          subcategories: productSubcategories.length > 0 ? productSubcategories : undefined,
           badges: [], // Ya no usamos badges para categorías
           complements: complements, // Siempre enviar el array, incluso si está vacío
           allow_custom_complements: allowCustomComplements,
@@ -1165,40 +1327,40 @@ const MenuRestaurantScreen: React.FC = () => {
           console.log('[MenuRestaurantScreen] Producto creado en Supabase:', created);
           // Refrescar los productos del contexto
           await refreshProducts();
-
+          
           // Agregar el producto solo a la sección "Menú" (no a "Sugerencias del chef" ni "Destacados")
           if (created.id) {
             // Si el producto está en "Sugerencias del chef" o "Destacados" (por valores por defecto o localStorage), eliminarlo
             // Usar la categoría del producto para las secciones
             const productCategoryForSections = productCategory || '';
             if (productCategoryForSections) {
-              setChefSuggestionsByCategory((prev) => {
+            setChefSuggestionsByCategory((prev) => {
                 const current = prev[productCategoryForSections] || [];
-                if (current.includes(created.id)) {
-                  console.log('[MenuRestaurantScreen] Producto removido de Sugerencias del chef (estaba presente)');
+              if (current.includes(created.id)) {
+                console.log('[MenuRestaurantScreen] Producto removido de Sugerencias del chef (estaba presente)');
                   return { ...prev, [productCategoryForSections]: current.filter((id) => id !== created.id) };
-                }
-                return prev;
-              });
-
-              setHighlightsByCategory((prev) => {
+              }
+              return prev;
+            });
+            
+            setHighlightsByCategory((prev) => {
                 const current = prev[productCategoryForSections] || [];
-                if (current.includes(created.id)) {
-                  console.log('[MenuRestaurantScreen] Producto removido de Destacados (estaba presente)');
+              if (current.includes(created.id)) {
+                console.log('[MenuRestaurantScreen] Producto removido de Destacados (estaba presente)');
                   return { ...prev, [productCategoryForSections]: current.filter((id) => id !== created.id) };
-                }
-                return prev;
-              });
-
-              // Agregar solo a "Menú" si no está ya presente
-              setMenuItemsByCategory((prev) => {
+              }
+              return prev;
+            });
+            
+            // Agregar solo a "Menú" si no está ya presente
+            setMenuItemsByCategory((prev) => {
                 const current = prev[productCategoryForSections] || [];
-                if (!current.includes(created.id)) {
-                  console.log('[MenuRestaurantScreen] Producto agregado a Menú');
+              if (!current.includes(created.id)) {
+                console.log('[MenuRestaurantScreen] Producto agregado a Menú');
                   return { ...prev, [productCategoryForSections]: [...current, created.id] };
-                }
-                return prev;
-              });
+              }
+              return prev;
+            });
             }
           }
         } else {
@@ -1293,7 +1455,7 @@ const MenuRestaurantScreen: React.FC = () => {
                 });
                 return updated;
               });
-
+              
               setHighlightsByCategory((prev) => {
                 const updated: PicksByCategory = {};
                 Object.keys(prev).forEach((category) => {
@@ -1301,7 +1463,7 @@ const MenuRestaurantScreen: React.FC = () => {
                 });
                 return updated;
               });
-
+              
               setMenuItemsByCategory((prev) => {
                 const updated: PicksByCategory = {};
                 Object.keys(prev).forEach((category) => {
@@ -1312,7 +1474,7 @@ const MenuRestaurantScreen: React.FC = () => {
 
               // Refrescar los productos para actualizar la lista
               await refreshProducts();
-
+              
               console.log('[MenuRestaurantScreen] Producto eliminado completamente de todas las secciones');
             } catch (error) {
               console.error('[MenuRestaurantScreen] Error al eliminar el producto:', error);
@@ -1330,18 +1492,18 @@ const MenuRestaurantScreen: React.FC = () => {
           // Usar el campo 'category' del producto
           const productCategory = dishToRemove.category;
 
-          if (section === 'chef') {
-            setChefSuggestionsByCategory((prev) => {
+        if (section === 'chef') {
+          setChefSuggestionsByCategory((prev) => {
               const current = prev[productCategory] || [];
               return { ...prev, [productCategory]: current.filter((id) => id !== dishId) };
-            });
-            console.log('[MenuRestaurantScreen] Producto removido de Sugerencias del chef');
-          } else if (section === 'highlights') {
-            setHighlightsByCategory((prev) => {
+          });
+          console.log('[MenuRestaurantScreen] Producto removido de Sugerencias del chef');
+        } else if (section === 'highlights') {
+          setHighlightsByCategory((prev) => {
               const current = prev[productCategory] || [];
               return { ...prev, [productCategory]: current.filter((id) => id !== dishId) };
-            });
-            console.log('[MenuRestaurantScreen] Producto removido de Destacados');
+          });
+          console.log('[MenuRestaurantScreen] Producto removido de Destacados');
           }
         }
       }
@@ -1396,7 +1558,7 @@ const MenuRestaurantScreen: React.FC = () => {
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden overflow-y-scroll bg-background-light dark:bg-background-dark" style={{ height: '100vh' }}>
-      <TopNavbar title={selectedRestaurant || 'RESTAURANT'} showAvatar={true} />
+      <TopNavbar showAvatar={true} showWelcome={true} showBackButton={false} />
 
       {/* Categories */}
       <div className="sticky top-[73px] z-40 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
@@ -1418,11 +1580,11 @@ const MenuRestaurantScreen: React.FC = () => {
               className={`flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full px-4 ${!searchQuery.trim() && selectedCategory === cat
                   ? 'bg-primary shadow-md shadow-primary/20'
                   : 'bg-white dark:bg-[#322a1a] border border-[#f4f3f0] dark:border-[#3d3321]'
-                }`}
+              }`}
             >
               <p
                 className={`text-sm ${!searchQuery.trim() && selectedCategory === cat ? 'font-semibold text-white' : 'font-medium text-[#181611] dark:text-stone-300'
-                  }`}
+                }`}
               >
                 {cat}
               </p>
@@ -1497,7 +1659,7 @@ const MenuRestaurantScreen: React.FC = () => {
           className={`w-full rounded-xl border px-4 py-3 flex items-center justify-between ${editMode
               ? 'border-primary/30 bg-primary/10 text-primary'
               : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#322a1a] text-[#181611] dark:text-white'
-            }`}
+          }`}
         >
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined">{editMode ? 'edit_off' : 'edit'}</span>
@@ -1533,7 +1695,7 @@ const MenuRestaurantScreen: React.FC = () => {
                     <div
                       onClick={() => (!editMode ? navigateToDish(dish.id) : undefined)}
                       className={`w-full bg-center bg-no-repeat aspect-[16/10] bg-cover rounded-lg flex flex-col relative ${!editMode ? 'cursor-pointer' : ''
-                        }`}
+                      }`}
                       style={getImageStyle(dish.image)}
                     >
                       <div className="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
@@ -1658,14 +1820,14 @@ const MenuRestaurantScreen: React.FC = () => {
         </div>
 
 
-        {/* Menu Items */}
-        <div className="flex flex-col gap-4">
-          {(searchQuery.trim()
-            ? filteredDishes
-            : (menuIds.length > 0
-              ? menuIds
-                .map((dishId) => dishes.find((d) => d.id === dishId))
-                .filter((dish): dish is Dish => {
+          {/* Menu Items */}
+          <div className="flex flex-col gap-4">
+            {(searchQuery.trim() 
+              ? filteredDishes 
+              : (menuIds.length > 0
+                  ? menuIds
+                      .map((dishId) => dishes.find((d) => d.id === dishId))
+                      .filter((dish): dish is Dish => {
                   if (!dish) return false;
                   // Filtrar por la categoría seleccionada
                   if (!selectedTagAsCategory || dish.category !== selectedTagAsCategory) return false;
@@ -1674,12 +1836,12 @@ const MenuRestaurantScreen: React.FC = () => {
                     return !dish.subcategories || dish.subcategories.length === 0 || dish.subcategories.includes(selectedSubcategory);
                   }
                   // Si hay un filtro de etiqueta adicional, aplicarlo
-                  if (selectedTag) {
-                    return dish.badges?.includes(selectedTag) || false;
-                  }
-                  return true;
-                })
-              : dishes.filter((dish) => {
+                        if (selectedTag) {
+                          return dish.badges?.includes(selectedTag) || false;
+                        }
+                        return true;
+                      })
+                  : dishes.filter((dish) => {
                 // Si no hay productos en menuItemsByCategory, mostrar todos los que tienen la categoría seleccionada
                 if (!selectedTagAsCategory || dish.category !== selectedTagAsCategory) return false;
                 // Si hay una subcategoría seleccionada, mostrar productos con esa subcategoría O sin subcategorías
@@ -1687,107 +1849,107 @@ const MenuRestaurantScreen: React.FC = () => {
                   return !dish.subcategories || dish.subcategories.length === 0 || dish.subcategories.includes(selectedSubcategory);
                 }
                 // Si hay un filtro de etiqueta adicional, aplicarlo
-                if (selectedTag) {
-                  return dish.badges?.includes(selectedTag) || false;
-                }
-                return true;
-              })
-            )
-          ).map((dish) => (
-            <div
-              key={dish.id}
-              onClick={() => (!editMode ? navigateToDish(dish.id) : undefined)}
+                      if (selectedTag) {
+                        return dish.badges?.includes(selectedTag) || false;
+                      }
+                      return true;
+                    })
+                )
+            ).map((dish) => (
+                <div
+                  key={dish.id}
+                  onClick={() => (!editMode ? navigateToDish(dish.id) : undefined)}
               className={`group relative flex items-stretch justify-between gap-4 rounded-xl bg-white dark:bg-[#2d2516] p-4 shadow-[0_2px_15px_rgba(0,0,0,0.05)] border border-[#f4f3f0] dark:border-[#3d3321] transition-transform ${!editMode ? 'active:scale-[0.98] cursor-pointer' : ''
-                }`}
-            >
-              <div className="flex flex-[2_2_0px] flex-col justify-between gap-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-[#181611] dark:text-white text-base font-bold leading-tight">{dish.name}</p>
-                    {dish.badges?.includes('vegano') && (
-                      <span className="material-symbols-outlined text-xs text-green-500" title={t('menu.badges.vegan')}>eco</span>
-                    )}
-                    {dish.badges?.includes('especialidad') && (
-                      <span className="material-symbols-outlined text-xs text-orange-500" title={t('menu.badges.specialty')}>star</span>
-                    )}
+                  }`}
+                >
+                  <div className="flex flex-[2_2_0px] flex-col justify-between gap-3">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[#181611] dark:text-white text-base font-bold leading-tight">{dish.name}</p>
+                        {dish.badges?.includes('vegano') && (
+                          <span className="material-symbols-outlined text-xs text-green-500" title={t('menu.badges.vegan')}>eco</span>
+                        )}
+                        {dish.badges?.includes('especialidad') && (
+                          <span className="material-symbols-outlined text-xs text-orange-500" title={t('menu.badges.specialty')}>star</span>
+                        )}
+                      </div>
+                      <p className="text-[#897c61] dark:text-stone-400 text-sm font-normal leading-snug">{dish.description}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!editMode) navigateToDish(dish.id);
+                        }}
+                        className="flex min-w-[84px] cursor-pointer items-center justify-center rounded-full h-8 px-4 bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary/90 transition-colors"
+                      >
+                        <span className="truncate">{formatPrice(dish.price, localStorage.getItem('selectedLanguage'))}</span>
+                      </button>
+                      {editMode && (
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditProduct(dish);
+                            }}
+                            className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
+                            title={t('restaurant.menu.edit')}
+                          >
+                            <span className="material-symbols-outlined">edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removePick('menu', dish.id);
+                            }}
+                            className="w-9 h-9 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center"
+                            title={t('restaurant.menu.delete')}
+                          >
+                            <span className="material-symbols-outlined">delete</span>
+                          </button>
+                        </div>
+                      )}
+                      {!editMode && (
+                        <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary transition-colors cursor-default">
+                          <span className="material-symbols-outlined text-lg">note_add</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-[#897c61] dark:text-stone-400 text-sm font-normal leading-snug">{dish.description}</p>
+                  <div className="w-32 h-32 bg-center bg-no-repeat bg-cover rounded-xl flex-shrink-0 relative" style={getImageStyle(dish.image)}>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!editMode) navigateToDish(dish.id);
-                    }}
-                    className="flex min-w-[84px] cursor-pointer items-center justify-center rounded-full h-8 px-4 bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary/90 transition-colors"
-                  >
-                    <span className="truncate">{formatPrice(dish.price, localStorage.getItem('selectedLanguage'))}</span>
-                  </button>
-                  {editMode && (
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditProduct(dish);
-                        }}
-                        className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
-                        title={t('restaurant.menu.edit')}
-                      >
-                        <span className="material-symbols-outlined">edit</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removePick('menu', dish.id);
-                        }}
-                        className="w-9 h-9 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center"
-                        title={t('restaurant.menu.delete')}
-                      >
-                        <span className="material-symbols-outlined">delete</span>
-                      </button>
-                    </div>
-                  )}
-                  {!editMode && (
-                    <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary transition-colors cursor-default">
-                      <span className="material-symbols-outlined text-lg">note_add</span>
-                    </div>
-                  )}
-                </div>
+              ))}
+            
+            {searchQuery.trim() && filteredDishes.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
+                <span className="material-symbols-outlined text-4xl mb-2">search_off</span>
+                <p className="text-sm text-center">{t('menu.noDishesFound')}</p>
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="mt-4 px-4 py-2 bg-primary text-white rounded-xl font-semibold text-sm"
+                >
+                  {t('menu.clearFilters')}
+                </button>
               </div>
-              <div className="w-32 h-32 bg-center bg-no-repeat bg-cover rounded-xl flex-shrink-0 relative" style={getImageStyle(dish.image)}>
-              </div>
-            </div>
-          ))}
-
-          {searchQuery.trim() && filteredDishes.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
-              <span className="material-symbols-outlined text-4xl mb-2">search_off</span>
-              <p className="text-sm text-center">{t('menu.noDishesFound')}</p>
+            )}
+            
+            {editMode && !searchQuery.trim() && (
               <button
-                onClick={() => setSearchQuery('')}
-                className="mt-4 px-4 py-2 bg-primary text-white rounded-xl font-semibold text-sm"
+                type="button"
+                onClick={() => openEditProduct()}
+                className="flex items-center justify-center w-full rounded-xl border-2 border-dashed border-primary/40 text-primary bg-primary/5 py-6"
               >
-                {t('menu.clearFilters')}
+                <div className="flex flex-col items-center">
+                  <span className="material-symbols-outlined text-3xl">add</span>
+                  <span className="text-sm font-bold">{getAddButtonText(selectedCategory)}</span>
+                </div>
               </button>
-            </div>
-          )}
-
-          {editMode && !searchQuery.trim() && (
-            <button
-              type="button"
-              onClick={() => openEditProduct()}
-              className="flex items-center justify-center w-full rounded-xl border-2 border-dashed border-primary/40 text-primary bg-primary/5 py-6"
-            >
-              <div className="flex flex-col items-center">
-                <span className="material-symbols-outlined text-3xl">add</span>
-                <span className="text-sm font-bold">{getAddButtonText(selectedCategory)}</span>
-              </div>
-            </button>
-          )}
-        </div>
-      </section>
+            )}
+          </div>
+        </section>
 
       {/* Modal: seleccionar dish */}
       {pickerOpen && (
@@ -1795,10 +1957,10 @@ const MenuRestaurantScreen: React.FC = () => {
           <div className="w-full bg-white dark:bg-gray-800 rounded-t-3xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
               <h3 className="text-xl font-bold text-[#181611] dark:text-white">
-                {pickerSection === 'chef'
+                {pickerSection === 'chef' 
                   ? t('restaurant.menu.chefSuggestions')
-                  : pickerSection === 'highlights'
-                    ? t('restaurant.menu.highlights')
+                  : pickerSection === 'highlights' 
+                  ? t('restaurant.menu.highlights')
                     : t('restaurant.menu.menu')} • {selectedTagAsCategory || 'Sin categoría'}
               </h3>
               <button
@@ -1843,20 +2005,20 @@ const MenuRestaurantScreen: React.FC = () => {
 
       {/* Pantalla de edición de producto */}
       {editProductOpen && (
-        <div
+        <div 
           className="fixed inset-0 z-[100] bg-background-light dark:bg-background-dark flex flex-col overflow-y-auto"
-          style={{
+          style={{ 
             paddingTop: 'env(safe-area-inset-top)',
             paddingBottom: 'calc(6.5rem + env(safe-area-inset-bottom))'
           }}
         >
           {/* Header con imagen */}
           <div className="relative w-full aspect-[4/3] overflow-hidden">
-            <div
-              className="absolute inset-0 bg-center bg-cover bg-no-repeat"
-              style={{
-                backgroundImage: (productImages.length > 0 ? `url("${productImages[0]}")` : (editingProduct?.image ? `url("${editingProduct.image}")` : 'none')),
-                backgroundColor: '#f5f0e8'
+            <div 
+              className="absolute inset-0 bg-center bg-cover bg-no-repeat" 
+              style={{ 
+                backgroundImage: (productImages.length > 0 ? `url("${productImages[0]}")` : (editingProduct?.image ? `url("${editingProduct.image}")` : 'none')), 
+                backgroundColor: '#f5f0e8' 
               }}
             >
               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60"></div>
@@ -1885,8 +2047,8 @@ const MenuRestaurantScreen: React.FC = () => {
                 const isOriginalImage = editingProduct?.image === image && !productImages.includes(image);
                 return (
                   <div key={index} className="relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border-2 border-gray-200 dark:border-gray-700">
-                    <img
-                      src={image}
+                    <img 
+                      src={image} 
                       alt={`Imagen ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
@@ -1900,7 +2062,7 @@ const MenuRestaurantScreen: React.FC = () => {
                   </div>
                 );
               })}
-
+              
               {/* Botón para agregar imagen */}
               <label className="flex-shrink-0 w-24 h-24 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 flex items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors">
                 <input
@@ -1945,7 +2107,7 @@ const MenuRestaurantScreen: React.FC = () => {
                       />
                     </div>
                   ) : (
-                    <h1
+                    <h1 
                       onClick={() => setIsEditingName(true)}
                       className="text-2xl font-bold text-[#181611] dark:text-white leading-tight mb-2 cursor-pointer hover:opacity-70 transition-opacity"
                     >
@@ -1982,23 +2144,6 @@ const MenuRestaurantScreen: React.FC = () => {
                             + {t('restaurant.menu.createNewCategory') || 'Crear nueva categoría'}
                           </option>
                         </select>
-                        {productCategory && (
-                          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
-                            <span className="material-symbols-outlined text-primary text-sm">category</span>
-                            <span className="text-sm font-medium text-primary">{productCategory}</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setProductCategory('');
-                                setProductSubcategories([]);
-                              }}
-                              className="ml-auto w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors flex-shrink-0"
-                              title={t('restaurant.menu.clearCategory') || 'Limpiar categoría'}
-                            >
-                              <span className="material-symbols-outlined text-sm">close</span>
-                            </button>
-                          </div>
-                        )}
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
@@ -2041,102 +2186,50 @@ const MenuRestaurantScreen: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Subcategorías del producto */}
+                  {/* Subcategorías del producto (estructura jerárquica) */}
                   {productCategory && (
                     <div className="mt-4">
                       <label className="block text-sm font-medium text-[#181611] dark:text-white mb-2">
                         {t('restaurant.menu.subcategories') || 'Subcategorías'} <span className="text-gray-500 text-xs">({t('restaurant.menu.optional') || 'Opcional'})</span>
                       </label>
                       <div className="space-y-3">
-                        {/* Subcategorías seleccionadas */}
+                        {/* Botón para abrir el modal de subcategorías */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setModalCurrentPath('');
+                            setSubcategoryModalOpen(true);
+                          }}
+                          className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-[#181611] dark:text-white hover:border-primary hover:bg-primary/5 transition-colors flex items-center justify-between"
+                        >
+                          <span className="text-sm">
+                            {productSubcategories.length > 0 
+                              ? `${productSubcategories.length} ${productSubcategories.length === 1 ? 'subcategoría seleccionada' : 'subcategorías seleccionadas'}`
+                              : t('restaurant.menu.selectSubcategory') || 'Seleccionar subcategorías...'}
+                          </span>
+                          <span className="material-symbols-outlined text-gray-400">chevron_right</span>
+                        </button>
+                        
+                        {/* Mostrar subcategorías seleccionadas como badges */}
                         {productSubcategories.length > 0 && (
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {productSubcategories.map((subcategory) => (
-                              <div key={subcategory} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-medium border border-blue-200 dark:border-blue-800">
-                                <span className="material-symbols-outlined text-sm">category</span>
-                                <span>{subcategory}</span>
+                          <div className="flex flex-wrap gap-2">
+                            {productSubcategories.map((subcat) => (
+                              <div
+                                key={subcat}
+                                className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-sm"
+                              >
+                                <span className="text-primary">{subcat}</span>
                                 <button
                                   type="button"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    deleteSubcategory(subcategory);
+                                  onClick={() => {
+                                    setProductSubcategories(productSubcategories.filter(s => s !== subcat));
                                   }}
-                                  className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors flex-shrink-0"
-                                  title={t('restaurant.menu.deleteSubcategory') || 'Eliminar subcategoría'}
+                                  className="text-primary hover:text-primary-dark transition-colors"
                                 >
                                   <span className="material-symbols-outlined text-sm">close</span>
                                 </button>
                               </div>
                             ))}
-                          </div>
-                        )}
-                        
-                        {/* Selector de subcategorías existentes o crear nueva */}
-                        {!isCreatingNewSubcategory ? (
-                          <div className="flex items-center gap-2">
-                            <select
-                              value=""
-                              onChange={(e) => {
-                                if (e.target.value === '__create_new__') {
-                                  setIsCreatingNewSubcategory(true);
-                                  setNewSubcategoryName('');
-                                } else if (e.target.value && !productSubcategories.includes(e.target.value)) {
-                                  setProductSubcategories([...productSubcategories, e.target.value]);
-                                }
-                              }}
-                              className="flex-1 px-4 py-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-[#181611] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                            >
-                              <option value="">{availableSubcategories.length > 0 ? (t('restaurant.menu.selectSubcategory') || 'Seleccionar subcategoría existente...') : (t('restaurant.menu.createSubcategory') || 'Crear subcategoría...')}</option>
-                              {availableSubcategories
-                                .filter(sub => !productSubcategories.includes(sub))
-                                .map((sub) => (
-                                  <option key={sub} value={sub}>
-                                    {sub}
-                                  </option>
-                                ))}
-                              <option value="__create_new__" className="font-semibold">
-                                + {t('restaurant.menu.createNewSubcategory') || 'Crear nueva subcategoría'}
-                              </option>
-                            </select>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="text"
-                              value={newSubcategoryName}
-                              onChange={(e) => setNewSubcategoryName(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  addSubcategory();
-                                } else if (e.key === 'Escape') {
-                                  setIsCreatingNewSubcategory(false);
-                                  setNewSubcategoryName('');
-                                }
-                              }}
-                              className="flex-1 px-4 py-2 rounded-lg border-2 border-primary bg-white dark:bg-gray-900 text-[#181611] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                              placeholder={t('restaurant.menu.newSubcategoryName') || 'Nombre de la nueva subcategoría'}
-                              autoFocus
-                            />
-                            <button
-                              type="button"
-                              onClick={addSubcategory}
-                              className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors"
-                              disabled={!newSubcategoryName.trim()}
-                            >
-                              <span className="material-symbols-outlined">check</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsCreatingNewSubcategory(false);
-                                setNewSubcategoryName('');
-                              }}
-                              className="px-4 py-2 rounded-lg bg-gray-500 text-white hover:bg-gray-600 transition-colors"
-                            >
-                              <span className="material-symbols-outlined">close</span>
-                            </button>
                           </div>
                         )}
                       </div>
@@ -2167,14 +2260,14 @@ const MenuRestaurantScreen: React.FC = () => {
                       />
                     </div>
                   ) : (
-                    <p
+                    <p 
                       onClick={() => setIsEditingPrice(true)}
                       className="text-2xl font-bold text-primary cursor-pointer hover:opacity-70 transition-opacity"
                     >
                       {(() => {
                         const priceValue = editingProductPrice ? parseFloat(editingProductPrice) : 0;
-                        return !isNaN(priceValue) && isFinite(priceValue)
-                          ? formatPrice(priceValue, localStorage.getItem('selectedLanguage'))
+                        return !isNaN(priceValue) && isFinite(priceValue) 
+                          ? formatPrice(priceValue, localStorage.getItem('selectedLanguage')) 
                           : '$0.00';
                       })()}
                     </p>
@@ -2201,7 +2294,7 @@ const MenuRestaurantScreen: React.FC = () => {
                   />
                 </div>
               ) : (
-                <p
+                <p 
                   onClick={() => setIsEditingDescription(true)}
                   className="text-base text-gray-600 dark:text-gray-300 leading-relaxed mb-6 cursor-pointer hover:opacity-70 transition-opacity"
                 >
@@ -2288,7 +2381,7 @@ const MenuRestaurantScreen: React.FC = () => {
                         )}
                       </div>
                     ))}
-
+                    
                     {/* Formulario para agregar nuevo complemento */}
                     {editingComplementId === null && (
                       <div className="flex items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50">
@@ -2306,7 +2399,7 @@ const MenuRestaurantScreen: React.FC = () => {
                         />
                         <div className="flex items-center gap-1">
                           {showSinCosto ? (
-                            <div
+                            <div 
                               onClick={() => {
                                 setShowSinCosto(false);
                                 setNewComplementPrice('');
@@ -2378,15 +2471,15 @@ const MenuRestaurantScreen: React.FC = () => {
                     />
                   </label>
                   {allowSpecialInstructions && (
-                    <textarea
+                    <textarea 
                       value={specialInstructions}
                       onChange={(e) => setSpecialInstructions(e.target.value)}
                       readOnly={editingProduct === null}
                       className={`w-full bg-white dark:bg-gray-900 border-2 rounded-xl p-4 text-sm text-[#181611] dark:text-white placeholder:text-gray-400 outline-none transition-all resize-none ${editingProduct === null
-                          ? 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-60'
+                          ? 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-60' 
                           : 'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:border-primary'
-                        }`}
-                      placeholder="Ej. Sin cebolla, salsa aparte, bien cocido..."
+                      }`}
+                      placeholder="Ej. Sin cebolla, salsa aparte, bien cocido..." 
                       rows={1}
                     ></textarea>
                   )}
@@ -2408,7 +2501,7 @@ const MenuRestaurantScreen: React.FC = () => {
           {/* Botones de acción fijos */}
           <div className="fixed left-0 right-0 w-full bg-white/95 dark:bg-background-dark/95 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 p-4 z-40" style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}>
             <div className="max-w-md mx-auto flex gap-3">
-              <button
+              <button 
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();
@@ -2420,7 +2513,7 @@ const MenuRestaurantScreen: React.FC = () => {
                 <span className="material-symbols-outlined text-xl">close</span>
                 <span>{t('restaurant.menu.cancel')}</span>
               </button>
-              <button
+              <button 
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();
@@ -2439,6 +2532,288 @@ const MenuRestaurantScreen: React.FC = () => {
       )}
 
       {/* Modal de confirmación */}
+      {/* Modal de gestión de subcategorías */}
+      {subcategoryModalOpen && (
+        <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl bg-white dark:bg-[#322a1a] rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+            {/* Header del modal */}
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-[#181611] dark:text-white">
+                {t('restaurant.menu.subcategories') || 'Subcategorías'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setSubcategoryModalOpen(false);
+                  setModalCurrentPath('');
+                  setIsCreatingNewSubcategory(false);
+                  setNewSubcategoryName('');
+                }}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">close</span>
+              </button>
+            </div>
+
+            {/* Contenido del modal */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Subcategorías seleccionadas */}
+              {productSubcategories.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    {t('restaurant.menu.selectedSubcategories') || 'Subcategorías seleccionadas'} ({productSubcategories.length})
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {productSubcategories.map((subcat) => (
+                      <div
+                        key={subcat}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20"
+                      >
+                        <span className="text-sm text-primary">{subcat}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProductSubcategories(productSubcategories.filter(s => s !== subcat));
+                          }}
+                          className="text-primary hover:text-primary-dark transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-sm">close</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Breadcrumb de navegación */}
+              {modalCurrentPath && (
+                <div className="mb-4 flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const pathParts = modalCurrentPath.split(' > ');
+                      if (pathParts.length > 1) {
+                        setModalCurrentPath(pathParts.slice(0, -1).join(' > '));
+                      } else {
+                        setModalCurrentPath('');
+                      }
+                      setIsCreatingNewSubcategory(false);
+                      setNewSubcategoryName('');
+                    }}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-sm">arrow_back</span>
+                    <span>{t('restaurant.menu.back') || 'Atrás'}</span>
+                  </button>
+                  <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+                    {modalCurrentPath.split(' > ').map((part, index, arr) => (
+                      <React.Fragment key={index}>
+                        {index > 0 && <span className="mx-1">/</span>}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setModalCurrentPath(arr.slice(0, index + 1).join(' > '));
+                            setIsCreatingNewSubcategory(false);
+                            setNewSubcategoryName('');
+                          }}
+                          className="hover:text-primary transition-colors"
+                        >
+                          {part}
+                        </button>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Lista de subcategorías disponibles en el nivel actual */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  {modalCurrentPath ? t('restaurant.menu.subcategories') || 'Subcategorías' : t('restaurant.menu.rootSubcategories') || 'Subcategorías principales'}
+                </h4>
+                <div className="border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 max-h-64 overflow-y-auto">
+                  <div className="p-2 space-y-1">
+                    {(() => {
+                      // Obtener subcategorías del nivel actual
+                      let currentLevelOptions: string[] = [];
+                      
+                      if (!modalCurrentPath) {
+                        // Nivel raíz: mostrar todas las subcategorías de nivel raíz
+                        currentLevelOptions = allAvailableSubcategories
+                          .filter(sub => !sub.includes(' > '))
+                          .sort();
+                      } else {
+                        // Nivel anidado: mostrar las hijas directas del nivel actual
+                        currentLevelOptions = allAvailableSubcategories
+                          .filter(sub => {
+                            const searchPath = `${modalCurrentPath} > `;
+                            if (!sub.startsWith(searchPath)) return false;
+                            const remaining = sub.substring(searchPath.length);
+                            return !remaining.includes(' > '); // Solo hijas directas
+                          })
+                          .map(sub => {
+                            const searchPath = `${modalCurrentPath} > `;
+                            return sub.substring(searchPath.length);
+                          })
+                          .filter((name, index, arr) => arr.indexOf(name) === index) // Eliminar duplicados
+                          .sort();
+                      }
+
+                      return currentLevelOptions.length > 0 ? (
+                        currentLevelOptions.map((optionName) => {
+                          const fullPath = modalCurrentPath 
+                            ? `${modalCurrentPath} > ${optionName}`
+                            : optionName;
+                          const isSelected = productSubcategories.includes(fullPath);
+                          const hasChildren = allAvailableSubcategories.some(sub => 
+                            sub.startsWith(fullPath + ' > ')
+                          );
+
+                          return (
+                            <div
+                              key={optionName}
+                              className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            >
+                              <div className="flex items-center gap-3 flex-1">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      if (!productSubcategories.includes(fullPath)) {
+                                        setProductSubcategories([...productSubcategories, fullPath]);
+                                      }
+                                    } else {
+                                      setProductSubcategories(productSubcategories.filter(s => s !== fullPath));
+                                    }
+                                  }}
+                                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                />
+                                <span className="text-sm font-medium text-[#181611] dark:text-white">
+                                  {optionName}
+                                </span>
+                              </div>
+                              {hasChildren && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setModalCurrentPath(fullPath);
+                                    setIsCreatingNewSubcategory(false);
+                                    setNewSubcategoryName('');
+                                  }}
+                                  className="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                  <span className="material-symbols-outlined text-gray-400 dark:text-gray-500 text-sm">
+                                    chevron_right
+                                  </span>
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                          {t('restaurant.menu.noSubcategories') || 'No hay subcategorías disponibles'}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Botón para crear nueva subcategoría */}
+                    {!isCreatingNewSubcategory ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCreatingNewSubcategory(true);
+                          setNewSubcategoryName('');
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary hover:bg-primary/5 transition-colors text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-primary"
+                      >
+                        <span className="material-symbols-outlined text-sm">add</span>
+                        <span>{t('restaurant.menu.createNewSubcategory') || 'Crear nueva subcategoría'}</span>
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2 px-3 py-2">
+                        <input
+                          type="text"
+                          value={newSubcategoryName}
+                          onChange={(e) => setNewSubcategoryName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const subcategoryName = toTitleCase(newSubcategoryName.trim());
+                              const fullPath = modalCurrentPath 
+                                ? `${modalCurrentPath} > ${subcategoryName}`
+                                : subcategoryName;
+                              
+                              if (!productSubcategories.some(sub => sub.toLowerCase() === fullPath.toLowerCase())) {
+                                setProductSubcategories([...productSubcategories, fullPath]);
+                              }
+                              setNewSubcategoryName('');
+                              setIsCreatingNewSubcategory(false);
+                            } else if (e.key === 'Escape') {
+                              setIsCreatingNewSubcategory(false);
+                              setNewSubcategoryName('');
+                            }
+                          }}
+                          className="flex-1 px-3 py-2 rounded-lg border-2 border-primary bg-white dark:bg-gray-900 text-[#181611] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                          placeholder={t('restaurant.menu.newSubcategoryName') || 'Nombre de la nueva subcategoría'}
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const subcategoryName = toTitleCase(newSubcategoryName.trim());
+                            const fullPath = modalCurrentPath 
+                              ? `${modalCurrentPath} > ${subcategoryName}`
+                              : subcategoryName;
+                            
+                            if (!productSubcategories.some(sub => sub.toLowerCase() === fullPath.toLowerCase())) {
+                              setProductSubcategories([...productSubcategories, fullPath]);
+                            }
+                            setNewSubcategoryName('');
+                            setIsCreatingNewSubcategory(false);
+                          }}
+                          className="px-3 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors"
+                          disabled={!newSubcategoryName.trim()}
+                        >
+                          <span className="material-symbols-outlined text-sm">check</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCreatingNewSubcategory(false);
+                            setNewSubcategoryName('');
+                          }}
+                          className="px-3 py-2 rounded-lg bg-gray-500 text-white hover:bg-gray-600 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-sm">close</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer del modal */}
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setSubcategoryModalOpen(false);
+                  setModalCurrentPath('');
+                  setIsCreatingNewSubcategory(false);
+                  setNewSubcategoryName('');
+                }}
+                className="px-6 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium"
+              >
+                {t('restaurant.menu.done') || 'Listo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {confirmModalOpen && (
         <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-white dark:bg-[#322a1a] rounded-2xl shadow-xl overflow-hidden">
@@ -2476,7 +2851,7 @@ const MenuRestaurantScreen: React.FC = () => {
           </div>
         </div>
       )}
-
+      
       {/* Safe area bottom para navbar - Espacio adicional para scroll */}
       <div className="pb-48" style={{ paddingBottom: 'calc(200px + env(safe-area-inset-bottom))' }}></div>
     </div>

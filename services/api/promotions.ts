@@ -95,7 +95,7 @@ export async function getPromotions(
     if (error) throw error;
     return (data || []).map((promo: any) => ({
       ...promo,
-      badges: Array.isArray(promo.badges) ? promo.badges : [],
+      badges: [],
     })) as Promotion[];
   }, 'Error al obtener promociones');
 }
@@ -119,7 +119,7 @@ export async function getPromotionById(
     
     return {
       ...data,
-      badges: Array.isArray(data.badges) ? data.badges : [],
+      badges: [],
     } as Promotion;
   }, 'Error al obtener promoción');
 }
@@ -146,13 +146,10 @@ export async function createPromotion(
       valid_from: promotion.valid_from,
       valid_until: promotion.valid_until,
       is_featured: promotion.is_featured || false,
-      badges: promotion.badges || [],
       is_active: true,
       total_uses: 0,
       applicable_hours: promotion.applicable_hours || null,
       applicable_days: promotion.applicable_days || null,
-      client_segmentation: promotion.client_segmentation || 'all',
-      flash_counter: promotion.flash_counter || false,
     };
 
     const { data, error } = await supabase
@@ -165,7 +162,7 @@ export async function createPromotion(
     
     return {
       ...data,
-      badges: Array.isArray(data.badges) ? data.badges : [],
+      badges: [],
     } as Promotion;
   }, 'Error al crear promoción');
 }
@@ -215,20 +212,11 @@ export async function updatePromotion(
     if (updates.is_featured !== undefined) {
       updateData.is_featured = updates.is_featured;
     }
-    if (updates.badges !== undefined) {
-      updateData.badges = updates.badges;
-    }
     if (updates.applicable_hours !== undefined) {
       updateData.applicable_hours = updates.applicable_hours;
     }
     if (updates.applicable_days !== undefined) {
       updateData.applicable_days = updates.applicable_days;
-    }
-    if (updates.client_segmentation !== undefined) {
-      updateData.client_segmentation = updates.client_segmentation;
-    }
-    if (updates.flash_counter !== undefined) {
-      updateData.flash_counter = updates.flash_counter;
     }
     if (updates.is_active !== undefined) {
       updateData.is_active = updates.is_active;
@@ -245,7 +233,7 @@ export async function updatePromotion(
     
     return {
       ...data,
-      badges: Array.isArray(data.badges) ? data.badges : [],
+      badges: [],
     } as Promotion;
   }, 'Error al actualizar promoción');
 }

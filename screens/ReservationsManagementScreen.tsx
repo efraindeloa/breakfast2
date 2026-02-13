@@ -4,6 +4,7 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getRestaurantReservations, updateReservation, Reservation } from '../services/api/reservations';
 import { getCurrentUserRestaurantId } from '../services/database';
+import TopNavbar from '../components/TopNavbar';
 
 type ReservationStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
 type ViewMode = 'list' | 'calendar';
@@ -448,20 +449,13 @@ const ReservationsManagementScreen: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark font-display text-slate-800 dark:text-slate-100 pb-10">
-      {/* Safe area top */}
-      <div className="h-12 bg-background-light dark:bg-background-dark sticky top-0 z-50"></div>
-      
-      {/* Header */}
-      <header className="sticky top-12 z-50 px-4 py-2 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
-          >
-            <span className="material-symbols-outlined text-slate-700 dark:text-slate-300">arrow_back_ios_new</span>
-          </button>
-          <h1 className="text-xl font-bold tracking-tight">Gestionar Reservaciones</h1>
-        </div>
+      <TopNavbar showAvatar={true} showWelcome={true} showBackButton={false} />
+
+      {/* View mode toggle */}
+      <div className="sticky top-[73px] z-40 px-4 py-2 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+        <h1 className="text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100">
+          {t('restaurant.reservations.title')}
+        </h1>
         <div className="flex gap-2">
           <button
             onClick={() => setViewMode('list')}
@@ -484,7 +478,7 @@ const ReservationsManagementScreen: React.FC = () => {
             <span className="material-symbols-outlined">calendar_month</span>
           </button>
         </div>
-      </header>
+      </div>
 
       {/* Main content */}
       <main className="px-4 mt-6 space-y-6">

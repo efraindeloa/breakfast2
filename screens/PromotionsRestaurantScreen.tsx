@@ -4,6 +4,7 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useProducts } from '../contexts/ProductsContext';
 import TopNavbar from '../components/TopNavbar';
 import { 
   getPromotions, 
@@ -14,7 +15,7 @@ import {
   getCurrentUserRestaurantId,
   type Promotion as DBPromotion
 } from '../services/api';
-import { getImageUrl } from '../services/database';
+import { getImageUrl, getProductImageUrl } from '../services/database';
 import { formatPrice } from '../utils/currency';
 
 interface Promotion {
@@ -45,6 +46,7 @@ const PromotionsRestaurantScreen: React.FC = () => {
   const { addFavoritePromotion, removeFavoritePromotion, isPromotionFavorite } = useFavorites();
   const { selectedRestaurant } = useRestaurant();
   const { accountType } = useAuth();
+  const { products, refreshProducts } = useProducts();
   const [editMode, setEditMode] = useState(false);
   const [promotions, setPromotions] = useState<DBPromotion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,6 +89,7 @@ const PromotionsRestaurantScreen: React.FC = () => {
   
   // Notificaciones temporales
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  
 
   // Cargar promociones desde la base de datos
   useEffect(() => {
@@ -197,7 +200,21 @@ const PromotionsRestaurantScreen: React.FC = () => {
   }, [convertedPromotions, promotions]);
 
   const mainPromotions = featuredPromotions;
-  const seasonalPromotions = regularPromotions;
+  
+  // Productos para "Especiales de Temporada" (category="Promociones", subcategories incluye "Especiales de Temporada")
+  const seasonalProducts = useMemo(() => {
+    if (!products) return [];
+    return products.filter((product) => {
+      // Filtrar por categoría "Promociones"
+      if (product.category !== 'Promociones') return false;
+      // Filtrar por subcategoría "Especiales de Temporada"
+      if (!product.subcategories || !Array.isArray(product.subcategories)) return false;
+      return product.subcategories.some(sub => 
+        sub.toLowerCase().includes('especiales de temporada') || 
+        sub.toLowerCase() === 'especiales de temporada'
+      );
+    });
+  }, [products]);
 
   // Sugerencia de IA (mantener hardcodeada por ahora)
   const aiSuggestion: AISuggestion = {
@@ -213,7 +230,7 @@ const PromotionsRestaurantScreen: React.FC = () => {
   };
 
   // Abrir modal de edición/creación de promoción
-  const openEditPromotion = (promotion?: DBPromotion) => {
+  const openEditPromotion = (promotion?: DBPromotion, isFeatured: boolean = false) => {
     if (promotion) {
       setEditingPromotion(promotion);
       setEditingTitle(promotion.title);
@@ -293,7 +310,7 @@ const PromotionsRestaurantScreen: React.FC = () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
       setEditingValidFrom(now.toISOString().slice(0, 10));
       setEditingValidUntil(tomorrow.toISOString().slice(0, 10));
-      setEditingIsFeatured(false);
+      setEditingIsFeatured(isFeatured); // Usar el parámetro isFeatured
       setPromotionBadges([]);
       setPromotionImage('');
       setPromotionImageFile(null);
@@ -509,14 +526,19 @@ const PromotionsRestaurantScreen: React.FC = () => {
     setConfirmModalOpen(false);
     setPendingDeleteId(null);
   };
+  
+  // Abrir diálogo de producto para Especiales de Temporada (navegar a MenuRestaurantScreen)
+  const openEditProductForSpecial = () => {
+    navigate('/menu?category=Promociones&subcategory=Especiales de Temporada&create=true');
+  };
 
   if (isLoading) {
     return (
       <div className="relative flex h-auto min-h-screen w-full max-w-[480px] mx-auto flex-col overflow-x-hidden pb-24 bg-background-light dark:bg-background-dark">
         <TopNavbar 
-          title={t('restaurant.promotions.title')}
-          showBackButton={true}
           showAvatar={true}
+          showWelcome={true}
+          showBackButton={false}
         />
         <div className="flex items-center justify-center py-12">
           <p className="text-gray-500 dark:text-gray-400">{t('common.loading') || 'Cargando...'}</p>
@@ -542,9 +564,9 @@ const PromotionsRestaurantScreen: React.FC = () => {
       <div className="relative flex h-auto min-h-screen w-full max-w-[480px] mx-auto flex-col overflow-x-hidden pb-24 bg-background-light dark:bg-background-dark">
         {/* TopAppBar */}
         <TopNavbar 
-          title={t('restaurant.promotions.title')}
-          showBackButton={true}
           showAvatar={true}
+          showWelcome={true}
+          showBackButton={false}
         />
 
         {/* Botón para activar/desactivar modo de edición */}
@@ -655,7 +677,7 @@ const PromotionsRestaurantScreen: React.FC = () => {
             {editMode && (
               <button
                 type="button"
-                onClick={() => openEditPromotion()}
+                onClick={() => openEditPromotion(undefined, true)}
                 className="flex items-center justify-center min-w-[280px] aspect-[16/9] rounded-xl border-2 border-dashed border-primary/40 text-primary bg-primary/5"
               >
                 <div className="flex flex-col items-center">
@@ -710,20 +732,21 @@ const PromotionsRestaurantScreen: React.FC = () => {
           {t('promotions.seasonalSpecials')}
         </h2>
 
-        {/* Simple Grid for more items */}
+        {/* Simple Grid for more items - Productos de Especiales de Temporada */}
         <div className="px-4 grid grid-cols-2 gap-4 pb-24">
-          {seasonalPromotions.map((promotion) => {
-            const isFavorite = isPromotionFavorite(promotion.id);
+          {seasonalProducts.map((product) => {
+            const productImage = product.image_urls && product.image_urls.length > 0 
+              ? getProductImageUrl(product.image_urls[0]) 
+              : (product.image || '');
+            const productPrice = typeof product.price === 'number' ? product.price : parseFloat(product.price || '0');
+            
             return (
-              <div key={promotion.id} className="relative">
+              <div key={product.id} className="relative">
                 {editMode && (
                   <div className="absolute top-2 right-2 z-10 flex gap-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        const originalPromo = promotions.find(p => p.id === promotion.id);
-                        if (originalPromo) openEditPromotion(originalPromo);
-                      }}
+                      onClick={() => navigate(`/menu?edit=${product.id}`)}
                       className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
                       title={t('restaurant.menu.edit') || 'Editar'}
                     >
@@ -734,7 +757,8 @@ const PromotionsRestaurantScreen: React.FC = () => {
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
-                        handleDeletePromotion(promotion.id);
+                        // TODO: Implementar eliminación de producto
+                        showNotification(t('restaurant.menu.deleteProduct') || 'Eliminar producto', 'info');
                       }}
                       className="w-9 h-9 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center"
                       title={t('restaurant.menu.delete') || 'Eliminar'}
@@ -744,39 +768,24 @@ const PromotionsRestaurantScreen: React.FC = () => {
                   </div>
                 )}
                 <button
-                  onClick={() => !editMode && navigate(`/promotion-detail/${promotion.id}`)}
+                  onClick={() => !editMode && navigate(`/dish/${product.id}`)}
                   className="bg-white dark:bg-[#32281d] p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-none text-left cursor-pointer hover:opacity-90 transition-opacity w-full"
                 >
                   <div 
                     className="relative w-full aspect-square bg-cover bg-center rounded-xl mb-2"
-                    style={{ backgroundImage: `url('${promotion.image}')` }}
+                    style={{ backgroundImage: productImage ? `url('${productImage}')` : 'none' }}
                   >
-                    {!editMode && (
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (isFavorite) {
-                            removeFavoritePromotion(promotion.id);
-                          } else {
-                            addFavoritePromotion(promotion);
-                          }
-                        }}
-                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 dark:bg-gray-800/90 flex items-center justify-center hover:bg-white dark:hover:bg-gray-800 transition-colors shadow-sm cursor-pointer"
-                      >
-                        <span 
-                          className={`material-symbols-outlined text-xs ${isFavorite ? 'text-red-500' : 'text-gray-400'}`}
-                          style={isFavorite ? { fontVariationSettings: "'FILL' 1" } : {}}
-                        >
-                          favorite
-                        </span>
+                    {!productImage && (
+                      <div className="w-full h-full bg-gray-200 dark:bg-gray-700 rounded-xl flex items-center justify-center">
+                        <span className="material-symbols-outlined text-gray-400">image</span>
                       </div>
                     )}
                   </div>
-                  <p className={`text-xs font-bold mb-1 ${promotion.badge.color === 'bg-primary' ? 'text-primary' : 'text-primary'}`}>
-                    {promotion.discount || promotion.badge.text}
+                  <p className="text-xs font-bold mb-1 text-primary">
+                    {formatPrice(productPrice)}
                   </p>
-                  <p className="text-sm font-bold dark:text-white">{promotion.title}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{promotion.description}</p>
+                  <p className="text-sm font-bold dark:text-white">{product.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{product.description}</p>
                 </button>
               </div>
             );
@@ -784,7 +793,7 @@ const PromotionsRestaurantScreen: React.FC = () => {
           {editMode && (
             <button
               type="button"
-              onClick={() => openEditPromotion()}
+              onClick={openEditProductForSpecial}
               className="bg-[#F7F2ED] dark:bg-[#F7F2ED] p-3 rounded-2xl shadow-sm border-2 border-dashed border-primary/40 text-primary bg-primary/5"
             >
               <div className="flex flex-col items-center justify-center h-full">
@@ -802,12 +811,12 @@ const PromotionsRestaurantScreen: React.FC = () => {
           className="fixed inset-0 z-[100] bg-background-light dark:bg-background-dark flex flex-col overflow-y-auto"
           style={{ 
             paddingTop: 'env(safe-area-inset-top)',
-            paddingBottom: 'calc(6.5rem + env(safe-area-inset-bottom))'
+            paddingBottom: 'env(safe-area-inset-bottom)'
           }}
         >
           {/* Header */}
           <div className="sticky top-0 z-10 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 safe-top">
-            <div className="flex items-center p-4 pb-4 justify-between">
+            <div className="flex items-center p-4 pb-4">
               <div className="flex items-center gap-3">
                 <button
                   onClick={closeEditPromotion}
@@ -819,13 +828,6 @@ const PromotionsRestaurantScreen: React.FC = () => {
                   {editingPromotion ? (t('restaurant.promotions.editPromotion') || 'Editar Promoción') : (t('restaurant.promotions.newPromotion') || 'Nueva Promoción')}
                 </h2>
               </div>
-              <button
-                onClick={handleSavePromotion}
-                disabled={isSaving || !editingTitle.trim()}
-                className="bg-primary text-white px-4 py-2 rounded-full text-sm font-bold shadow-md active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSaving ? (t('common.saving') || 'Guardando...') : (t('restaurant.menu.save') || 'Guardar')}
-              </button>
             </div>
           </div>
 
@@ -1158,6 +1160,19 @@ const PromotionsRestaurantScreen: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Footer fijo con botón de guardar */}
+          <div className="sticky bottom-0 z-10 bg-white/95 dark:bg-background-dark/95 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 safe-bottom">
+            <div className="p-4">
+              <button
+                onClick={handleSavePromotion}
+                disabled={isSaving || !editingTitle.trim()}
+                className="w-full bg-primary text-white px-4 py-3 rounded-full text-sm font-bold shadow-md active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? (t('common.saving') || 'Guardando...') : (t('restaurant.menu.save') || 'Guardar')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1221,6 +1236,7 @@ const PromotionsRestaurantScreen: React.FC = () => {
           </div>
         </div>
       )}
+
     </>
   );
 };

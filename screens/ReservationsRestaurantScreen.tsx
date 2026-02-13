@@ -5,6 +5,7 @@ import { useProducts } from '../contexts/ProductsContext';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { createReservation } from '../services/api/reservations';
+import TopNavbar from '../components/TopNavbar';
 
 interface ReservationItem {
   id: number;
@@ -420,24 +421,7 @@ const ReservationsRestaurantScreen: React.FC = () => {
       )}
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 safe-top">
-        <div className="flex items-center p-4 justify-between max-w-md mx-auto">
-          <button
-            onClick={() => navigate(-1)}
-            className="text-[#181511] dark:text-white flex size-10 items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            <span className="material-symbols-outlined">arrow_back_ios_new</span>
-          </button>
-          <h2 className="text-[#181511] dark:text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center">
-            {t('restaurant.reservations.details')}
-          </h2>
-          <div className="flex w-10 items-center justify-end">
-            <button className="text-[#181511] dark:text-white">
-              <span className="material-symbols-outlined">info</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      <TopNavbar showAvatar={true} showWelcome={true} showBackButton={false} />
 
       <main className="max-w-md mx-auto px-4 py-6">
         {!showWelcomeModal && (

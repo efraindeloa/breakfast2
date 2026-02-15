@@ -43,6 +43,8 @@
     "quickActions": "Acciones Rápidas",
     "viewMenu": "Ver Menú",
     "viewMenuDescription": "Explora nuestro menú completo",
+    "viewPromotions": "Ver Promociones",
+    "viewPromotionsDescription": "Ofertas y descuentos del restaurante",
     "joinTable": "Unirse a la mesa",
     "joinTableDescription": "Únete a una orden grupal",
     "scanQR": "Escanear QR",
@@ -1428,6 +1430,63 @@
     "profile": {
       "title": "Perfil del Restaurante",
       "manage": "Administra tu restaurante"
+    }
+  },
+  "waiter": {
+    "navigation": {
+      "home": "Inicio",
+      "tables": "Mesas",
+      "orders": "Órdenes"
+    },
+    "home": {
+      "title": "Inicio",
+      "subtitle": "Resumen de tu turno. Aquí verás mesas asignadas y órdenes activas.",
+      "quickActions": "Acciones rápidas",
+      "selectTable": "Seleccionar mesa",
+      "selectTableDescription": "Elige una mesa para tomar orden o ver estado.",
+      "selectedTable": "Mesa {{number}} seleccionada",
+      "assistanceRequests": "Solicitudes de Asistencia",
+      "assistanceRequestsDescription": "Ver solicitudes de los comensales (cuchara, ayuda, etc.)"
+    },
+    "assistance": {
+      "noRequests": "No hay solicitudes de asistencia en este momento.",
+      "justNow": "Ahora mismo",
+      "minutesAgo": "Hace {{count}} min",
+      "hoursAgo": "Hace {{count}} h",
+      "newRequest": "Nueva solicitud de asistencia",
+      "markAttended": "Atendido"
+    },
+    "tableStatus": {
+      "free": "Libre",
+      "occupied": "Ocupada",
+      "outOfService": "Fuera de servicio"
+    },
+    "modal": {
+      "selectTableTitle": "Seleccionar mesa",
+      "close": "Cerrar"
+    },
+    "tables": {
+      "title": "Mesas",
+      "subtitle": "Selecciona una mesa para tomar orden o ver la cuenta.",
+      "tableLabel": "Mesa {{number}}",
+      "takeOrder": "Tomar orden"
+    },
+    "orders": {
+      "title": "Órdenes activas",
+      "subtitle": "Órdenes en curso del restaurante."
+    },
+    "takeOrder": {
+      "title": "Orden para {{table}}",
+      "confirmOrder": "Enviar a cocina",
+      "addToOrder": "Agregar a la orden",
+      "emptyOrder": "Agrega productos a la orden.",
+      "orderSent": "Orden enviada",
+      "errorRestaurant": "No se pudo obtener el restaurante."
+    },
+    "dish": {
+      "addToOrder": "Agregar a la orden",
+      "quantity": "Cantidad",
+      "notes": "Notas (opcional)"
     }
   },
   "guest": {

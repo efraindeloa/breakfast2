@@ -13,7 +13,7 @@ import {
   UserPaymentMethod
 } from '../services/database';
 import { getUserProfile, updateUserProfile, getUserData, updateUserData } from '../services/api/user';
-import { playClickSound } from '../utils/sound';
+import { playClickSound, playBackspaceSound } from '../utils/sound';
 import GuestRestrictionModal from '../components/GuestRestrictionModal';
 
 interface Card {
@@ -684,6 +684,13 @@ const ProfileScreen: React.FC = () => {
                     type="text"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Backspace' || e.key === 'Delete') {
+                        playBackspaceSound();
+                      } else if (e.key.length === 1) {
+                        playClickSound();
+                      }
+                    }}
                     className="w-full px-3 py-2 rounded-lg border-2 border-primary/50 bg-white dark:bg-gray-900 text-[#181411] dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                     autoFocus
                   />
@@ -780,6 +787,13 @@ const ProfileScreen: React.FC = () => {
                     type="tel"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Backspace' || e.key === 'Delete') {
+                        playBackspaceSound();
+                      } else if (e.key.length === 1) {
+                        playClickSound();
+                      }
+                    }}
                     className="w-full px-3 py-2 rounded-lg border-2 border-primary/50 bg-white dark:bg-gray-900 text-[#181411] dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                     autoFocus
                   />

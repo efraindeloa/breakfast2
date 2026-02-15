@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { HashRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import WelcomeScreen from './screens/WelcomeScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import BillingDataScreen from './screens/BillingDataScreen';
@@ -53,6 +53,12 @@ import MenuRestaurantScreen from './screens/MenuRestaurantScreen';
 import ReservationsRestaurantScreen from './screens/ReservationsRestaurantScreen';
 import ReservationsManagementScreen from './screens/ReservationsManagementScreen';
 import StatisticsRestaurantScreen from './screens/StatisticsRestaurantScreen';
+import WaiterHomeScreen from './screens/WaiterHomeScreen';
+import WaiterTablesScreen from './screens/WaiterTablesScreen';
+import WaiterOrdersScreen from './screens/WaiterOrdersScreen';
+import WaiterTakeOrderScreen from './screens/WaiterTakeOrderScreen';
+import WaiterDishScreen from './screens/WaiterDishScreen';
+import WaiterAssistanceRequestsScreen from './screens/WaiterAssistanceRequestsScreen';
 import WeatherDetailScreen from './screens/WeatherDetailScreen';
 import CurrencyDetailScreen from './screens/CurrencyDetailScreen';
 import BottomNav from './components/BottomNav';
@@ -65,36 +71,24 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { FavoritesProvider } from './contexts/FavoritesContext';
 import { LoyaltyProvider } from './contexts/LoyaltyContext';
 import { ProductsProvider } from './contexts/ProductsContext';
+import { WaiterTableCartProvider } from './contexts/WaiterTableCartContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
-// Componente interno que usa el AuthContext
-const AppContent: React.FC = () => {
-  const { user, loading, accountType, userType } = useAuth();
-  const isAuthenticated = !!user && userType !== 'guest';
+// Rutas donde no debe mostrarse la navbar inferior (login, registro, recuperar contraseña)
+const AUTH_PATHS = ['/', '/register', '/forgot-password', '/reset-password'];
 
-  // Mostrar loading mientras se verifica la sesión
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Cargando...</p>
-        </div>
-      </div>
-    );
-  }
+// Contenido del Router: usa useLocation aquí (debe estar dentro de HashRouter)
+const RouterContent: React.FC = () => {
+  const location = useLocation();
+  const { user, accountType, staffRole, userType } = useAuth();
+  const isAuthenticated = !!user && userType !== 'guest';
+  const isAuthRoute = AUTH_PATHS.includes(location.pathname);
+  const showAppShell = (isAuthenticated || userType === 'guest') && !isAuthRoute;
 
   return (
-    <LanguageProvider>
-      <RestaurantProvider>
-        <ProductsProvider>
-          <CartProvider>
-            <FavoritesProvider>
-              <LoyaltyProvider>
-                <GroupOrderProvider>
-                  <HashRouter>
-                    <AndroidBackButton />
-                    <div className="w-full max-w-full min-h-screen bg-white dark:bg-background-dark relative overflow-hidden flex flex-col md:max-w-2xl md:mx-auto md:shadow-2xl">
+    <>
+      <AndroidBackButton />
+      <div className="w-full max-w-full min-h-screen bg-white dark:bg-background-dark relative overflow-hidden flex flex-col md:max-w-2xl md:mx-auto md:shadow-2xl">
         <Routes>
           <Route path="/" element={!isAuthenticated ? <WelcomeScreen onLogin={() => {}} /> : <Navigate to="/home" />} />
           <Route path="/register" element={!isAuthenticated ? <RegisterScreen onLogin={() => {}} /> : <Navigate to="/home" />} />
@@ -104,8 +98,10 @@ const AppContent: React.FC = () => {
             path="/home"
             element={
               (isAuthenticated || userType === 'guest')
-                ? accountType === 'restaurant'
-                  ? <Navigate to="/home-restaurant" />
+                ? accountType === 'restaurant' && staffRole === 'waiter'
+                  ? <Navigate to="/waiter-home" replace />
+                  : accountType === 'restaurant'
+                  ? <Navigate to="/home-restaurant" replace />
                   : <HomeScreen />
                 : <Navigate to="/" />
             }
@@ -166,22 +162,61 @@ const AppContent: React.FC = () => {
           <Route path="/admin-control-panel" element={isAuthenticated ? <AdminControlPanelScreen /> : <Navigate to="/" />} />
 
           {/* Rutas específicas de restaurante */}
-          <Route path="/home-restaurant" element={isAuthenticated ? <HomeRestaurantScreen /> : <Navigate to="/" />} />
+          <Route path="/home-restaurant" element={isAuthenticated ? (staffRole === 'waiter' ? <Navigate to="/waiter-home" replace /> : <HomeRestaurantScreen />) : <Navigate to="/" />} />
           <Route path="/promotions-restaurant" element={isAuthenticated ? <PromotionsRestaurantScreen /> : <Navigate to="/" />} />
           <Route path="/menu-restaurant" element={isAuthenticated ? <MenuRestaurantScreen /> : <Navigate to="/" />} />
           <Route path="/reservaciones-restaurant" element={isAuthenticated ? <ReservationsRestaurantScreen /> : <Navigate to="/" />} />
           <Route path="/gestionar-reservaciones" element={isAuthenticated ? <ReservationsManagementScreen /> : <Navigate to="/" />} />
           <Route path="/estadisticas-restaurant" element={isAuthenticated ? <StatisticsRestaurantScreen /> : <Navigate to="/" />} />
+
+          {/* Rutas mesero */}
+          <Route path="/waiter-home" element={isAuthenticated ? <WaiterHomeScreen /> : <Navigate to="/" />} />
+          <Route path="/waiter-tables" element={isAuthenticated ? <WaiterTablesScreen /> : <Navigate to="/" />} />
+          <Route path="/waiter-orders" element={isAuthenticated ? <WaiterOrdersScreen /> : <Navigate to="/" />} />
+          <Route path="/waiter-take-order" element={isAuthenticated ? <WaiterTakeOrderScreen /> : <Navigate to="/" />} />
+          <Route path="/waiter-dish/:productId" element={isAuthenticated ? <WaiterDishScreen /> : <Navigate to="/" />} />
+          <Route path="/waiter-assistance-requests" element={isAuthenticated ? <WaiterAssistanceRequestsScreen /> : <Navigate to="/" />} />
         </Routes>
-        
-                      {(isAuthenticated || userType === 'guest') && <BottomNav />}
-                      {(isAuthenticated || userType === 'guest') && <AssistantButton />}
-                    </div>
+        {showAppShell && <BottomNav />}
+        {showAppShell && <AssistantButton />}
+      </div>
+    </>
+  );
+};
+
+// Componente interno que usa el AuthContext
+const AppContent: React.FC = () => {
+  const { user, loading, accountType, staffRole, userType } = useAuth();
+  const isAuthenticated = !!user && userType !== 'guest';
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <LanguageProvider>
+      <RestaurantProvider>
+        <ProductsProvider>
+          <WaiterTableCartProvider>
+          <CartProvider>
+            <FavoritesProvider>
+              <LoyaltyProvider>
+                <GroupOrderProvider>
+                  <HashRouter>
+                    <RouterContent />
                   </HashRouter>
                 </GroupOrderProvider>
               </LoyaltyProvider>
             </FavoritesProvider>
           </CartProvider>
+          </WaiterTableCartProvider>
         </ProductsProvider>
       </RestaurantProvider>
     </LanguageProvider>

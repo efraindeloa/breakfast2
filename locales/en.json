@@ -61,6 +61,8 @@
     "quickActions": "Quick Actions",
     "viewMenu": "View Menu",
     "viewMenuDescription": "Explore our complete menu",
+    "viewPromotions": "View Promotions",
+    "viewPromotionsDescription": "Restaurant offers and discounts",
     "joinTable": "Join Table",
     "joinTableDescription": "Join a group order",
     "scanQR": "Scan QR",
@@ -1445,6 +1447,62 @@
         "updated": "Promotion updated successfully",
         "deleted": "Promotion deleted successfully"
       }
+    }
+  },
+  "waiter": {
+    "navigation": {
+      "home": "Home",
+      "tables": "Tables",
+      "orders": "Orders"
+    },
+    "home": {
+      "title": "Home",
+      "subtitle": "Your shift summary. Here you will see assigned tables and active orders.",
+      "quickActions": "Quick actions",
+      "selectTable": "Select table",
+      "selectTableDescription": "Choose a table to take an order or view status.",
+      "selectedTable": "Table {{number}} selected",
+      "assistanceRequests": "Assistance Requests",
+      "assistanceRequestsDescription": "View requests from diners (utensils, help, etc.)"
+    },
+    "assistance": {
+      "noRequests": "No assistance requests at this time.",
+      "justNow": "Just now",
+      "minutesAgo": "{{count}} min ago",
+      "hoursAgo": "{{count}} h ago",
+      "newRequest": "New assistance request",
+      "markAttended": "Attended"
+    },
+    "tableStatus": {
+      "free": "Available",
+      "occupied": "Occupied",
+      "outOfService": "Out of service"
+    },
+    "modal": {
+      "selectTableTitle": "Select table",
+      "close": "Close"
+    },
+    "tables": {
+      "title": "Tables",
+      "subtitle": "Select a table to take an order or view the bill.",
+      "tableLabel": "Table {{number}}",
+      "takeOrder": "Take order"
+    },
+    "orders": {
+      "title": "Active orders",
+      "subtitle": "Restaurant orders in progress."
+    },
+    "takeOrder": {
+      "title": "Order for {{table}}",
+      "confirmOrder": "Send to kitchen",
+      "addToOrder": "Add to order",
+      "emptyOrder": "Add products to the order.",
+      "orderSent": "Order sent"
+    },
+    "dish": {
+      "addToOrder": "Add to order",
+      "quantity": "Quantity",
+      "notes": "Notes (optional)"
     }
   },
   "weather": {

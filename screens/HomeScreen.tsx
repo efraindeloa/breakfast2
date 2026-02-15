@@ -72,10 +72,6 @@ const HomeScreen: React.FC = () => {
   const [buttonDescriptions, setButtonDescriptions] = useState<Record<string, { show: boolean; opacity: number }>>({});
   const [buttonDescriptionTimers, setButtonDescriptionTimers] = useState<Record<string, NodeJS.Timeout>>({});
   
-  // Estados para controlar la visibilidad del título "Acciones Rápidas"
-  const [showTitle, setShowTitle] = useState<boolean>(true);
-  const [titleOpacity, setTitleOpacity] = useState<number>(1);
-  
   // Estado para el modal de restricción de invitados
   const [guestRestrictionModal, setGuestRestrictionModal] = useState<{ show: boolean; featureName: string }>({
     show: false,
@@ -87,7 +83,7 @@ const HomeScreen: React.FC = () => {
     { id: 'qr', path: '/qr-scanner', titleKey: 'home.scanQR', descriptionKey: 'home.scanQRDescription', icon: 'qr_code_scanner', isQR: true },
     { 
       id: 'menu', 
-      path: accountType === 'restaurant' ? '/menu-restaurant' : '/menu', 
+      path: '/menu-restaurant',
       titleKey: accountType === 'restaurant' ? 'restaurant.home.manageMenu' : 'home.viewMenu', 
       descriptionKey: accountType === 'restaurant' ? 'restaurant.home.manageMenuDescription' : 'home.viewMenuDescription', 
       icon: 'restaurant_menu' 
@@ -95,10 +91,9 @@ const HomeScreen: React.FC = () => {
     { 
       id: 'promotions', 
       path: '/promotions-restaurant', 
-      titleKey: 'restaurant.home.managePromotions', 
-      descriptionKey: 'restaurant.home.managePromotionsDescription', 
-      icon: 'local_offer',
-      condition: (accountType) => accountType === 'restaurant'
+      titleKey: accountType === 'restaurant' ? 'restaurant.home.managePromotions' : 'home.viewPromotions', 
+      descriptionKey: accountType === 'restaurant' ? 'restaurant.home.managePromotionsDescription' : 'home.viewPromotionsDescription', 
+      icon: 'local_offer'
     },
     { id: 'assistance', path: '/request-assistance', titleKey: 'payment.requestAssistance', descriptionKey: 'home.requestAssistanceDescription', icon: 'person' },
     { id: 'waitlist', path: '/waitlist', titleKey: 'waitlist.scanQR', descriptionKey: 'waitlist.scanQRDescription', icon: 'schedule', condition: (type) => type !== 'restaurant' },
@@ -111,7 +106,7 @@ const HomeScreen: React.FC = () => {
 
   // Obtener orden guardado o usar orden por defecto
   const getDefaultOrder = (): string[] => {
-    const defaultOrder = ['qr', 'menu', 'assistance', 'waitlist', 'joinTable', 'invite'];
+    const defaultOrder = ['qr', 'menu', 'promotions', 'assistance', 'waitlist', 'joinTable', 'invite'];
     if (accountType !== 'restaurant') {
       defaultOrder.push('discover', 'reservations');
     }
@@ -392,16 +387,6 @@ const HomeScreen: React.FC = () => {
     };
   }, [descriptionTimer, buttonDescriptionTimers]);
 
-  // Ocultar título "Acciones Rápidas" después de 10 segundos con efecto de desvanecimiento
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      // Solo desvanecer (cambiar opacidad a 0) pero mantener el espacio
-      setTitleOpacity(0);
-    }, 10000); // 10 segundos
-
-    return () => clearTimeout(timer);
-  }, []);
-
   const orderedButtons = getOrderedButtons();
   const qrButton = orderedButtons.find(btn => btn.id === 'qr');
   const assistanceButton = orderedButtons.find(btn => btn.id === 'assistance');
@@ -422,7 +407,7 @@ const HomeScreen: React.FC = () => {
     // Verificar si el botón está deshabilitado para usuarios invitados
     const isGuestRestricted = userType === 'guest' && button.id !== 'menu';
     // Verificar si el botón está deshabilitado por falta de restaurante seleccionado (solo para comensales)
-    const restaurantRequiredButtons = ['menu', 'waitlist', 'joinTable', 'invite', 'reservations'];
+    const restaurantRequiredButtons = ['menu', 'promotions', 'waitlist', 'joinTable', 'invite', 'reservations'];
     const isRestaurantRequired = accountType === 'diner' && restaurantRequiredButtons.includes(button.id) && !selectedRestaurantId;
     const isDisabled = isGuestRestricted || isRestaurantRequired;
 
@@ -520,40 +505,6 @@ const HomeScreen: React.FC = () => {
         {/* Selector de restaurante solo para comensales */}
         {accountType === 'diner' && <RestaurantSelector />}
         
-        <div className="flex items-center justify-between px-4 pb-2 pt-6">
-          <h3 
-            className="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] transition-opacity duration-500 ease-out pointer-events-none"
-            style={{ opacity: titleOpacity }}
-          >
-            {t('home.quickActions')}
-          </h3>
-          
-          {/* Debug: Botón temporal para refrescar tipo de cuenta */}
-          {process.env.NODE_ENV === 'development' && (
-            <button
-              onClick={async () => {
-                if (user?.id) {
-                  console.log('[DEBUG] Refreshing account type for user:', user.id);
-                  console.log('[DEBUG] Current account type:', accountType);
-                  
-                  // Importar AuthContext dinámicamente para acceder a refreshAccountType
-                  const { supabase } = await import('../config/supabase');
-                  const { data: staffRow, error } = await supabase
-                    .from('restaurant_staff')
-                    .select('id, role, restaurant_id')
-                    .eq('user_id', user.id)
-                    .eq('is_active', true);
-                  
-                  console.log('[DEBUG] Restaurant staff query result:', { staffRow, error });
-                  alert(`Account Type: ${accountType}\nStaff Records: ${JSON.stringify(staffRow, null, 2)}`);
-                }
-              }}
-              className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded border"
-            >
-              Debug Account
-            </button>
-          )}
-        </div>
         <div className="w-full px-4 pb-4">
           {/* Botón QR que ocupa todo el ancho */}
           {qrButton && (

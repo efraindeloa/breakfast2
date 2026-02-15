@@ -174,7 +174,7 @@ const BottomNav: React.FC = () => {
   const location = useLocation();
   const { getCartItemCount } = useCart();
   const { t } = useTranslation();
-  const { accountType, userType } = useAuth();
+  const { accountType, staffRole, userType } = useAuth();
   const { selectedRestaurantId } = useRestaurant();
   
   // Verificación de seguridad para evitar errores durante transiciones de estado
@@ -254,8 +254,17 @@ const BottomNav: React.FC = () => {
     }
   };
 
+  const isWaiter = accountType === 'restaurant' && staffRole === 'waiter';
+
   const navItems =
-    accountType === 'restaurant'
+    isWaiter
+      ? [
+          { label: t('waiter.navigation.home'), icon: 'home', path: '/waiter-home' },
+          { label: t('waiter.navigation.tables'), icon: 'table_restaurant', path: '/waiter-tables' },
+          { label: t('waiter.navigation.orders'), icon: 'receipt_long', path: '/waiter-orders' },
+          { label: t('navigation.profile') || 'Perfil', icon: 'person', path: '/profile' },
+        ]
+      : accountType === 'restaurant'
       ? [
           { label: t('restaurant.navigation.home'), icon: 'home', path: '/home-restaurant' },
           { label: t('restaurant.navigation.promotions'), icon: 'local_offer', path: '/promotions-restaurant', showBadge: true },
@@ -283,7 +292,7 @@ const BottomNav: React.FC = () => {
         // Verificar si el botón está restringido para invitados
         const isRestricted = userType === 'guest' && (item as any).guestRestricted;
         // Verificar si el botón está deshabilitado por falta de restaurante seleccionado (solo para comensales)
-        const restaurantRequiredPaths = ['/menu', '/orders', '/payments'];
+        const restaurantRequiredPaths = ['/menu', '/orders', '/payments', '/promotions'];
         const isRestaurantRequired = accountType === 'diner' && restaurantRequiredPaths.includes(item.path) && !selectedRestaurantId;
         const isDisabled = isRestricted || isRestaurantRequired;
         
@@ -316,10 +325,6 @@ const BottomNav: React.FC = () => {
               >
                 {item.icon}
               </span>
-              {/* Badge para promociones (punto rojo) - solo para cuentas que no sean restaurant */}
-              {item.showBadge && accountType !== 'restaurant' && (
-                <span className="absolute -top-1 -right-1 size-2 bg-red-500 rounded-full border-2 border-background-dark dark:border-background-light"></span>
-              )}
               {/* Solo mostrar badge si hay items pendientes en el carrito (orden complementaria pendiente) */}
               {isOrdersPath && cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
@@ -328,11 +333,8 @@ const BottomNav: React.FC = () => {
               )}
             </span>
             <span className={`text-[10px] ${isActive ? 'font-bold' : 'font-medium'} ${isDisabled ? 'opacity-50' : ''}`}>
-              {isDisabled 
-                ? (isRestaurantRequired 
-                    ? (t('restaurant.selectRestaurantHint') || 'Selecciona un restaurante')
-                    : (t('guest.registeredOnly') || 'Solo registrados')
-                  )
+              {isDisabled && !isRestaurantRequired
+                ? (t('guest.registeredOnly') || 'Solo registrados')
                 : item.label
               }
             </span>

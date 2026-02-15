@@ -1,0 +1,170 @@
+{
+  "info": {
+    "name": "Solicitudes de asistencia (Assistance Requests)",
+    "description": "API para solicitudes de asistencia. Schema: assistance_requests (user_id NOT NULL, restaurant_id NOT NULL, type NOT NULL, order_id opcional).\n\n**Variables:** Edit → Variables:\n- base_url: https://YOUR_PROJECT_REF.supabase.co\n- anon_key: tu anon key\n- restaurant_id: UUID restaurante\n- user_id: UUID usuario (requerido para crear)\n- order_id: UUID orden (opcional)\n- request_id: UUID solicitud (para PATCH)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://tkwackqrnsqlmxtalvuw.supabase.co" },
+    { "key": "anon_key", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRrd2Fja3FybnNxbG14dGFsdnV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxMTU3NzEsImV4cCI6MjA4NDY5MTc3MX0.1PG0x0ZdAAjhunyiPBRzpgpsr9nZGV5epHdUvalHqbA" },
+    { "key": "restaurant_id", "value": "c57f5afa-0442-4998-9f25-d74a95e027a1" },
+    { "key": "user_id", "value": "0d601037-47b4-4d47-ad3a-0cdd9d9bfd78" },
+    { "key": "order_id", "value": "51053024-1555-4893-936a-935947a5f88f" },
+    { "key": "request_id", "value": "35530176-717a-4512-9195-4a433b5a6f7f" }
+  ],
+  "item": [
+    {
+      "name": "Edge Function",
+      "item": [
+        {
+          "name": "Crear solicitud (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"restaurant_id\": \"{{restaurant_id}}\",\n  \"type\": \"cutlery\",\n  \"request_type\": \"cutlery\",\n  \"message\": \"Cubiertos y Vasos\",\n  \"table_number\": \"1\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/functions/v1/assistance-requests",
+              "host": ["{{base_url}}"],
+              "path": ["functions", "v1", "assistance-requests"]
+            },
+            "description": "Crea una solicitud de asistencia.\n\nCampos según schema:\n- user_id (NOT NULL)\n- restaurant_id (NOT NULL)\n- type (NOT NULL)\n- order_id (opcional)\n- request_type\n- message\n- table_number\n\nstatus tiene default 'pending'."
+          }
+        },
+        {
+          "name": "Listar pendientes (GET)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{anon_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/functions/v1/assistance-requests?restaurant_id={{restaurant_id}}&status=pending&limit=50",
+              "host": ["{{base_url}}"],
+              "path": ["functions", "v1", "assistance-requests"],
+              "query": [
+                { "key": "restaurant_id", "value": "{{restaurant_id}}" },
+                { "key": "status", "value": "pending" },
+                { "key": "limit", "value": "50" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar todas (GET)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{anon_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/functions/v1/assistance-requests?restaurant_id={{restaurant_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["functions", "v1", "assistance-requests"],
+              "query": [
+                { "key": "restaurant_id", "value": "{{restaurant_id}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Marcar atendida (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{request_id}}\",\n  \"status\": \"attended\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/functions/v1/assistance-requests",
+              "host": ["{{base_url}}"],
+              "path": ["functions", "v1", "assistance-requests"]
+            },
+            "description": "Actualiza el estado de una solicitud vía Edge Function.\n\nstatus: pending | attended | cancelled"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Supabase REST / RPC",
+      "item": [
+        {
+          "name": "Crear solicitud (RPC)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{anon_key}}" },
+              { "key": "apikey", "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Prefer", "value": "return=representation" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_restaurant_id\": \"{{restaurant_id}}\",\n  \"p_user_id\": \"{{user_id}}\",\n  \"p_order_id\": \"{{order_id}}\",\n  \"p_request_type\": \"cutlery\",\n  \"p_message\": \"Cubiertos y Vasos\",\n  \"p_table_number\": \"1\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rest/v1/rpc/create_assistance_request",
+              "host": ["{{base_url}}"],
+              "path": ["rest", "v1", "rpc", "create_assistance_request"]
+            },
+            "description": "RPC create_assistance_request.\n- user_id requerido (schema NOT NULL).\n- order_id opcional.\n- type/request_type se rellenan internamente en la función a partir de p_request_type."
+          }
+        },
+        {
+          "name": "Listar pendientes (REST)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{anon_key}}" },
+              { "key": "apikey", "value": "{{anon_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/rest/v1/assistance_requests?restaurant_id=eq.{{restaurant_id}}&status=eq.pending&order=created_at.desc",
+              "host": ["{{base_url}}"],
+              "path": ["rest", "v1", "assistance_requests"],
+              "query": [
+                { "key": "restaurant_id", "value": "eq.{{restaurant_id}}" },
+                { "key": "status", "value": "eq.pending" },
+                { "key": "order", "value": "created_at.desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Actualizar estado (REST)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{anon_key}}" },
+              { "key": "apikey", "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Prefer", "value": "return=representation" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"attended\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rest/v1/assistance_requests?id=eq.{{request_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["rest", "v1", "assistance_requests"],
+              "query": [
+                { "key": "id", "value": "eq.{{request_id}}" }
+              ]
+            },
+            "description": "Actualiza el estado de una solicitud vía REST.\n\nstatus: pending | attended | cancelled"
+          }
+        }
+      ]
+    }
+  ]
+}

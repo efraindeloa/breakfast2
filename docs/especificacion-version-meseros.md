@@ -50,7 +50,58 @@ Recomendación: **Opción A** con detección por `role` para no tocar mucho el f
 
 ---
 
-## 4. Navegación (Bottom Nav) para Meseros
+## 4. Creación de cuentas de tipo mesero
+
+### 4.1 Estado actual
+
+Hoy **no existe en la app** un flujo para que el dueño o gerente cree cuentas de mesero. Lo que sí existe:
+
+- **Registro de restaurante** (`RegisterScreen` + `registerRestaurant`): crea el restaurante y un único usuario con rol **`owner`** en `restaurant_staff`. No permite elegir rol “mesero”.
+- **API de staff** en `services/database.ts`: `createRestaurantStaff({ restaurant_id, user_id, role, is_active })` permite insertar cualquier rol (`owner`, `admin`, `manager`, `waiter`, `chef`, `cashier`), pero ninguna pantalla llama a esta función para agregar meseros.
+
+Por tanto, un usuario se convierte en mesero **solo si** se inserta a mano (o por script) una fila en `restaurant_staff` con `role = 'waiter'` y su `user_id`. Ese usuario debe existir antes en Supabase Auth (y opcionalmente en la tabla `users`).
+
+### 4.2 Formas de crear cuentas mesero
+
+**A) Manual / SQL o script (pruebas o pocos usuarios)**  
+- El mesero **se registra como cualquier usuario** en la app (o se crea en Supabase Auth).  
+- Un admin ejecuta en Supabase (o con un script) un `INSERT` en `restaurant_staff`:
+
+```sql
+INSERT INTO restaurant_staff (restaurant_id, user_id, role, is_active)
+VALUES (
+  '<uuid-del-restaurante>',
+  '<uuid-del-usuario-en-auth>',
+  'waiter',
+  true
+);
+```
+
+- La próxima vez que ese usuario inicie sesión, `AuthContext` leerá `restaurant_staff`, verá `role = 'waiter'` y la app mostrará la versión mesero (nav y rutas de mesero).
+
+**B) Panel en la app: “Invitar personal” o “Gestionar personal” (recomendado para producción)**  
+- Pantalla accesible solo para **owner** (y opcionalmente **manager**), por ejemplo desde Perfil del restaurante o Menú de administración.  
+- El dueño/gerente:
+  1. Ingresa **correo** (y opcionalmente nombre) del futuro mesero.
+  2. Elige **rol**: Mesero, Cajero, Cocina, etc. (mapeado a `waiter`, `cashier`, `kitchen`, …).
+  3. Si el correo **ya está registrado** en Auth: se busca su `user_id` y se llama a `createRestaurantStaff(restaurant_id, user_id, 'waiter', true)`. El usuario ya puede entrar y ver la app mesero.
+  4. Si el correo **no está registrado**: se puede enviar un **correo de invitación** con un enlace de registro; al completar el registro, un backend/trigger o flujo post-registro crea la fila en `restaurant_staff` con el rol elegido (por ejemplo guardando “invitación pendiente” en una tabla `staff_invitations` con email + restaurant_id + role, y al registrarse o hacer login por primera vez se consumen esas invitaciones y se crean las filas en `restaurant_staff`).
+
+**C) Registro con “código de invitación”**  
+- El dueño genera un **código o enlace** (ej. `/register?invite=abc123`).  
+- La tabla `staff_invitations` (o similar) guarda: código, `restaurant_id`, `role`, email opcional, vigencia.  
+- El mesero entra a “Registrarse” con ese código; al completar el registro, el backend asocia `user_id` al restaurante con el rol indicado (y marca la invitación como usada).
+
+### 4.3 Resumen recomendado
+
+- **Pruebas / pocos meseros:** usar **A)** (INSERT manual o script con `user_id` y `restaurant_id`).  
+- **Producción:** implementar **B)** (panel “Invitar personal” / “Gestionar personal” con rol y, si aplica, invitación por correo y/o **C)** con código de invitación).
+
+La app ya está preparada para que, cuando exista una fila en `restaurant_staff` con `role = 'waiter'`, el usuario vea la versión mesero; solo falta el flujo de **creación** de esa fila (panel de invitación o script).
+
+---
+
+## 5. Navegación (Bottom Nav) para Meseros
 
 Barra inferior con 4–5 ítems, centrados en servicio de mesas y órdenes:
 
@@ -66,7 +117,7 @@ No incluir: Promociones (gestión), Estadísticas, Gestionar Reservaciones, Pago
 
 ---
 
-## 5. Pantallas principales
+## 6. Pantallas principales
 
 ### 5.1 Inicio Mesero (`/waiter-home`)
 
@@ -117,7 +168,7 @@ No incluir: Promociones (gestión), Estadísticas, Gestionar Reservaciones, Pago
 
 ---
 
-## 6. Modelo de datos y API
+## 7. Modelo de datos y API
 
 ### 6.1 Órdenes (ya existente)
 
@@ -155,7 +206,7 @@ Recomendación: empezar con **opción mínima** (lista de mesas por restaurante 
 
 ---
 
-## 7. Permisos y seguridad
+## 8. Permisos y seguridad
 
 - **RLS (Supabase):** Las filas de `orders` que el mesero puede ver/actualizar deben limitarse a `restaurant_id` = restaurante del mesero. Si se añade `waiter_id`, se puede restringir “solo mis órdenes” para meseros y seguir mostrando todas las del restaurante a manager/owner.
 - **Auth:** El mesero ya está autenticado y vinculado a un `restaurant_id` vía `restaurant_staff`. No debe poder ver órdenes de otro restaurante.
@@ -163,7 +214,7 @@ Recomendación: empezar con **opción mínima** (lista de mesas por restaurante 
 
 ---
 
-## 8. Resumen de reutilización
+## 9. Resumen de reutilización
 
 | Elemento | Comensal | Restaurante | Mesero |
 |----------|----------|-------------|--------|
@@ -178,27 +229,32 @@ Recomendación: empezar con **opción mínima** (lista de mesas por restaurante 
 
 ---
 
-## 9. Fases de implementación sugeridas
+## 10. Fases de implementación (moderadas y alcanzables)
 
-**Fase 1 – Mínimo viable**
-- Detección de rol `waiter` en login (mismo `accountType` “restaurant”, distinta navegación por rol).
-- Bottom nav y rutas solo para mesero: Inicio, Mesas, Órdenes, Perfil.
-- Pantalla “Mesas”: lista simple de mesas (configuración o lista fija por restaurante); al elegir mesa → “Tomar orden para Mesa X”.
-- Flujo “Tomar orden”: reutilizar menú y detalle de producto; carrito temporal por mesa; al confirmar, `createOrder` con `restaurant_id` del mesero y `table_number`.
-- Pantalla “Órdenes activas”: listar órdenes del restaurante (API nueva o ampliada) con filtro por estado; solo lectura en v1.
+### Fase 1 – Navegación y estructura mesero (actual)
+- **Auth:** Exponer `staffRole` desde `restaurant_staff` en AuthContext (ya se consulta `role`; guardarlo en estado).
+- **Rutas y nav:** Si `accountType === 'restaurant'` y `staffRole === 'waiter'`, mostrar bottom nav de mesero (Inicio, Mesas, Órdenes, Perfil) y rutas `/waiter-home`, `/waiter-tables`, `/waiter-orders`. Redirect de `/home` a `/waiter-home` para meseros.
+- **Pantallas placeholder:** Crear `WaiterHomeScreen`, `WaiterTablesScreen`, `WaiterOrdersScreen` con TopNavbar (Bienvenido + nombre) y título/contenido mínimo. Sin lógica de negocio aún.
+- **i18n:** Añadir claves `waiter.navigation.*` y `waiter.*.title` en locales.
 
-**Fase 2**
-- “Inicio mesero” con resumen de mesas y órdenes activas.
-- Marcar orden como “entregada” (o “lista para entregar”) desde la app mesero.
-- Opcional: columna `waiter_id` en `orders` y filtrar “mis órdenes”.
+### Fase 2 – Mesas y tomar orden
+- Lista de mesas: configuración por restaurante (lista fija o campo en BD) y pantalla Mesas mostrando mesas; al tocar una mesa → ir a “Tomar orden para Mesa X”.
+- Flujo tomar orden: reutilizar menú (productos) y detalle de producto; carrito temporal por mesa; al confirmar, `createOrder` con `restaurant_id` del mesero y `table_number`.
 
-**Fase 3**
-- Cuenta por mesa (agrupar órdenes por `table_number`) y botón “Solicitar cuenta”.
-- Si el negocio lo pide: tabla `tables` y asignación mesero–mesas por turno.
+### Fase 3 – Órdenes activas del restaurante
+- API (o ampliación): obtener órdenes por `restaurant_id` (solo lectura para staff). RLS/permisos para rol waiter.
+- Pantalla Órdenes: listar órdenes activas del restaurante con filtro por estado (y opcional por mesa); detalle de orden en solo lectura.
+
+### Fase 4 – Inicio con resumen y acciones
+- Inicio mesero: resumen (cantidad de mesas, órdenes activas, “listas para entregar”); accesos rápidos a mesas/órdenes.
+- Marcar orden como “entregada” o “lista para entregar” desde la app mesero (actualizar estado vía API existente).
+
+### Fase 5 – Opcionales
+- Cuenta por mesa y “Solicitar cuenta”; columna `waiter_id` en `orders`; tabla `tables` y asignación mesero–mesas por turno.
 
 ---
 
-## 10. Traducciones (i18n)
+## 11. Traducciones (i18n)
 
 Añadir claves bajo `restaurant` o nuevo bloque `waiter`, por ejemplo:
 

@@ -3,11 +3,16 @@ import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../config/supabase';
 import { registerRestaurant } from '../services/database';
 
+/** Rol del usuario en restaurant_staff cuando accountType === 'restaurant'. null si es comensal o no hay staff. */
+export type StaffRole = 'owner' | 'admin' | 'manager' | 'waiter' | 'chef' | 'cashier' | string;
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   accountType: 'restaurant' | 'diner';
+  /** Rol en restaurant_staff cuando accountType === 'restaurant'; null en caso contrario. */
+  staffRole: StaffRole | null;
   userType: 'registered' | 'guest';
   signUp: (params: { 
     email?: string; 
@@ -32,6 +37,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [accountType, setAccountType] = useState<'restaurant' | 'diner'>('diner');
+  const [staffRole, setStaffRole] = useState<StaffRole | null>(null);
   const [userType, setUserType] = useState<'registered' | 'guest'>('registered');
 
   // Track users currently being created to avoid race conditions with onAuthStateChange
@@ -45,6 +51,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const refreshAccountType = async (userId?: string | null, retries = 3) => {
     if (!userId) {
       setAccountType('diner');
+      setStaffRole(null);
       return;
     }
     
@@ -67,10 +74,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return refreshAccountType(userId, retries - 1);
         }
         setAccountType('diner');
+        setStaffRole(null);
         return;
       }
       
       const newAccountType = staffRow ? 'restaurant' : 'diner';
+      setStaffRole(staffRow?.role ?? null);
       console.log(`[AuthContext] Account type determined: ${newAccountType}`, staffRow);
       setAccountType(newAccountType);
     } catch (error) {
@@ -81,6 +90,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return refreshAccountType(userId, retries - 1);
       }
       setAccountType('diner');
+      setStaffRole(null);
     }
   };
 
@@ -114,6 +124,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } as Session);
     setUserType('guest');
     setAccountType('diner'); // Los invitados siempre son comensales
+    setStaffRole(null);
     setLoading(false);
     
     localStorage.setItem('guestSession', JSON.stringify(guestData));
@@ -599,6 +610,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setSession(null);
     setUserType('guest');
     setAccountType('diner');
+    setStaffRole(null);
   };
 
   const resetPassword = async (email: string): Promise<{ error: AuthError | null }> => {
@@ -640,6 +652,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         session,
         loading,
         accountType,
+        staffRole,
         userType,
         signUp,
         signIn,
@@ -664,6 +677,7 @@ export const useAuth = (): AuthContextType => {
       session: null,
       loading: true,
       accountType: 'diner',
+      staffRole: null,
       userType: 'registered',
       signUp: async () => ({ error: { name: 'AuthError', message: 'AuthProvider no está montado' } as AuthError }),
       signIn: async () => ({ error: { name: 'AuthError', message: 'AuthProvider no está montado' } as AuthError }),

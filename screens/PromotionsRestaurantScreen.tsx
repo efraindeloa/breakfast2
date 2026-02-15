@@ -44,8 +44,9 @@ const PromotionsRestaurantScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { addFavoritePromotion, removeFavoritePromotion, isPromotionFavorite } = useFavorites();
-  const { selectedRestaurant } = useRestaurant();
+  const { selectedRestaurantId } = useRestaurant();
   const { accountType } = useAuth();
+  const canEditPromotions = accountType === 'restaurant';
   const { products, refreshProducts } = useProducts();
   const [editMode, setEditMode] = useState(false);
   const [promotions, setPromotions] = useState<DBPromotion[]>([]);
@@ -91,22 +92,25 @@ const PromotionsRestaurantScreen: React.FC = () => {
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   
 
-  // Cargar promociones desde la base de datos
+  // Cargar promociones (cualquier tipo de cuenta: restaurante usa su id, resto usa restaurante seleccionado)
   useEffect(() => {
     const loadPromotions = async () => {
       setIsLoading(true);
       try {
-        const restaurantIdResult = selectedRestaurant?.id 
-          ? { success: true, data: selectedRestaurant.id }
-          : await getCurrentUserRestaurantId();
-        
-        if (!restaurantIdResult.success || !restaurantIdResult.data) {
-          console.error('No se pudo obtener el ID del restaurante');
+        let restaurantId: string | null = null;
+        if (accountType === 'restaurant') {
+          const restaurantIdResult = await getCurrentUserRestaurantId();
+          restaurantId = restaurantIdResult.success && restaurantIdResult.data ? restaurantIdResult.data : null;
+        } else {
+          restaurantId = selectedRestaurantId;
+        }
+        if (!restaurantId) {
+          setPromotions([]);
           setIsLoading(false);
           return;
         }
 
-        const promotionsResult = await getPromotions(restaurantIdResult.data);
+        const promotionsResult = await getPromotions(restaurantId);
         if (promotionsResult.success && promotionsResult.data) {
           setPromotions(promotionsResult.data);
         } else {
@@ -120,7 +124,7 @@ const PromotionsRestaurantScreen: React.FC = () => {
     };
 
     loadPromotions();
-  }, [selectedRestaurant]);
+  }, [selectedRestaurantId, accountType]);
 
   // Convertir promociones de BD al formato esperado por el componente
   const convertedPromotions = useMemo(() => {
@@ -353,8 +357,9 @@ const PromotionsRestaurantScreen: React.FC = () => {
     setPromotionBadges(promotionBadges.filter(b => b !== badge));
   };
 
-  // Guardar promoción
+  // Guardar promoción (solo cuentas restaurante)
   const handleSavePromotion = async () => {
+    if (!canEditPromotions) return;
     if (!editingTitle.trim()) {
       showNotification(t('restaurant.promotions.errors.titleRequired') || 'El título es requerido', 'error');
       return;
@@ -364,15 +369,16 @@ const PromotionsRestaurantScreen: React.FC = () => {
     setIsSaving(true);
 
     try {
-      const restaurantIdResult = selectedRestaurant?.id 
-        ? { success: true, data: selectedRestaurant.id }
-        : await getCurrentUserRestaurantId();
-      
-      if (!restaurantIdResult.success || !restaurantIdResult.data) {
-        throw new Error(((restaurantIdResult as any).error) || 'No se pudo obtener el ID del restaurante');
+      let restaurantId: string | null = null;
+      if (accountType === 'restaurant') {
+        const restaurantIdResult = await getCurrentUserRestaurantId();
+        restaurantId = restaurantIdResult.success && restaurantIdResult.data ? restaurantIdResult.data : null;
+      } else {
+        restaurantId = selectedRestaurantId;
       }
-      
-      const restaurantId = restaurantIdResult.data;
+      if (!restaurantId) {
+        throw new Error('No se pudo obtener el ID del restaurante');
+      }
 
       // Subir imagen si hay una nueva
       let imageUrl = editingPromotion?.image_url || '';
@@ -497,10 +503,13 @@ const PromotionsRestaurantScreen: React.FC = () => {
     try {
       const success = await deletePromotion(promotionIdToDelete);
       if (success) {
-        // Recargar promociones
-        const restaurantId = selectedRestaurant?.id || await getCurrentUserRestaurantId();
-        const loadedPromotions = await getPromotions(restaurantId);
-        setPromotions(loadedPromotions);
+        const restaurantId = accountType === 'restaurant'
+          ? (await getCurrentUserRestaurantId()).data ?? null
+          : selectedRestaurantId;
+        if (restaurantId) {
+          const result = await getPromotions(restaurantId);
+          if (result.success && result.data) setPromotions(result.data);
+        }
         showNotification(t('restaurant.promotions.success.deleted') || 'Promoción eliminada correctamente', 'success');
       } else {
         throw new Error('Error al eliminar la promoción');
@@ -569,21 +578,23 @@ const PromotionsRestaurantScreen: React.FC = () => {
           showBackButton={false}
         />
 
-        {/* Botón para activar/desactivar modo de edición */}
-        <div className="px-4 pt-2">
-          <button
-            type="button"
-            onClick={() => setEditMode(!editMode)}
-            className="w-full rounded-xl border px-4 py-3 flex items-center justify-between border-gray-200 dark:border-gray-700 bg-white dark:bg-[#322a1a] text-[#181611] dark:text-white"
-          >
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined">{editMode ? 'check' : 'edit'}</span>
-              <span className="text-sm font-bold">
-                {editMode ? (t('restaurant.menu.editModeActive') || 'Modo edición activado') : (t('restaurant.menu.switchToEditMode') || 'Cambiar a modo de edición')}
-              </span>
-            </div>
-          </button>
-        </div>
+        {/* Botón para activar/desactivar modo de edición (solo cuentas restaurante) */}
+        {canEditPromotions && (
+          <div className="px-4 pt-2">
+            <button
+              type="button"
+              onClick={() => setEditMode(!editMode)}
+              className="w-full rounded-xl border px-4 py-3 flex items-center justify-between border-gray-200 dark:border-gray-700 bg-white dark:bg-[#322a1a] text-[#181611] dark:text-white"
+            >
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined">{editMode ? 'check' : 'edit'}</span>
+                <span className="text-sm font-bold">
+                  {editMode ? (t('restaurant.menu.editModeActive') || 'Modo edición activado') : (t('restaurant.menu.switchToEditMode') || 'Cambiar a modo de edición')}
+                </span>
+              </div>
+            </button>
+          </div>
+        )}
 
         {/* Carousel: Main Offers */}
         <div className="flex overflow-x-auto scroll-smooth [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

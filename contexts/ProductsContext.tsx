@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getProducts, getProductById, Product, getCurrentUserRestaurantId } from '../services/database';
-import { allDishes } from '../screens/DishDetailScreen';
+import { getProducts, Product, getCurrentUserRestaurantId } from '../services/database';
 import { useRestaurant } from './RestaurantContext';
 import { useLanguage } from './LanguageContext';
 import { useAuth } from './AuthContext';
@@ -23,26 +22,7 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const { language } = useLanguage(); // Escuchar cambios de idioma
   const { accountType } = useAuth(); // Para saber si es restaurante o comensal
 
-  // Función para convertir allDishes a formato Product
-  const convertDishesToProducts = (): Product[] => {
-    return allDishes.map(dish => ({
-      id: dish.id,
-      restaurant_id: '00000000-0000-0000-0000-000000000001', // ID de restaurante por defecto
-      name: dish.name,
-      description: dish.description,
-      price: dish.price,
-      image: dish.image,
-      image_urls: dish.image ? [dish.image] : [],
-      badges: dish.badges || [],
-      category: dish.category,
-      origin: dish.origin || '',
-      is_active: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }));
-  };
-
-  // Cargar productos desde Supabase o usar fallback
+  // Cargar productos desde Supabase (sin fallback hardcodeado para comensales)
   const loadProducts = async () => {
     try {
       setIsLoading(true);
@@ -64,27 +44,13 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
       });
       
       if (supabaseProducts.length > 0) {
-        // Si hay productos en Supabase, usarlos
         setProducts(supabaseProducts);
-      } else {
-        // Si no hay productos en Supabase, usar los hardcodeados como fallback
-        // Solo para comensales, los restaurantes no deberían ver productos hardcodeados
-        if (accountType === 'diner') {
-          const fallbackProducts = convertDishesToProducts();
-          setProducts(fallbackProducts);
-        } else {
-          setProducts([]);
-        }
-      }
-    } catch (error) {
-      console.error('[ProductsContext] Error loading products:', error);
-      // En caso de error, usar fallback solo para comensales
-      if (accountType === 'diner') {
-        const fallbackProducts = convertDishesToProducts();
-        setProducts(fallbackProducts);
       } else {
         setProducts([]);
       }
+    } catch (error) {
+      console.error('[ProductsContext] Error loading products:', error);
+      setProducts([]);
     } finally {
       setIsLoading(false);
     }

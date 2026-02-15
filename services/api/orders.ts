@@ -255,6 +255,20 @@ export async function updateOrder(
 }
 
 /**
+ * Cerrar orden (RPC: status = entregada, completed_at = now())
+ */
+export async function closeOrder(orderId: string): Promise<ApiResponse<Order>> {
+  return handleSupabaseError(async () => {
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase no está configurado');
+    }
+    const { data, error } = await supabase.rpc('close_order', { p_order_id: orderId });
+    if (error) throw error;
+    return data as Order;
+  }, 'Error al cerrar orden');
+}
+
+/**
  * Eliminar una orden (soft delete)
  */
 export async function deleteOrder(orderId: string, userId?: string): Promise<ApiResponse<boolean>> {
@@ -264,10 +278,10 @@ export async function deleteOrder(orderId: string, userId?: string): Promise<Api
     const { error } = await supabase
       .from('orders')
       .update({ 
-        status: 'cancelled' as OrderStatus,
+        status: 'cancelada' as OrderStatus,
         updated_at: new Date().toISOString()
       })
-      .eq('order_id', orderId)
+      .eq('id', orderId)
       .eq('user_id', targetUserId);
 
     if (error) throw error;

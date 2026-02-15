@@ -66,7 +66,7 @@ const MenuRestaurantScreen: React.FC = () => {
   const { t } = useTranslation();
   const { language } = useLanguage();
   const { products, refreshProducts } = useProducts();
-  const { selectedRestaurant } = useRestaurant();
+  const { selectedRestaurant, selectedRestaurantId } = useRestaurant();
   const { user, accountType } = useAuth();
 
   // Nota: Las categorías ahora se usan directamente desde el campo 'category' de los productos
@@ -211,11 +211,17 @@ const MenuRestaurantScreen: React.FC = () => {
   // Los productos ahora se guardan en Supabase, no localmente
 
   
-  // Cargar picks desde la base de datos
+  // Cargar picks desde la base de datos (cualquier tipo de cuenta: restaurante usa su id, resto usa restaurante seleccionado)
   useEffect(() => {
     const loadMenuSections = async () => {
-      if (!selectedRestaurant || accountType !== 'restaurant') {
-        // Si no hay restaurante seleccionado o no es restaurante, usar valores por defecto vacíos
+      let restaurantId: string | null = null;
+      if (accountType === 'restaurant') {
+        const restaurantIdResult = await getCurrentUserRestaurantId();
+        restaurantId = restaurantIdResult.success && restaurantIdResult.data ? restaurantIdResult.data : null;
+      } else {
+        restaurantId = selectedRestaurantId;
+      }
+      if (!restaurantId) {
         setChefSuggestionsByCategory(DEFAULT_CHEF_SUGGESTIONS);
         setHighlightsByCategory(DEFAULT_HIGHLIGHTS);
         setMenuItemsByCategory(DEFAULT_MENU_ITEMS);
@@ -223,13 +229,6 @@ const MenuRestaurantScreen: React.FC = () => {
       }
 
       try {
-        const restaurantIdResult = await getCurrentUserRestaurantId();
-        if (!restaurantIdResult.success || !restaurantIdResult.data) {
-          console.warn('[MenuRestaurantScreen] No se pudo obtener el restaurant_id');
-          return;
-        }
-
-        const restaurantId = restaurantIdResult.data;
         const sectionsResult = await getMenuSections(restaurantId);
         if (sectionsResult.success && sectionsResult.data) {
           const [chefSuggestions, highlights, menuItems] = sectionsResult.data;
@@ -250,11 +249,11 @@ const MenuRestaurantScreen: React.FC = () => {
     };
 
     loadMenuSections();
-  }, [selectedRestaurant, accountType]);
+  }, [selectedRestaurantId, accountType]);
 
-  // Guardar picks en la base de datos (con debounce para evitar demasiadas llamadas)
+  // Guardar picks en la base de datos (solo cuentas restaurante pueden guardar)
   useEffect(() => {
-    if (!selectedRestaurant || accountType !== 'restaurant') return;
+    if (accountType !== 'restaurant') return;
 
     let timeoutId: NodeJS.Timeout;
     const saveMenuSectionsToDB = async () => {
@@ -293,7 +292,7 @@ const MenuRestaurantScreen: React.FC = () => {
         clearTimeout(timeoutId);
       }
     };
-  }, [chefSuggestionsByCategory, highlightsByCategory, menuItemsByCategory, selectedRestaurant, accountType]);
+  }, [chefSuggestionsByCategory, highlightsByCategory, menuItemsByCategory, accountType]);
 
   // Guardar estado en localStorage cuando cambie
   useEffect(() => {

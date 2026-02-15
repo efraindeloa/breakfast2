@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useRestaurant } from '../contexts/RestaurantContext';
+import { createAssistanceRequest as createAssistanceRequestAPI } from '../services/api';
 
 // IDs de todos los productos del menú
 const ALL_DISH_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34];
@@ -27,6 +29,7 @@ const ASSISTANCE_HISTORY_KEY = 'assistance_history';
 const RequestAssistanceScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { selectedRestaurantId } = useRestaurant();
   const [selectedRequests, setSelectedRequests] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [history, setHistory] = useState<AssistanceHistoryItem[]>([]);
@@ -340,24 +343,21 @@ const RequestAssistanceScreen: React.FC = () => {
   };
 
   // Enviar todas las solicitudes seleccionadas
-  const handleSendRequests = () => {
+  const handleSendRequests = async () => {
     if (selectedRequests.length === 0) return;
 
     const newHistoryItems: AssistanceHistoryItem[] = [];
 
-    selectedRequests.forEach(requestId => {
-      // Obtener información de la solicitud
+    for (const requestId of selectedRequests) {
       let requestLabel = '';
       let requestIcon = 'help';
       let isCustom = false;
 
       if (requestId.startsWith('custom-')) {
-        // Es una solicitud personalizada
         requestLabel = customRequestLabel || searchQuery.trim();
         requestIcon = 'priority_high';
         isCustom = true;
       } else {
-        // Es una solicitud predefinida
         const request = assistanceRequests.find(r => r.id === requestId);
         if (request) {
           requestLabel = request.label;
@@ -366,30 +366,40 @@ const RequestAssistanceScreen: React.FC = () => {
       }
 
       if (requestLabel) {
-        const historyItem: AssistanceHistoryItem = {
+        newHistoryItems.push({
           id: `history-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           label: requestLabel,
           icon: requestIcon,
           timestamp: new Date().toISOString(),
-          isCustom: isCustom,
-          status: 'sent', // Estado inicial: enviada
-        };
-        newHistoryItems.push(historyItem);
-      }
-    });
+          isCustom,
+          status: 'sent',
+        });
 
-    // Agregar al historial
+        // Enviar al backend para que el mesero reciba la notificación
+        if (selectedRestaurantId) {
+          try {
+            await createAssistanceRequestAPI({
+              restaurant_id: selectedRestaurantId,
+              request_type: isCustom ? 'custom' : requestId,
+              message: requestLabel,
+              // TODO: cuando el comensal pueda elegir mesa, usar ese valor
+              table_number: '1',
+            });
+          } catch (err) {
+            console.error('Error enviando solicitud de asistencia:', err);
+          }
+        }
+      }
+    }
+
     const updatedHistory = [...newHistoryItems, ...history];
     setHistory(updatedHistory);
-    
-    // Guardar en localStorage
     try {
       localStorage.setItem(ASSISTANCE_HISTORY_KEY, JSON.stringify(updatedHistory));
     } catch (error) {
       console.error('Error saving assistance history:', error);
     }
 
-    // Limpiar selecciones
     setSelectedRequests([]);
     setCustomRequestId(null);
     setCustomRequestLabel('');

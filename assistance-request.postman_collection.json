@@ -1,0 +1,44 @@
+{
+  "info": {
+    "name": "Supabase Assistance Request",
+    "_postman_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+    "description": "Request to Supabase Edge Function assistance-requests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Assistance Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRrd2Fja3FybnNxbG14dGFsdnV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxMTU3NzEsImV4cCI6MjA4NDY5MTc3MX0.1PG0x0ZdAAjhunyiPBRzpgpsr9nZGV5epHdUvalHqbA"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"restaurant_id\": \"c57f5afa-0442-4998-9f25-d74a95e027a1\",\n  \"request_type\": \"cutlery\",\n  \"message\": \"Cubiertos y Vasos\",\n  \"table_number\": \"1\"\n}"
+        },
+        "url": {
+          "raw": "https://tkwackqrnsqlmxtalvuw.supabase.co/functions/v1/assistance-requests",
+          "protocol": "https",
+          "host": [
+            "tkwackqrnsqlmxtalvuw",
+            "supabase",
+            "co"
+          ],
+          "path": [
+            "functions",
+            "v1",
+            "assistance-requests"
+          ]
+        }
+      }
+    }
+  ]
+}

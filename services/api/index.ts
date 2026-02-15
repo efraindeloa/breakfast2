@@ -16,3 +16,8 @@ export * from './user';
 export * from './menu-sections';
 export * from './orders';
 export * from './reservations';
+export * from './assistance-requests';
+export * from './reports';
+export * from './notifications';
+export * from './invoices';
+export * from './endpoints/assistance-requests';

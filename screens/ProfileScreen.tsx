@@ -13,6 +13,16 @@ import {
   UserPaymentMethod
 } from '../services/database';
 import { getUserProfile, updateUserProfile, getUserData, updateUserData } from '../services/api/user';
+import {
+  getCurrentUserRestaurantId,
+  getRestaurantById,
+  updateRestaurant,
+  getRestaurantCoverImages,
+  createRestaurantCoverImage,
+  deleteRestaurantCoverImage,
+  uploadImage,
+  getRestaurantImageUrl,
+} from '../services/database';
 import { playClickSound, playBackspaceSound } from '../utils/sound';
 import GuestRestrictionModal from '../components/GuestRestrictionModal';
 
@@ -33,7 +43,7 @@ const ProfileScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { config } = useRestaurant();
-  const { signOut, user, userType } = useAuth();
+  const { signOut, user, userType, accountType } = useAuth();
   const { clearCart } = useCart();
   const [cards, setCards] = useState<Card[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -51,6 +61,21 @@ const ProfileScreen: React.FC = () => {
   const [editingField, setEditingField] = useState<'name' | 'email' | 'phone' | null>(null);
   const [editValue, setEditValue] = useState('');
   const [isLoadingUserData, setIsLoadingUserData] = useState(true);
+  const [lastSync, setLastSync] = useState<string>('');
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [restaurantForm, setRestaurantForm] = useState({
+    description: '',
+    address: '',
+    city: '',
+    state: '',
+    country: 'México',
+    postal_code: '',
+    website: '',
+  });
+  const [isSavingAll, setIsSavingAll] = useState(false);
+  const [carouselImages, setCarouselImages] = useState<{ id: string; image_url: string; image_order: number }[]>([]);
+  const [isUploadingCarousel, setIsUploadingCarousel] = useState(false);
+  const carouselInputRef = useRef<HTMLInputElement>(null);
   const defaultImage = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCpDz7kylj-nzXQ8dgTtg0umbheeBshTyl9RxUnJSp0BUjFcWJ3sxgOubkQ8zmiPon5fihqbaOxTagMXDyKVNgvKz26RDTYgirEcCoN4D63BS70Z756QE8GvMF0f9jY4ay6NQGHThIUrY9LyBJ36TnvGVD55nEjl3MkjHlHN1Lu8GWsNcmjYRbb1fvVeEXa3U082ocTXHk5jBmvqBPt1G5iwzCVNqXclTyviqCl15lCCSj96Ih0QAmRstK-YiKSnnxj97uPAvxJUJVd';
   const [profileImage, setProfileImage] = useState<string>(defaultImage);
   const [showCropModal, setShowCropModal] = useState(false);
@@ -79,6 +104,7 @@ const ProfileScreen: React.FC = () => {
         
         if (result.success && result.data) {
           setUserData(result.data);
+          setLastSync(new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }));
         } else {
           // Fallback a datos de Auth si la API falla
           const fullName = user.user_metadata?.full_name || 
@@ -110,6 +136,35 @@ const ProfileScreen: React.FC = () => {
 
     loadUserData();
   }, [user?.id]);
+
+  // Cargar datos del restaurante cuando la cuenta es tipo restaurante
+  useEffect(() => {
+    const loadRestaurant = async () => {
+      if (accountType !== 'restaurant' || !isSupabaseConfigured()) return;
+      try {
+        const rid = await getCurrentUserRestaurantId();
+        if (!rid) return;
+        setRestaurantId(rid);
+        const rest = await getRestaurantById(rid);
+        if (rest) {
+          setRestaurantForm({
+            description: rest.description || '',
+            address: rest.address || '',
+            city: rest.city || '',
+            state: rest.state || '',
+            country: rest.country || 'México',
+            postal_code: rest.postal_code || '',
+            website: rest.website || '',
+          });
+        }
+        const covers = await getRestaurantCoverImages(rid);
+        setCarouselImages(covers.map(c => ({ id: c.id, image_url: c.image_url, image_order: c.image_order })));
+      } catch (e) {
+        console.error('[ProfileScreen] Error loading restaurant:', e);
+      }
+    };
+    loadRestaurant();
+  }, [accountType]);
 
   // Cargar perfil, configuración y métodos de pago desde la base de datos
   useEffect(() => {
@@ -338,6 +393,31 @@ const ProfileScreen: React.FC = () => {
     setEditValue('');
   };
 
+  const handleSaveAll = async () => {
+    setIsSavingAll(true);
+    try {
+      if (user?.id && isSupabaseConfigured()) {
+        await updateUserData({ name: userData.name, phone: userData.phone }, user.id);
+      }
+      if (restaurantId && accountType === 'restaurant') {
+        await updateRestaurant(restaurantId, {
+          description: restaurantForm.description || undefined,
+          address: restaurantForm.address || undefined,
+          city: restaurantForm.city || undefined,
+          state: restaurantForm.state || undefined,
+          country: restaurantForm.country || undefined,
+          postal_code: restaurantForm.postal_code || undefined,
+          website: restaurantForm.website || undefined,
+        });
+      }
+      setLastSync(new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }));
+    } catch (e) {
+      console.error('[ProfileScreen] Error saving:', e);
+    } finally {
+      setIsSavingAll(false);
+    }
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -526,93 +606,144 @@ const ProfileScreen: React.FC = () => {
     }
   };
 
+  const handleCarouselAdd = () => {
+    if (carouselImages.length >= 10) return;
+    carouselInputRef.current?.click();
+  };
+
+  const handleCarouselFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !restaurantId || !file.type.startsWith('image/')) return;
+    setIsUploadingCarousel(true);
+    try {
+      const filePath = `cover/${restaurantId}/${Date.now()}-${file.name.replace(/\s/g, '-')}`;
+      const url = await uploadImage('restaurant-images', filePath, file);
+      if (!url) throw new Error('Upload failed');
+      const created = await createRestaurantCoverImage({
+        restaurant_id: restaurantId,
+        image_url: filePath,
+        image_order: carouselImages.length,
+        is_active: true,
+      });
+      if (created) setCarouselImages(prev => [...prev, { id: created.id, image_url: created.image_url, image_order: created.image_order }]);
+    } catch (err) {
+      console.error('[ProfileScreen] Error adding carousel image:', err);
+    } finally {
+      setIsUploadingCarousel(false);
+    }
+  };
+
+  const handleCarouselRemove = async (imageId: string) => {
+    const ok = await deleteRestaurantCoverImage(imageId);
+    if (ok) setCarouselImages(prev => prev.filter(img => img.id !== imageId));
+  };
 
   return (
     <div className="pb-32">
-      <header className="flex items-center bg-white dark:bg-[#2d2116] p-4 pb-2 justify-between sticky top-0 z-50 border-b border-gray-100 dark:border-gray-800 safe-top">
-        <button 
-          onClick={() => {
-            playClickSound();
-            navigate(-1);
-          }} 
-          className="size-10 rounded-full bg-[#F5F0E8] dark:bg-[#3d3321] flex items-center justify-center hover:bg-[#E8E0D0] dark:hover:bg-[#4a3f2d] transition-colors shadow-sm"
+      <header className="sticky top-0 z-50 flex items-center bg-white/80 dark:bg-background-dark/80 backdrop-blur-md p-4 pb-2 justify-between border-b border-[#e6e0db] dark:border-[#3d2e21] safe-top">
+        <button
+          onClick={() => { playClickSound(); navigate(-1); }}
+          className="text-[#181411] dark:text-white flex size-12 shrink-0 items-center justify-start"
         >
-          <span className="material-symbols-outlined cursor-pointer text-[#8a7560] dark:text-[#d4c4a8]">arrow_back_ios</span>
+          <span className="material-symbols-outlined cursor-pointer">arrow_back_ios</span>
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center">{t('profile.title')}</h2>
-        <div className="w-12 flex items-center justify-end">
-          <span 
-            className="material-symbols-outlined cursor-pointer" 
-            onClick={() => {
-              playClickSound();
-              navigate('/settings');
-            }}
+        <h2 className="text-[#181411] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">{t('profile.title')}</h2>
+        <div className="flex w-12 items-center justify-end">
+          <button
+            type="button"
+            onClick={() => { playClickSound(); navigate('/settings'); }}
+            className="flex cursor-pointer items-center justify-center rounded-full h-10 w-10 bg-primary/10 text-primary"
           >
-            settings
-          </span>
+            <span className="material-symbols-outlined">settings</span>
+          </button>
         </div>
       </header>
 
-      <section className="flex p-6 bg-white dark:bg-[#2d2116] mb-2 shadow-sm">
-        <div className="flex w-full flex-col gap-4 items-center">
-          <div className="relative">
-            <div className="aspect-square rounded-full min-h-32 w-32 border-4 border-primary/20 bg-center bg-cover"
-                 style={{ backgroundImage: profileImage !== defaultImage ? `url("${profileImage}")` : 'none', backgroundColor: profileImage === defaultImage ? '#f3f4f6' : 'transparent' }}>
+      {accountType === 'restaurant' ? (
+        <section className="py-6 bg-white dark:bg-[#2d2218] border-b border-[#f5f2f0] dark:border-[#3d2e21]">
+          <p className="text-center text-sm text-[#8a7560] mb-3 px-4">Hasta 10 imágenes para tu restaurante</p>
+          <div className="flex overflow-x-auto gap-4 px-4 pb-2 snap-x snap-mandatory hide-scrollbar" style={{ scrollSnapType: 'x mandatory' }}>
+            {carouselImages.map((img) => (
+              <div
+                key={img.id}
+                className="relative shrink-0 w-[180px] h-[120px] rounded-xl overflow-hidden snap-center bg-[#f8f7f5] dark:bg-[#221910] border border-[#e6e0db] dark:border-[#3d2e21]"
+              >
+                <div
+                  className="w-full h-full bg-center bg-cover"
+                  style={{ backgroundImage: `url("${getRestaurantImageUrl(img.image_url, 'cover')}")` }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleCarouselRemove(img.id)}
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-red-500 transition-colors"
+                  title="Eliminar"
+                >
+                  <span className="material-symbols-outlined text-lg">close</span>
+                </button>
+              </div>
+            ))}
+            {carouselImages.length < 10 && (
+              <button
+                type="button"
+                onClick={handleCarouselAdd}
+                disabled={isUploadingCarousel}
+                className="shrink-0 w-[180px] h-[120px] rounded-xl border-2 border-dashed border-[#e6e0db] dark:border-[#3d2e21] flex flex-col items-center justify-center gap-2 text-[#8a7560] hover:border-primary hover:bg-primary/5 transition-colors snap-center disabled:opacity-50"
+              >
+                {isUploadingCarousel ? (
+                  <span className="material-symbols-outlined animate-spin text-3xl">progress_activity</span>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-3xl">add_photo_alternate</span>
+                    <span className="text-xs font-medium">Agregar</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+          <input
+            ref={carouselInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleCarouselFileChange}
+            className="hidden"
+          />
+        </section>
+      ) : (
+        <section className="flex flex-col items-center py-8 bg-white dark:bg-[#2d2218] border-b border-[#f5f2f0] dark:border-[#3d2e21]">
+          <div className="relative mb-4">
+            <div
+              className="w-32 h-32 rounded-full border-4 border-[#f5f2f0] dark:border-[#3d2e21] flex items-center justify-center bg-[#f8f7f5] dark:bg-[#2d2218] bg-center bg-cover"
+              style={{ backgroundImage: profileImage !== defaultImage ? `url("${profileImage}")` : 'none' }}
+            >
               {profileImage === defaultImage && (
-                <div className="w-full h-full flex items-center justify-center">
-                  <span className="material-symbols-outlined text-4xl text-gray-400">person</span>
-                </div>
+                <span className="material-symbols-outlined text-5xl text-[#8a7560] font-light">person</span>
               )}
             </div>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowImageMenu(!showImageMenu);
-              }}
-              className="absolute bottom-1 right-1 bg-primary text-white p-1 rounded-full border-2 border-white cursor-pointer hover:bg-primary/90 transition-colors active:scale-95 z-10"
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowImageMenu(!showImageMenu); }}
+              className="absolute bottom-1 right-1 bg-primary text-white p-2 rounded-full shadow-lg z-10"
             >
               <span className="material-symbols-outlined text-sm">edit</span>
             </button>
-            
-            {/* Menú desplegable */}
             {showImageMenu && (
-              <div 
+              <div
                 ref={menuRef}
                 className="absolute left-full top-1/2 -translate-y-1/2 ml-3 bg-white dark:bg-[#2d2116] rounded-md shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-[60] w-[120px]"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Agregar/Cambiar foto - siempre visible */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEditImage();
-                  }}
-                  className="w-full px-2.5 py-1.5 text-left text-xs font-medium text-[#181411] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5 border-b border-gray-100 dark:border-gray-700"
-                >
+                <button onClick={(e) => { e.stopPropagation(); handleEditImage(); }} className="w-full px-2.5 py-1.5 text-left text-xs font-medium text-[#181411] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5 border-b border-gray-100 dark:border-gray-700">
                   <span className="material-symbols-outlined text-sm">photo_camera</span>
                   <span>{profileImage === defaultImage ? t('profile.addPhoto') : t('profile.changePhoto')}</span>
                 </button>
-                
-                {/* Editar foto y Eliminar foto - solo cuando hay imagen personalizada */}
                 {profileImage !== defaultImage && (
                   <>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditExistingImage();
-                      }}
-                      className="w-full px-2.5 py-1.5 text-left text-xs font-medium text-[#181411] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5 border-b border-gray-100 dark:border-gray-700"
-                    >
+                    <button onClick={(e) => { e.stopPropagation(); handleEditExistingImage(); }} className="w-full px-2.5 py-1.5 text-left text-xs font-medium text-[#181411] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5 border-b border-gray-100 dark:border-gray-700">
                       <span className="material-symbols-outlined text-sm">crop</span>
                       <span>{t('profile.editPhoto')}</span>
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteImage();
-                      }}
-                      className="w-full px-2.5 py-1.5 text-left text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center gap-1.5"
-                    >
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteImage(); }} className="w-full px-2.5 py-1.5 text-left text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-sm">delete</span>
                       <span>{t('profile.deletePhoto')}</span>
                     </button>
@@ -620,39 +751,116 @@ const ProfileScreen: React.FC = () => {
                 )}
               </div>
             )}
-            
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="hidden"
-            />
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
           </div>
           <div className="flex flex-col items-center">
-            <p className="text-[24px] font-bold">
+            <h1 className="text-2xl font-bold mb-2">
               {(() => {
-                // Obtener el primer nombre del usuario
-                const firstName = userData.name || 
-                                 user?.user_metadata?.full_name || 
-                                 user?.user_metadata?.name || 
-                                 user?.email || 
-                                 'Usuario';
-                // Limitar a 10 caracteres (sin contar "¡Hola,")
-                const limitedFirstName = firstName.length > 10 ? firstName.substring(0, 10) : firstName;
-                // Reemplazar "Carlos" con el nombre real limitado
-                return t('profile.greeting').replace('Carlos', limitedFirstName);
+                const firstName = userData.name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'Usuario';
+                const limited = firstName.length > 10 ? firstName.substring(0, 10) : firstName;
+                return t('profile.greeting').replace('Carlos', limited);
               })()}
-            </p>
-            <div className="mt-2 px-3 py-1 bg-primary/10 rounded-full">
-              <p className="text-primary text-xs font-semibold uppercase">{t('profile.memberSince')}</p>
-            </div>
+            </h1>
+            <span className="bg-[#fef3e7] dark:bg-primary/20 text-primary text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">{t('profile.memberSince')}</span>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      <section className={`bg-white dark:bg-[#2d2116] mb-2 px-4 ${userType === 'guest' ? 'opacity-50' : ''}`}>
-        <h3 className={`text-lg font-bold py-4 ${userType === 'guest' ? 'text-gray-400 dark:text-gray-500' : ''}`}>{t('profile.accountInfo')}</h3>
+      {/* Perfil del restaurante: accordion con formulario — solo para cuentas restaurante */}
+      {accountType === 'restaurant' && (
+        <div className="px-4 pb-4 space-y-3">
+          <h3 className="text-[#181411] dark:text-white text-base font-bold mb-1">Perfil del restaurante</h3>
+          <details className="group bg-white dark:bg-[#2d2218] rounded-xl border border-[#e6e0db] dark:border-[#3d2e21] overflow-hidden shadow-sm" open>
+            <summary className="flex cursor-pointer items-center justify-between p-4 list-none [&::-webkit-details-marker]:hidden">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/10 p-2 rounded-lg text-primary">
+                  <span className="material-symbols-outlined">store</span>
+                </div>
+                <div>
+                  <p className="text-[#181411] dark:text-white font-semibold">Datos del restaurante</p>
+                  <p className="text-xs text-[#8a7560]">Domicilio, sitio web, ciudad, código postal y más</p>
+                </div>
+              </div>
+              <span className="material-symbols-outlined text-[#8a7560] group-open:rotate-90 transition-transform">chevron_right</span>
+            </summary>
+            <div className="px-4 pb-4 pt-0 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">Descripción</label>
+                <textarea
+                  value={restaurantForm.description}
+                  onChange={(e) => setRestaurantForm(f => ({ ...f, description: e.target.value }))}
+                  className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary min-h-[100px] px-3 py-2"
+                  placeholder="Describe tu restaurante..."
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">Dirección</label>
+                <input
+                  type="text"
+                  value={restaurantForm.address}
+                  onChange={(e) => setRestaurantForm(f => ({ ...f, address: e.target.value }))}
+                  className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
+                  placeholder="Calle y número"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">Ciudad</label>
+                  <input
+                    type="text"
+                    value={restaurantForm.city}
+                    onChange={(e) => setRestaurantForm(f => ({ ...f, city: e.target.value }))}
+                    className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">Estado</label>
+                  <input
+                    type="text"
+                    value={restaurantForm.state}
+                    onChange={(e) => setRestaurantForm(f => ({ ...f, state: e.target.value }))}
+                    className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">País</label>
+                  <input
+                    type="text"
+                    value={restaurantForm.country}
+                    onChange={(e) => setRestaurantForm(f => ({ ...f, country: e.target.value }))}
+                    className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">Código Postal</label>
+                  <input
+                    type="text"
+                    value={restaurantForm.postal_code}
+                    onChange={(e) => setRestaurantForm(f => ({ ...f, postal_code: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                    className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
+                    maxLength={10}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">Sitio Web</label>
+                <input
+                  type="url"
+                  value={restaurantForm.website}
+                  onChange={(e) => setRestaurantForm(f => ({ ...f, website: e.target.value }))}
+                  className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+          </details>
+        </div>
+      )}
+
+      <section className={`px-4 pt-4 ${userType === 'guest' ? 'opacity-50' : ''}`}>
+        <h3 className={`text-[#181411] dark:text-white text-base font-bold mb-4 ${userType === 'guest' ? 'text-gray-400' : ''}`}>{t('profile.accountInfo')}</h3>
         {userType === 'guest' ? (
           <div className="py-8 text-center">
             <div className="text-gray-400 dark:text-gray-500 mb-2">
@@ -670,14 +878,14 @@ const ProfileScreen: React.FC = () => {
               </button>
           </div>
         ) : (
-          <div className="py-4 space-y-4">
+          <div className="space-y-4">
           {/* Nombre */}
-          <div className="flex items-start gap-4">
-            <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 size-12 shrink-0">
+          <div className="flex items-center gap-4 p-2">
+            <div className="bg-[#fef3e7] dark:bg-primary/20 p-3 rounded-lg text-primary shrink-0">
               <span className="material-symbols-outlined">person</span>
             </div>
-            <div className="flex-1">
-              <p className="text-[#8a7560] dark:text-[#c0a890] text-xs font-medium mb-1">{t('profile.name')}</p>
+            <div className="flex-1 border-b border-[#f5f2f0] dark:border-[#3d2e21] pb-2">
+              <p className="text-xs text-[#8a7560] mb-0.5">{t('profile.name')}</p>
               {editingField === 'name' ? (
                 <div className="space-y-2">
                   <input
@@ -712,27 +920,20 @@ const ProfileScreen: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold text-[#181411] dark:text-white">{userData.name || '-'}</p>
-                  <button
-                    onClick={() => handleStartEdit('name')}
-                    className="text-primary hover:text-primary/80 transition-colors p-1"
-                    title={t('profile.editName')}
-                  >
-                    <span className="material-symbols-outlined text-sm">edit</span>
-                  </button>
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-medium text-[#181411] dark:text-white">{userData.name || '-'}</p>
+                  <button type="button" onClick={() => handleStartEdit('name')} className="text-primary hover:text-primary/80 p-1" title={t('profile.editName')}><span className="material-symbols-outlined text-sm">edit</span></button>
                 </div>
               )}
             </div>
           </div>
-          
           {/* Correo electrónico */}
-          <div className="flex items-start gap-4 border-t border-gray-50 dark:border-gray-800 pt-4">
-            <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 size-12 shrink-0">
+          <div className="flex items-center gap-4 p-2">
+            <div className="bg-[#fef3e7] dark:bg-primary/20 p-3 rounded-lg text-primary shrink-0">
               <span className="material-symbols-outlined">mail</span>
             </div>
-            <div className="flex-1">
-              <p className="text-[#8a7560] dark:text-[#c0a890] text-xs font-medium mb-1">{t('profile.email')}</p>
+            <div className="flex-1 border-b border-[#f5f2f0] dark:border-[#3d2e21] pb-2">
+              <p className="text-xs text-[#8a7560] mb-0.5">{t('profile.email')}</p>
               {editingField === 'email' ? (
                 <div className="space-y-2">
                   <input
@@ -760,27 +961,20 @@ const ProfileScreen: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold text-[#181411] dark:text-white">{userData.email || '-'}</p>
-                  <button
-                    onClick={() => handleStartEdit('email')}
-                    className="text-primary hover:text-primary/80 transition-colors p-1"
-                    title={t('profile.editEmail')}
-                  >
-                    <span className="material-symbols-outlined text-sm">edit</span>
-                  </button>
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-medium text-[#181411] dark:text-white">{userData.email || '-'}</p>
+                  <button type="button" onClick={() => handleStartEdit('email')} className="text-primary hover:text-primary/80 p-1" title={t('profile.editEmail')}><span className="material-symbols-outlined text-sm">edit</span></button>
                 </div>
               )}
             </div>
           </div>
-          
           {/* Número de teléfono */}
-          <div className="flex items-start gap-4 border-t border-gray-50 dark:border-gray-800 pt-4">
-            <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 size-12 shrink-0">
-              <span className="material-symbols-outlined">phone</span>
+          <div className="flex items-center gap-4 p-2">
+            <div className="bg-[#fef3e7] dark:bg-primary/20 p-3 rounded-lg text-primary shrink-0">
+              <span className="material-symbols-outlined">call</span>
             </div>
-            <div className="flex-1">
-              <p className="text-[#8a7560] dark:text-[#c0a890] text-xs font-medium mb-1">{t('profile.phone')}</p>
+            <div className="flex-1 border-b border-[#f5f2f0] dark:border-[#3d2e21] pb-2">
+              <p className="text-xs text-[#8a7560] mb-0.5">{t('profile.phone')}</p>
               {editingField === 'phone' ? (
                 <div className="space-y-2">
                   <input
@@ -815,15 +1009,9 @@ const ProfileScreen: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold text-[#181411] dark:text-white">{userData.phone || '-'}</p>
-                  <button
-                    onClick={() => handleStartEdit('phone')}
-                    className="text-primary hover:text-primary/80 transition-colors p-1"
-                    title={t('profile.editPhone')}
-                  >
-                    <span className="material-symbols-outlined text-sm">edit</span>
-                  </button>
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-medium text-[#181411] dark:text-white">{userData.phone || '-'}</p>
+                  <button type="button" onClick={() => handleStartEdit('phone')} className="text-primary hover:text-primary/80 p-1" title={t('profile.editPhone')}><span className="material-symbols-outlined text-sm">edit</span></button>
                 </div>
               )}
             </div>
@@ -849,82 +1037,84 @@ const ProfileScreen: React.FC = () => {
         </section>
       )}
 
-      {/* Programa de Lealtad */}
-      <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
-        <MenuItem 
-          icon="stars" 
-          title={t('loyalty.title')} 
-          subtitle={t('loyalty.myLevelBenefits')} 
-          disabled={userType === 'guest'}
-          onClick={() => navigate('/loyalty')} 
-          onRestrictedClick={() => setGuestRestrictionModal({
-            show: true,
-            featureName: t('loyalty.title')
-          })}
-        />
-        <MenuItem 
-          icon="confirmation_number" 
-          title={t('coupons.title')} 
-          subtitle={t('coupons.yourCoupons')} 
-          disabled={userType === 'guest'}
-          onClick={() => navigate('/coupons')} 
-          onRestrictedClick={() => setGuestRestrictionModal({
-            show: true,
-            featureName: t('coupons.title')
-          })}
-        />
-      </section>
+      {/* Programa de Lealtad, Cupones, Contactos y Tarjetas: solo para cuentas comensal */}
+      {accountType !== 'restaurant' && (
+        <>
+          <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
+            <MenuItem 
+              icon="stars" 
+              title={t('loyalty.title')} 
+              subtitle={t('loyalty.myLevelBenefits')} 
+              disabled={userType === 'guest'}
+              onClick={() => navigate('/loyalty')} 
+              onRestrictedClick={() => setGuestRestrictionModal({
+                show: true,
+                featureName: t('loyalty.title')
+              })}
+            />
+            <MenuItem 
+              icon="confirmation_number" 
+              title={t('coupons.title')} 
+              subtitle={t('coupons.yourCoupons')} 
+              disabled={userType === 'guest'}
+              onClick={() => navigate('/coupons')} 
+              onRestrictedClick={() => setGuestRestrictionModal({
+                show: true,
+                featureName: t('coupons.title')
+              })}
+            />
+          </section>
 
-      {/* Contactos */}
-      <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
-        <MenuItem 
-          icon="contacts" 
-          title={t('contacts.title')} 
-          subtitle={t('contacts.manageContacts')} 
-          disabled={userType === 'guest'}
-          onClick={() => navigate('/contacts')} 
-          onRestrictedClick={() => setGuestRestrictionModal({
-            show: true,
-            featureName: t('contacts.title')
-          })}
-        />
-      </section>
+          <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
+            <MenuItem 
+              icon="contacts" 
+              title={t('contacts.title')} 
+              subtitle={t('contacts.manageContacts')} 
+              disabled={userType === 'guest'}
+              onClick={() => navigate('/contacts')} 
+              onRestrictedClick={() => setGuestRestrictionModal({
+                show: true,
+                featureName: t('contacts.title')
+              })}
+            />
+          </section>
 
-      {/* Tarjetas de Crédito */}
-      <section className={`bg-white dark:bg-[#2d2116] mb-2 px-4 py-4 ${userType === 'guest' ? 'opacity-50' : ''}`}>
-        <h3 className={`text-lg font-bold mb-4 ${userType === 'guest' ? 'text-gray-400 dark:text-gray-500' : ''}`}>{t('profile.myCards')}</h3>
-        {userType === 'guest' ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="text-center">
-              <div className="text-gray-400 dark:text-gray-500 mb-2">
-                <span className="material-symbols-outlined text-4xl">credit_card_off</span>
+          <section className={`bg-white dark:bg-[#2d2116] mb-2 px-4 py-4 ${userType === 'guest' ? 'opacity-50' : ''}`}>
+            <h3 className={`text-lg font-bold mb-4 ${userType === 'guest' ? 'text-gray-400 dark:text-gray-500' : ''}`}>{t('profile.myCards')}</h3>
+            {userType === 'guest' ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="text-gray-400 dark:text-gray-500 mb-2">
+                    <span className="material-symbols-outlined text-4xl">credit_card_off</span>
+                  </div>
+                  <p className="text-gray-400 dark:text-gray-500 text-sm font-medium">Solo para usuarios registrados</p>
+                  <button 
+                    onClick={() => setGuestRestrictionModal({
+                      show: true,
+                      featureName: t('profile.myCards')
+                    })}
+                    className="mt-2 text-primary text-sm font-medium hover:text-primary/80 transition-colors bg-transparent border-none shadow-none"
+                  >
+                    Registrarse para acceder
+                  </button>
+                </div>
               </div>
-              <p className="text-gray-400 dark:text-gray-500 text-sm font-medium">Solo para usuarios registrados</p>
-              <button 
-                onClick={() => setGuestRestrictionModal({
-                  show: true,
-                  featureName: t('profile.myCards')
-                })}
-                className="mt-2 text-primary text-sm font-medium hover:text-primary/80 transition-colors bg-transparent border-none shadow-none"
-              >
-                Registrarse para acceder
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-2 -mx-4 px-4">
-            {cards.map((card) => (
-              <CreditCard
-                key={card.id}
-                {...card}
-                onDelete={() => setShowDeleteConfirm(card.id)}
-                onToggle={() => toggleCardStatus(card.id)}
-              />
-            ))}
-            <EmptyCard onClick={() => navigate('/add-card')} />
-          </div>
-        )}
-      </section>
+            ) : (
+              <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-2 -mx-4 px-4">
+                {cards.map((card) => (
+                  <CreditCard
+                    key={card.id}
+                    {...card}
+                    onDelete={() => setShowDeleteConfirm(card.id)}
+                    onToggle={() => toggleCardStatus(card.id)}
+                  />
+                ))}
+                <EmptyCard onClick={() => navigate('/add-card')} />
+              </div>
+            )}
+          </section>
+        </>
+      )}
 
       <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
         <h3 className="text-lg font-bold py-4">{t('profile.myActivity')}</h3>
@@ -951,6 +1141,22 @@ const ProfileScreen: React.FC = () => {
           })}
         />
       </section>
+
+      {/* Footer: Guardar Cambios */}
+      <div className="mt-auto p-6 bg-white dark:bg-[#2d2218] border-t border-[#e6e0db] dark:border-[#3d2e21] pb-10">
+        <button
+          type="button"
+          onClick={handleSaveAll}
+          disabled={isSavingAll}
+          className="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+        >
+          <span className="material-symbols-outlined">save</span>
+          Guardar Cambios
+        </button>
+        <p className="text-center text-[10px] text-[#8a7560] mt-4 uppercase tracking-widest font-bold">
+          {lastSync ? `Última sincronización: Hoy ${lastSync}` : 'Guardar para sincronizar'}
+        </p>
+      </div>
 
       <div className="px-4 mt-8">
         <button 

@@ -95,7 +95,7 @@ async function createSampleRestaurant() {
       // Nuevos campos de perfil
       nombre_comercial: 'Donk Restaurant',
       razon_social: 'Donk Restaurant S.A. de C.V.',
-      descripcion_corta: 'Deliciosa comida mexicana e internacional en el corazón de la ciudad',
+      description: 'Deliciosa comida mexicana e internacional en el corazón de la ciudad',
       descripcion_larga: 'Donk Restaurant es un lugar acogedor donde la tradición mexicana se encuentra con sabores internacionales. Ofrecemos platillos preparados con ingredientes frescos y de la más alta calidad, en un ambiente cálido y familiar.',
       tipo_cocina: 'Mexicana e Internacional',
       tags: ['familiar', 'romántico', 'gourmet'],

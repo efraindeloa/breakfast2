@@ -44,7 +44,7 @@ import PromotionDetailScreen from './screens/PromotionDetailScreen';
 import TableReadyScreen from './screens/TableReadyScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
-import RestaurantProfileScreen from './screens/RestaurantProfileScreen';
+import RestaurantProfileScreen from './screens/RestaurantProfile';
 import RestaurantDetailsScreen from './screens/RestaurantDetailsScreen';
 import AdminControlPanelScreen from './screens/AdminControlPanelScreen';
 import HomeRestaurantScreen from './screens/HomeRestaurantScreen';
@@ -101,7 +101,7 @@ const RouterContent: React.FC = () => {
                 ? accountType === 'restaurant' && staffRole === 'waiter'
                   ? <Navigate to="/waiter-home" replace />
                   : accountType === 'restaurant'
-                  ? <Navigate to="/home-restaurant" replace />
+                  ? <HomeRestaurantScreen />
                   : <HomeScreen />
                 : <Navigate to="/" />
             }

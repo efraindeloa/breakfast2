@@ -2770,6 +2770,16 @@ export const checkRestaurantNameExists = async (restaurantName: string): Promise
   }
 };
 
+/** Datos de domicilio y contacto para registro de restaurante */
+export interface RestaurantRegistrationAddress {
+  address?: string;
+  website?: string;
+  postal_code?: string;
+  country?: string;
+  state?: string;
+  city?: string;
+}
+
 /**
  * Registra un restaurante completo y asocia al usuario como owner
  * Esta función debe ser llamada después de que el usuario se haya registrado en auth
@@ -2777,7 +2787,8 @@ export const checkRestaurantNameExists = async (restaurantName: string): Promise
 export const registerRestaurant = async (
   userId: string,
   restaurantName: string,
-  rfc?: string
+  rfc?: string,
+  addressData?: RestaurantRegistrationAddress
 ): Promise<{ restaurant: Restaurant; staff: RestaurantStaff }> => {
   if (!isSupabaseConfigured()) {
     throw new Error('Supabase no está configurado');
@@ -2819,20 +2830,26 @@ export const registerRestaurant = async (
     slugCounter++;
   }
 
-  // Crear el restaurante
+  // Crear el restaurante con domicilio y datos de contacto si se proporcionan
+  const insertData: Record<string, unknown> = {
+    name: restaurantName.trim(),
+    slug: finalSlug,
+    city: addressData?.city?.trim() || 'Ciudad',
+    country: addressData?.country?.trim() || 'México',
+    is_active: true,
+    is_verified: false,
+    rating: 0.0,
+    total_reviews: 0,
+    timezone: 'America/Mexico_City',
+  };
+  if (addressData?.address?.trim()) insertData.address = addressData.address.trim();
+  if (addressData?.website?.trim()) insertData.website = addressData.website.trim();
+  if (addressData?.postal_code?.trim()) insertData.postal_code = addressData.postal_code.trim();
+  if (addressData?.state?.trim()) insertData.state = addressData.state.trim();
+
   const { data: restaurant, error: restaurantError } = await supabase
     .from('restaurants')
-    .insert({
-      name: restaurantName.trim(),
-      slug: finalSlug,
-      city: 'Ciudad', // Valores por defecto, se pueden actualizar después
-      country: 'México',
-      is_active: true,
-      is_verified: false,
-      rating: 0.0,
-      total_reviews: 0,
-      timezone: 'America/Mexico_City',
-    })
+    .insert(insertData)
     .select()
     .single();
 
@@ -2922,7 +2939,6 @@ export interface Restaurant {
   // Nuevas columnas de perfil
   nombre_comercial?: string;
   razon_social?: string;
-  descripcion_corta?: string;
   descripcion_larga?: string;
   tipo_cocina?: string;
   tags?: string[];
@@ -3231,11 +3247,18 @@ export const updateRestaurant = async (
       throw new Error('ID de restaurante inválido');
     }
 
-    console.log('[updateRestaurant] Updating restaurant:', { restaurantId, updates });
+    // La tabla restaurants tiene columna "description", no "descripcion_corta"
+    const payload = { ...updates } as Record<string, unknown>;
+    if ('descripcion_corta' in payload && payload.descripcion_corta !== undefined) {
+      payload.description = payload.descripcion_corta;
+      delete payload.descripcion_corta;
+    }
+
+    console.log('[updateRestaurant] Updating restaurant:', { restaurantId, updates: payload });
 
     const { data, error } = await supabase
       .from('restaurants')
-      .update(updates)
+      .update(payload)
       .eq('id', restaurantId)
       .select()
       .single();

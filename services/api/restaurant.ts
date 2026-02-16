@@ -10,10 +10,9 @@ import { getRestaurantImageUrl } from '../database';
 
 export interface UpdateRestaurantRequest {
   name?: string;
-  description?: string;
   nombre_comercial?: string;
   razon_social?: string;
-  descripcion_corta?: string;
+  description?: string;
   descripcion_larga?: string;
   tipo_cocina?: string;
   tags?: string[];
@@ -135,7 +134,7 @@ export async function updateRestaurant(
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.nombre_comercial !== undefined) updateData.nombre_comercial = updates.nombre_comercial;
     if (updates.razon_social !== undefined) updateData.razon_social = updates.razon_social;
-    if (updates.descripcion_corta !== undefined) updateData.descripcion_corta = updates.descripcion_corta;
+    if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.descripcion_larga !== undefined) updateData.descripcion_larga = updates.descripcion_larga;
     if (updates.tipo_cocina !== undefined) updateData.tipo_cocina = updates.tipo_cocina;
     if (updates.tags !== undefined) updateData.tags = updates.tags;

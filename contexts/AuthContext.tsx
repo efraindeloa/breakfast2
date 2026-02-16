@@ -21,6 +21,7 @@ interface AuthContextType {
     name: string;
     restaurantName?: string;
     rfc?: string;
+    restaurantAddress?: { address?: string; website?: string; postal_code?: string; country?: string; state?: string; city?: string };
   }) => Promise<{ error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signInAsGuest: () => void;
@@ -387,13 +388,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-  const signUp = async ({ email, phone, password, name, restaurantName, rfc }: { 
+  const signUp = async ({ email, phone, password, name, restaurantName, rfc, restaurantAddress }: { 
     email?: string; 
     phone?: string; 
     password: string;
     name: string;
     restaurantName?: string;
     rfc?: string;
+    restaurantAddress?: { address?: string; website?: string; postal_code?: string; country?: string; state?: string; city?: string };
   }): Promise<{ error: AuthError | null }> => {
     
     if (!isSupabaseConfigured()) {
@@ -460,7 +462,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           await registerRestaurant(
             data.user.id,
             restaurantName.trim(),
-            rfc?.trim() || undefined
+            rfc?.trim() || undefined,
+            restaurantAddress
           );
           
           console.log('[AuthContext] Restaurant created successfully, updating account type...');

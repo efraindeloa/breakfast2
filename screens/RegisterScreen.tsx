@@ -67,6 +67,12 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
   const [restaurantNameError, setRestaurantNameError] = useState<string>('');
   const [rfcError, setRfcError] = useState<string>('');
   const [isCheckingRestaurantName, setIsCheckingRestaurantName] = useState(false);
+  const [restaurantAddress, setRestaurantAddress] = useState('');
+  const [restaurantWebsite, setRestaurantWebsite] = useState('');
+  const [restaurantPostalCode, setRestaurantPostalCode] = useState('');
+  const [restaurantCountry, setRestaurantCountry] = useState('México');
+  const [restaurantState, setRestaurantState] = useState('');
+  const [restaurantCity, setRestaurantCity] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
@@ -371,7 +377,15 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
           password,
           name: userName,
           restaurantName: registerType === 'restaurant' ? restaurantName.trim() : undefined,
-          rfc: registerType === 'restaurant' ? rfc?.trim() : undefined
+          rfc: registerType === 'restaurant' ? rfc?.trim() : undefined,
+          restaurantAddress: registerType === 'restaurant' ? {
+            address: restaurantAddress.trim() || undefined,
+            website: restaurantWebsite.trim() || undefined,
+            postal_code: restaurantPostalCode.trim() || undefined,
+            country: restaurantCountry.trim() || undefined,
+            state: restaurantState.trim() || undefined,
+            city: restaurantCity.trim() || undefined,
+          } : undefined,
         });
 
         if (result.error) {
@@ -503,6 +517,12 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
                   setRfc('');
                   setRestaurantNameError('');
                   setRfcError('');
+                  setRestaurantAddress('');
+                  setRestaurantWebsite('');
+                  setRestaurantPostalCode('');
+                  setRestaurantCountry('México');
+                  setRestaurantState('');
+                  setRestaurantCity('');
                 }}
                 className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
               >
@@ -807,6 +827,104 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin }) => {
                     ✓ Nombre disponible
                   </p>
                 )}
+              </div>
+
+              {/* Domicilio completo */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
+                  Domicilio completo
+                </label>
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary text-xl">location_on</span>
+                  <input
+                    type="text"
+                    value={restaurantAddress}
+                    onChange={(e) => setRestaurantAddress(e.target.value)}
+                    onFocus={(e) => scrollToFocusedField(e.target)}
+                    className="w-full h-14 pl-12 pr-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Calle, número, colonia"
+                  />
+                </div>
+              </div>
+
+              {/* País */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
+                  País
+                </label>
+                <input
+                  type="text"
+                  value={restaurantCountry}
+                  onChange={(e) => setRestaurantCountry(e.target.value)}
+                  onFocus={(e) => scrollToFocusedField(e.target)}
+                  className="w-full h-14 px-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Ej: México"
+                />
+              </div>
+
+              {/* Estado */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
+                  Estado
+                </label>
+                <input
+                  type="text"
+                  value={restaurantState}
+                  onChange={(e) => setRestaurantState(e.target.value)}
+                  onFocus={(e) => scrollToFocusedField(e.target)}
+                  className="w-full h-14 px-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Ej: Ciudad de México"
+                />
+              </div>
+
+              {/* Ciudad */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
+                  Ciudad
+                </label>
+                <input
+                  type="text"
+                  value={restaurantCity}
+                  onChange={(e) => setRestaurantCity(e.target.value)}
+                  onFocus={(e) => scrollToFocusedField(e.target)}
+                  className="w-full h-14 px-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Ej: Ciudad de México"
+                />
+              </div>
+
+              {/* Código postal */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
+                  Código postal
+                </label>
+                <input
+                  type="text"
+                  value={restaurantPostalCode}
+                  onChange={(e) => setRestaurantPostalCode(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  onFocus={(e) => scrollToFocusedField(e.target)}
+                  className="w-full h-14 px-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Ej: 06600"
+                  maxLength={10}
+                  inputMode="numeric"
+                />
+              </div>
+
+              {/* Sitio web */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-[#181411]/80 dark:text-white/80 px-1">
+                  Sitio web
+                </label>
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary text-xl">link</span>
+                  <input
+                    type="url"
+                    value={restaurantWebsite}
+                    onChange={(e) => setRestaurantWebsite(e.target.value)}
+                    onFocus={(e) => scrollToFocusedField(e.target)}
+                    className="w-full h-14 pl-12 pr-4 rounded-xl border-none bg-white dark:bg-white/5 shadow-sm text-base placeholder:text-[#181411]/40 dark:placeholder:text-white/30 text-[#181411] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="https://www.mirestaurante.com"
+                  />
+                </div>
               </div>
 
               {/* RFC (opcional)

@@ -77,6 +77,8 @@ const HomeScreen: React.FC = () => {
     show: false,
     featureName: ''
   });
+  // Modal para indicar que debe seleccionar un restaurante (comensal)
+  const [showSelectRestaurantModal, setShowSelectRestaurantModal] = useState(false);
   
   // Configuración de todos los botones
   const allButtons: ButtonConfig[] = [
@@ -406,17 +408,20 @@ const HomeScreen: React.FC = () => {
     
     // Verificar si el botón está deshabilitado para usuarios invitados
     const isGuestRestricted = userType === 'guest' && button.id !== 'menu';
-    // Verificar si el botón está deshabilitado por falta de restaurante seleccionado (solo para comensales)
-    const restaurantRequiredButtons = ['menu', 'promotions', 'waitlist', 'joinTable', 'invite', 'reservations'];
-    const isRestaurantRequired = accountType === 'diner' && restaurantRequiredButtons.includes(button.id) && !selectedRestaurantId;
+    // Para comensales: solo "Descubrir Restaurantes" está activo sin restaurante; el resto requiere uno seleccionado
+    const isRestaurantRequired = accountType === 'diner' && !selectedRestaurantId && button.id !== 'discover';
     const isDisabled = isGuestRestricted || isRestaurantRequired;
 
     const handleClick = () => {
       if (isDisabled) {
-        setGuestRestrictionModal({
-          show: true,
-          featureName: t(button.titleKey)
-        });
+        if (isRestaurantRequired) {
+          setShowSelectRestaurantModal(true);
+        } else {
+          setGuestRestrictionModal({
+            show: true,
+            featureName: t(button.titleKey)
+          });
+        }
         return;
       }
       playClickSound();
@@ -507,13 +512,21 @@ const HomeScreen: React.FC = () => {
         
         <div className="w-full px-4 pb-4">
           {/* Botón QR que ocupa todo el ancho */}
-          {qrButton && (
+          {qrButton && (() => {
+            const isQrDisabled = accountType === 'diner' && !selectedRestaurantId;
+            return (
             <div 
               onClick={() => {
+                if (isQrDisabled) {
+                  setShowSelectRestaurantModal(true);
+                  return;
+                }
                 playClickSound();
                 navigate(qrButton.path);
               }}
-              className="flex flex-col gap-3 rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white p-5 items-start shadow-lg cursor-pointer overflow-hidden relative mb-3 transition-opacity duration-500 ease-out"
+              className={`flex flex-col gap-3 rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white p-5 items-start shadow-lg overflow-hidden relative mb-3 transition-opacity duration-500 ease-out ${
+                isQrDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+              }`}
               style={{ opacity: buttonOpacities.qr }}
             >
               <div className="z-10 flex items-center gap-3 w-full">
@@ -563,8 +576,14 @@ const HomeScreen: React.FC = () => {
               <div className="absolute -right-4 -bottom-4 opacity-10">
                 <span className="material-symbols-outlined text-[120px]">qr_code_2</span>
               </div>
+              {isQrDisabled && (
+                <p className="text-xs text-white/90 mt-1 z-10">
+                  {t('restaurant.selectRestaurantHint') || 'Selecciona un restaurante'}
+                </p>
+              )}
             </div>
-          )}
+            );
+          })()}
 
           {/* Contenedor principal con dos columnas */}
           <div className="flex gap-3 w-full">
@@ -635,7 +654,9 @@ const HomeScreen: React.FC = () => {
       </main>
 
       {/* Botón Solicitar Asistencia fijo en la parte inferior */}
-      {assistanceButton && (
+      {assistanceButton && (() => {
+        const isAssistanceDisabled = userType === 'guest' || (accountType === 'diner' && !selectedRestaurantId);
+        return (
         <div 
           className="fixed left-0 right-0 z-40 px-4 transition-opacity duration-500 ease-out"
           style={{ 
@@ -652,11 +673,15 @@ const HomeScreen: React.FC = () => {
                 });
                 return;
               }
+              if (accountType === 'diner' && !selectedRestaurantId) {
+                setShowSelectRestaurantModal(true);
+                return;
+              }
               playClickSound();
               navigate(assistanceButton.path);
             }}
             className={`font-bold py-3 px-6 rounded-xl flex items-center gap-2 mx-auto transition-colors w-auto ${
-              userType === 'guest'
+              isAssistanceDisabled
                 ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                 : 'bg-primary text-white hover:bg-primary-dark'
             }`}
@@ -665,7 +690,8 @@ const HomeScreen: React.FC = () => {
             <span>{t(assistanceButton.titleKey)}</span>
           </button>
         </div>
-      )}
+        );
+      })()}
 
       {/* Modal de restricción para usuarios invitados */}
       {guestRestrictionModal.show && (
@@ -673,6 +699,31 @@ const HomeScreen: React.FC = () => {
           featureName={guestRestrictionModal.featureName}
           onClose={() => setGuestRestrictionModal({ show: false, featureName: '' })}
         />
+      )}
+
+      {/* Modal: selecciona un restaurante (comensal) */}
+      {showSelectRestaurantModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 mx-4 max-w-sm w-full shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="material-symbols-outlined text-primary text-2xl">store</span>
+              </div>
+              <h2 className="text-[#181511] dark:text-white text-xl font-bold mb-2">
+                {t('restaurant.selectRestaurantTitle') || 'Selecciona un restaurante'}
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                {t('restaurant.selectRestaurantHint') || 'Elige un restaurante en el selector de arriba para usar esta función.'}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowSelectRestaurantModal(false)}
+              className="w-full h-12 bg-primary hover:bg-primary/90 text-white text-base font-bold rounded-xl transition-colors"
+            >
+              {t('common.close') || 'Cerrar'}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

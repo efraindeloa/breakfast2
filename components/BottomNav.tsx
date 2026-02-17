@@ -325,8 +325,8 @@ const BottomNav: React.FC = () => {
               >
                 {item.icon}
               </span>
-              {/* Solo mostrar badge si hay items pendientes en el carrito (orden complementaria pendiente) */}
-              {isOrdersPath && cartCount > 0 && (
+              {/* Solo mostrar badge si hay items en el carrito y (no es comensal o ya tiene restaurante seleccionado) */}
+              {isOrdersPath && cartCount > 0 && (accountType !== 'diner' || selectedRestaurantId) && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
                   {cartCount > 9 ? '9+' : cartCount}
                 </span>

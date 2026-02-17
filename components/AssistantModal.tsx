@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
+import { useProducts } from '../contexts/ProductsContext';
+import { useRestaurant } from '../contexts/RestaurantContext';
 import { useGroupOrder } from '../contexts/GroupOrderContext';
+import type { Product } from '../services/database';
 import { useTranslation, useLanguage } from '../contexts/LanguageContext';
 import { Capacitor } from '@capacitor/core';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
@@ -28,19 +31,33 @@ interface AssistantModalProps {
   onClose: () => void;
 }
 
-const CHAT_HISTORY_KEY = 'assistant_chat_history';
+const CHAT_HISTORY_KEY_PREFIX = 'assistant_chat_history_';
+const MAX_STORED_MESSAGES = 200; // Límite para no exceder cuota de localStorage
+
+const getChatHistoryKey = (restaurantId: string | null): string =>
+  `${CHAT_HISTORY_KEY_PREFIX}${restaurantId ?? 'none'}`;
+
+const getInitialGreeting = (): Message => ({
+  id: '1',
+  type: 'assistant',
+  content: '¡Hola! Soy tu asistente inteligente. ¿En qué puedo ayudarte hoy? Puedes preguntarme sobre cómo usar la app, el menú, tu orden, o cualquier otra consulta general.',
+  timestamp: new Date(),
+});
 
 const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
   const navigate = useNavigate();
-  const { cart } = useCart();
+  const { cart, addToCart } = useCart();
+  const { products } = useProducts();
+  const { selectedRestaurantId } = useRestaurant();
   const { isGroupOrder, participants, isConfirmed } = useGroupOrder();
   const { t } = useTranslation();
   const { setLanguage, language } = useLanguage();
-  
-  // Función para cargar el historial desde localStorage
-  const loadChatHistory = (): Message[] => {
+
+  // Cargar historial desde localStorage para el restaurante actual
+  const loadChatHistory = (restaurantId: string | null): Message[] => {
     try {
-      const stored = localStorage.getItem(CHAT_HISTORY_KEY);
+      const key = getChatHistoryKey(restaurantId);
+      const stored = localStorage.getItem(key);
       if (stored) {
         const storedMessages: MessageStorage[] = JSON.parse(stored);
         return storedMessages.map(msg => ({
@@ -51,37 +68,35 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
     } catch (error) {
       console.error('Error loading chat history:', error);
     }
-    // Mensaje inicial si no hay historial
-    return [
-      {
-        id: '1',
-        type: 'assistant',
-        content: '¡Hola! Soy tu asistente inteligente. ¿En qué puedo ayudarte hoy? Puedes preguntarme sobre cómo usar la app, el menú, tu orden, o cualquier otra consulta general.',
-        timestamp: new Date(),
-      },
-    ];
+    return [getInitialGreeting()];
   };
 
-  // Función para guardar el historial en localStorage
-  const saveChatHistory = (messagesToSave: Message[]) => {
+  // Guardar historial en localStorage (por restaurante; últimos N mensajes para no exceder cuota)
+  const saveChatHistory = (messagesToSave: Message[], restaurantId: string | null) => {
     try {
-      const messagesToStore: MessageStorage[] = messagesToSave.map(msg => ({
+      const toSave = messagesToSave.length > MAX_STORED_MESSAGES
+        ? messagesToSave.slice(-MAX_STORED_MESSAGES)
+        : messagesToSave;
+      const messagesToStore: MessageStorage[] = toSave.map(msg => ({
         id: msg.id,
         type: msg.type,
         content: msg.content,
         timestamp: msg.timestamp.toISOString(),
-        actionRoute: msg.actionRoute || null,
-        actionLabel: msg.actionLabel || undefined,
+        actionRoute: msg.actionRoute ?? null,
+        actionLabel: msg.actionLabel ?? undefined,
       }));
-      localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messagesToStore));
+      localStorage.setItem(getChatHistoryKey(restaurantId), JSON.stringify(messagesToStore));
     } catch (error) {
       console.error('Error saving chat history:', error);
     }
   };
 
-  const [messages, setMessages] = useState<Message[]>(loadChatHistory);
+  const [messages, setMessages] = useState<Message[]>(() => loadChatHistory(selectedRestaurantId));
+  const prevRestaurantIdRef = useRef<string | null>(selectedRestaurantId);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  // Lista de productos entre los que el comensal debe elegir + cantidad solicitada
+  const [pendingProductChoice, setPendingProductChoice] = useState<{ list: Product[]; quantity: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
@@ -94,6 +109,8 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
   const pendingNavigationRef = useRef<string | null>(null);
   const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const recognitionRef = useRef<any>(null);
+  // Ref para que el callback de setTimeout siempre tenga la lista pendiente actual (evita cierre obsoleto)
+  const pendingProductChoiceRef = useRef<{ list: Product[]; quantity: number } | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -272,22 +289,22 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
   // Función para borrar el historial
   const handleClearHistory = () => {
     if (window.confirm('¿Estás seguro de que deseas borrar todo el historial del chat? Esta acción no se puede deshacer.')) {
-      const initialMessage: Message = {
-        id: '1',
-        type: 'assistant',
-        content: '¡Hola! Soy tu asistente inteligente. ¿En qué puedo ayudarte hoy? Puedes preguntarme sobre cómo usar la app, el menú, tu orden, o cualquier otra consulta general.',
-        timestamp: new Date(),
-      };
-      setMessages([initialMessage]);
-      localStorage.removeItem(CHAT_HISTORY_KEY);
+      setMessages([getInitialGreeting()]);
+      localStorage.removeItem(getChatHistoryKey(selectedRestaurantId));
     }
   };
 
-  // Guardar el historial cada vez que cambien los mensajes
+  // Al cambiar de restaurante: guardar historial actual del restaurante anterior y cargar el del nuevo
   useEffect(() => {
-    if (messages.length > 0) {
-      saveChatHistory(messages);
-    }
+    if (prevRestaurantIdRef.current === selectedRestaurantId) return;
+    saveChatHistory(messages, prevRestaurantIdRef.current);
+    prevRestaurantIdRef.current = selectedRestaurantId;
+    setMessages(loadChatHistory(selectedRestaurantId));
+  }, [selectedRestaurantId]);
+
+  // Persistir historial en localStorage cada vez que cambie la conversación (por restaurante)
+  useEffect(() => {
+    saveChatHistory(messages, selectedRestaurantId);
   }, [messages]);
 
   // Detectar respuestas afirmativas
@@ -295,6 +312,96 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
     const affirmativeWords = ['sí', 'si', 'yes', 'ok', 'okay', 'claro', 'por favor', 'adelante', 'vamos', 'vamos a', 'llevame', 'lleva', 'quiero', 'deseo', 'perfecto', 'genial', 'bueno', 'está bien', 'está bien', 'de acuerdo', 'acepto'];
     const lowerMessage = message.toLowerCase().trim();
     return affirmativeWords.some(word => lowerMessage.includes(word));
+  };
+
+  // Detectar intención de agregar producto a la orden y extraer nombre y cantidad
+  const parseAddProductIntent = (text: string): { productName: string; quantity: number } | null => {
+    const lower = text.toLowerCase().trim();
+    // Patrones: "quiero un carajillo", "dame dos cafés", "agregar carajillo", "un carajillo por favor"
+    const withQuantity = lower.match(/^(?:quiero|dame|ponme|trae|agregar|me das)\s+(un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|\d+)\s+(.+?)(?:\s+por favor)?$/);
+    if (withQuantity) {
+      const numWords: Record<string, number> = { un: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10 };
+      const numPart = withQuantity[1];
+      const quantity = numWords[numPart] ?? (parseInt(numPart, 10) || 1);
+      let productName = withQuantity[2].trim();
+      if (productName.startsWith('un ') || productName.startsWith('una ')) {
+        productName = productName.replace(/^(un|una)\s+/, '').trim();
+      }
+      if (productName.length < 2) return null;
+      return { productName, quantity: Math.min(quantity, 99) };
+    }
+    const singleProduct = lower.match(/^(?:quiero|dame|ponme|trae|agregar|me das)\s+(?:un|una)?\s*(.+?)(?:\s+por favor)?$/);
+    if (singleProduct) {
+      let productName = singleProduct[1].trim().replace(/^(un|una)\s+/, '');
+      if (productName.length < 2) return null;
+      return { productName, quantity: 1 };
+    }
+    const justProduct = lower.match(/^(?:un|una)\s+(.+?)(?:\s+por favor)?$/);
+    if (justProduct) {
+      const productName = justProduct[1].trim();
+      if (productName.length < 2) return null;
+      return { productName, quantity: 1 };
+    }
+    return null;
+  };
+
+  // Buscar producto por nombre (coincidencia flexible) — devuelve uno o null
+  const findProductByName = (productList: Product[], name: string): Product | null => {
+    const matches = findProductsByName(productList, name);
+    if (matches.length === 1) return matches[0];
+    if (matches.length > 1) {
+      const normalized = name.toLowerCase().trim();
+      const exact = matches.find((p) => p.name.toLowerCase() === normalized);
+      if (exact) return exact;
+      return matches[0];
+    }
+    return null;
+  };
+
+  // Buscar todos los productos que coincidan con el nombre
+  const findProductsByName = (productList: Product[], name: string): Product[] => {
+    const normalized = name.toLowerCase().trim().replace(/\s+/g, ' ');
+    if (!normalized) return [];
+    return productList.filter(
+      (p) =>
+        p.name.toLowerCase().includes(normalized) ||
+        normalized.includes(p.name.toLowerCase())
+    );
+  };
+
+  // Interpretar la respuesta del usuario como elección de la lista (número o nombre)
+  const parseChoiceFromList = (userMessage: string, list: Product[]): Product | null => {
+    const msg = userMessage.toLowerCase().trim();
+    if (list.length === 0) return null;
+    const ordinals: Record<string, number> = {
+      primera: 1, primero: 1, segundo: 2, segunda: 2, tercero: 3, tercera: 3,
+      cuarta: 4, cuarto: 4, quinta: 5, quinto: 5, sexta: 6, sexto: 6
+    };
+    // Mensaje que es solo un número (ej. "1", "2")
+    if (/^\d+$/.test(msg)) {
+      const idx = parseInt(msg, 10);
+      if (idx >= 1 && idx <= list.length) return list[idx - 1];
+      return null;
+    }
+    const numMatch = msg.match(/^(?:la?\s*)?(?:número\s*)?(\d+)$/);
+    if (numMatch) {
+      const idx = parseInt(numMatch[1], 10);
+      if (idx >= 1 && idx <= list.length) return list[idx - 1];
+      return null;
+    }
+    const ordMatch = msg.match(/^(?:la\s+)?(primera|primero|segunda|segundo|tercera|tercero|cuarta|cuarto|quinta|quinto|sexta|sexto)$/);
+    if (ordMatch) {
+      const idx = ordinals[ordMatch[1]];
+      if (idx != null && idx <= list.length) return list[idx - 1];
+      return null;
+    }
+    const byName = list.find(
+      (p) =>
+        p.name.toLowerCase() === msg ||
+        p.name.toLowerCase().includes(msg) ||
+        msg.includes(p.name.toLowerCase())
+    );
+    return byName ?? null;
   };
 
   // Extraer ruta de navegación del mensaje del asistente
@@ -326,10 +433,80 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
     return null;
   };
 
+  // Tipo de retorno cuando se agrega un producto al carrito o se pide elegir de una lista
+  type GenerateResponseResult = {
+    response: string;
+    navigationRoute?: string | null;
+    addToCartItem?: { id: number; name: string; price: number; notes: string };
+    quantity?: number;
+    pendingProductList?: Product[];
+    pendingQuantity?: number;
+  };
+
   // Detectar el tipo de consulta y generar respuesta
-  const generateResponse = (userMessage: string, previousAssistantMessage?: string): { response: string; navigationRoute?: string | null } => {
+  const generateResponse = (
+    userMessage: string,
+    previousAssistantMessage?: string,
+    productsList: Product[] = [],
+    pending: { list: Product[]; quantity: number } | null = null
+  ): GenerateResponseResult => {
     const message = userMessage.toLowerCase().trim();
-    
+
+    // El comensal está eligiendo de una lista previa (ej. "la primera", "2", "Cerveza Corona")
+    if (pending != null && pending.list.length > 0) {
+      const chosen = parseChoiceFromList(userMessage, pending.list);
+      if (chosen) {
+        const price = typeof chosen.price === 'string' ? parseFloat(chosen.price) : chosen.price;
+        const qty = pending.quantity;
+        return {
+          response: `Listo, agregué ${qty} ${chosen.name} a tu orden. ¿Quieres que te lleve a revisar tu orden para confirmar y enviar?`,
+          navigationRoute: '/orders',
+          addToCartItem: { id: chosen.id, name: chosen.name, price, notes: '' },
+          quantity: qty
+        };
+      }
+      return {
+        response: 'No entendí. Responde con el número (1, 2, 3...) o con el nombre exacto del producto que quieres.'
+      };
+    }
+
+    // Intención: agregar producto a la orden (ej. "quiero un carajillo", "dame una cerveza")
+    const addIntent = parseAddProductIntent(userMessage);
+    if (addIntent) {
+      if (productsList.length === 0) {
+        return {
+          response: 'Primero selecciona un restaurante en el selector de arriba para poder agregar productos a tu orden.'
+        };
+      }
+      const matches = findProductsByName(productsList, addIntent.productName);
+      if (matches.length === 0) {
+        return {
+          response: `No encontré "${addIntent.productName}" en el menú de este restaurante. ¿Puedes decirme el nombre exacto o revisar el menú?`
+        };
+      }
+      if (matches.length === 1) {
+        const product = matches[0];
+        const price = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
+        return {
+          response: `Listo, agregué ${addIntent.quantity} ${product.name} a tu orden. ¿Quieres que te lleve a revisar tu orden para confirmar y enviar?`,
+          navigationRoute: '/orders',
+          addToCartItem: { id: product.id, name: product.name, price, notes: '' },
+          quantity: addIntent.quantity
+        };
+      }
+      // Varios productos coinciden: mostrar lista numerada para que elija
+      const priceStr = (p: Product) => {
+        const n = typeof p.price === 'string' ? parseFloat(p.price) : p.price;
+        return typeof n === 'number' && !Number.isNaN(n) ? ` - $${n}` : '';
+      };
+      const listText = matches.map((p, i) => `${i + 1}. ${p.name}${priceStr(p)}`).join('\n');
+      return {
+        response: `Hay varios productos con "${addIntent.productName}". ¿Cuál quieres?\n\n${listText}\n\nResponde con el número (1, 2, 3...) o con el nombre del producto.`,
+        pendingProductList: matches,
+        pendingQuantity: addIntent.quantity
+      };
+    }
+
     // Si el usuario responde afirmativamente a una pregunta previa del asistente
     if (previousAssistantMessage && isAffirmativeResponse(userMessage)) {
       const route = extractNavigationRoute(previousAssistantMessage);
@@ -340,7 +517,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
         };
       }
     }
-    
+
     // Consultas sobre la aplicación
     if (message.includes('orden') || message.includes('pedido')) {
       if (message.includes('crear') || message.includes('hacer') || message.includes('agregar')) {
@@ -789,10 +966,30 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
       .filter(m => m.type === 'assistant')
       .slice(-1)[0]?.content;
 
-    // Simular respuesta del asistente
-    setTimeout(() => {
-      const { response, navigationRoute } = generateResponse(currentInput, lastAssistantMessage);
-      
+    // Simular respuesta del asistente (usar ref para tener siempre la lista pendiente actual)
+    const pendingToUse = pendingProductChoiceRef.current ?? pendingProductChoice;
+    setTimeout(async () => {
+      const result = generateResponse(currentInput, lastAssistantMessage, products, pendingToUse);
+      const { response, navigationRoute, addToCartItem, quantity, pendingProductList, pendingQuantity } = result;
+
+      // Lista de productos para elegir: guardar en state y ref para el siguiente mensaje
+      if (pendingProductList != null && pendingProductList.length > 0 && (pendingQuantity ?? 1) > 0) {
+        const next = { list: pendingProductList, quantity: pendingQuantity ?? 1 };
+        pendingProductChoiceRef.current = next;
+        setPendingProductChoice(next);
+      }
+
+      // Si se detectó "agregar producto", añadir al carrito antes de mostrar la respuesta
+      if (addToCartItem && quantity != null && quantity > 0) {
+        try {
+          await addToCart(addToCartItem, quantity);
+        } catch (err) {
+          console.error('[AssistantModal] Error adding to cart:', err);
+        }
+        pendingProductChoiceRef.current = null;
+        setPendingProductChoice(null);
+      }
+
       // Determinar el label del botón según la ruta
       let actionLabel = '';
       if (navigationRoute) {
@@ -804,7 +1001,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
         else if (navigationRoute.includes('payments')) actionLabel = 'Ir a pagar';
         else actionLabel = 'Ir';
       }
-      
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
@@ -816,10 +1013,17 @@ const AssistantModal: React.FC<AssistantModalProps> = ({ onClose }) => {
       setMessages(prev => [...prev, assistantMessage]);
       setIsTyping(false);
 
-      // Navegar si hay una ruta pendiente (solo si el usuario respondió afirmativamente)
-      if (navigationRoute && isAffirmativeResponse(currentInput)) {
+      // Si agregamos un producto, abrir pantalla de orden para que el comensal confirme y envíe
+      if (addToCartItem && navigationRoute === '/orders') {
         setTimeout(() => {
-          onClose(); // Cerrar el modal primero
+          onClose();
+          navigate('/orders');
+        }, 800);
+      }
+      // Navegar si hay una ruta pendiente (solo si el usuario respondió afirmativamente a una pregunta previa)
+      else if (navigationRoute && isAffirmativeResponse(currentInput)) {
+        setTimeout(() => {
+          onClose();
           navigate(navigationRoute);
         }, 800);
       }

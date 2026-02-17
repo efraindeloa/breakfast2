@@ -4,6 +4,7 @@ import {
   getRestaurantFullProfile,
   getRestaurantStaff,
   type Restaurant,
+  type RestaurantSocialMedia,
 } from '../../services/database';
 import { getUserData } from '../../services/api/user';
 import type { CoverImageItem, OwnerData } from './types';
@@ -25,6 +26,7 @@ const RestaurantProfileComensal: React.FC<RestaurantProfileComensalProps> = ({
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [carouselImages, setCarouselImages] = useState<CoverImageItem[]>([]);
   const [ownerData, setOwnerData] = useState<OwnerData | null>(null);
+  const [socialMedia, setSocialMedia] = useState<RestaurantSocialMedia[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -33,6 +35,7 @@ const RestaurantProfileComensal: React.FC<RestaurantProfileComensalProps> = ({
         const profile = await getRestaurantFullProfile(restaurantId);
         if (profile) {
           setRestaurant(profile.restaurant);
+          setSocialMedia(profile.socialMedia ?? []);
           if (profile.coverImages?.length) {
             setCarouselImages(
               profile.coverImages.map((img: { id: string; image_url: string; image_order: number }) => ({
@@ -47,6 +50,7 @@ const RestaurantProfileComensal: React.FC<RestaurantProfileComensalProps> = ({
         } else {
           setRestaurant(null);
           setCarouselImages([]);
+          setSocialMedia([]);
         }
 
         const staffList = await getRestaurantStaff(restaurantId);
@@ -66,6 +70,7 @@ const RestaurantProfileComensal: React.FC<RestaurantProfileComensalProps> = ({
         setRestaurant(null);
         setCarouselImages([]);
         setOwnerData(null);
+        setSocialMedia([]);
       } finally {
         setIsLoading(false);
       }
@@ -113,6 +118,7 @@ const RestaurantProfileComensal: React.FC<RestaurantProfileComensalProps> = ({
       restaurant={restaurant}
       carouselImages={carouselImages}
       ownerData={ownerData}
+      socialMedia={socialMedia}
     />
   );
 };

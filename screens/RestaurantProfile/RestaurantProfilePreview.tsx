@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getRestaurantImageUrl } from '../../services/database';
-import type { Restaurant } from '../../services/database';
+import type { Restaurant, RestaurantSocialMedia } from '../../services/database';
 import type { CoverImageItem, OwnerData } from './types';
 import { geocodeAddress, buildAddressString } from '../../services/geocoding';
 
@@ -21,6 +21,7 @@ export interface RestaurantProfilePreviewProps {
   restaurant: Restaurant | null;
   carouselImages: CoverImageItem[];
   ownerData: OwnerData | null;
+  socialMedia?: RestaurantSocialMedia[];
 }
 
 /** Centra el mapa en la posición del marcador al montar */
@@ -40,11 +41,29 @@ const RestaurantProfilePreview: React.FC<RestaurantProfilePreviewProps> = ({
   restaurant,
   carouselImages,
   ownerData,
+  socialMedia = [],
 }) => {
   const navigate = useNavigate();
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
   const [resolvedCoords, setResolvedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [isLoadingGeocode, setIsLoadingGeocode] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+
+  const handleCarouselSwipeStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) touchStartX.current = e.touches[0].clientX;
+  };
+  const handleCarouselSwipeEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current == null || carouselImages.length <= 1) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX.current - touchEndX;
+    const minSwipe = 50;
+    if (diff > minSwipe) {
+      setCurrentCarouselIndex((prev) => (prev === carouselImages.length - 1 ? 0 : prev + 1));
+    } else if (diff < -minSwipe) {
+      setCurrentCarouselIndex((prev) => (prev === 0 ? carouselImages.length - 1 : prev - 1));
+    }
+    touchStartX.current = null;
+  };
 
   // Geocodificar domicilio cuando no hay lat/lng pero sí dirección
   useEffect(() => {
@@ -110,7 +129,11 @@ const RestaurantProfilePreview: React.FC<RestaurantProfilePreviewProps> = ({
 
       {/* Hero Carousel */}
       <div className="px-4 py-3">
-        <div className="relative group">
+        <div
+          className="relative group touch-pan-y"
+          onTouchStart={handleCarouselSwipeStart}
+          onTouchEnd={handleCarouselSwipeEnd}
+        >
           <div
             className="bg-cover bg-center flex flex-col justify-end overflow-hidden rounded-xl min-h-[320px] shadow-lg"
             style={{
@@ -150,8 +173,8 @@ const RestaurantProfilePreview: React.FC<RestaurantProfilePreviewProps> = ({
                 }
                 className="absolute inset-y-0 left-2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity"
               >
-                <div className="bg-white/20 backdrop-blur-sm p-1 rounded-full text-white cursor-pointer">
-                  <span className="material-symbols-outlined">chevron_left</span>
+                <div className="bg-white/20 backdrop-blur-sm p-2 rounded-full text-white cursor-pointer">
+                  <span className="material-symbols-outlined text-4xl">chevron_left</span>
                 </div>
               </button>
               <button
@@ -163,8 +186,8 @@ const RestaurantProfilePreview: React.FC<RestaurantProfilePreviewProps> = ({
                 }
                 className="absolute inset-y-0 right-2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity"
               >
-                <div className="bg-white/20 backdrop-blur-sm p-1 rounded-full text-white cursor-pointer">
-                  <span className="material-symbols-outlined">chevron_right</span>
+                <div className="bg-white/20 backdrop-blur-sm p-2 rounded-full text-white cursor-pointer">
+                  <span className="material-symbols-outlined text-4xl">chevron_right</span>
                 </div>
               </button>
             </>
@@ -202,46 +225,66 @@ const RestaurantProfilePreview: React.FC<RestaurantProfilePreviewProps> = ({
       <div className="px-4 space-y-6 pb-24">
         <section className="bg-white dark:bg-background-dark p-5 rounded-xl border border-primary/5 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
-            <span className="material-symbols-outlined text-primary">location_on</span>
-            <h3 className="font-bold text-lg text-[#181411] dark:text-white">Ubicación</h3>
+            <span className="material-symbols-outlined text-primary">contact_mail</span>
+            <h3 className="font-bold text-lg text-[#181411] dark:text-white">Contacto</h3>
           </div>
-          <div className="space-y-3">
-            <div>
+          <div className="space-y-4">
+            <div className="w-full">
               <p className="text-xs text-primary font-bold uppercase tracking-widest mb-0.5">
-                Dirección
+                Correo Electrónico
               </p>
-              <p className="text-sm font-medium">{restaurant?.address || '—'}</p>
+              <p className="text-sm font-medium break-all">{ownerData?.email || '—'}</p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-primary font-bold uppercase tracking-widest mb-0.5">
-                  Ciudad
-                </p>
-                <p className="text-sm font-medium">{restaurant?.city || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-primary font-bold uppercase tracking-widest mb-0.5">
-                  Estado / Provincia
-                </p>
-                <p className="text-sm font-medium">{restaurant?.state || '—'}</p>
-              </div>
+            <div className="w-full">
+              <p className="text-xs text-primary font-bold uppercase tracking-widest mb-0.5">
+                Teléfono de Contacto
+              </p>
+              <p className="text-sm font-medium">{restaurant?.phone || ownerData?.phone || '—'}</p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+          </div>
+          <div className="border-t border-primary/10 pt-4 mt-4">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="material-symbols-outlined text-primary">location_on</span>
+              <h3 className="font-bold text-lg text-[#181411] dark:text-white">Ubicación</h3>
+            </div>
+            <div className="space-y-3">
               <div>
                 <p className="text-xs text-primary font-bold uppercase tracking-widest mb-0.5">
-                  País
+                  Dirección
                 </p>
-                <p className="text-sm font-medium">{restaurant?.country || '—'}</p>
+                <p className="text-sm font-medium">{restaurant?.address || '—'}</p>
               </div>
-              <div>
-                <p className="text-xs text-primary font-bold uppercase tracking-widest mb-0.5">
-                  Código Postal
-                </p>
-                <p className="text-sm font-medium">{restaurant?.postal_code || '—'}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-primary font-bold uppercase tracking-widest mb-0.5">
+                    Ciudad
+                  </p>
+                  <p className="text-sm font-medium">{restaurant?.city || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-primary font-bold uppercase tracking-widest mb-0.5">
+                    Estado / Provincia
+                  </p>
+                  <p className="text-sm font-medium">{restaurant?.state || '—'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-primary font-bold uppercase tracking-widest mb-0.5">
+                    País
+                  </p>
+                  <p className="text-sm font-medium">{restaurant?.country || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-primary font-bold uppercase tracking-widest mb-0.5">
+                    Código Postal
+                  </p>
+                  <p className="text-sm font-medium">{restaurant?.postal_code || '—'}</p>
+                </div>
               </div>
             </div>
           </div>
-          <div className="mt-4 rounded-lg overflow-hidden h-32 border border-primary/10">
+          <div className="mt-4 rounded-lg overflow-hidden h-[24rem] border border-primary/10">
             {showMap ? (
               <div className="w-full h-full [&_.leaflet-container]:!h-full [&_.leaflet-container]:!rounded-lg">
                 <MapContainer
@@ -249,7 +292,7 @@ const RestaurantProfilePreview: React.FC<RestaurantProfilePreviewProps> = ({
                   zoom={15}
                   scrollWheelZoom={false}
                   className="h-full w-full rounded-lg"
-                  style={{ height: '100%', minHeight: 128 }}
+                  style={{ height: '100%', minHeight: 384 }}
                 >
                   <MapCenter center={[mapCoords.lat, mapCoords.lng]} zoom={15} />
                   <TileLayer
@@ -293,71 +336,59 @@ const RestaurantProfilePreview: React.FC<RestaurantProfilePreviewProps> = ({
             <span className="material-symbols-outlined text-primary">language</span>
             <h3 className="font-bold text-lg text-[#181411] dark:text-white">Presencia Digital</h3>
           </div>
-          <div>
-            <p className="text-xs text-primary font-bold uppercase tracking-widest mb-0.5">
-              Sitio Web
-            </p>
-            {restaurant?.website ? (
-              <a
-                href={
-                  restaurant.website.startsWith('http')
-                    ? restaurant.website
-                    : `https://${restaurant.website}`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary font-semibold text-sm hover:underline flex items-center gap-1"
-              >
-                {restaurant.website.replace(/^https?:\/\//, '')}
-                <span className="material-symbols-outlined text-xs">open_in_new</span>
-              </a>
-            ) : (
-              <p className="text-sm font-medium">—</p>
-            )}
-          </div>
-        </section>
-
-        <section className="bg-white dark:bg-background-dark p-5 rounded-xl border border-primary/5 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="material-symbols-outlined text-primary">account_circle</span>
-            <h3 className="font-bold text-lg text-[#181411] dark:text-white">
-              Información de Cuenta
-            </h3>
-          </div>
           <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-primary text-sm">person</span>
-              </div>
-              <div>
-                <p className="text-xs text-[#181411]/50 dark:text-white/50 font-medium">
-                  Nombre del Propietario
-                </p>
-                <p className="text-sm font-bold">{ownerData?.name || '—'}</p>
-              </div>
+            <div>
+              <p className="text-xs text-primary font-bold uppercase tracking-widest mb-0.5">
+                Sitio Web
+              </p>
+              {restaurant?.website ? (
+                <a
+                  href={
+                    restaurant.website.startsWith('http')
+                      ? restaurant.website
+                      : `https://${restaurant.website}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary font-semibold text-sm hover:underline flex items-center gap-1"
+                >
+                  {restaurant.website.replace(/^https?:\/\//, '')}
+                  <span className="material-symbols-outlined text-xs">open_in_new</span>
+                </a>
+              ) : (
+                <p className="text-sm font-medium">—</p>
+              )}
             </div>
-            <div className="flex items-start gap-3">
-              <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-primary text-sm">mail</span>
-              </div>
-              <div>
-                <p className="text-xs text-[#181411]/50 dark:text-white/50 font-medium">
-                  Correo Electrónico
-                </p>
-                <p className="text-sm font-bold">{ownerData?.email || '—'}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-primary text-sm">call</span>
-              </div>
-              <div>
-                <p className="text-xs text-[#181411]/50 dark:text-white/50 font-medium">
-                  Teléfono de Contacto
-                </p>
-                <p className="text-sm font-bold">{ownerData?.phone || '—'}</p>
-              </div>
-            </div>
+            {(['facebook', 'instagram', 'tiktok'] as const).map((platform) => {
+              const url =
+                (platform === 'facebook' && restaurant?.facebook_url) ||
+                (platform === 'instagram' && restaurant?.instagram_url) ||
+                (platform === 'tiktok' && restaurant?.tiktok_url) ||
+                socialMedia.find((s) => s.platform === platform && s.is_active && s.url?.trim())?.url;
+              const label = platform === 'facebook' ? 'Facebook' : platform === 'instagram' ? 'Instagram' : 'TikTok';
+              const href = url?.trim() ? (url.startsWith('http') ? url : `https://${url}`) : null;
+              const display = href && url ? url.replace(/^https?:\/\//, '').replace(/\/$/, '') : null;
+              return (
+                <div key={platform}>
+                  <p className="text-xs text-primary font-bold uppercase tracking-widest mb-0.5">
+                    {label}
+                  </p>
+                  {display && href ? (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary font-semibold text-sm hover:underline flex items-center gap-1"
+                    >
+                      {display}
+                      <span className="material-symbols-outlined text-xs">open_in_new</span>
+                    </a>
+                  ) : (
+                    <p className="text-sm font-medium">—</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </section>
       </div>

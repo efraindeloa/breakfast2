@@ -2927,6 +2927,9 @@ export interface Restaurant {
   phone?: string;
   email?: string;
   website?: string;
+  facebook_url?: string;
+  instagram_url?: string;
+  tiktok_url?: string;
   logo_url?: string;
   cover_image_url?: string;
   rating: number;

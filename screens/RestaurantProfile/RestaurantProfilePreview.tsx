@@ -107,6 +107,14 @@ const RestaurantProfilePreview: React.FC<RestaurantProfilePreviewProps> = ({
       ? { lat: restaurant.latitude, lng: restaurant.longitude }
       : resolvedCoords;
   const showMap = mapCoords != null;
+  const mapsUrl =
+    mapCoords != null
+      ? `https://www.google.com/maps/dir/?api=1&destination=${mapCoords.lat},${mapCoords.lng}`
+      : restaurant?.address || restaurant?.city
+        ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+            [restaurant?.address, restaurant?.city, restaurant?.state, restaurant?.country].filter(Boolean).join(', ')
+          )}`
+        : null;
 
   const activeIndex = Math.min(currentCarouselIndex, Math.max(0, carouselImages.length - 1));
   const currentImage = carouselImages[activeIndex];
@@ -233,19 +241,58 @@ const RestaurantProfilePreview: React.FC<RestaurantProfilePreviewProps> = ({
               <p className="text-xs text-primary font-bold uppercase tracking-widest mb-0.5">
                 Correo Electrónico
               </p>
-              <p className="text-sm font-medium break-all">{ownerData?.email || '—'}</p>
+              {ownerData?.email ? (
+                <a
+                  href={`mailto:${ownerData.email}`}
+                  className="text-sm font-medium break-all text-[#181411] dark:text-white hover:underline cursor-pointer flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg shrink-0">mail</span>
+                  {ownerData.email}
+                </a>
+              ) : (
+                <p className="text-sm font-medium text-[#181411] dark:text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-lg shrink-0">mail</span>
+                  —
+                </p>
+              )}
             </div>
             <div className="w-full">
               <p className="text-xs text-primary font-bold uppercase tracking-widest mb-0.5">
                 Teléfono de Contacto
               </p>
-              <p className="text-sm font-medium">{restaurant?.phone || ownerData?.phone || '—'}</p>
+              {(restaurant?.phone || ownerData?.phone) ? (
+                <a
+                  href={`tel:${restaurant?.phone || ownerData?.phone}`}
+                  className="text-sm font-medium text-[#181411] dark:text-white hover:underline cursor-pointer flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg shrink-0">call</span>
+                  {restaurant?.phone || ownerData?.phone}
+                </a>
+              ) : (
+                <p className="text-sm font-medium text-[#181411] dark:text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-lg shrink-0">call</span>
+                  —
+                </p>
+              )}
             </div>
           </div>
           <div className="border-t border-primary/10 pt-4 mt-4">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="material-symbols-outlined text-primary">location_on</span>
-              <h3 className="font-bold text-lg text-[#181411] dark:text-white">Ubicación</h3>
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">location_on</span>
+                <h3 className="font-bold text-lg text-[#181411] dark:text-white">Ubicación</h3>
+              </div>
+              {mapsUrl && (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary text-sm font-semibold hover:underline flex items-center gap-1 shrink-0"
+                >
+                  Cómo llegar
+                  <span className="material-symbols-outlined text-xs">directions</span>
+                </a>
+              )}
             </div>
             <div className="space-y-3">
               <div>
@@ -284,15 +331,20 @@ const RestaurantProfilePreview: React.FC<RestaurantProfilePreviewProps> = ({
               </div>
             </div>
           </div>
-          <div className="mt-4 rounded-lg overflow-hidden h-[24rem] border border-primary/10">
+          <div
+            className="mt-4 rounded-lg overflow-hidden h-[16rem] border border-primary/10 cursor-pointer"
+            role={mapsUrl ? 'button' : undefined}
+            onClick={() => mapsUrl && window.open(mapsUrl, '_blank')}
+            title={mapsUrl ? 'Abrir navegación (Waze, Google Maps, etc.)' : undefined}
+          >
             {showMap ? (
-              <div className="w-full h-full [&_.leaflet-container]:!h-full [&_.leaflet-container]:!rounded-lg">
+              <div className="w-full h-full [&_.leaflet-container]:!h-full [&_.leaflet-container]:!rounded-lg pointer-events-none">
                 <MapContainer
                   center={[mapCoords.lat, mapCoords.lng]}
                   zoom={15}
                   scrollWheelZoom={false}
                   className="h-full w-full rounded-lg"
-                  style={{ height: '100%', minHeight: 384 }}
+                  style={{ height: '100%', minHeight: 256 }}
                 >
                   <MapCenter center={[mapCoords.lat, mapCoords.lng]} zoom={15} />
                   <TileLayer
@@ -314,15 +366,15 @@ const RestaurantProfilePreview: React.FC<RestaurantProfilePreviewProps> = ({
                 <span className="material-symbols-outlined text-4xl text-primary/30">map</span>
                 {(restaurant?.address || restaurant?.city) && (
                   <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
                       [restaurant.address, restaurant.city, restaurant.state, restaurant.country].filter(Boolean).join(', ')
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary text-sm font-semibold hover:underline flex items-center gap-1"
                   >
-                    Ver en Google Maps
-                    <span className="material-symbols-outlined text-xs">open_in_new</span>
+                    Cómo llegar
+                    <span className="material-symbols-outlined text-xs">directions</span>
                   </a>
                 )}
                 <div className="absolute inset-0 bg-primary/5 pointer-events-none" />

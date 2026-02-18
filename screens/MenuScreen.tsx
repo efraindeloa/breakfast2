@@ -116,23 +116,18 @@ const MenuScreen: React.FC = () => {
     }
   };
   
-  // Obtener categorías dinámicamente desde las etiquetas (badges) de los productos del restaurante seleccionado
+  // Obtener categorías desde product.category (igual que MenuRestaurantScreen) para mostrar Entradas, Bebidas, etc.
   const categories = useMemo(() => {
     if (!selectedRestaurantId || !products) {
       return [];
     }
-    const tagsSet = new Set<string>();
+    const categoriesSet = new Set<string>();
     products.forEach((product) => {
-      if (product.badges && Array.isArray(product.badges)) {
-        product.badges.forEach((badge) => {
-          if (typeof badge === 'string' && badge.trim() !== '') {
-            tagsSet.add(badge.trim());
-          }
-        });
+      if (product.category && String(product.category).trim() !== '') {
+        categoriesSet.add(String(product.category).trim());
       }
     });
-    // Convertir a array y ordenar alfabéticamente
-    return Array.from(tagsSet).sort();
+    return Array.from(categoriesSet).sort();
   }, [products, selectedRestaurantId]);
 
   // Restaurar estado desde location.state o sessionStorage
@@ -153,6 +148,7 @@ const MenuScreen: React.FC = () => {
   };
 
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedOrigin, setSelectedOrigin] = useState<OriginType>('');
@@ -214,9 +210,11 @@ const MenuScreen: React.FC = () => {
       // Si la categoría seleccionada ya no existe, usar la primera disponible
       setSelectedCategory(categories[0]);
       sessionStorage.setItem('menuSelectedCategory', categories[0]);
+      setSelectedSubcategory('');
     } else if (categories.length === 0) {
       // Si no hay categorías, limpiar la selección
       setSelectedCategory('');
+      setSelectedSubcategory('');
       sessionStorage.removeItem('menuSelectedCategory');
     }
   }, [categories, selectedCategory]);
@@ -671,7 +669,7 @@ const MenuScreen: React.FC = () => {
   // Usar productos de Supabase si están disponibles, sino usar los hardcodeados
   const dishes = useMemo(() => {
     if (products.length > 0) {
-      // Convertir productos de Supabase al formato esperado
+      // Convertir productos de Supabase al formato esperado (misma estructura que MenuRestaurantScreen)
       return products.map(p => ({
         id: p.id,
         name: p.name,
@@ -680,11 +678,37 @@ const MenuScreen: React.FC = () => {
         image: p.image,
         badges: p.badges || [],
         category: p.category,
+        subcategories: p.subcategories || [],
         origin: p.origin as OriginType,
       }));
     }
     return dishesFromCode;
   }, [products]);
+
+  // Subcategorías de la categoría seleccionada (igual que MenuRestaurantScreen)
+  const foodSubcategories = useMemo(() => {
+    if (!selectedCategory) return [];
+    const subcategoriesSet = new Set<string>();
+    dishes.forEach((dish) => {
+      if (dish.category === selectedCategory && dish.subcategories && dish.subcategories.length > 0) {
+        (dish.subcategories as string[]).forEach((subcat: string) => {
+          if (subcat && String(subcat).trim() !== '') {
+            subcategoriesSet.add(String(subcat).trim());
+          }
+        });
+      }
+    });
+    return Array.from(subcategoriesSet).sort();
+  }, [dishes, selectedCategory]);
+
+  // Al cambiar de categoría, limpiar subcategoría si ya no aplica (debe ir después de foodSubcategories)
+  useEffect(() => {
+    if (selectedCategory && foodSubcategories.length > 0 && selectedSubcategory && !foodSubcategories.includes(selectedSubcategory)) {
+      setSelectedSubcategory('');
+    } else if (selectedCategory && foodSubcategories.length === 0) {
+      setSelectedSubcategory('');
+    }
+  }, [selectedCategory, foodSubcategories, selectedSubcategory]);
 
   // Sugerencias del Chef y Destacados ahora se cargan desde la base de datos
   // Valores por defecto hardcodeados solo se usan si no hay restaurante seleccionado o no hay datos en la BD
@@ -786,48 +810,39 @@ const MenuScreen: React.FC = () => {
     return false;
   };
 
-  // Filtrar platos por etiqueta (categoría), búsqueda y origen
+  // Filtrar platos por categoría (product.category), subcategoría, búsqueda y origen (igual que MenuRestaurantScreen)
   const filteredDishes = useMemo(() => {
-    const selectedTagAsCategory = selectedCategory || '';
     const hasSearchQuery = searchQuery.trim().length > 0;
-    
-    return dishes.filter(dish => {
-      // IMPORTANTE: Si hay búsqueda, buscar en TODAS las categorías (ignorar filtro de categoría)
-      // Si NO hay búsqueda, filtrar por la etiqueta seleccionada
-      if (!hasSearchQuery && selectedTagAsCategory) {
-        // Filtro por etiqueta solo si NO hay búsqueda y hay una etiqueta seleccionada
-        // Verificar si el producto tiene la etiqueta seleccionada en sus badges
-        if (!dish.badges || !dish.badges.includes(selectedTagAsCategory)) {
-          return false;
-        }
-      }
-      
-      // Filtro por búsqueda fuzzy (buscar en TODAS las categorías cuando hay búsqueda)
+
+    return dishes.filter((dish) => {
+      // Si hay búsqueda, buscar en todas las categorías
       if (hasSearchQuery) {
         const query = searchQuery.trim().toLowerCase();
-        // Usar nombres y descripciones reales de los productos
         const productName = (dish.name || '').toLowerCase();
         const productDescription = (dish.description || '').toLowerCase();
-        
-        // Buscar coincidencias en nombre y descripción
         const matchesName = fuzzyMatch(productName, query);
         const matchesDescription = fuzzyMatch(productDescription, query);
-        
-        // Si no hay coincidencias, excluir el producto
-        if (!matchesName && !matchesDescription) {
-          return false;
+        if (!matchesName && !matchesDescription) return false;
+      } else {
+        // Sin búsqueda: filtrar por categoría (campo category, no badges)
+        if (selectedCategory && dish.category !== selectedCategory) return false;
+        // Si hay subcategoría seleccionada, filtrar también por subcategoría
+        if (selectedSubcategory) {
+          const subcats = dish.subcategories as string[] | undefined;
+          if (!subcats || subcats.length === 0 || !subcats.includes(selectedSubcategory)) return false;
         }
       }
-      
-      // Filtro por origen (solo vegano usando badges)
+
+      // Filtro por origen (ej. vegano por badge)
       if (selectedOrigin === 'vegano') {
-        // Para vegano, verificar si tiene el badge 'vegano'
         if (!dish.badges || !dish.badges.includes('vegano')) return false;
+      } else if (selectedOrigin && dish.origin !== selectedOrigin) {
+        return false;
       }
-      
+
       return true;
     });
-  }, [selectedCategory, searchQuery, selectedOrigin, dishes]);
+  }, [selectedCategory, selectedSubcategory, searchQuery, selectedOrigin, dishes]);
 
   // La categoría seleccionada ahora es directamente la etiqueta
   const selectedTagAsCategory = selectedCategory || '';
@@ -879,7 +894,7 @@ const MenuScreen: React.FC = () => {
               key={category}
               onClick={() => {
                 setSelectedCategory(category);
-                // Limpiar el filtro cuando se cambia de categoría
+                setSelectedSubcategory('');
                 setSelectedOrigin('');
               }}
               className={`flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full px-5 ${
@@ -898,6 +913,29 @@ const MenuScreen: React.FC = () => {
             </button>
           ))}
         </div>
+        )}
+        {/* Subcategorías (igual que MenuRestaurantScreen) */}
+        {selectedRestaurantId && selectedCategory && foodSubcategories.length > 0 && (
+          <div className="max-h-[120px] overflow-y-auto border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+            <div className="flex flex-wrap gap-2 p-3 px-4">
+              {foodSubcategories.map((subcat) => (
+                <button
+                  key={subcat}
+                  onClick={() => {
+                    setSelectedSubcategory(selectedSubcategory === subcat ? '' : subcat);
+                    setSelectedOrigin('');
+                  }}
+                  className={`flex h-8 shrink-0 items-center justify-center rounded-full px-3 text-xs ${
+                    !searchQuery.trim() && selectedSubcategory === subcat
+                      ? 'bg-primary/80 shadow-md shadow-primary/15 text-white font-semibold'
+                      : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 font-medium text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {subcat}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
@@ -945,12 +983,7 @@ const MenuScreen: React.FC = () => {
             <div className="flex gap-4">
               {suggestions.map((dishId) => {
                 const dish = dishes.find(d => d.id === dishId);
-                // Verificar que el plato existe
-                // NOTA: No filtrar por categoría aquí porque los productos ya están organizados por categoría en la BD
-                if (!dish) {
-                  console.warn('[MenuScreen] Producto no encontrado en dishes:', dishId);
-                  return null;
-                }
+                if (!dish || !selectedCategory || dish.category !== selectedCategory) return null;
                 return (
                   <div 
                     key={dish.id}
@@ -982,12 +1015,7 @@ const MenuScreen: React.FC = () => {
           <div className="flex flex-col gap-3">
             {highlights.map((dishId) => {
               const dish = dishes.find(d => d.id === dishId);
-              // Verificar que el plato existe
-              // NOTA: No filtrar por categoría aquí porque los productos ya están organizados por categoría en la BD
-              if (!dish) {
-                console.warn('[MenuScreen] Producto destacado no encontrado en dishes:', dishId);
-                return null;
-              }
+              if (!dish || !selectedCategory || dish.category !== selectedCategory) return null;
               return (
                 <div 
                   key={dish.id}

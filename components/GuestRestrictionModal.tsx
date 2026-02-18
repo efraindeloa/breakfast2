@@ -3,20 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 
 interface GuestRestrictionModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   featureName: string;
 }
 
 const GuestRestrictionModal: React.FC<GuestRestrictionModalProps> = ({ 
-  isOpen, 
+  isOpen = true, 
   onClose, 
   featureName 
 }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  if (!isOpen) return null;
+  if (isOpen === false) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70">

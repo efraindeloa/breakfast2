@@ -240,6 +240,11 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
   }, [isRotationComplete, currentLanguage]);
 
   const handleLogin = async () => {
+    // Cerrar teclado en Android para que el tap no se pierda
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     // Validar campos
     if (!emailOrPhone.trim()) {
       setError(t('welcome.pleaseEnterEmailOrPhone') || 'Por favor ingresa tu usuario, correo o teléfono');
@@ -327,13 +332,19 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
         }
       }
 
-      // Login exitoso - AuthContext se encargará del resto
+      // Login exitoso - AuthContext actualizará user vía onAuthStateChange.
+      // En Android el estado puede actualizarse un tick después; dar tiempo antes de navegar para no redirigir de vuelta a /
       console.log('[WelcomeScreen] ✓ Login exitoso');
       onLogin();
-      navigate('/home');
-    } catch (err) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          navigate('/home');
+        });
+      });
+    } catch (err: unknown) {
       console.error('Unexpected login error:', err);
-      setError(t('welcome.loginError') || 'Error inesperado al iniciar sesión');
+      const message = err && typeof err === 'object' && 'message' in err ? String((err as { message: string }).message) : null;
+      setError(message || t('welcome.loginError') || 'Error inesperado al iniciar sesión');
     } finally {
       setIsLoading(false);
     }
@@ -454,6 +465,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
                 }`}
                 placeholder={t('welcome.emailOrPhonePlaceholder') || 'Usuario, correo o teléfono'}
                 type="text"
+                inputMode="email"
+                autoComplete="username"
                 value={emailOrPhone}
                 onChange={(e) => {
                   setEmailOrPhone(e.target.value);
@@ -482,6 +495,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
                 }`}
                 placeholder={t('welcome.passwordPlaceholder')}
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
@@ -514,6 +528,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
 
           <div className="pt-4">
             <button
+              type="button"
               onClick={handleLogin}
               disabled={isLoading}
               className={`flex items-center justify-center rounded-xl h-14 bg-primary text-white text-base font-bold w-full shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform ${
@@ -531,19 +546,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
             </button>
           </div>
 
-          {/* Botón Continuar como invitado */}
-          <button
-            onClick={() => {
-              signInAsGuest();
-              navigate('/home');
-            }}
-            className="flex items-center justify-center rounded-xl h-12 bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary text-sm font-medium w-full mt-4 hover:bg-primary/20 dark:hover:bg-primary/30 transition-colors"
-          >
-            <span className="material-symbols-outlined mr-2 text-lg">person_outline</span>
-            {t('welcome.continueAsGuest')}
-          </button>
-
-          <p className="text-[#8a7560] dark:text-primary/70 text-sm font-medium leading-normal text-center pt-4">
+          <p className="text-[#8a7560] dark:text-primary/70 text-sm font-medium leading-normal text-center pt-2">
             {t('welcome.noAccount')}{' '}
             <span
               className="underline cursor-pointer text-primary font-bold"
@@ -552,6 +555,20 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLogin }) => {
               {t('welcome.register')}
             </span>
           </p>
+
+          {/* Botón Continuar como invitado (separado del texto "¿Aún no tienes cuenta?" arriba) */}
+          <button
+            type="button"
+            data-screen="welcome-guest-button"
+            onClick={() => {
+              signInAsGuest();
+              navigate('/home');
+            }}
+            className="flex items-center justify-center rounded-xl h-12 bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary text-sm font-medium w-full mt-8 hover:bg-primary/20 dark:hover:bg-primary/30 transition-colors"
+          >
+            <span className="material-symbols-outlined mr-2 text-lg">person_outline</span>
+            {t('welcome.continueAsGuest')}
+          </button>
         </div>
       </div>
 

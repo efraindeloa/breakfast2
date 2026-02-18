@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { getRestaurants, Restaurant } from '../services/database';
 import { useTranslation } from '../contexts/LanguageContext';
 import { playClickSound } from '../utils/sound';
+
+const RESTAURANT_SELECTOR_EXPAND_EVENT = 'restaurant-selector-expand';
 
 const RestaurantSelector: React.FC = () => {
   const { selectedRestaurantId, setSelectedRestaurantId, setSelectedRestaurant } = useRestaurant();
@@ -10,6 +12,7 @@ const RestaurantSelector: React.FC = () => {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const loadRestaurants = async () => {
@@ -29,6 +32,16 @@ const RestaurantSelector: React.FC = () => {
     loadRestaurants();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Solo cargar una vez al montar el componente
+
+  // Escuchar evento para enfocar y expandir el combobox (p. ej. al cerrar el modal "Selecciona un restaurante")
+  useEffect(() => {
+    const handleExpand = () => {
+      triggerRef.current?.focus();
+      setIsOpen(true);
+    };
+    window.addEventListener(RESTAURANT_SELECTOR_EXPAND_EVENT, handleExpand);
+    return () => window.removeEventListener(RESTAURANT_SELECTOR_EXPAND_EVENT, handleExpand);
+  }, []);
 
   const selectedRestaurant = restaurants.find(r => r.id === selectedRestaurantId);
 
@@ -62,6 +75,8 @@ const RestaurantSelector: React.FC = () => {
   return (
     <div className="px-4 py-3 relative">
       <button
+        ref={triggerRef}
+        type="button"
         onClick={() => {
           playClickSound();
           setIsOpen(!isOpen);
@@ -72,13 +87,10 @@ const RestaurantSelector: React.FC = () => {
           <img 
             src={selectedRestaurant.image} 
             alt={selectedRestaurant.name}
-            className="w-10 h-10 rounded-lg object-contain bg-white"
-            //className="w-10 h-10 rounded-lg object-cover"
+            className="w-10 h-10 rounded-lg object-contain bg-white shrink-0"
           />
         ) : (
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-primary">restaurant</span>
-          </div>
+          <div className="w-10 h-10 shrink-0" aria-hidden />
         )}
         <div className="flex-1 text-left min-w-0">
           <p className="text-sm font-semibold text-[#111813] dark:text-white truncate">
@@ -105,7 +117,7 @@ const RestaurantSelector: React.FC = () => {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute top-full left-4 right-4 mt-2 z-50 max-h-64 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg">
+          <div className="absolute top-full left-4 right-4 mt-0.5 z-50 max-h-64 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg">
             {restaurants.map((restaurant) => (
               <button
                 key={restaurant.id}
@@ -118,13 +130,10 @@ const RestaurantSelector: React.FC = () => {
                   <img 
                     src={restaurant.image} 
                     alt={restaurant.name}
-                    className="w-10 h-10 rounded-lg object-contain bg-white"
-                    //className="w-10 h-10 rounded-lg object-cover"
+                    className="w-10 h-10 rounded-lg object-contain bg-white shrink-0"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-primary">restaurant</span>
-                  </div>
+                  <div className="w-10 h-10 shrink-0" aria-hidden />
                 )}
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-sm font-semibold text-[#111813] dark:text-white truncate">

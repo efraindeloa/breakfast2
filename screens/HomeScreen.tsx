@@ -85,7 +85,7 @@ const HomeScreen: React.FC = () => {
     { id: 'qr', path: '/qr-scanner', titleKey: 'home.scanQR', descriptionKey: 'home.scanQRDescription', icon: 'qr_code_scanner', isQR: true },
     { 
       id: 'menu', 
-      path: '/menu-restaurant',
+      path: accountType === 'restaurant' ? '/menu-restaurant' : '/menu',
       titleKey: accountType === 'restaurant' ? 'restaurant.home.manageMenu' : 'home.viewMenu', 
       descriptionKey: accountType === 'restaurant' ? 'restaurant.home.manageMenuDescription' : 'home.viewMenuDescription', 
       icon: 'restaurant_menu' 
@@ -414,13 +414,15 @@ const HomeScreen: React.FC = () => {
 
     const handleClick = () => {
       if (isDisabled) {
-        if (isRestaurantRequired) {
-          setShowSelectRestaurantModal(true);
-        } else {
+        // Solo invitados ven "Función Restringida" (crear cuenta / iniciar sesión)
+        if (isGuestRestricted) {
           setGuestRestrictionModal({
             show: true,
             featureName: t(button.titleKey)
           });
+        } else if (isRestaurantRequired) {
+          // Usuario registrado pero sin restaurante: pedir que elija uno
+          setShowSelectRestaurantModal(true);
         }
         return;
       }
@@ -467,7 +469,11 @@ const HomeScreen: React.FC = () => {
           {isDisabled && (
             <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
               {isRestaurantRequired 
-                ? (t('restaurant.selectRestaurantHint') || 'Selecciona un restaurante')
+                ? (button.id === 'menu' 
+                    ? t('home.selectRestaurantHintMenu') 
+                    : button.id === 'promotions' 
+                      ? t('home.selectRestaurantHintPromotions') 
+                      : t('home.selectRestaurantHint'))
                 : t('guest.registeredOnly')
               }
             </p>
@@ -696,6 +702,7 @@ const HomeScreen: React.FC = () => {
       {/* Modal de restricción para usuarios invitados */}
       {guestRestrictionModal.show && (
         <GuestRestrictionModal
+          isOpen={guestRestrictionModal.show}
           featureName={guestRestrictionModal.featureName}
           onClose={() => setGuestRestrictionModal({ show: false, featureName: '' })}
         />
@@ -713,11 +720,18 @@ const HomeScreen: React.FC = () => {
                 {t('restaurant.selectRestaurantTitle') || 'Selecciona un restaurante'}
               </h2>
               <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                {t('restaurant.selectRestaurantHint') || 'Elige un restaurante en el selector de arriba para usar esta función.'}
+                {t('restaurant.selectRestaurantModalMessage') || 'Elige un restaurante para poder usar esta función'}
               </p>
             </div>
             <button
-              onClick={() => setShowSelectRestaurantModal(false)}
+              onClick={() => {
+                setShowSelectRestaurantModal(false);
+                requestAnimationFrame(() => {
+                  requestAnimationFrame(() => {
+                    window.dispatchEvent(new CustomEvent('restaurant-selector-expand'));
+                  });
+                });
+              }}
               className="w-full h-12 bg-primary hover:bg-primary/90 text-white text-base font-bold rounded-xl transition-colors"
             >
               {t('common.close') || 'Cerrar'}

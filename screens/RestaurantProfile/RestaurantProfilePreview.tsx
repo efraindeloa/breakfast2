@@ -402,7 +402,7 @@ const RestaurantProfilePreview: React.FC<RestaurantProfilePreviewProps> = ({
                   }
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary font-semibold text-sm hover:underline flex items-center gap-1"
+                  className="text-[#181411] dark:text-white font-semibold text-sm hover:underline flex items-center gap-1"
                 >
                   {restaurant.website.replace(/^https?:\/\//, '')}
                   <span className="material-symbols-outlined text-xs">open_in_new</span>
@@ -430,7 +430,7 @@ const RestaurantProfilePreview: React.FC<RestaurantProfilePreviewProps> = ({
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-primary font-semibold text-sm hover:underline flex items-center gap-1"
+                      className="text-[#181411] dark:text-white font-semibold text-sm hover:underline flex items-center gap-1"
                     >
                       {display}
                       <span className="material-symbols-outlined text-xs">open_in_new</span>

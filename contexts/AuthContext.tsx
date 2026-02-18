@@ -33,6 +33,23 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/** UUID v4 compatible con WebViews Android donde crypto.randomUUID puede no existir */
+function generateGuestId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  bytes[6] = (bytes[6]! & 0x0f) | 0x40;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+  const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -97,12 +114,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Función para iniciar sesión como invitado
   const signInAsGuest = () => {
-    const guestId = crypto.randomUUID();
+    const guestId = generateGuestId();
     const guestData = {
       id: guestId,
       createdAt: new Date().toISOString()
     };
-    
+
     // Crear un usuario invitado temporal
     const guestUser = {
       id: guestId,
@@ -113,7 +130,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         name: 'Usuario Invitado'
       }
     } as unknown as User;
-    
+
     setUser(guestUser);
     setSession({
       user: guestUser,
@@ -127,23 +144,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setAccountType('diner'); // Los invitados siempre son comensales
     setStaffRole(null);
     setLoading(false);
-    
-    localStorage.setItem('guestSession', JSON.stringify(guestData));
+
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('guestSession', JSON.stringify(guestData));
+      }
+    } catch (e) {
+      console.warn('[AuthContext] No se pudo guardar guestSession (p. ej. modo privado Android):', e);
+    }
     console.log('[AuthContext] Sesión de invitado iniciada:', guestId);
   };
 
   // Cargar sesión al iniciar
   useEffect(() => {
-    // Verificar si hay sesión de invitado
-    const guestSession = localStorage.getItem('guestSession');
+    // Verificar si hay sesión de invitado (localStorage puede no estar disponible en Android WebView en modo privado)
+    let guestSession: string | null = null;
+    try {
+      guestSession = typeof localStorage !== 'undefined' ? localStorage.getItem('guestSession') : null;
+    } catch {
+      // ignorar
+    }
     if (guestSession) {
       try {
-        const guestData = JSON.parse(guestSession);
+        JSON.parse(guestSession);
         signInAsGuest();
         return;
       } catch (error) {
         console.error('[AuthContext] Error al cargar sesión de invitado:', error);
-        localStorage.removeItem('guestSession');
+        try {
+          localStorage.removeItem('guestSession');
+        } catch {
+          // ignorar
+        }
       }
     }
     
@@ -596,9 +628,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const signOut = async (): Promise<void> => {
-    // Limpiar sesión de invitado
-    localStorage.removeItem('guestSession');
-    
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.removeItem('guestSession');
+    } catch {
+      // p. ej. modo privado Android
+    }
+
     // Limpiar sesión de Supabase
     if (isSupabaseConfigured()) {
       try {

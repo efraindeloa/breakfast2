@@ -16,6 +16,7 @@ const BottomNav: React.FC = () => {
   const [showAssistant, setShowAssistant] = useState(false);
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [restrictedFeature, setRestrictedFeature] = useState('');
+  const [showSelectRestaurantModal, setShowSelectRestaurantModal] = useState(false);
   const [isDocked, setIsDocked] = useState(() => {
     const saved = localStorage.getItem(DOCKED_STATE_KEY);
     return saved === 'true';
@@ -301,11 +302,16 @@ const BottomNav: React.FC = () => {
             key={item.label}
             onClick={() => {
               if (isDisabled) {
-                setRestrictedFeature(item.label);
-                setShowGuestModal(true);
+                // Solo invitados ven "Función Restringida"; registrado sin restaurante ve "Selecciona un restaurante"
+                if (isRestaurantRequired) {
+                  setShowSelectRestaurantModal(true);
+                } else if (isRestricted) {
+                  setRestrictedFeature(item.label);
+                  setShowGuestModal(true);
+                }
                 return;
               }
-              
+
               if (isOrdersPath) {
                 handleOrdersClick();
               } else {
@@ -400,6 +406,38 @@ const BottomNav: React.FC = () => {
         onClose={() => setShowGuestModal(false)}
         featureName={restrictedFeature}
       />
+    )}
+
+    {/* Modal: selecciona un restaurante (comensal registrado sin restaurante) */}
+    {showSelectRestaurantModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 mx-4 max-w-sm w-full shadow-2xl">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-primary text-2xl">store</span>
+            </div>
+            <h2 className="text-[#181511] dark:text-white text-xl font-bold mb-2">
+              {t('restaurant.selectRestaurantTitle') || 'Selecciona un restaurante'}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+              {t('restaurant.selectRestaurantModalMessage') || 'Elige un restaurante para poder usar esta función'}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setShowSelectRestaurantModal(false);
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  window.dispatchEvent(new CustomEvent('restaurant-selector-expand'));
+                });
+              });
+            }}
+            className="w-full h-12 bg-primary hover:bg-primary/90 text-white text-base font-bold rounded-xl transition-colors"
+          >
+            {t('common.close') || 'Cerrar'}
+          </button>
+        </div>
+      </div>
     )}
     </>
   );

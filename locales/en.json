@@ -81,6 +81,8 @@
     "noRestaurants": "No restaurants available"
   },
   "menu": {
+    "categoriesLabel": "Categories",
+    "subcategoriesLabel": "Subcategories",
     "categories": {
       "appetizers": "Appetizers",
       "mains": "Main Courses",

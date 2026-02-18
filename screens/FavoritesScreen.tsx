@@ -479,17 +479,6 @@ const FavoritesScreen: React.FC = () => {
                 >
                   <span className="truncate">{formatPrice(dish.price, localStorage.getItem('selectedLanguage'))}</span>
                 </button>
-                <div
-                  className="relative flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary transition-colors cursor-default"
-                  title={getCartQuantity(dish.id) > 0 ? t('menu.inCart') : ''}
-                >
-                  <span className="material-symbols-outlined text-lg">note_add</span>
-                  {getCartQuantity(dish.id) > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center shadow-sm">
-                      {getCartQuantity(dish.id)}
-                    </span>
-                  )}
-                </div>
               </div>
             </div>
             <div

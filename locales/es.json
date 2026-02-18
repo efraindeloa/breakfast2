@@ -58,6 +58,8 @@
     "makeReservationDescription": "Reserva tu mesa con anticipación"
   },
   "menu": {
+    "categoriesLabel": "Categorías",
+    "subcategoriesLabel": "Subcategorías",
     "categories": {
       "appetizers": "Entradas",
       "mains": "Platos Fuertes",

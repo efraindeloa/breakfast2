@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toTitleCase } from '../utils/text';
 import { useTranslation, useLanguage } from '../contexts/LanguageContext';
@@ -307,44 +307,20 @@ const MenuRestaurantScreen: React.FC = () => {
     }
   }, [selectedSubcategory]);
 
-  // Inicializar categoría y subcategoría desde localStorage o usar la primera disponible
+  const subcategoriesScrollRef = useRef<HTMLDivElement>(null);
+  const subcategoriesScrollRafRef = useRef(0);
+  const subcategoriesScrollStoppedRef = useRef(false);
+  const scrollAnimationRanOnceRef = useRef(false);
   useEffect(() => {
-    if (mainCategories.length > 0 && !selectedCategory) {
+    const list = mainCategories.length > 0 && !selectedCategory ? mainCategories : null;
+    if (list) {
       const savedCategory = localStorage.getItem(STORAGE_KEY_CATEGORY);
-      const categoryToSelect = (savedCategory && mainCategories.includes(savedCategory))
+      const categoryToSelect = (savedCategory && list.includes(savedCategory))
         ? savedCategory
-        : mainCategories[0];
+        : list[0];
       setSelectedCategory(categoryToSelect);
     }
   }, [mainCategories, selectedCategory]);
-
-  // Asegurar que siempre haya una subcategoría seleccionada cuando hay subcategorías disponibles
-  // Y que la subcategoría seleccionada pertenezca a la categoría actual
-  useEffect(() => {
-    if (selectedCategory && foodSubcategories.length > 0) {
-      // Verificar si la subcategoría actual pertenece a la categoría seleccionada
-      const currentSubcategoryValid = selectedSubcategory && foodSubcategories.includes(selectedSubcategory);
-      
-      if (!currentSubcategoryValid) {
-        // Si no hay subcategoría o la subcategoría actual no pertenece a esta categoría,
-        // intentar usar la guardada en localStorage si pertenece a esta categoría,
-        // sino usar la primera disponible
-        const savedSubcategory = localStorage.getItem(STORAGE_KEY_SUBCATEGORY);
-        const subcategoryToSelect = (savedSubcategory && foodSubcategories.includes(savedSubcategory))
-          ? savedSubcategory
-          : foodSubcategories[0];
-        setSelectedSubcategory(subcategoryToSelect);
-        // Guardar inmediatamente en localStorage
-        localStorage.setItem(STORAGE_KEY_SUBCATEGORY, subcategoryToSelect);
-      }
-    } else {
-      // Si no hay subcategorías disponibles, limpiar subcategoría
-      if (selectedSubcategory) {
-        setSelectedSubcategory('');
-        localStorage.removeItem(STORAGE_KEY_SUBCATEGORY);
-      }
-    }
-  }, [selectedCategory, foodSubcategories, selectedSubcategory]);
 
   // La categoría seleccionada ahora es directamente la etiqueta
   const selectedTagAsCategory = selectedCategory || '';
@@ -511,78 +487,38 @@ const MenuRestaurantScreen: React.FC = () => {
     });
   }, [dishes, selectedTagAsCategory, selectedSubcategory]);
 
-  // Función de búsqueda fuzzy (igual que en MenuScreen)
-  const fuzzyMatch = (text: string, query: string): boolean => {
-    if (!text || !query) return false;
-    
-    const normalizedText = text
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim();
-    const normalizedQuery = query
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim();
-
-    if (!normalizedText || !normalizedQuery) return false;
-
-    // Coincidencia exacta
+  // Búsqueda por nombre/descripción: solo coincide si el término está en el texto (evita falsos positivos)
+  const searchMatchesText = (text: string, query: string): boolean => {
+    const normalize = (str: string) =>
+      str
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+    const normalizedText = normalize(text);
+    const normalizedQuery = normalize(query);
+    if (!normalizedQuery) return true;
     if (normalizedText === normalizedQuery) return true;
-
-    // Coincidencia de subcadena (esta debería encontrar "torta" en "torta ahogada")
     if (normalizedText.includes(normalizedQuery)) return true;
-
-    // Coincidencia por palabras (todas las palabras del query deben aparecer)
-    const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length > 0);
-    if (queryWords.length > 1) {
-      const allWordsMatch = queryWords.every(word => normalizedText.includes(word));
-      if (allWordsMatch) return true;
-    }
-
-    // Coincidencia parcial de caracteres (≥70% de caracteres coinciden en orden)
-    if (normalizedQuery.length >= 3) {
-      let textIndex = 0;
-      let queryIndex = 0;
-      let matches = 0;
-
-      while (textIndex < normalizedText.length && queryIndex < normalizedQuery.length) {
-        if (normalizedText[textIndex] === normalizedQuery[queryIndex]) {
-          matches++;
-          queryIndex++;
-        }
-        textIndex++;
-      }
-
-      const matchRatio = matches / normalizedQuery.length;
-      if (matchRatio >= 0.7) return true;
-    }
-
-    // Buscar caracteres del query en cualquier orden (pero juntos)
-    if (query.length >= 3) {
-      const textChars = normalizedText.split('');
-      const queryChars = normalizedQuery.split('');
-      let consecutiveMatches = 0;
-      let maxConsecutive = 0;
-
-      for (let i = 0; i < textChars.length; i++) {
-        let queryIdx = 0;
-        for (let j = i; j < textChars.length && queryIdx < queryChars.length; j++) {
-          if (textChars[j] === queryChars[queryIdx]) {
-            consecutiveMatches++;
-            queryIdx++;
-          } else {
-            consecutiveMatches = 0;
-          }
-        }
-        maxConsecutive = Math.max(maxConsecutive, consecutiveMatches);
-      }
-
-      if (maxConsecutive >= Math.min(3, normalizedQuery.length)) return true;
-    }
-
+    const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length >= 2);
+    if (queryWords.length > 1 && queryWords.every(word => normalizedText.includes(word))) return true;
     return false;
+  };
+
+  const getCategoryTileIcon = (category: string) => {
+    const c = (category || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    if (c.includes('pan')) return 'bakery_dining';
+    if (c.includes('huevo')) return 'egg_alt';
+    if (c.includes('bebid') || c.includes('drink')) return 'local_bar';
+    if (c.includes('cervez')) return 'sports_bar';
+    if (c.includes('coctel') || c.includes('cocktail')) return 'liquor';
+    if (c.includes('vino')) return 'wine_bar';
+    if (c.includes('licor')) return 'liquor';
+    if (c.includes('postre') || c.includes('dessert')) return 'cake';
+    if (c.includes('fruta')) return 'nutrition';
+    if (c.includes('promo')) return 'sell';
+    if (c.includes('alimento') || c.includes('menu') || c.includes('comida') || c.includes('food')) return 'restaurant';
+    return 'category';
   };
 
   // Filtrar productos por búsqueda (buscar en todas las categorías cuando hay búsqueda)
@@ -594,42 +530,121 @@ const MenuRestaurantScreen: React.FC = () => {
       return dishes;
     }
 
-    // Con búsqueda, buscar en todos los productos de todas las categorías
-    const query = searchQuery.trim().toLowerCase();
-    const filtered = dishes.filter((dish) => {
-      const productName = (dish.name || '').toLowerCase();
-      const productDescription = (dish.description || '').toLowerCase();
-      
-      const matchesName = fuzzyMatch(productName, query);
-      const matchesDescription = fuzzyMatch(productDescription, query);
-      
-      // Debug en desarrollo
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[MenuRestaurantScreen] Filtering dish:', {
-          dishName: dish.name,
-          productName,
-          query,
-          matchesName,
-          matchesDescription,
-          result: matchesName || matchesDescription
-        });
-      }
-      
+    const query = searchQuery.trim();
+    return dishes.filter((dish) => {
+      const matchesName = searchMatchesText(dish.name || '', query);
+      const matchesDescription = searchMatchesText(dish.description || '', query);
       return matchesName || matchesDescription;
     });
-    
-    // Debug en desarrollo
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[MenuRestaurantScreen] Filtered dishes:', {
-        totalDishes: dishes.length,
-        query,
-        filteredCount: filtered.length,
-        filteredNames: filtered.map(d => d.name)
-      });
-    }
-    
-    return filtered;
   }, [dishes, searchQuery]);
+
+  // Con búsqueda activa, los filtros muestran solo categorías/subcategorías presentes en los resultados
+  const displayCategories = useMemo(() => {
+    if (searchQuery.trim()) {
+      const set = new Set<string>();
+      filteredDishes.forEach((d) => {
+        if (d.category && d.category.trim() !== '') set.add(d.category.trim());
+      });
+      return Array.from(set).sort();
+    }
+    return mainCategories;
+  }, [searchQuery, filteredDishes, mainCategories]);
+
+  const displaySubcategories = useMemo(() => {
+    if (!selectedCategory) return [];
+    if (searchQuery.trim()) {
+      const set = new Set<string>();
+      filteredDishes.forEach((d) => {
+        if (d.category === selectedCategory && d.subcategories && d.subcategories.length > 0) {
+          d.subcategories.forEach((sub) => {
+            if (sub && sub.trim() !== '') set.add(sub.trim());
+          });
+        }
+      });
+      return Array.from(set).sort();
+    }
+    return foodSubcategories;
+  }, [searchQuery, filteredDishes, selectedCategory, foodSubcategories]);
+
+  // Efectos que usan displayCategories/displaySubcategories (definidos después de filteredDishes)
+  useEffect(() => {
+    const list = searchQuery.trim() ? displayCategories : mainCategories;
+    if (list.length > 0 && !selectedCategory) {
+      const savedCategory = localStorage.getItem(STORAGE_KEY_CATEGORY);
+      const categoryToSelect = (savedCategory && list.includes(savedCategory))
+        ? savedCategory
+        : list[0];
+      setSelectedCategory(categoryToSelect);
+    }
+  }, [mainCategories, displayCategories, searchQuery, selectedCategory]);
+
+  useEffect(() => {
+    if (!searchQuery.trim() || displayCategories.length === 0) return;
+    if (selectedCategory && !displayCategories.includes(selectedCategory)) {
+      setSelectedCategory(displayCategories[0]);
+      setSelectedSubcategory('');
+      localStorage.setItem(STORAGE_KEY_CATEGORY, displayCategories[0]);
+      localStorage.removeItem(STORAGE_KEY_SUBCATEGORY);
+    }
+  }, [searchQuery, displayCategories, selectedCategory]);
+
+  useEffect(() => {
+    if (selectedCategory && displaySubcategories.length > 0) {
+      const valid = selectedSubcategory && displaySubcategories.includes(selectedSubcategory);
+      if (!valid) {
+        const saved = localStorage.getItem(STORAGE_KEY_SUBCATEGORY);
+        const next = (saved && displaySubcategories.includes(saved)) ? saved : displaySubcategories[0];
+        setSelectedSubcategory(next);
+        localStorage.setItem(STORAGE_KEY_SUBCATEGORY, next);
+      }
+    } else if (selectedSubcategory) {
+      setSelectedSubcategory('');
+      localStorage.removeItem(STORAGE_KEY_SUBCATEGORY);
+    }
+  }, [selectedCategory, displaySubcategories, selectedSubcategory]);
+
+  // Animación de scroll: una sola vez al entrar a la página; al salir y volver se repite una vez
+  useEffect(() => {
+    if (scrollAnimationRanOnceRef.current) return;
+    subcategoriesScrollStoppedRef.current = false;
+    const el = subcategoriesScrollRef.current;
+    if (!el || !selectedCategory || displaySubcategories.length === 0) return;
+    const ROW_HEIGHT_APPROX = 40;
+    const VISIBLE_ROWS = 3;
+    if (el.scrollHeight <= ROW_HEIGHT_APPROX * VISIBLE_ROWS) return;
+
+    scrollAnimationRanOnceRef.current = true;
+    const maxScroll = Math.min(80, el.scrollHeight - el.clientHeight);
+    const duration = 2800;
+    const hold = 5000;
+    let rafId = 0;
+    let phase: 'down' | 'hold-down' | 'up' | 'hold-up' = 'down';
+    let startTime = 0;
+    let startScrollTop = 0;
+    const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const tick = (now: number) => {
+      if (subcategoriesScrollStoppedRef.current) return;
+      if (phase === 'down') {
+        if (startTime === 0) startTime = now;
+        const t = Math.min(1, (now - startTime) / duration);
+        el.scrollTop = startScrollTop + easeInOutCubic(t) * maxScroll;
+        if (t >= 1) { phase = 'hold-down'; startTime = now; }
+      } else if (phase === 'hold-down') {
+        if (now - startTime >= hold) { phase = 'up'; startTime = now; startScrollTop = el.scrollTop; }
+      } else if (phase === 'up') {
+        const t = Math.min(1, (now - startTime) / duration);
+        el.scrollTop = startScrollTop + easeInOutCubic(t) * (0 - startScrollTop);
+        if (t >= 1) { phase = 'hold-up'; startTime = now; }
+      } else {
+        if (now - startTime >= hold) { phase = 'down'; startTime = 0; startScrollTop = 0; }
+      }
+      rafId = requestAnimationFrame(tick);
+      subcategoriesScrollRafRef.current = rafId;
+    };
+    rafId = requestAnimationFrame(tick);
+    subcategoriesScrollRafRef.current = rafId;
+    return () => cancelAnimationFrame(rafId);
+  }, [selectedCategory, displaySubcategories]);
 
   // Calcular cuántos productos hay en la categoría actual
   const menuItemsCount = useMemo(() => {
@@ -1561,64 +1576,91 @@ const MenuRestaurantScreen: React.FC = () => {
 
       {/* Categories */}
       <div className="sticky top-[73px] z-40 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
-        {/* Static category buttons as requested */}
-        <div className="flex gap-3 p-3 px-4 overflow-x-auto no-scrollbar">
-          {mainCategories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => {
-                // Siempre seleccionar la categoría (no permitir deseleccionar)
-                if (selectedCategory !== cat) {
-                  setSelectedCategory(cat);
-                  // Si hay subcategorías disponibles para esta categoría, seleccionar la primera
-                  // (esto se manejará automáticamente en el useEffect)
-                  setSelectedOrigin('');
-                  setSelectedTag('');
-                }
-              }}
-              className={`flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full px-4 ${!searchQuery.trim() && selectedCategory === cat
-                  ? 'bg-primary shadow-md shadow-primary/20'
-                  : 'bg-white dark:bg-[#322a1a] border border-[#f4f3f0] dark:border-[#3d3321]'
-              }`}
-            >
-              <p
-                className={`text-sm ${!searchQuery.trim() && selectedCategory === cat ? 'font-semibold text-white' : 'font-medium text-[#181611] dark:text-stone-300'
-                }`}
-              >
-                {cat}
+        {/* Categorías (tiles estilo screenshot) */}
+        {displayCategories.length > 0 && (
+          <div className="px-4 pt-4 pb-3">
+            <div className="flex items-center justify-between pb-3">
+              <p className="text-xs font-bold tracking-wide text-gray-500 dark:text-gray-400 uppercase">
+                {t('menu.categoriesLabel') || 'Categorías'}
               </p>
-            </button>
-          ))}
-        </div>
+            </div>
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+              {displayCategories.map((cat) => {
+                const isSelected = selectedCategory === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => {
+                      if (selectedCategory !== cat) {
+                        setSelectedCategory(cat);
+                        setSelectedOrigin('');
+                        setSelectedTag('');
+                      }
+                    }}
+                    className={`flex h-[86px] w-[86px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border transition-colors ${
+                      isSelected
+                        ? 'bg-primary border-primary shadow-md shadow-primary/20'
+                        : 'bg-white dark:bg-[#322a1a] border-[#f4f3f0] dark:border-[#3d3321]'
+                    }`}
+                  >
+                    <span
+                      className={`material-symbols-outlined text-[28px] leading-none ${
+                        isSelected ? 'text-white' : 'text-primary'
+                      }`}
+                      aria-hidden
+                    >
+                      {getCategoryTileIcon(cat)}
+                    </span>
+                    <p className={`text-[11px] leading-tight text-center px-1 ${
+                      isSelected ? 'font-bold text-white' : 'font-semibold text-[#181611] dark:text-stone-300'
+                    }`}>
+                      {cat}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
-        {/* Subcategorías dinámicas */}
-        {selectedCategory && foodSubcategories.length > 0 && (
-          <div className="max-h-[120px] overflow-y-auto border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-            <div className="flex flex-wrap gap-2 p-3 px-4">
-              {foodSubcategories.map((subcat) => (
+        {/* Subcategorías: etiqueta fija, solo los botones hacen scroll */}
+        {selectedCategory && displaySubcategories.length > 0 && (
+          <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+            <p className="px-4 pt-3 pb-2 text-xs font-bold tracking-wide text-gray-500 dark:text-gray-400 uppercase shrink-0">
+              {t('menu.subcategoriesLabel') || 'Subcategorías'}
+            </p>
+            <div
+              ref={subcategoriesScrollRef}
+              className="max-h-[100px] overflow-y-auto overflow-x-hidden px-4 pb-2"
+            >
+              <div className="flex flex-wrap gap-2">
+              {displaySubcategories.map((subcat) => (
                 <button
                   key={subcat}
+                  type="button"
                   onClick={() => {
-                    // Siempre seleccionar la subcategoría (no permitir deseleccionar)
+                    subcategoriesScrollStoppedRef.current = true;
+                    if (subcategoriesScrollRafRef.current) {
+                      cancelAnimationFrame(subcategoriesScrollRafRef.current);
+                      subcategoriesScrollRafRef.current = 0;
+                    }
                     if (selectedSubcategory !== subcat) {
                       setSelectedSubcategory(subcat);
                       setSelectedOrigin('');
                       setSelectedTag('');
                     }
                   }}
-                  className={`flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full px-3 text-xs ${!searchQuery.trim() && selectedSubcategory === subcat
-                      ? 'bg-primary/80 shadow-md shadow-primary/15'
-                      : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
-                    }`}
+                  className={`flex h-8 shrink-0 items-center justify-center rounded-full px-3 text-xs ${
+                    selectedSubcategory === subcat
+                      ? 'bg-primary/80 shadow-md shadow-primary/15 text-white font-semibold'
+                      : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 font-medium text-gray-700 dark:text-gray-300'
+                  }`}
                 >
-                  <p
-                    className={`${!searchQuery.trim() && selectedSubcategory === subcat ? 'font-semibold text-white' : 'font-medium text-gray-700 dark:text-gray-300'
-                      }`}
-                  >
-                    {subcat}
-                  </p>
+                  {subcat}
                 </button>
               ))}
+              </div>
             </div>
           </div>
         )}
@@ -1908,11 +1950,6 @@ const MenuRestaurantScreen: React.FC = () => {
                           >
                             <span className="material-symbols-outlined">delete</span>
                           </button>
-                        </div>
-                      )}
-                      {!editMode && (
-                        <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary transition-colors cursor-default">
-                          <span className="material-symbols-outlined text-lg">note_add</span>
                         </div>
                       )}
                     </div>

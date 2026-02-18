@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useTranslation, useLanguage } from '../contexts/LanguageContext';
@@ -160,6 +160,20 @@ const MenuScreen: React.FC = () => {
     const saved = localStorage.getItem('showHighlights');
     return saved === null ? true : saved === 'true'; // Por defecto activado
   });
+  const [chefSuggestionsExpanded, setChefSuggestionsExpanded] = useState(true);
+  const [highlightsExpanded, setHighlightsExpanded] = useState(true);
+
+  // Colapsar Sugerencias del chef y Destacados después de 5 segundos (una sola vez por visita)
+  const collapseSectionsRanRef = useRef(false);
+  useEffect(() => {
+    if (collapseSectionsRanRef.current) return;
+    const t = setTimeout(() => {
+      collapseSectionsRanRef.current = true;
+      setChefSuggestionsExpanded(false);
+      setHighlightsExpanded(false);
+    }, 5000);
+    return () => clearTimeout(t);
+  }, []);
 
   // Escuchar cambios en localStorage para actualizar el estado cuando se cambia el toggle en Settings
   useEffect(() => {
@@ -201,23 +215,22 @@ const MenuScreen: React.FC = () => {
     };
   }, [showSuggestions, showHighlights]);
 
-  // Establecer la primera categoría disponible si no hay ninguna seleccionada y hay categorías disponibles
+  // Establecer la primera categoría disponible si no hay ninguna (solo cuando no hay búsqueda; con búsqueda se sincroniza después de displayCategories)
   useEffect(() => {
+    if (searchQuery.trim()) return;
     if (categories.length > 0 && !selectedCategory) {
       setSelectedCategory(categories[0]);
       sessionStorage.setItem('menuSelectedCategory', categories[0]);
     } else if (categories.length > 0 && selectedCategory && !categories.includes(selectedCategory)) {
-      // Si la categoría seleccionada ya no existe, usar la primera disponible
       setSelectedCategory(categories[0]);
       sessionStorage.setItem('menuSelectedCategory', categories[0]);
       setSelectedSubcategory('');
     } else if (categories.length === 0) {
-      // Si no hay categorías, limpiar la selección
       setSelectedCategory('');
       setSelectedSubcategory('');
       sessionStorage.removeItem('menuSelectedCategory');
     }
-  }, [categories, selectedCategory]);
+  }, [categories, searchQuery, selectedCategory]);
 
   // Restaurar posición de scroll y categoría al regresar
   useEffect(() => {
@@ -264,6 +277,22 @@ const MenuScreen: React.FC = () => {
     'Coctelería': t('menu.categories.cocktails'),
     'Misceláneos': t('menu.categories.miscellaneous')
   }), [t]);
+
+  const getCategoryTileIcon = (category: string) => {
+    const c = (category || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    if (c.includes('pan')) return 'bakery_dining';
+    if (c.includes('huevo')) return 'egg_alt';
+    if (c.includes('bebid') || c.includes('drink')) return 'local_bar';
+    if (c.includes('cervez')) return 'sports_bar';
+    if (c.includes('coctel') || c.includes('cocktail')) return 'liquor';
+    if (c.includes('vino')) return 'wine_bar';
+    if (c.includes('licor')) return 'liquor';
+    if (c.includes('postre') || c.includes('dessert')) return 'cake';
+    if (c.includes('fruta')) return 'nutrition';
+    if (c.includes('promo')) return 'sell';
+    if (c.includes('alimento') || c.includes('menu') || c.includes('comida') || c.includes('food')) return 'restaurant';
+    return 'category';
+  };
   
   
   // Ya no necesitamos getOriginalCategory porque las categorías ahora son las etiquetas directamente
@@ -685,30 +714,12 @@ const MenuScreen: React.FC = () => {
     return dishesFromCode;
   }, [products]);
 
-  // Subcategorías de la categoría seleccionada (igual que MenuRestaurantScreen)
-  const foodSubcategories = useMemo(() => {
-    if (!selectedCategory) return [];
-    const subcategoriesSet = new Set<string>();
-    dishes.forEach((dish) => {
-      if (dish.category === selectedCategory && dish.subcategories && dish.subcategories.length > 0) {
-        (dish.subcategories as string[]).forEach((subcat: string) => {
-          if (subcat && String(subcat).trim() !== '') {
-            subcategoriesSet.add(String(subcat).trim());
-          }
-        });
-      }
-    });
-    return Array.from(subcategoriesSet).sort();
-  }, [dishes, selectedCategory]);
-
-  // Al cambiar de categoría, limpiar subcategoría si ya no aplica (debe ir después de foodSubcategories)
-  useEffect(() => {
-    if (selectedCategory && foodSubcategories.length > 0 && selectedSubcategory && !foodSubcategories.includes(selectedSubcategory)) {
-      setSelectedSubcategory('');
-    } else if (selectedCategory && foodSubcategories.length === 0) {
-      setSelectedSubcategory('');
-    }
-  }, [selectedCategory, foodSubcategories, selectedSubcategory]);
+  // Al cambiar de categoría, limpiar subcategoría si ya no aplica (foodSubcategories se define después de filteredDishes)
+  // Ref para el contenedor de subcategorías (animación de scroll cuando hay más de ~3 filas)
+  const subcategoriesScrollRef = useRef<HTMLDivElement>(null);
+  const subcategoriesScrollRafRef = useRef(0);
+  const subcategoriesScrollStoppedRef = useRef(false);
+  const scrollAnimationRanOnceRef = useRef(false);
 
   // Sugerencias del Chef y Destacados ahora se cargan desde la base de datos
   // Valores por defecto hardcodeados solo se usan si no hay restaurante seleccionado o no hay datos en la BD
@@ -738,75 +749,24 @@ const MenuScreen: React.FC = () => {
     ? highlightsByCategory 
     : defaultHighlights;
 
-  // Función de búsqueda fuzzy
-  const fuzzyMatch = (text: string, query: string): boolean => {
-    const normalize = (str: string) => {
-      return str
+  // Búsqueda por nombre/descripción: solo coincide si el término está en el texto (evita falsos positivos)
+  const searchMatchesText = (text: string, query: string): boolean => {
+    const normalize = (str: string) =>
+      str
         .toLowerCase()
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+        .replace(/[\u0300-\u036f]/g, '')
         .trim();
-    };
-
     const normalizedText = normalize(text);
     const normalizedQuery = normalize(query);
-
+    if (!normalizedQuery) return true;
     // Coincidencia exacta
     if (normalizedText === normalizedQuery) return true;
-
-    // Coincidencia de subcadena
+    // El query completo debe aparecer como subcadena (ej. "carajillo" en nombre o descripción)
     if (normalizedText.includes(normalizedQuery)) return true;
-
-    // Buscar palabras individuales del query en el texto
-    const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length > 0);
-    if (queryWords.length > 0) {
-      const allWordsMatch = queryWords.every(word => normalizedText.includes(word));
-      if (allWordsMatch) return true;
-    }
-
-    // Buscar coincidencias parciales de caracteres (permite errores de tipeo menores)
-    if (query.length >= 3) {
-      let textIndex = 0;
-      let queryIndex = 0;
-      let matches = 0;
-
-      while (textIndex < normalizedText.length && queryIndex < normalizedQuery.length) {
-        if (normalizedText[textIndex] === normalizedQuery[queryIndex]) {
-          matches++;
-          queryIndex++;
-        }
-        textIndex++;
-      }
-
-      // Si al menos el 70% de los caracteres del query coinciden en orden
-      const matchRatio = matches / normalizedQuery.length;
-      if (matchRatio >= 0.7) return true;
-    }
-
-    // Buscar caracteres del query en cualquier orden (pero juntos)
-    if (query.length >= 3) {
-      const textChars = normalizedText.split('');
-      const queryChars = normalizedQuery.split('');
-      let consecutiveMatches = 0;
-      let maxConsecutive = 0;
-
-      for (let i = 0; i < textChars.length; i++) {
-        let queryIdx = 0;
-        for (let j = i; j < textChars.length && queryIdx < queryChars.length; j++) {
-          if (textChars[j] === queryChars[queryIdx]) {
-            consecutiveMatches++;
-            queryIdx++;
-          } else {
-            consecutiveMatches = 0;
-          }
-        }
-        maxConsecutive = Math.max(maxConsecutive, consecutiveMatches);
-      }
-
-      // Si hay una secuencia de caracteres que coincide
-      if (maxConsecutive >= Math.min(3, normalizedQuery.length)) return true;
-    }
-
+    // Si el usuario escribe varias palabras, todas deben aparecer (ej. "cafe leche" → nombre/descripción debe contener "cafe" y "leche")
+    const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length >= 2);
+    if (queryWords.length > 1 && queryWords.every(word => normalizedText.includes(word))) return true;
     return false;
   };
 
@@ -817,11 +777,11 @@ const MenuScreen: React.FC = () => {
     return dishes.filter((dish) => {
       // Si hay búsqueda, buscar en todas las categorías
       if (hasSearchQuery) {
-        const query = searchQuery.trim().toLowerCase();
-        const productName = (dish.name || '').toLowerCase();
-        const productDescription = (dish.description || '').toLowerCase();
-        const matchesName = fuzzyMatch(productName, query);
-        const matchesDescription = fuzzyMatch(productDescription, query);
+        const query = searchQuery.trim();
+        const productName = dish.name || '';
+        const productDescription = dish.description || '';
+        const matchesName = searchMatchesText(productName, query);
+        const matchesDescription = searchMatchesText(productDescription, query);
         if (!matchesName && !matchesDescription) return false;
       } else {
         // Sin búsqueda: filtrar por categoría (campo category, no badges)
@@ -843,6 +803,121 @@ const MenuScreen: React.FC = () => {
       return true;
     });
   }, [selectedCategory, selectedSubcategory, searchQuery, selectedOrigin, dishes]);
+
+  // Con búsqueda activa, los filtros muestran solo categorías/subcategorías presentes en los resultados
+  const displayCategories = useMemo(() => {
+    if (searchQuery.trim()) {
+      const set = new Set<string>();
+      filteredDishes.forEach((d) => {
+        if (d.category && String(d.category).trim() !== '') set.add(String(d.category).trim());
+      });
+      return Array.from(set).sort();
+    }
+    return categories;
+  }, [searchQuery, filteredDishes, categories]);
+
+  // Con búsqueda: sincronizar categoría/subcategoría con los resultados (displayCategories ya definido aquí)
+  useEffect(() => {
+    if (!searchQuery.trim()) return;
+    if (displayCategories.length > 0 && !selectedCategory) {
+      setSelectedCategory(displayCategories[0]);
+      sessionStorage.setItem('menuSelectedCategory', displayCategories[0]);
+    } else if (displayCategories.length > 0 && selectedCategory && !displayCategories.includes(selectedCategory)) {
+      setSelectedCategory(displayCategories[0]);
+      sessionStorage.setItem('menuSelectedCategory', displayCategories[0]);
+      setSelectedSubcategory('');
+    } else if (displayCategories.length === 0) {
+      setSelectedCategory('');
+      setSelectedSubcategory('');
+      sessionStorage.removeItem('menuSelectedCategory');
+    }
+  }, [displayCategories, searchQuery, selectedCategory]);
+
+  // Subcategorías de la categoría seleccionada; con búsqueda solo las que aparecen en los resultados
+  const foodSubcategories = useMemo(() => {
+    if (!selectedCategory) return [];
+    const source = searchQuery.trim() ? filteredDishes : dishes;
+    const subcategoriesSet = new Set<string>();
+    source.forEach((dish) => {
+      if (dish.category === selectedCategory && dish.subcategories && dish.subcategories.length > 0) {
+        (dish.subcategories as string[]).forEach((subcat: string) => {
+          if (subcat && String(subcat).trim() !== '') {
+            subcategoriesSet.add(String(subcat).trim());
+          }
+        });
+      }
+    });
+    return Array.from(subcategoriesSet).sort();
+  }, [dishes, filteredDishes, searchQuery, selectedCategory]);
+
+  // Al cambiar de categoría o resultados de búsqueda, limpiar subcategoría si ya no aplica
+  useEffect(() => {
+    if (selectedCategory && foodSubcategories.length > 0 && selectedSubcategory && !foodSubcategories.includes(selectedSubcategory)) {
+      setSelectedSubcategory('');
+    } else if (selectedCategory && foodSubcategories.length === 0) {
+      setSelectedSubcategory('');
+    }
+  }, [selectedCategory, foodSubcategories, selectedSubcategory]);
+
+  // Animación de scroll suave: una sola vez al entrar a la página; al salir y volver se repite una vez
+  useEffect(() => {
+    if (scrollAnimationRanOnceRef.current) return;
+    subcategoriesScrollStoppedRef.current = false;
+    const el = subcategoriesScrollRef.current;
+    if (!el || !selectedCategory || foodSubcategories.length === 0) return;
+    const ROW_HEIGHT_APPROX = 40;
+    const VISIBLE_ROWS = 3;
+    const maxVisibleHeight = ROW_HEIGHT_APPROX * VISIBLE_ROWS;
+    if (el.scrollHeight <= maxVisibleHeight) return;
+
+    scrollAnimationRanOnceRef.current = true;
+    const maxScroll = Math.min(80, el.scrollHeight - el.clientHeight);
+    const duration = 2800;
+    const hold = 5000;
+    let rafId = 0;
+    let phase: 'down' | 'hold-down' | 'up' | 'hold-up' = 'down';
+    let startTime = 0;
+    let startScrollTop = 0;
+    const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+    const tick = (now: number) => {
+      if (subcategoriesScrollStoppedRef.current) return;
+      if (phase === 'down') {
+        if (startTime === 0) startTime = now;
+        const t = Math.min(1, (now - startTime) / duration);
+        el.scrollTop = startScrollTop + easeInOutCubic(t) * maxScroll;
+        if (t >= 1) {
+          phase = 'hold-down';
+          startTime = now;
+        }
+      } else if (phase === 'hold-down') {
+        if (now - startTime >= hold) {
+          phase = 'up';
+          startTime = now;
+          startScrollTop = el.scrollTop;
+        }
+      } else if (phase === 'up') {
+        if (startTime === now) startTime = now - 1;
+        const t = Math.min(1, (now - startTime) / duration);
+        el.scrollTop = startScrollTop + easeInOutCubic(t) * (0 - startScrollTop);
+        if (t >= 1) {
+          phase = 'hold-up';
+          startTime = now;
+        }
+      } else {
+        if (now - startTime >= hold) {
+          phase = 'down';
+          startTime = 0;
+          startScrollTop = 0;
+        }
+      }
+      rafId = requestAnimationFrame(tick);
+      subcategoriesScrollRafRef.current = rafId;
+    };
+    rafId = requestAnimationFrame(tick);
+    subcategoriesScrollRafRef.current = rafId;
+    return () => cancelAnimationFrame(rafId);
+  }, [selectedCategory, foodSubcategories]);
 
   // La categoría seleccionada ahora es directamente la etiqueta
   const selectedTagAsCategory = selectedCategory || '';
@@ -886,47 +961,77 @@ const MenuScreen: React.FC = () => {
       {/* Header Section */}
       <TopNavbar title="DONK RESTAURANT" showAvatar={true} />
       <div className="sticky top-[73px] z-40 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
-        {/* Categories Chips - Solo mostrar si hay restaurante seleccionado y categorías disponibles */}
-        {selectedRestaurantId && categories.length > 0 && (
-        <div className="flex gap-3 p-4 overflow-x-auto no-scrollbar">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => {
-                setSelectedCategory(category);
-                setSelectedSubcategory('');
-                setSelectedOrigin('');
-              }}
-              className={`flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full px-5 ${
-                !searchQuery.trim() && selectedCategory === category
-                  ? 'bg-primary shadow-md shadow-primary/20'
-                  : 'bg-white dark:bg-[#322a1a] border border-[#f4f3f0] dark:border-[#3d3321]'
-              }`}
-            >
-              <p className={`text-sm font-${!searchQuery.trim() && selectedCategory === category ? 'semibold' : 'medium'} ${
-                !searchQuery.trim() && selectedCategory === category
-                  ? 'text-white'
-                  : 'text-[#181611] dark:text-stone-300'
-              }`}>
-                {category}
+        {/* Categorías (tiles estilo screenshot) */}
+        {selectedRestaurantId && displayCategories.length > 0 && (
+          <div className="px-4 pt-4 pb-3">
+            <div className="flex items-center justify-between pb-3">
+              <p className="text-xs font-bold tracking-wide text-gray-500 dark:text-gray-400 uppercase">
+                {t('menu.categoriesLabel') || 'Categorías'}
               </p>
-            </button>
-          ))}
-        </div>
+            </div>
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+              {displayCategories.map((category) => {
+                const isSelected = selectedCategory === category;
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory(category);
+                      setSelectedSubcategory('');
+                      setSelectedOrigin('');
+                    }}
+                    className={`flex h-[86px] w-[86px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border transition-colors ${
+                      isSelected
+                        ? 'bg-primary border-primary shadow-md shadow-primary/20'
+                        : 'bg-white dark:bg-[#322a1a] border-[#f4f3f0] dark:border-[#3d3321]'
+                    }`}
+                  >
+                    <span
+                      className={`material-symbols-outlined text-[28px] leading-none ${
+                        isSelected ? 'text-white' : 'text-primary'
+                      }`}
+                      aria-hidden
+                    >
+                      {getCategoryTileIcon(category)}
+                    </span>
+                    <p className={`text-[11px] leading-tight text-center px-1 ${
+                      isSelected ? 'font-bold text-white' : 'font-semibold text-[#181611] dark:text-stone-300'
+                    }`}>
+                      {category}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         )}
-        {/* Subcategorías (igual que MenuRestaurantScreen) */}
+        {/* Subcategorías: etiqueta fija, solo los botones hacen scroll */}
         {selectedRestaurantId && selectedCategory && foodSubcategories.length > 0 && (
-          <div className="max-h-[120px] overflow-y-auto border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-            <div className="flex flex-wrap gap-2 p-3 px-4">
+          <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+            <p className="px-4 pt-3 pb-2 text-xs font-bold tracking-wide text-gray-500 dark:text-gray-400 uppercase shrink-0">
+              {t('menu.subcategoriesLabel') || 'Subcategorías'}
+            </p>
+            <div
+              ref={subcategoriesScrollRef}
+              className="max-h-[100px] overflow-y-auto overflow-x-hidden px-4 pb-2"
+            >
+              <div className="flex flex-wrap gap-2">
               {foodSubcategories.map((subcat) => (
                 <button
                   key={subcat}
+                  type="button"
                   onClick={() => {
+                    subcategoriesScrollStoppedRef.current = true;
+                    if (subcategoriesScrollRafRef.current) {
+                      cancelAnimationFrame(subcategoriesScrollRafRef.current);
+                      subcategoriesScrollRafRef.current = 0;
+                    }
                     setSelectedSubcategory(selectedSubcategory === subcat ? '' : subcat);
                     setSelectedOrigin('');
                   }}
                   className={`flex h-8 shrink-0 items-center justify-center rounded-full px-3 text-xs ${
-                    !searchQuery.trim() && selectedSubcategory === subcat
+                    selectedSubcategory === subcat
                       ? 'bg-primary/80 shadow-md shadow-primary/15 text-white font-semibold'
                       : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 font-medium text-gray-700 dark:text-gray-300'
                   }`}
@@ -934,13 +1039,117 @@ const MenuScreen: React.FC = () => {
                   {subcat}
                 </button>
               ))}
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Search Input */}
-      <div className="px-4 pt-4 pb-2">
+      {/* Sugerencias del Chef - colapsable */}
+      {!searchQuery.trim() && showSuggestions && suggestions.length > 0 && (
+        <section
+          className={`mx-4 mt-8 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 ${!chefSuggestionsExpanded ? 'min-h-[56px] flex flex-col justify-center py-0' : 'pt-6 pb-4'}`}
+        >
+          <button
+            type="button"
+            onClick={() => setChefSuggestionsExpanded((e) => !e)}
+            className={`flex w-full justify-between items-center text-left ${chefSuggestionsExpanded ? 'mb-4' : ''}`}
+            aria-expanded={chefSuggestionsExpanded}
+          >
+            <h3 className="text-gray-500 dark:text-gray-400 text-lg font-bold leading-tight tracking-[-0.015em]">{t('menu.chefSuggestions')}</h3>
+            <span
+              className={`material-symbols-outlined text-gray-500 dark:text-gray-400 transition-transform duration-300 ${chefSuggestionsExpanded ? 'rotate-180' : ''}`}
+              aria-hidden
+            >
+              expand_more
+            </span>
+          </button>
+          <div
+            className="overflow-hidden transition-[max-height] duration-500 ease-in-out"
+            style={{ maxHeight: chefSuggestionsExpanded ? '320px' : '0px' }}
+          >
+            <div className="flex overflow-x-auto hide-scrollbar pb-2 -mx-4 px-4">
+                <div className="flex gap-4">
+                  {suggestions.map((dishId) => {
+                    const dish = dishes.find(d => d.id === dishId);
+                    if (!dish || !selectedCategory || dish.category !== selectedCategory) return null;
+                    return (
+                      <div
+                        key={dish.id}
+                        onClick={() => navigateToDish(dish.id)}
+                        className="flex flex-col gap-3 rounded-xl min-w-[200px] max-w-[280px] w-[200px] bg-white dark:bg-gray-900 p-2 shadow-sm border border-gray-100 dark:border-gray-800 shrink-0 cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
+                      >
+                        <div
+                          className="w-full bg-center bg-no-repeat aspect-[16/10] bg-cover rounded-lg flex flex-col relative"
+                          style={{ backgroundImage: `url("${dish.image}")` }}
+                        >
+                          <div className="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">{formatPrice(dish.price, localStorage.getItem('selectedLanguage'))}</div>
+                        </div>
+                        <div className="px-2 pb-2 flex-1 flex flex-col">
+                          <p className="text-[#181611] dark:text-white text-base font-bold leading-tight mb-1 line-clamp-2">{dish.name}</p>
+                          <p className="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal line-clamp-2">{dish.description}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+          </div>
+        </section>
+      )}
+
+      {/* Destacados - colapsable */}
+      {!searchQuery.trim() && showHighlights && highlights.length > 0 && (
+        <section
+          className={`mx-4 mt-2 mb-8 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 ${!highlightsExpanded ? 'min-h-[56px] flex flex-col justify-center py-0' : 'pb-4'}`}
+        >
+          <button
+            type="button"
+            onClick={() => setHighlightsExpanded((e) => !e)}
+            className={`flex w-full justify-between items-center text-left ${highlightsExpanded ? 'pb-2' : ''}`}
+            aria-expanded={highlightsExpanded}
+          >
+            <h3 className="text-gray-500 dark:text-gray-400 text-lg font-bold leading-tight tracking-[-0.015em]">{t('menu.highlights')}</h3>
+            <span
+              className={`material-symbols-outlined text-gray-500 dark:text-gray-400 transition-transform duration-300 ${highlightsExpanded ? 'rotate-180' : ''}`}
+              aria-hidden
+            >
+              expand_more
+            </span>
+          </button>
+          <div
+            className="overflow-hidden transition-[max-height] duration-500 ease-in-out"
+            style={{ maxHeight: highlightsExpanded ? '1200px' : '0px' }}
+          >
+            <div className="flex flex-col gap-3">
+                {highlights.map((dishId) => {
+                  const dish = dishes.find(d => d.id === dishId);
+                  if (!dish || !selectedCategory || dish.category !== selectedCategory) return null;
+                  return (
+                    <div
+                      key={dish.id}
+                      onClick={() => navigateToDish(dish.id)}
+                      className="flex items-center gap-4 bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
+                    >
+                      <div
+                        className="size-16 rounded-lg bg-cover bg-center shrink-0"
+                        style={{ backgroundImage: `url("${dish.image}")` }}
+                      />
+                      <div className="flex-1">
+                        <p className="font-bold dark:text-white">{dish.name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{dish.description}</p>
+                      </div>
+                      <span className="material-symbols-outlined text-gray-300">chevron_right</span>
+                    </div>
+                  );
+                })}
+              </div>
+          </div>
+        </section>
+      )}
+
+      {/* Search Input - después de Destacados, antes de Menú */}
+      <div className="px-4 pt-2 pb-3">
         <div className="relative">
           <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-xl">
             search
@@ -950,19 +1159,15 @@ const MenuScreen: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => {
-              // Reproducir sonido de tecla para teclas que generan caracteres
-              // Excluir teclas especiales como Shift, Ctrl, Alt, etc.
-              if (e.key === 'Backspace' || e.key === 'Delete') {
-                playBackspaceSound();
-              } else if (e.key.length === 1) {
-                playClickSound();
-              }
+              if (e.key === 'Backspace' || e.key === 'Delete') playBackspaceSound();
+              else if (e.key.length === 1) playClickSound();
             }}
             placeholder={t('menu.searchPlaceholder') || 'Buscar productos...'}
             className="w-full h-12 pl-12 pr-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#322a1a] focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500 text-[#181511] dark:text-white"
           />
           {searchQuery && (
             <button
+              type="button"
               onClick={() => setSearchQuery('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             >
@@ -972,79 +1177,13 @@ const MenuScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Sugerencias del Chef */}
-      {!searchQuery.trim() && showSuggestions && suggestions.length > 0 && (
-        <section className="px-4 pt-6 pb-4">
-          <div className="flex justify-between items-end mb-4">
-            <h3 className="text-[#181611] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">{t('menu.chefSuggestions')}</h3>
-          </div>
-          
-          <div className="flex overflow-x-auto hide-scrollbar pb-2 -mx-4 px-4">
-            <div className="flex gap-4">
-              {suggestions.map((dishId) => {
-                const dish = dishes.find(d => d.id === dishId);
-                if (!dish || !selectedCategory || dish.category !== selectedCategory) return null;
-                return (
-                  <div 
-                    key={dish.id}
-                    onClick={() => navigateToDish(dish.id)}
-                    className="flex flex-col gap-3 rounded-xl min-w-[200px] max-w-[280px] w-[200px] bg-white dark:bg-gray-900 p-2 shadow-sm border border-gray-100 dark:border-gray-800 shrink-0 cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
-                  >
-                    <div 
-                      className="w-full bg-center bg-no-repeat aspect-[16/10] bg-cover rounded-lg flex flex-col relative" 
-                      style={{ backgroundImage: `url("${dish.image}")` }}
-                    >
-                      <div className="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">{formatPrice(dish.price, localStorage.getItem('selectedLanguage'))}</div>
-                    </div>
-                    <div className="px-2 pb-2 flex-1 flex flex-col">
-                      <p className="text-[#181611] dark:text-white text-base font-bold leading-tight mb-1 line-clamp-2">{dish.name}</p>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal line-clamp-2">{dish.description}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Destacados */}
-      {!searchQuery.trim() && showHighlights && highlights.length > 0 && (
-        <section className="px-4 pb-4">
-          <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-2">{t('menu.highlights')}</h3>
-          <div className="flex flex-col gap-3">
-            {highlights.map((dishId) => {
-              const dish = dishes.find(d => d.id === dishId);
-              if (!dish || !selectedCategory || dish.category !== selectedCategory) return null;
-              return (
-                <div 
-                  key={dish.id}
-                  onClick={() => navigateToDish(dish.id)}
-                  className="flex items-center gap-4 bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
-                >
-                  <div 
-                    className="size-16 rounded-lg bg-cover bg-center shrink-0" 
-                    style={{ backgroundImage: `url("${dish.image}")` }}
-                  />
-                  <div className="flex-1">
-                    <p className="font-bold dark:text-white">{dish.name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{dish.description}</p>
-                  </div>
-                  <span className="material-symbols-outlined text-gray-300">chevron_right</span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
       {/* Menu List */}
       <section className="px-4 pb-4">
         <div className="flex items-center gap-2 pb-3">
           <span className="material-symbols-outlined text-[#181611] dark:text-white text-xl">restaurant_menu</span>
           <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">{t('navigation.menu')}</h3>
         </div>
-        
+
         <div className="flex flex-col gap-4">
           {filteredDishes.length > 0 ? (
             filteredDishes.map((dish) => (
@@ -1076,17 +1215,6 @@ const MenuScreen: React.FC = () => {
                 >
                   <span className="truncate">{formatPrice(dish.price, localStorage.getItem('selectedLanguage'))}</span>
                 </button>
-                <div
-                  className="relative flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary transition-colors cursor-default"
-                  title={getCartQuantity(dish.id) > 0 ? t('menu.inCart') : ''}
-                >
-                  <span className="material-symbols-outlined text-lg">note_add</span>
-                  {getCartQuantity(dish.id) > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center shadow-sm">
-                      {getCartQuantity(dish.id)}
-                    </span>
-                  )}
-                </div>
               </div>
             </div>
             <div

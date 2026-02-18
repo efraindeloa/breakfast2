@@ -81,6 +81,8 @@
     "noRestaurants": "Aucun restaurant disponible"
   },
   "menu": {
+    "categoriesLabel": "Catégories",
+    "subcategoriesLabel": "Sous-catégories",
     "categories": {
       "appetizers": "Entrées",
       "mains": "Plats Principaux",
@@ -1304,7 +1306,29 @@
       "loadingReservations": "Chargement des réservations...",
       "errorLoading": "Erreur lors du chargement",
       "retry": "Réessayer",
-      "tablePreferencesPlaceholder": "Ex: Table près de la fenêtre, zone calme..."
+      "tablePreferencesPlaceholder": "Ex: Table près de la fenêtre, zone calme...",
+      "details": "Détails de la Réservation",
+      "welcomeTitle": "Faire une réservation",
+      "welcomeMessage": "Veuillez compléter les questions qui apparaîtront",
+      "selectDate": "Sélectionnez la Date",
+      "arrivalTime": "À quelle heure arriverez-vous ?",
+      "numberOfPeople": "Combien de personnes ?",
+      "selectZone": "Sélectionnez la Zone",
+      "advanceOrderDescription": "Gagnez du temps à votre arrivée. Sélectionnez vos plats favoris maintenant.",
+      "viewFullMenu": "Voir le menu complet",
+      "totalReservation": "Total de la Réservation",
+      "guests": "Invités",
+      "zones": {
+        "interior": "Intérieur",
+        "terraza": "Terrasse",
+        "jardin": "Jardin"
+      },
+      "occasions": {
+        "birthday": "Anniversaire",
+        "anniversary": "Anniversaire",
+        "business": "Affaires",
+        "date": "Rendez-vous"
+      }
     },
     "menu": {
       "chefSuggestions": "Suggestions du chef",
@@ -1388,34 +1412,6 @@
         "friday": "Vendredi",
         "saturday": "Samedi",
         "sunday": "Dimanche"
-      }
-    },
-    "reservations": {
-      "details": "Détails de la Réservation",
-      "welcomeTitle": "Faire une réservation",
-      "welcomeMessage": "Veuillez compléter les questions qui apparaîtront",
-      "selectDate": "Sélectionnez la Date",
-      "arrivalTime": "À quelle heure arriverez-vous ?",
-      "numberOfPeople": "Combien de personnes ?",
-      "selectZone": "Sélectionnez la Zone",
-      "specialOccasion": "Est-ce une occasion spéciale ?",
-      "tablePreferences": "Préférences de Table",
-      "tablePreferencesPlaceholder": "Ex. Près de la fenêtre, zone calme, chaise haute pour bébé...",
-      "advanceOrder": "Commande à l'Avance",
-      "advanceOrderDescription": "Gagnez du temps à votre arrivée. Sélectionnez vos plats favoris maintenant.",
-      "viewFullMenu": "Voir le menu complet",
-      "totalReservation": "Total de la Réservation",
-      "guests": "Invités",
-      "zones": {
-        "interior": "Intérieur",
-        "terraza": "Terrasse",
-        "jardin": "Jardin"
-      },
-      "occasions": {
-        "birthday": "Anniversaire",
-        "anniversary": "Anniversaire",
-        "business": "Affaires",
-        "date": "Rendez-vous"
       }
     },
     "promotions": {

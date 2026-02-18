@@ -81,6 +81,8 @@
     "noRestaurants": "Nenhum restaurante disponível"
   },
   "menu": {
+    "categoriesLabel": "Categorias",
+    "subcategoriesLabel": "Subcategorias",
     "categories": {
       "appetizers": "Entradas",
       "mains": "Pratos Principais",

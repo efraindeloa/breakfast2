@@ -1667,9 +1667,9 @@ const MenuRestaurantScreen: React.FC = () => {
             </p>
             <div
               ref={subcategoriesScrollRef}
-              className="max-h-[100px] overflow-y-auto overflow-x-hidden px-4 pb-2"
+              className="overflow-x-auto no-scrollbar pb-1 px-4 pb-2"
             >
-              <div className="flex flex-wrap gap-2">
+              <div className="flex gap-2">
               {subcategoryRootOptions.map((root) => {
                 const isActive = selectedSubcategory === root || selectedSubcategory.startsWith(root + '/');
                 return (
@@ -1689,13 +1689,25 @@ const MenuRestaurantScreen: React.FC = () => {
                       setSelectedOrigin('');
                       setSelectedTag('');
                     }}
-                    className={`flex h-8 shrink-0 items-center justify-center rounded-full px-3 text-xs ${
+                    className={`flex h-[65px] w-[65px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border transition-colors ${
                       isActive
-                        ? 'bg-primary/80 shadow-md shadow-primary/15 text-white font-semibold'
-                        : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 font-medium text-gray-700 dark:text-gray-300'
+                        ? 'bg-primary border-primary shadow-md shadow-primary/20'
+                        : 'bg-white dark:bg-[#322a1a] border-[#f4f3f0] dark:border-[#3d3321]'
                     }`}
                   >
-                    {root}
+                    <span
+                      className={`material-symbols-outlined text-[21px] leading-none ${
+                        isActive ? 'text-white' : 'text-primary'
+                      }`}
+                      aria-hidden
+                    >
+                      {getCategoryTileIcon(selectedCategory)}
+                    </span>
+                    <p className={`text-[10px] leading-tight text-center px-0.5 line-clamp-2 ${
+                      isActive ? 'font-bold text-white' : 'font-semibold text-[#181611] dark:text-stone-300'
+                    }`}>
+                      {root}
+                    </p>
                   </button>
                 );
               })}
@@ -1709,8 +1721,8 @@ const MenuRestaurantScreen: React.FC = () => {
             <p className="px-4 pt-3 pb-2 text-xs font-bold tracking-wide text-gray-500 dark:text-gray-400 uppercase shrink-0">
               SELECCIONA SUBCATEGORIA
             </p>
-            <div className="max-h-[100px] overflow-y-auto overflow-x-hidden px-4 pb-2">
-              <div className="flex flex-wrap gap-2">
+            <div className="overflow-x-auto no-scrollbar pb-1 px-4 pb-2">
+              <div className="flex gap-2">
               {subcategorySecondLevelOptions.map((label) => {
                 const fullPath = selectedFirstLevel + '/' + label;
                 const isActive = selectedSubcategory === fullPath;
@@ -1731,13 +1743,25 @@ const MenuRestaurantScreen: React.FC = () => {
                       setSelectedOrigin('');
                       setSelectedTag('');
                     }}
-                    className={`flex h-8 shrink-0 items-center justify-center rounded-full px-3 text-xs ${
+                    className={`flex h-[65px] w-[65px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border transition-colors ${
                       isActive
-                        ? 'bg-primary/80 shadow-md shadow-primary/15 text-white font-semibold'
-                        : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 font-medium text-gray-700 dark:text-gray-300'
+                        ? 'bg-primary border-primary shadow-md shadow-primary/20'
+                        : 'bg-white dark:bg-[#322a1a] border-[#f4f3f0] dark:border-[#3d3321]'
                     }`}
                   >
-                    {label}
+                    <span
+                      className={`material-symbols-outlined text-[21px] leading-none ${
+                        isActive ? 'text-white' : 'text-primary'
+                      }`}
+                      aria-hidden
+                    >
+                      {getCategoryTileIcon(selectedCategory)}
+                    </span>
+                    <p className={`text-[10px] leading-tight text-center px-0.5 line-clamp-2 ${
+                      isActive ? 'font-bold text-white' : 'font-semibold text-[#181611] dark:text-stone-300'
+                    }`}>
+                      {label}
+                    </p>
                   </button>
                 );
               })}

@@ -143,6 +143,18 @@ const MenuRestaurantScreen: React.FC = () => {
     });
     return Array.from(subcategoriesSet).sort();
   }, [dishes, selectedCategory]);
+
+  const normalizeSubPath = (s: string) => (s || '').replace(/\s*>\s*/g, '/').trim();
+
+  const dishMatchesSubcategory = (dish: Dish, sub: string) => {
+    if (!sub) return true;
+    if (!dish.subcategories || dish.subcategories.length === 0) return false;
+    return dish.subcategories.some((s) => {
+      const n = normalizeSubPath(s);
+      return n === sub || n.startsWith(sub + '/');
+    });
+  };
+
   const [searchQuery, setSearchQuery] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [selectedOrigin, setSelectedOrigin] = useState<OriginType>('');
@@ -336,7 +348,7 @@ const MenuRestaurantScreen: React.FC = () => {
       if (!dish || !selectedTagAsCategory || dish.category !== selectedTagAsCategory) return false;
       // Si hay subcategoría seleccionada, mostrar productos con esa subcategoría O sin subcategorías
       if (selectedSubcategory) {
-        return !dish.subcategories || dish.subcategories.length === 0 || dish.subcategories.includes(selectedSubcategory);
+        return dishMatchesSubcategory(dish, selectedSubcategory);
       }
       return true;
     });
@@ -348,7 +360,7 @@ const MenuRestaurantScreen: React.FC = () => {
       if (!dish || !selectedTagAsCategory || dish.category !== selectedTagAsCategory) return false;
       // Si hay subcategoría seleccionada, mostrar productos con esa subcategoría O sin subcategorías
       if (selectedSubcategory) {
-        return !dish.subcategories || dish.subcategories.length === 0 || dish.subcategories.includes(selectedSubcategory);
+        return dishMatchesSubcategory(dish, selectedSubcategory);
       }
       return true;
     });
@@ -472,15 +484,7 @@ const MenuRestaurantScreen: React.FC = () => {
       // Filtrar por categoría
       if (d.category !== selectedTagAsCategory) return false;
       
-      // Si hay una subcategoría seleccionada, filtrar por subcategoría
-      if (selectedSubcategory) {
-        // Mostrar productos que tienen la subcategoría seleccionada O que no tienen subcategorías
-        if (d.subcategories && d.subcategories.length > 0) {
-          return d.subcategories.includes(selectedSubcategory);
-        }
-        // Si no tiene subcategorías, no mostrarlo cuando hay una subcategoría seleccionada
-        return false;
-      }
+      if (selectedSubcategory && !dishMatchesSubcategory(d, selectedSubcategory)) return false;
       
       // Si no hay subcategoría seleccionada, mostrar todos los productos de la categoría
       return true;
@@ -566,6 +570,34 @@ const MenuRestaurantScreen: React.FC = () => {
     return foodSubcategories;
   }, [searchQuery, filteredDishes, selectedCategory, foodSubcategories]);
 
+  // 1er nivel: raíz de cada subcategoría (ej. "Cocteles de Mariscos" de "Cocteles de Mariscos/Camarón")
+  const subcategoryRootOptions = useMemo(() => {
+    const set = new Set<string>();
+    displaySubcategories.forEach((s) => {
+      const n = normalizeSubPath(s);
+      const root = n.includes('/') ? n.split('/')[0].trim() : n;
+      if (root) set.add(root);
+    });
+    return Array.from(set).sort();
+  }, [displaySubcategories]);
+
+  const selectedFirstLevel = selectedSubcategory ? normalizeSubPath(selectedSubcategory).split('/')[0] : '';
+
+  // 2do nivel: solo hijos directos de la raíz seleccionada (ej. "Camarón", "Mixto", "Pulpo")
+  const subcategorySecondLevelOptions = useMemo(() => {
+    if (!selectedFirstLevel) return [];
+    const prefix = selectedFirstLevel + '/';
+    const set = new Set<string>();
+    displaySubcategories.forEach((s) => {
+      const n = normalizeSubPath(s);
+      if (!n.startsWith(prefix)) return;
+      const after = n.slice(prefix.length);
+      const child = after.split('/')[0]?.trim();
+      if (child) set.add(child);
+    });
+    return Array.from(set).sort();
+  }, [displaySubcategories, selectedFirstLevel]);
+
   // Efectos que usan displayCategories/displaySubcategories (definidos después de filteredDishes)
   useEffect(() => {
     const list = searchQuery.trim() ? displayCategories : mainCategories;
@@ -589,17 +621,20 @@ const MenuRestaurantScreen: React.FC = () => {
   }, [searchQuery, displayCategories, selectedCategory]);
 
   useEffect(() => {
-    if (selectedCategory && displaySubcategories.length > 0) {
-      const valid = selectedSubcategory && displaySubcategories.includes(selectedSubcategory);
-      if (!valid) {
-        const saved = localStorage.getItem(STORAGE_KEY_SUBCATEGORY);
-        const next = (saved && displaySubcategories.includes(saved)) ? saved : displaySubcategories[0];
-        setSelectedSubcategory(next);
-        localStorage.setItem(STORAGE_KEY_SUBCATEGORY, next);
-      }
-    } else if (selectedSubcategory) {
+    if (selectedCategory && displaySubcategories.length === 0) {
       setSelectedSubcategory('');
       localStorage.removeItem(STORAGE_KEY_SUBCATEGORY);
+      return;
+    }
+    if (selectedCategory && displaySubcategories.length > 0 && selectedSubcategory) {
+      const valid = displaySubcategories.some((s) => {
+        const n = normalizeSubPath(s);
+        return n === selectedSubcategory || n.startsWith(selectedSubcategory + '/');
+      });
+      if (!valid) {
+        setSelectedSubcategory('');
+        localStorage.removeItem(STORAGE_KEY_SUBCATEGORY);
+      }
     }
   }, [selectedCategory, displaySubcategories, selectedSubcategory]);
 
@@ -608,7 +643,7 @@ const MenuRestaurantScreen: React.FC = () => {
     if (scrollAnimationRanOnceRef.current) return;
     subcategoriesScrollStoppedRef.current = false;
     const el = subcategoriesScrollRef.current;
-    if (!el || !selectedCategory || displaySubcategories.length === 0) return;
+    if (!el || !selectedCategory || subcategoryRootOptions.length === 0) return;
     const ROW_HEIGHT_APPROX = 40;
     const VISIBLE_ROWS = 3;
     if (el.scrollHeight <= ROW_HEIGHT_APPROX * VISIBLE_ROWS) return;
@@ -644,7 +679,7 @@ const MenuRestaurantScreen: React.FC = () => {
     rafId = requestAnimationFrame(tick);
     subcategoriesScrollRafRef.current = rafId;
     return () => cancelAnimationFrame(rafId);
-  }, [selectedCategory, displaySubcategories]);
+  }, [selectedCategory, subcategoryRootOptions]);
 
   // Calcular cuántos productos hay en la categoría actual
   const menuItemsCount = useMemo(() => {
@@ -660,7 +695,7 @@ const MenuRestaurantScreen: React.FC = () => {
           if (!selectedTagAsCategory || dish.category !== selectedTagAsCategory) return false;
           // Si hay una subcategoría seleccionada, mostrar productos con esa subcategoría O sin subcategorías
           if (selectedSubcategory) {
-            return !dish.subcategories || dish.subcategories.length === 0 || dish.subcategories.includes(selectedSubcategory);
+            return dishMatchesSubcategory(dish, selectedSubcategory);
           }
           // Si hay un filtro de etiqueta adicional, aplicarlo
           if (selectedTag) {
@@ -674,7 +709,7 @@ const MenuRestaurantScreen: React.FC = () => {
       if (!selectedTagAsCategory || dish.category !== selectedTagAsCategory) return false;
       // Si hay una subcategoría seleccionada, mostrar productos con esa subcategoría O sin subcategorías
       if (selectedSubcategory) {
-        return !dish.subcategories || dish.subcategories.length === 0 || dish.subcategories.includes(selectedSubcategory);
+        return dishMatchesSubcategory(dish, selectedSubcategory);
       }
       // Si hay un filtro de etiqueta adicional, aplicarlo
       if (selectedTag) {
@@ -1624,42 +1659,88 @@ const MenuRestaurantScreen: React.FC = () => {
           </div>
         )}
 
-        {/* Subcategorías: etiqueta fija, solo los botones hacen scroll */}
-        {selectedCategory && displaySubcategories.length > 0 && (
+        {/* Subcategorías 1er Nivel: raíces (ej. Cocteles de Mariscos, Cortes, Aguachiles) */}
+        {selectedCategory && subcategoryRootOptions.length > 0 && (
           <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
             <p className="px-4 pt-3 pb-2 text-xs font-bold tracking-wide text-gray-500 dark:text-gray-400 uppercase shrink-0">
-              {t('menu.subcategoriesLabel') || 'Subcategorías'}
+              SELECCIONA SUBCATEGORIA
             </p>
             <div
               ref={subcategoriesScrollRef}
               className="max-h-[100px] overflow-y-auto overflow-x-hidden px-4 pb-2"
             >
               <div className="flex flex-wrap gap-2">
-              {displaySubcategories.map((subcat) => (
-                <button
-                  key={subcat}
-                  type="button"
-                  onClick={() => {
-                    subcategoriesScrollStoppedRef.current = true;
-                    if (subcategoriesScrollRafRef.current) {
-                      cancelAnimationFrame(subcategoriesScrollRafRef.current);
-                      subcategoriesScrollRafRef.current = 0;
-                    }
-                    if (selectedSubcategory !== subcat) {
-                      setSelectedSubcategory(subcat);
+              {subcategoryRootOptions.map((root) => {
+                const isActive = selectedSubcategory === root || selectedSubcategory.startsWith(root + '/');
+                return (
+                  <button
+                    key={root}
+                    type="button"
+                    onClick={() => {
+                      subcategoriesScrollStoppedRef.current = true;
+                      if (subcategoriesScrollRafRef.current) {
+                        cancelAnimationFrame(subcategoriesScrollRafRef.current);
+                        subcategoriesScrollRafRef.current = 0;
+                      }
+                      const next = selectedSubcategory === root ? '' : root;
+                      setSelectedSubcategory(next);
+                      if (next) localStorage.setItem(STORAGE_KEY_SUBCATEGORY, next);
+                      else localStorage.removeItem(STORAGE_KEY_SUBCATEGORY);
                       setSelectedOrigin('');
                       setSelectedTag('');
-                    }
-                  }}
-                  className={`flex h-8 shrink-0 items-center justify-center rounded-full px-3 text-xs ${
-                    selectedSubcategory === subcat
-                      ? 'bg-primary/80 shadow-md shadow-primary/15 text-white font-semibold'
-                      : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 font-medium text-gray-700 dark:text-gray-300'
-                  }`}
-                >
-                  {subcat}
-                </button>
-              ))}
+                    }}
+                    className={`flex h-8 shrink-0 items-center justify-center rounded-full px-3 text-xs ${
+                      isActive
+                        ? 'bg-primary/80 shadow-md shadow-primary/15 text-white font-semibold'
+                        : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 font-medium text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    {root}
+                  </button>
+                );
+              })}
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Subcategorías 2do Nivel: solo hijos de la raíz seleccionada (ej. Camarón, Mixto, Pulpo) */}
+        {selectedCategory && subcategorySecondLevelOptions.length > 0 && (
+          <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+            <p className="px-4 pt-3 pb-2 text-xs font-bold tracking-wide text-gray-500 dark:text-gray-400 uppercase shrink-0">
+              SELECCIONA SUBCATEGORIA
+            </p>
+            <div className="max-h-[100px] overflow-y-auto overflow-x-hidden px-4 pb-2">
+              <div className="flex flex-wrap gap-2">
+              {subcategorySecondLevelOptions.map((label) => {
+                const fullPath = selectedFirstLevel + '/' + label;
+                const isActive = selectedSubcategory === fullPath;
+                return (
+                  <button
+                    key={fullPath}
+                    type="button"
+                    onClick={() => {
+                      subcategoriesScrollStoppedRef.current = true;
+                      if (subcategoriesScrollRafRef.current) {
+                        cancelAnimationFrame(subcategoriesScrollRafRef.current);
+                        subcategoriesScrollRafRef.current = 0;
+                      }
+                      const next = isActive ? selectedFirstLevel : fullPath;
+                      setSelectedSubcategory(next);
+                      if (next) localStorage.setItem(STORAGE_KEY_SUBCATEGORY, next);
+                      else localStorage.removeItem(STORAGE_KEY_SUBCATEGORY);
+                      setSelectedOrigin('');
+                      setSelectedTag('');
+                    }}
+                    className={`flex h-8 shrink-0 items-center justify-center rounded-full px-3 text-xs ${
+                      isActive
+                        ? 'bg-primary/80 shadow-md shadow-primary/15 text-white font-semibold'
+                        : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 font-medium text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
               </div>
             </div>
           </div>
@@ -1711,7 +1792,7 @@ const MenuRestaurantScreen: React.FC = () => {
         </button>
       </div>
 
-      {/* Sugerencias del Chef (editable) */}
+      {/* Sugerencias del Chef: en editMode siempre visible; en vista solo si hay productos para la categoría/subcategoría actual */}
       {!searchQuery.trim() && (editMode || hasVisibleChefSuggestions) && (
         <section className="px-4 pt-6 pb-4">
           <div className="flex justify-between items-end mb-4">
@@ -1727,7 +1808,7 @@ const MenuRestaurantScreen: React.FC = () => {
                 // Filtrar por la categoría seleccionada
                 if (!dish || !selectedTagAsCategory || dish.category !== selectedTagAsCategory) return null;
                 // Si hay una subcategoría seleccionada, mostrar productos con esa subcategoría O sin subcategorías
-                if (selectedSubcategory && dish.subcategories && !dish.subcategories.includes(selectedSubcategory)) return null;
+                if (selectedSubcategory && !dishMatchesSubcategory(dish, selectedSubcategory)) return null;
                 return (
                   <div
                     key={dish.id}
@@ -1787,7 +1868,7 @@ const MenuRestaurantScreen: React.FC = () => {
         </section>
       )}
 
-      {/* Destacados (editable) */}
+      {/* Destacados: en editMode siempre visible; en vista solo si hay productos para la categoría/subcategoría actual */}
       {!searchQuery.trim() && (editMode || hasVisibleHighlights) && (
         <section className="px-4 pb-4">
           <div className="flex items-end justify-between">
@@ -1802,7 +1883,7 @@ const MenuRestaurantScreen: React.FC = () => {
               // Filtrar por la categoría seleccionada
               if (!dish || !selectedTagAsCategory || dish.category !== selectedTagAsCategory) return null;
               // Si hay una subcategoría seleccionada, mostrar productos con esa subcategoría O sin subcategorías
-              if (selectedSubcategory && dish.subcategories && !dish.subcategories.includes(selectedSubcategory)) return null;
+              if (selectedSubcategory && !dishMatchesSubcategory(dish, selectedSubcategory)) return null;
               return (
                 <div
                   key={dish.id}
@@ -1835,15 +1916,17 @@ const MenuRestaurantScreen: React.FC = () => {
               );
             })}
 
-            {editMode && highlightIds.length === 0 && (
+            {editMode && (
               <button
                 type="button"
                 onClick={() => openPicker('highlights')}
-                className="flex items-center justify-center w-full rounded-xl border-2 border-dashed border-primary/40 text-primary bg-primary/5 py-6"
+                className={`flex items-center justify-center w-full rounded-xl border-2 border-dashed border-primary/40 text-primary bg-primary/5 ${highlightIds.length === 0 ? 'py-6' : 'py-3'}`}
               >
-                <div className="flex flex-col items-center">
-                  <span className="material-symbols-outlined text-3xl">add</span>
-                  <span className="text-sm font-bold">{t('restaurant.menu.addHighlight')}</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="material-symbols-outlined text-2xl">add</span>
+                  <span className="text-sm font-bold">
+                    {highlightIds.length === 0 ? (t('restaurant.menu.addHighlight') || 'Agregar destacado') : (t('restaurant.menu.addAnotherHighlight') || 'Agregar otro destacado')}
+                  </span>
                 </div>
               </button>
             )}
@@ -1874,7 +1957,7 @@ const MenuRestaurantScreen: React.FC = () => {
                   if (!selectedTagAsCategory || dish.category !== selectedTagAsCategory) return false;
                   // Si hay una subcategoría seleccionada, mostrar productos con esa subcategoría O sin subcategorías
                   if (selectedSubcategory) {
-                    return !dish.subcategories || dish.subcategories.length === 0 || dish.subcategories.includes(selectedSubcategory);
+                    return dishMatchesSubcategory(dish, selectedSubcategory);
                   }
                   // Si hay un filtro de etiqueta adicional, aplicarlo
                         if (selectedTag) {
@@ -1887,7 +1970,7 @@ const MenuRestaurantScreen: React.FC = () => {
                 if (!selectedTagAsCategory || dish.category !== selectedTagAsCategory) return false;
                 // Si hay una subcategoría seleccionada, mostrar productos con esa subcategoría O sin subcategorías
                 if (selectedSubcategory) {
-                  return !dish.subcategories || dish.subcategories.length === 0 || dish.subcategories.includes(selectedSubcategory);
+                  return dishMatchesSubcategory(dish, selectedSubcategory);
                 }
                 // Si hay un filtro de etiqueta adicional, aplicarlo
                       if (selectedTag) {

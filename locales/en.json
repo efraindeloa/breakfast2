@@ -272,7 +272,7 @@
     }
   },
   "profile": {
-    "title": "My Profile",
+    "title": "Profile",
     "personalInfo": "Personal Information",
     "fiscalData": "Fiscal Data",
     "paymentMethods": "Payment Methods",
@@ -1315,6 +1315,7 @@
       "menu": "Menu",
       "addSuggestion": "Add suggestion",
       "addHighlight": "Add highlight",
+      "addAnotherHighlight": "Add another highlight",
       "addProduct": "Add Product",
       "addEntry": "Add Appetizer",
       "addMain": "Add Main Course",

@@ -272,7 +272,7 @@
     }
   },
   "profile": {
-    "title": "Mon Profil",
+    "title": "Profil",
     "personalInfo": "Informations Personnelles",
     "fiscalData": "Données Fiscales",
     "paymentMethods": "Méthodes de Paiement",
@@ -1336,6 +1336,7 @@
       "menu": "Menu",
       "addSuggestion": "Ajouter une suggestion",
       "addHighlight": "Ajouter en vedette",
+      "addAnotherHighlight": "Ajouter une autre vedette",
       "addProduct": "Ajouter un Produit",
       "addEntry": "Ajouter une Entrée",
       "addMain": "Ajouter un Plat Principal",

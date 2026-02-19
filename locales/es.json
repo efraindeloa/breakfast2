@@ -393,7 +393,7 @@
     }
   },
   "profile": {
-    "title": "Mi Perfil",
+    "title": "Perfil",
     "personalInfo": "Información Personal",
     "fiscalData": "Datos Fiscales",
     "paymentMethods": "Métodos de Pago",
@@ -1344,6 +1344,7 @@
       "menu": "Menú",
       "addSuggestion": "Agregar sugerencia",
       "addHighlight": "Agregar destacado",
+      "addAnotherHighlight": "Agregar otro destacado",
       "addProduct": "Agregar Producto",
       "addEntry": "Agregar Entrada",
       "addMain": "Agregar Plato Principal",

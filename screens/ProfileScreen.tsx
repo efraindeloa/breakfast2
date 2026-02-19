@@ -16,13 +16,13 @@ import { getUserProfile, updateUserProfile, getUserData, updateUserData } from '
 import {
   getCurrentUserRestaurantId,
   getRestaurantById,
-  updateRestaurant,
   getRestaurantCoverImages,
   createRestaurantCoverImage,
   deleteRestaurantCoverImage,
   uploadImage,
   getRestaurantImageUrl,
 } from '../services/database';
+import { updateRestaurant as updateRestaurantApi } from '../services/api/restaurant';
 import { playClickSound, playBackspaceSound } from '../utils/sound';
 import GuestRestrictionModal from '../components/GuestRestrictionModal';
 
@@ -58,11 +58,13 @@ const ProfileScreen: React.FC = () => {
     email: '',
     phone: '',
   });
-  const [editingField, setEditingField] = useState<'name' | 'email' | 'phone' | null>(null);
+  type RestaurantFormField = 'description' | 'address' | 'city' | 'state' | 'country' | 'postal_code' | 'website';
+  const [editingField, setEditingField] = useState<'name' | 'email' | 'phone' | RestaurantFormField | null>(null);
   const [editValue, setEditValue] = useState('');
   const [isLoadingUserData, setIsLoadingUserData] = useState(true);
   const [lastSync, setLastSync] = useState<string>('');
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [restaurantName, setRestaurantName] = useState<string>('');
   const [restaurantForm, setRestaurantForm] = useState({
     description: '',
     address: '',
@@ -147,6 +149,7 @@ const ProfileScreen: React.FC = () => {
         setRestaurantId(rid);
         const rest = await getRestaurantById(rid);
         if (rest) {
+          setRestaurantName(rest.name || '');
           setRestaurantForm({
             description: rest.description || '',
             address: rest.address || '',
@@ -341,50 +344,94 @@ const ProfileScreen: React.FC = () => {
     }
   };
 
-  const handleStartEdit = (field: 'name' | 'email' | 'phone') => {
+  const handleStartEdit = (field: 'name' | 'email' | 'phone' | RestaurantFormField) => {
     setEditingField(field);
-    setEditValue(userData[field]);
+    if (field === 'name' && accountType === 'restaurant') {
+      setEditValue(restaurantName);
+    } else if (field === 'name' || field === 'email' || field === 'phone') {
+      setEditValue(userData[field]);
+    } else {
+      const v = restaurantForm[field];
+      setEditValue(field === 'postal_code' ? (v || '') : (v || ''));
+    }
   };
 
   const handleSaveEdit = async () => {
-    if (editingField && user?.id) {
-      try {
-        // No permitir actualizar email desde aquí (debe hacerse a través de Supabase Auth)
-        // if (editingField === 'email') {
-        //   console.warn('[ProfileScreen] Email cannot be updated from profile screen');
-        //   setEditingField(null);
-        //   setEditValue('');
-        //   return;
-        // }
-
-        // Actualizar a través de la API
-        if (isSupabaseConfigured()) {
-          const updateData: { name?: string; phone?: string } = {};
-          if (editingField === 'name') updateData.name = editValue;
-          if (editingField === 'phone') updateData.phone = editValue;
-
-          const result = await updateUserData(updateData, user.id);
-
-          if (result.success && result.data) {
-            // Actualizar estado local con los datos actualizados de la API
-            setUserData(result.data);
-          } else {
-            console.error('[ProfileScreen] Error updating user data:', result.error);
-            // Aún así actualizar el estado local
-            setUserData({ ...userData, [editingField]: editValue });
-          }
-        } else {
-          // Si no hay Supabase, solo actualizar estado local
-          setUserData({ ...userData, [editingField]: editValue });
-        }
-      } catch (error) {
-        console.error('[ProfileScreen] Error saving user data:', error);
-        // Aún así actualizar el estado local
-        setUserData({ ...userData, [editingField]: editValue });
-      } finally {
+    if (!editingField) return;
+    try {
+      if (editingField === 'email') {
         setEditingField(null);
         setEditValue('');
+        return;
       }
+
+      // Aplicar el valor editado al estado antes de armar el perfil completo
+      const nameForUser = editingField === 'name' && accountType !== 'restaurant' ? editValue : userData.name;
+      const phoneForUser = editingField === 'phone' ? editValue : userData.phone;
+      const nameForRestaurant = editingField === 'name' && accountType === 'restaurant' ? editValue.trim() : restaurantName;
+      const appliedRestaurantForm = { ...restaurantForm };
+      if (['description', 'address', 'city', 'state', 'country', 'postal_code', 'website'].includes(editingField)) {
+        const key = editingField as RestaurantFormField;
+        appliedRestaurantForm[key] = key === 'postal_code' ? editValue.replace(/\D/g, '').slice(0, 10) : editValue.trim();
+      }
+
+      // Llamada a API: guardar perfil completo (usuario + restaurante si aplica)
+      if (isSupabaseConfigured() && user?.id) {
+        const userResult = await updateUserData({ name: nameForUser, phone: phoneForUser }, user.id);
+        if (userResult.success && userResult.data) {
+          setUserData(userResult.data);
+        } else {
+          setUserData(prev => ({ ...prev, name: nameForUser, phone: phoneForUser }));
+        }
+      } else {
+        setUserData(prev => ({ ...prev, name: nameForUser, phone: phoneForUser }));
+      }
+
+      if (restaurantId && accountType === 'restaurant' && isSupabaseConfigured()) {
+        const fullRestaurantPayload = {
+          name: nameForRestaurant || undefined,
+          description: appliedRestaurantForm.description || undefined,
+          address: appliedRestaurantForm.address || undefined,
+          city: appliedRestaurantForm.city || undefined,
+          state: appliedRestaurantForm.state || undefined,
+          country: appliedRestaurantForm.country || undefined,
+          postal_code: appliedRestaurantForm.postal_code || undefined,
+          website: appliedRestaurantForm.website || undefined,
+        };
+        const restaurantResult = await updateRestaurantApi(restaurantId, fullRestaurantPayload);
+        if (restaurantResult.success && restaurantResult.data) {
+          setRestaurantName(restaurantResult.data.name || nameForRestaurant);
+          setRestaurantForm(prev => ({
+            ...prev,
+            description: restaurantResult.data.description ?? prev.description,
+            address: restaurantResult.data.address ?? prev.address,
+            city: restaurantResult.data.city ?? prev.city,
+            state: restaurantResult.data.state ?? prev.state,
+            country: restaurantResult.data.country ?? prev.country,
+            postal_code: restaurantResult.data.postal_code ?? prev.postal_code,
+            website: restaurantResult.data.website ?? prev.website,
+          }));
+        } else {
+          setRestaurantName(nameForRestaurant);
+          setRestaurantForm(appliedRestaurantForm);
+        }
+      } else if (editingField === 'name' && accountType === 'restaurant') {
+        setRestaurantName(editValue.trim());
+      } else if (['description', 'address', 'city', 'state', 'country', 'postal_code', 'website'].includes(editingField)) {
+        setRestaurantForm(appliedRestaurantForm);
+      }
+    } catch (error: unknown) {
+      console.error('[ProfileScreen] Error saving:', error);
+      if (editingField === 'name' && accountType === 'restaurant') {
+        setRestaurantName(editValue);
+      } else if (editingField !== 'email' && editingField !== 'name' && editingField !== 'phone' && restaurantForm.hasOwnProperty(editingField)) {
+        setRestaurantForm(prev => ({ ...prev, [editingField]: editingField === 'postal_code' ? editValue.replace(/\D/g, '').slice(0, 10) : editValue }));
+      } else if ((editingField === 'name' || editingField === 'phone') && user?.id) {
+        setUserData({ ...userData, [editingField]: editValue });
+      }
+    } finally {
+      setEditingField(null);
+      setEditValue('');
     }
   };
 
@@ -399,8 +446,9 @@ const ProfileScreen: React.FC = () => {
       if (user?.id && isSupabaseConfigured()) {
         await updateUserData({ name: userData.name, phone: userData.phone }, user.id);
       }
-      if (restaurantId && accountType === 'restaurant') {
-        await updateRestaurant(restaurantId, {
+      if (restaurantId && accountType === 'restaurant' && isSupabaseConfigured()) {
+        await updateRestaurantApi(restaurantId, {
+          name: restaurantName || undefined,
           description: restaurantForm.description || undefined,
           address: restaurantForm.address || undefined,
           city: restaurantForm.city || undefined,
@@ -769,7 +817,6 @@ const ProfileScreen: React.FC = () => {
       {/* Perfil del restaurante: accordion con formulario — solo para cuentas restaurante */}
       {accountType === 'restaurant' && (
         <div className="px-4 pb-4 space-y-3">
-          <h3 className="text-[#181411] dark:text-white text-base font-bold mb-1">Perfil del restaurante</h3>
           <details className="group bg-white dark:bg-[#2d2218] rounded-xl border border-[#e6e0db] dark:border-[#3d2e21] overflow-hidden shadow-sm" open>
             <summary className="flex cursor-pointer items-center justify-between p-4 list-none [&::-webkit-details-marker]:hidden">
               <div className="flex items-center gap-3">
@@ -784,81 +831,261 @@ const ProfileScreen: React.FC = () => {
               <span className="material-symbols-outlined text-[#8a7560] group-open:rotate-90 transition-transform">chevron_right</span>
             </summary>
             <div className="px-4 pb-4 pt-0 space-y-4">
+              {/* 1. Nombre */}
+              <div>
+                <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">{t('profile.name')}</label>
+                {editingField === 'name' ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Backspace' || e.key === 'Delete') playBackspaceSound(); else if (e.key.length === 1) playClickSound(); }}
+                      className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
+                      autoFocus
+                    />
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={handleSaveEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90">
+                        <span className="material-symbols-outlined text-sm">check</span>{t('common.save')}
+                      </button>
+                      <button type="button" onClick={handleCancelEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold">
+                        <span className="material-symbols-outlined text-sm">close</span>{t('common.cancel')}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm px-3 py-2 min-h-[42px]">
+                    <span className="text-[#181411] dark:text-white">{accountType === 'restaurant' && restaurantName ? restaurantName : (userData.name || '-')}</span>
+                    <button type="button" onClick={() => handleStartEdit('name')} className="text-primary hover:text-primary/80 p-1 shrink-0" title={t('profile.editName')}><span className="material-symbols-outlined text-sm">edit</span></button>
+                  </div>
+                )}
+              </div>
+              {/* 2. Descripción */}
               <div>
                 <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">Descripción</label>
-                <textarea
-                  value={restaurantForm.description}
-                  onChange={(e) => setRestaurantForm(f => ({ ...f, description: e.target.value }))}
-                  className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary min-h-[100px] px-3 py-2"
-                  placeholder="Describe tu restaurante..."
-                />
+                {editingField === 'description' ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary min-h-[100px] px-3 py-2"
+                      placeholder="Describe tu restaurante..."
+                      autoFocus
+                    />
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={handleSaveEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90"><span className="material-symbols-outlined text-sm">check</span>{t('common.save')}</button>
+                      <button type="button" onClick={handleCancelEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold"><span className="material-symbols-outlined text-sm">close</span>{t('common.cancel')}</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-start gap-2 w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm px-3 py-2 min-h-[42px]">
+                    <span className="text-[#181411] dark:text-white whitespace-pre-wrap flex-1">{restaurantForm.description || '-'}</span>
+                    <button type="button" onClick={() => handleStartEdit('description')} className="text-primary hover:text-primary/80 p-1 shrink-0" title={t('profile.editName')}><span className="material-symbols-outlined text-sm">edit</span></button>
+                  </div>
+                )}
               </div>
+              {/* 3. Teléfono */}
+              <div>
+                <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">{t('profile.phone')}</label>
+                {editingField === 'phone' ? (
+                  <div className="space-y-2">
+                    <input
+                      type="tel"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Backspace' || e.key === 'Delete') playBackspaceSound(); else if (e.key.length === 1) playClickSound(); }}
+                      className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
+                      autoFocus
+                    />
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={handleSaveEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90"><span className="material-symbols-outlined text-sm">check</span>{t('common.save')}</button>
+                      <button type="button" onClick={handleCancelEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold"><span className="material-symbols-outlined text-sm">close</span>{t('common.cancel')}</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm px-3 py-2 min-h-[42px]">
+                    <span className="text-[#181411] dark:text-white">{userData.phone || '-'}</span>
+                    <button type="button" onClick={() => handleStartEdit('phone')} className="text-primary hover:text-primary/80 p-1 shrink-0" title={t('profile.editPhone')}><span className="material-symbols-outlined text-sm">edit</span></button>
+                  </div>
+                )}
+              </div>
+              {/* Resto de campos */}
               <div>
                 <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">Dirección</label>
-                <input
-                  type="text"
-                  value={restaurantForm.address}
-                  onChange={(e) => setRestaurantForm(f => ({ ...f, address: e.target.value }))}
-                  className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
-                  placeholder="Calle y número"
-                />
+                {editingField === 'address' ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
+                      placeholder="Calle y número"
+                      autoFocus
+                    />
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={handleSaveEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90"><span className="material-symbols-outlined text-sm">check</span>{t('common.save')}</button>
+                      <button type="button" onClick={handleCancelEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold"><span className="material-symbols-outlined text-sm">close</span>{t('common.cancel')}</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm px-3 py-2 min-h-[42px]">
+                    <span className="text-[#181411] dark:text-white">{restaurantForm.address || '-'}</span>
+                    <button type="button" onClick={() => handleStartEdit('address')} className="text-primary hover:text-primary/80 p-1 shrink-0" title={t('profile.editName')}><span className="material-symbols-outlined text-sm">edit</span></button>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">Ciudad</label>
-                  <input
-                    type="text"
-                    value={restaurantForm.city}
-                    onChange={(e) => setRestaurantForm(f => ({ ...f, city: e.target.value }))}
-                    className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
-                  />
+                  {editingField === 'city' ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
+                        autoFocus
+                      />
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={handleSaveEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90"><span className="material-symbols-outlined text-sm">check</span>{t('common.save')}</button>
+                        <button type="button" onClick={handleCancelEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold"><span className="material-symbols-outlined text-sm">close</span>{t('common.cancel')}</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm px-3 py-2 min-h-[42px]">
+                      <span className="text-[#181411] dark:text-white truncate">{restaurantForm.city || '-'}</span>
+                      <button type="button" onClick={() => handleStartEdit('city')} className="text-primary hover:text-primary/80 p-1 shrink-0" title={t('profile.editName')}><span className="material-symbols-outlined text-sm">edit</span></button>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">Estado</label>
-                  <input
-                    type="text"
-                    value={restaurantForm.state}
-                    onChange={(e) => setRestaurantForm(f => ({ ...f, state: e.target.value }))}
-                    className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
-                  />
+                  {editingField === 'state' ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
+                        autoFocus
+                      />
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={handleSaveEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90"><span className="material-symbols-outlined text-sm">check</span>{t('common.save')}</button>
+                        <button type="button" onClick={handleCancelEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold"><span className="material-symbols-outlined text-sm">close</span>{t('common.cancel')}</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm px-3 py-2 min-h-[42px]">
+                      <span className="text-[#181411] dark:text-white truncate">{restaurantForm.state || '-'}</span>
+                      <button type="button" onClick={() => handleStartEdit('state')} className="text-primary hover:text-primary/80 p-1 shrink-0" title={t('profile.editName')}><span className="material-symbols-outlined text-sm">edit</span></button>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">País</label>
-                  <input
-                    type="text"
-                    value={restaurantForm.country}
-                    onChange={(e) => setRestaurantForm(f => ({ ...f, country: e.target.value }))}
-                    className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
-                  />
+                  {editingField === 'country' ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
+                        autoFocus
+                      />
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={handleSaveEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90"><span className="material-symbols-outlined text-sm">check</span>{t('common.save')}</button>
+                        <button type="button" onClick={handleCancelEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold"><span className="material-symbols-outlined text-sm">close</span>{t('common.cancel')}</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm px-3 py-2 min-h-[42px]">
+                      <span className="text-[#181411] dark:text-white truncate">{restaurantForm.country || '-'}</span>
+                      <button type="button" onClick={() => handleStartEdit('country')} className="text-primary hover:text-primary/80 p-1 shrink-0" title={t('profile.editName')}><span className="material-symbols-outlined text-sm">edit</span></button>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">Código Postal</label>
-                  <input
-                    type="text"
-                    value={restaurantForm.postal_code}
-                    onChange={(e) => setRestaurantForm(f => ({ ...f, postal_code: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
-                    className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
-                    maxLength={10}
-                  />
+                  {editingField === 'postal_code' ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
+                        maxLength={10}
+                        autoFocus
+                      />
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={handleSaveEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90"><span className="material-symbols-outlined text-sm">check</span>{t('common.save')}</button>
+                        <button type="button" onClick={handleCancelEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold"><span className="material-symbols-outlined text-sm">close</span>{t('common.cancel')}</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm px-3 py-2 min-h-[42px]">
+                      <span className="text-[#181411] dark:text-white">{restaurantForm.postal_code || '-'}</span>
+                      <button type="button" onClick={() => handleStartEdit('postal_code')} className="text-primary hover:text-primary/80 p-1 shrink-0" title={t('profile.editName')}><span className="material-symbols-outlined text-sm">edit</span></button>
+                    </div>
+                  )}
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">Sitio Web</label>
-                <input
-                  type="url"
-                  value={restaurantForm.website}
-                  onChange={(e) => setRestaurantForm(f => ({ ...f, website: e.target.value }))}
-                  className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
-                  placeholder="https://..."
-                />
+                {editingField === 'website' ? (
+                  <div className="space-y-2">
+                    <input
+                      type="url"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
+                      placeholder="https://..."
+                      autoFocus
+                    />
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={handleSaveEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90"><span className="material-symbols-outlined text-sm">check</span>{t('common.save')}</button>
+                      <button type="button" onClick={handleCancelEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold"><span className="material-symbols-outlined text-sm">close</span>{t('common.cancel')}</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm px-3 py-2 min-h-[42px]">
+                    <span className="text-[#181411] dark:text-white truncate">{restaurantForm.website || '-'}</span>
+                    <button type="button" onClick={() => handleStartEdit('website')} className="text-primary hover:text-primary/80 p-1 shrink-0" title={t('profile.editName')}><span className="material-symbols-outlined text-sm">edit</span></button>
+                  </div>
+                )}
+              </div>
+              {/* Email al final */}
+              <div>
+                <label className="block text-xs font-bold text-[#8a7560] mb-1 uppercase">{t('profile.email')}</label>
+                {editingField === 'email' ? (
+                  <div className="space-y-2">
+                    <input
+                      type="email"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
+                      autoFocus
+                    />
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={handleSaveEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90"><span className="material-symbols-outlined text-sm">check</span>{t('common.save')}</button>
+                      <button type="button" onClick={handleCancelEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold"><span className="material-symbols-outlined text-sm">close</span>{t('common.cancel')}</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center w-full rounded-lg border border-[#e6e0db] dark:border-[#3d2e21] bg-[#f8f7f5] dark:bg-[#221910] text-[#181411] dark:text-white text-sm px-3 py-2 min-h-[42px]">
+                    <span className="text-[#181411] dark:text-white">{userData.email || '-'}</span>
+                    <button type="button" onClick={() => handleStartEdit('email')} className="text-primary hover:text-primary/80 p-1 shrink-0" title={t('profile.editEmail')}><span className="material-symbols-outlined text-sm">edit</span></button>
+                  </div>
+                )}
               </div>
             </div>
           </details>
         </div>
       )}
 
+      {/* Información de Cuenta (Nombre, Correo, Teléfono): solo para cuentas que no son restaurante; en restaurante están en Datos del restaurante */}
+      {accountType !== 'restaurant' && (
       <section className={`px-4 pt-4 ${userType === 'guest' ? 'opacity-50' : ''}`}>
         <h3 className={`text-[#181411] dark:text-white text-base font-bold mb-4 ${userType === 'guest' ? 'text-gray-400' : ''}`}>{t('profile.accountInfo')}</h3>
         {userType === 'guest' ? (
@@ -1019,9 +1246,10 @@ const ProfileScreen: React.FC = () => {
           </div>
         )}
       </section>
+      )}
 
-      {/* Mis datos de facturación */}
-      {config.allowInvoice && (
+      {/* Mis datos de facturación — solo para cuentas que no son restaurante */}
+      {config.allowInvoice && accountType !== 'restaurant' && (
         <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
           <MenuItem 
             icon="receipt_long" 
@@ -1115,48 +1343,6 @@ const ProfileScreen: React.FC = () => {
           </section>
         </>
       )}
-
-      <section className="bg-white dark:bg-[#2d2116] mb-2 px-4">
-        <h3 className="text-lg font-bold py-4">{t('profile.myActivity')}</h3>
-        <MenuItem 
-          icon="history" 
-          title={t('profile.orderHistory')} 
-          subtitle={t('profile.orderHistorySubtitle')} 
-          disabled={userType === 'guest'}
-          onClick={() => navigate('/order-history')} 
-          onRestrictedClick={() => setGuestRestrictionModal({
-            show: true,
-            featureName: t('profile.orderHistory')
-          })}
-        />
-        <MenuItem 
-          icon="payments" 
-          title={t('profile.transactions')} 
-          subtitle={t('profile.transactionsSubtitle')} 
-          disabled={userType === 'guest'}
-          onClick={() => navigate('/transactions')} 
-          onRestrictedClick={() => setGuestRestrictionModal({
-            show: true,
-            featureName: t('profile.transactions')
-          })}
-        />
-      </section>
-
-      {/* Footer: Guardar Cambios */}
-      <div className="mt-auto p-6 bg-white dark:bg-[#2d2218] border-t border-[#e6e0db] dark:border-[#3d2e21] pb-10">
-        <button
-          type="button"
-          onClick={handleSaveAll}
-          disabled={isSavingAll}
-          className="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
-        >
-          <span className="material-symbols-outlined">save</span>
-          Guardar Cambios
-        </button>
-        <p className="text-center text-[10px] text-[#8a7560] mt-4 uppercase tracking-widest font-bold">
-          {lastSync ? `Última sincronización: Hoy ${lastSync}` : 'Guardar para sincronizar'}
-        </p>
-      </div>
 
       <div className="px-4 mt-8">
         <button 

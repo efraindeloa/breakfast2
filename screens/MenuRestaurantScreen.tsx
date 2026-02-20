@@ -1684,7 +1684,7 @@ const MenuRestaurantScreen: React.FC = () => {
           </div>
         )}
 
-        {/* Subcategorías 1er Nivel: raíces (ej. Cocteles de Mariscos, Cortes, Aguachiles) */}
+        {/* Subcategorías 1er Nivel: con búsqueda también se muestran (desde resultados) */}
         {selectedCategory && subcategoryRootOptions.length > 0 && (
           <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
             <p className="px-4 pt-3 pb-2 text-xs font-bold tracking-wide text-gray-500 dark:text-gray-400 uppercase shrink-0">

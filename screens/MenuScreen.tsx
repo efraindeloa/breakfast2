@@ -1043,8 +1043,8 @@ const MenuScreen: React.FC = () => {
       {/* Header Section */}
       <TopNavbar title="DONK RESTAURANT" showAvatar={true} />
       <div className="sticky top-[73px] z-40 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
-        {/* Categorías (tiles estilo screenshot) */}
-        {selectedRestaurantId && displayCategories.length > 0 && (
+        {/* Categorías: con búsqueda se muestran las de los resultados */}
+        {(selectedRestaurantId || searchQuery.trim()) && displayCategories.length > 0 && (
           <div className="px-4 pt-4 pb-3">
             <div className="flex items-center justify-between pb-3">
               <p className="text-xs font-bold tracking-wide text-gray-500 dark:text-gray-400 uppercase">
@@ -1089,8 +1089,8 @@ const MenuScreen: React.FC = () => {
             </div>
           </div>
         )}
-        {/* Subcategorías 1er Nivel: raíces (ej. Cocteles de Mariscos, Cortes, Aguachiles) */}
-        {selectedRestaurantId && selectedCategory && subcategoryRootOptions.length > 0 && (
+        {/* Subcategorías 1er Nivel: con búsqueda también se muestran (desde resultados) */}
+        {(selectedRestaurantId || searchQuery.trim()) && selectedCategory && subcategoryRootOptions.length > 0 && (
           <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
             <p className="px-4 pt-3 pb-2 text-xs font-bold tracking-wide text-gray-500 dark:text-gray-400 uppercase shrink-0">
               SELECCIONA SUBCATEGORIA
@@ -1144,8 +1144,8 @@ const MenuScreen: React.FC = () => {
             </div>
           </div>
         )}
-        {/* Subcategorías 2do Nivel: solo hijos de la raíz seleccionada (ej. Camarón, Mixto, Pulpo) */}
-        {selectedRestaurantId && selectedCategory && subcategorySecondLevelOptions.length > 0 && (
+        {/* Subcategorías 2do Nivel: con búsqueda también se muestran */}
+        {(selectedRestaurantId || searchQuery.trim()) && selectedCategory && subcategorySecondLevelOptions.length > 0 && (
           <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
             <p className="px-4 pt-3 pb-2 text-xs font-bold tracking-wide text-gray-500 dark:text-gray-400 uppercase shrink-0">
               SELECCIONA SUBCATEGORIA

@@ -720,6 +720,29 @@ const MenuScreen: React.FC = () => {
   const subcategoriesScrollStoppedRef = useRef(false);
   const scrollAnimationRanOnceRef = useRef(false);
 
+  const menuSectionRef = useRef<HTMLElement>(null);
+  const scrollToMenuSection = () => {
+    setTimeout(() => {
+      menuSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+  };
+
+  // Saber si una categoría tiene subcategorías de 1er nivel (para no hacer scroll hasta ser hoja)
+  const getRootOptionsForCategory = (cat: string): string[] => {
+    const source = searchQuery.trim() ? filteredDishes : dishes;
+    const set = new Set<string>();
+    source.forEach((dish) => {
+      if (dish.category !== cat || !dish.subcategories?.length) return;
+      (dish.subcategories as string[]).forEach((sub: string) => {
+        const s = String(sub).trim();
+        if (!s) return;
+        const root = s.includes('/') ? s.split('/')[0].trim() : s;
+        if (root) set.add(root);
+      });
+    });
+    return Array.from(set);
+  };
+
   // Sugerencias del Chef y Destacados ahora se cargan desde la base de datos
   // Valores por defecto hardcodeados solo se usan si no hay restaurante seleccionado o no hay datos en la BD
   const defaultChefSuggestions: Record<string, number[]> = {
@@ -1039,6 +1062,7 @@ const MenuScreen: React.FC = () => {
                       setSelectedCategory(category);
                       setSelectedSubcategory('');
                       setSelectedOrigin('');
+                      if (getRootOptionsForCategory(category).length === 0) scrollToMenuSection();
                     }}
                     className={`flex h-[86px] w-[86px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border transition-colors ${
                       isSelected
@@ -1088,8 +1112,11 @@ const MenuScreen: React.FC = () => {
                         cancelAnimationFrame(subcategoriesScrollRafRef.current);
                         subcategoriesScrollRafRef.current = 0;
                       }
-                      setSelectedSubcategory(selectedSubcategory === root ? '' : root);
+                      const next = selectedSubcategory === root ? '' : root;
+                      setSelectedSubcategory(next);
                       setSelectedOrigin('');
+                      const hasChildren = next && foodSubcategories.some((s) => s.startsWith(next + '/'));
+                      if (next && !hasChildren) scrollToMenuSection();
                     }}
                     className={`flex min-h-[65px] h-auto min-w-[65px] w-auto max-w-[180px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border transition-colors py-2 px-2 ${
                       isActive
@@ -1140,6 +1167,7 @@ const MenuScreen: React.FC = () => {
                       }
                       setSelectedSubcategory(isActive ? selectedFirstLevel : fullPath);
                       setSelectedOrigin('');
+                      scrollToMenuSection();
                     }}
                     className={`flex min-h-[65px] h-auto min-w-[65px] w-auto max-w-[180px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border transition-colors py-2 px-2 ${
                       isActive
@@ -1303,8 +1331,8 @@ const MenuScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Menu List */}
-      <section className="px-4 pb-4">
+      {/* Menu List - ref para scroll suave al elegir categoría/subcategoría */}
+      <section ref={menuSectionRef} className="px-4 pb-4 scroll-mt-[80px]">
         <div className="flex items-center gap-2 pb-3">
           <span className="material-symbols-outlined text-[#181611] dark:text-white text-xl">restaurant_menu</span>
           <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">{t('navigation.menu')}</h3>

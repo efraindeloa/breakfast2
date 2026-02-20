@@ -323,6 +323,14 @@ const MenuRestaurantScreen: React.FC = () => {
   const subcategoriesScrollRafRef = useRef(0);
   const subcategoriesScrollStoppedRef = useRef(false);
   const scrollAnimationRanOnceRef = useRef(false);
+
+  const menuSectionRef = useRef<HTMLElement>(null);
+  const scrollToMenuSection = () => {
+    setTimeout(() => {
+      menuSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+  };
+
   useEffect(() => {
     const list = mainCategories.length > 0 && !selectedCategory ? mainCategories : null;
     if (list) {
@@ -597,6 +605,22 @@ const MenuRestaurantScreen: React.FC = () => {
     });
     return Array.from(set).sort();
   }, [displaySubcategories, selectedFirstLevel]);
+
+  const getRootOptionsForCategory = (cat: string): string[] => {
+    const source = searchQuery.trim() ? filteredDishes : dishes;
+    const set = new Set<string>();
+    source.forEach((dish) => {
+      if (dish.category !== cat || !dish.subcategories?.length) return;
+      dish.subcategories.forEach((sub: string) => {
+        const s = String(sub).trim();
+        if (!s) return;
+        const n = normalizeSubPath(s);
+        const root = n.includes('/') ? n.split('/')[0].trim() : n;
+        if (root) set.add(root);
+      });
+    });
+    return Array.from(set);
+  };
 
   // Efectos que usan displayCategories/displaySubcategories (definidos después de filteredDishes)
   useEffect(() => {
@@ -1632,6 +1656,7 @@ const MenuRestaurantScreen: React.FC = () => {
                         setSelectedOrigin('');
                         setSelectedTag('');
                       }
+                      if (getRootOptionsForCategory(cat).length === 0) scrollToMenuSection();
                     }}
                     className={`flex h-[86px] w-[86px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border transition-colors ${
                       isSelected
@@ -1688,6 +1713,8 @@ const MenuRestaurantScreen: React.FC = () => {
                       else localStorage.removeItem(STORAGE_KEY_SUBCATEGORY);
                       setSelectedOrigin('');
                       setSelectedTag('');
+                      const hasChildren = next && displaySubcategories.some((s) => normalizeSubPath(s).startsWith(next + '/'));
+                      if (next && !hasChildren) scrollToMenuSection();
                     }}
                     className={`flex min-h-[65px] h-auto min-w-[65px] w-auto max-w-[180px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border transition-colors py-2 px-2 ${
                       isActive
@@ -1742,6 +1769,7 @@ const MenuRestaurantScreen: React.FC = () => {
                       else localStorage.removeItem(STORAGE_KEY_SUBCATEGORY);
                       setSelectedOrigin('');
                       setSelectedTag('');
+                      scrollToMenuSection();
                     }}
                     className={`flex min-h-[65px] h-auto min-w-[65px] w-auto max-w-[180px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border transition-colors py-2 px-2 ${
                       isActive
@@ -1958,8 +1986,8 @@ const MenuRestaurantScreen: React.FC = () => {
         </section>
       )}
 
-      {/* Menú (editable) - Siempre mostrar, pero con contenido diferente según búsqueda */}
-      <section className="px-4 pb-4">
+      {/* Menú (editable) - ref para scroll suave al elegir categoría/subcategoría */}
+      <section ref={menuSectionRef} className="px-4 pb-4 scroll-mt-[80px]">
         <div className="flex items-center gap-2 pb-3">
           <span className="material-symbols-outlined text-[#181611] dark:text-white text-xl">restaurant_menu</span>
           <h3 className="text-[#181611] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">

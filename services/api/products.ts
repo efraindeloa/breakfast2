@@ -20,6 +20,7 @@ export interface CreateProductRequest {
   complements?: ProductComplement[];
   allow_custom_complements?: boolean;
   allow_special_instructions?: boolean;
+  notice?: string | null;
 }
 
 export interface UpdateProductRequest {
@@ -33,6 +34,7 @@ export interface UpdateProductRequest {
   complements?: ProductComplement[];
   allow_custom_complements?: boolean;
   allow_special_instructions?: boolean;
+  notice?: string | null;
 }
 
 /**
@@ -123,6 +125,7 @@ export async function createProduct(
       category: product.category,
       badges: product.badges || [],
       subcategories: product.subcategories || [],
+      notice: product.notice?.trim() || null,
       // complements, allow_custom_complements y allow_special_instructions removidos - columnas no existen en la BD
       is_active: true,
     };
@@ -182,6 +185,9 @@ export async function updateProduct(
     }
     if (updates.subcategories !== undefined) {
       updateData.subcategories = updates.subcategories || [];
+    }
+    if (updates.notice !== undefined) {
+      updateData.notice = updates.notice?.trim() || null;
     }
     // complements, allow_custom_complements y allow_special_instructions removidos - columnas no existen en la BD
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -400,6 +400,64 @@ const DishDetailScreen: React.FC = () => {
   useEffect(() => {
     setCurrentImageIndex(0);
   }, [id, productImages.length]);
+
+  // Estado para zoom con dedos en la imagen fullscreen
+  const [imageZoom, setImageZoom] = useState({ scale: 1, x: 0, y: 0 });
+  const pinchStartRef = useRef<{ distance: number; scale: number; centerX: number; centerY: number } | null>(null);
+  const panStartRef = useRef<{ x: number; y: number } | null>(null);
+  const fullscreenContainerRef = useRef<HTMLDivElement>(null);
+
+  const resetImageZoom = useCallback(() => {
+    setImageZoom({ scale: 1, x: 0, y: 0 });
+  }, []);
+
+  // Reiniciar zoom al abrir/cerrar fullscreen o al cambiar de imagen
+  useEffect(() => {
+    if (showFullscreenImage) resetImageZoom();
+  }, [showFullscreenImage, currentImageIndex, resetImageZoom]);
+
+  const getTouchDistance = (t1: Touch, t2: Touch) =>
+    Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+  const getTouchCenter = (t1: Touch, t2: Touch) => ({
+    x: (t1.clientX + t2.clientX) / 2,
+    y: (t1.clientY + t2.clientY) / 2,
+  });
+
+  const handleFullscreenTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const distance = getTouchDistance(e.touches[0], e.touches[1]);
+      const center = getTouchCenter(e.touches[0], e.touches[1]);
+      pinchStartRef.current = {
+        distance,
+        scale: imageZoom.scale,
+        centerX: center.x,
+        centerY: center.y,
+      };
+      panStartRef.current = null;
+    } else if (e.touches.length === 1 && imageZoom.scale > 1) {
+      panStartRef.current = { x: e.touches[0].clientX - imageZoom.x, y: e.touches[0].clientY - imageZoom.y };
+      pinchStartRef.current = null;
+    }
+  }, [imageZoom.scale, imageZoom.x, imageZoom.y]);
+
+  const handleFullscreenTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchStartRef.current) {
+      e.preventDefault();
+      const distance = getTouchDistance(e.touches[0], e.touches[1]);
+      const scale = Math.min(4, Math.max(0.5, (pinchStartRef.current.scale * distance) / pinchStartRef.current.distance));
+      setImageZoom((prev) => ({ ...prev, scale }));
+    } else if (e.touches.length === 1 && panStartRef.current) {
+      const newX = e.touches[0].clientX - panStartRef.current.x;
+      const newY = e.touches[0].clientY - panStartRef.current.y;
+      setImageZoom((prev) => ({ ...prev, x: newX, y: newY }));
+    }
+  }, []);
+
+  const handleFullscreenTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length < 2) pinchStartRef.current = null;
+    if (e.touches.length < 1) panStartRef.current = null;
+  }, []);
   
   // Usar producto de Supabase si existe, sino usar el hardcodeado
   const dish = productFromDB ? {
@@ -983,7 +1041,7 @@ const DishDetailScreen: React.FC = () => {
             </div>
           </div>
 
-          {/* Aviso de Alérgenos */}
+          {/* Aviso de Alérgenos / Nota por producto */}
           {(dish.badges?.includes('vegano') || dish.badges?.includes('vegetariano')) ? (
             <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 flex gap-3 mb-6">
               <span className="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>
@@ -995,7 +1053,8 @@ const DishDetailScreen: React.FC = () => {
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex gap-3 mb-6">
               <span className="material-symbols-outlined text-amber-600 dark:text-amber-400">info</span>
               <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-                <span className="font-bold">{t('dishDetail.allergenWarning')}:</span> {t('dishDetail.allergenMessage')}
+                <span className="font-bold">{t('dishDetail.noticeLabel')}:</span>{' '}
+                {productFromDB?.notice?.trim() || t('dishDetail.defaultNoticeMessage')}
               </p>
             </div>
           )}
@@ -1039,14 +1098,26 @@ const DishDetailScreen: React.FC = () => {
           className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center"
           onClick={() => setShowFullscreenImage(false)}
         >
-          {/* Botón cerrar */}
-          <button
-            onClick={() => setShowFullscreenImage(false)}
-            className="absolute top-4 right-4 z-30 w-12 h-12 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-            aria-label="Cerrar"
-          >
-            <span className="material-symbols-outlined text-2xl">close</span>
-          </button>
+          {/* Botón cerrar y restablecer zoom */}
+          <div className="absolute top-4 right-4 z-30 flex items-center gap-2">
+            {imageZoom.scale !== 1 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); resetImageZoom(); }}
+                className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+                aria-label="Restablecer zoom"
+                title="Restablecer zoom"
+              >
+                <span className="material-symbols-outlined text-2xl">fit_screen</span>
+              </button>
+            )}
+            <button
+              onClick={() => setShowFullscreenImage(false)}
+              className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+              aria-label="Cerrar"
+            >
+              <span className="material-symbols-outlined text-2xl">close</span>
+            </button>
+          </div>
 
           {/* Contenedor de imagen con navegación */}
           <div 
@@ -1067,14 +1138,31 @@ const DishDetailScreen: React.FC = () => {
               </button>
             )}
 
-            {/* Imagen en pantalla completa */}
-            <div className="w-full h-full flex items-center justify-center">
-              <img
-                src={productImages[currentImageIndex]}
-                alt={`${dish?.name || 'Producto'} - Imagen ${currentImageIndex + 1}`}
-                className="max-w-full max-h-full object-contain"
-                onClick={(e) => e.stopPropagation()}
-              />
+            {/* Imagen en pantalla completa con zoom con dedos */}
+            <div
+              ref={fullscreenContainerRef}
+              className="w-full h-full flex items-center justify-center overflow-hidden touch-none"
+              onClick={(e) => e.stopPropagation()}
+              onTouchStart={handleFullscreenTouchStart}
+              onTouchMove={handleFullscreenTouchMove}
+              onTouchEnd={handleFullscreenTouchEnd}
+              style={{ touchAction: 'none' }}
+            >
+              <div
+                className="flex items-center justify-center"
+                style={{
+                  transform: `translate(${imageZoom.x}px, ${imageZoom.y}px) scale(${imageZoom.scale})`,
+                }}
+              >
+                <img
+                  src={productImages[currentImageIndex]}
+                  alt={`${dish?.name || 'Producto'} - Imagen ${currentImageIndex + 1}`}
+                  className="max-w-full max-h-full object-contain select-none"
+                  style={{ maxHeight: '100vh', maxWidth: '100vw' }}
+                  draggable={false}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
             </div>
 
             {/* Botón siguiente */}

@@ -152,6 +152,7 @@ export interface Product {
   complements?: ProductComplement[]; // Array de complementos disponibles
   allow_custom_complements?: boolean; // Permitir complementos personalizados
   allow_special_instructions?: boolean; // Permitir instrucciones especiales
+  notice?: string | null; // Aviso opcional por producto
   created_at: string;
   updated_at: string;
 }
@@ -2284,6 +2285,7 @@ export const createProduct = async (product: {
   complements?: ProductComplement[];
   allow_custom_complements?: boolean;
   allow_special_instructions?: boolean;
+  notice?: string | null;
 }): Promise<Product | null> => {
   if (!isSupabaseConfigured()) {
     console.error('Supabase no está configurado. No se puede crear el producto.');
@@ -2312,6 +2314,7 @@ export const createProduct = async (product: {
       category: product.category,
       subcategories: Array.isArray(product.subcategories) ? product.subcategories : [],
       is_active: product.is_active !== undefined ? product.is_active : true,
+      notice: product.notice?.trim() || null,
       // complements, allow_custom_complements y allow_special_instructions removidos - columnas no existen en la BD
     };
 
@@ -2370,6 +2373,7 @@ export const updateProduct = async (
     complements?: ProductComplement[];
     allow_custom_complements?: boolean;
     allow_special_instructions?: boolean;
+    notice?: string | null;
   }
 ): Promise<Product | null> => {
   if (!isSupabaseConfigured()) {
@@ -2441,6 +2445,7 @@ export const updateProduct = async (
     }
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.price !== undefined) updateData.price = updates.price.toString();
+    if (updates.notice !== undefined) updateData.notice = updates.notice?.trim() || null;
     
     // Procesar imágenes: usar solo image_urls
     if (updates.image_urls !== undefined) {

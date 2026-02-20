@@ -51,6 +51,7 @@ type Dish = {
   badges?: string[];
   category: string;
   subcategories?: string[]; // Array de subcategorías
+  notice?: string | null; // Aviso opcional por producto
 };
 
 type PicksByCategory = Record<string, number[]>;
@@ -104,6 +105,7 @@ const MenuRestaurantScreen: React.FC = () => {
         badges: p.badges || [],
         category: p.category,
         subcategories: p.subcategories || [],
+        notice: p.notice ?? undefined,
       };
     });
     // Los productos vienen del contexto (Supabase), no hay productos locales
@@ -178,6 +180,7 @@ const MenuRestaurantScreen: React.FC = () => {
   const [editingProductName, setEditingProductName] = useState('');
   const [editingProductPrice, setEditingProductPrice] = useState('');
   const [editingProductDescription, setEditingProductDescription] = useState('');
+  const [editingProductNotice, setEditingProductNotice] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingPrice, setIsEditingPrice] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -759,6 +762,7 @@ const MenuRestaurantScreen: React.FC = () => {
     setEditingProductName(product?.name || '');
     setEditingProductPrice(product?.price ? product.price.toString() : '0');
     setEditingProductDescription(product?.description || '');
+    setEditingProductNotice(product?.notice ?? '');
     
     // Cargar todas las imágenes del producto
     if (product?.id) {
@@ -894,6 +898,7 @@ const MenuRestaurantScreen: React.FC = () => {
     setEditingProductName('');
     setEditingProductPrice('');
     setEditingProductDescription('');
+    setEditingProductNotice('');
     setProductImages([]);
     setProductImageFiles([]);
     setIsEditingName(false);
@@ -1348,6 +1353,7 @@ const MenuRestaurantScreen: React.FC = () => {
           complements: complements, // Siempre enviar el array, incluso si está vacío
           allow_custom_complements: allowCustomComplements,
           allow_special_instructions: allowSpecialInstructions,
+          notice: editingProductNotice.trim() || null,
         });
 
         if (updateResult.success && updateResult.data) {
@@ -1393,6 +1399,7 @@ const MenuRestaurantScreen: React.FC = () => {
           complements: complements, // Siempre enviar el array, incluso si está vacío
           allow_custom_complements: allowCustomComplements,
           allow_special_instructions: allowSpecialInstructions,
+          notice: editingProductNotice.trim() || null,
         });
 
         if (createResult.success && createResult.data) {
@@ -2472,6 +2479,22 @@ const MenuRestaurantScreen: React.FC = () => {
                   {editingProductDescription || t('restaurant.menu.productDescription')}
                 </p>
               )}
+
+              {/* Aviso / nota por producto */}
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-[#181611] dark:text-white mb-3 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-amber-600 dark:text-amber-400">info</span>
+                  {t('restaurant.menu.notice') || 'Aviso'}
+                  <span className="text-sm font-normal text-gray-500 dark:text-gray-400">(Opcional)</span>
+                </h3>
+                <textarea
+                  value={editingProductNotice}
+                  onChange={(e) => setEditingProductNotice(e.target.value)}
+                  placeholder={t('restaurant.menu.noticePlaceholder') || 'Ej: Contiene lácteos. Servir sin gluten bajo petición.'}
+                  className="w-full text-sm text-gray-600 dark:text-gray-300 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+                  rows={2}
+                />
+              </div>
 
               {/* Opciones adicionales */}
               <div className="space-y-6 mb-6">

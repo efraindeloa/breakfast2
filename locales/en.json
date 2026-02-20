@@ -778,8 +778,8 @@
     "specialInstructionsPlaceholder": "E.g. No onion, sauce on the side, well done...",
     "noAnimalProducts": "No animal products.",
     "suitableForVegans": "This dish is suitable for vegetarian and vegan diets.",
-    "allergenWarning": "Allergen warning",
-    "allergenMessage": "This dish may contain dairy, gluten or other allergens. Please let us know if you have any specific food allergies.",
+    "noticeLabel": "Notice",
+    "defaultNoticeMessage": "Important information about this dish. Ask staff if you have any questions.",
     "add": "Add",
     "added": "Added!",
     "selectSize": "Select size",
@@ -1307,7 +1307,29 @@
       "loadingReservations": "Loading reservations...",
       "errorLoading": "Error loading reservations",
       "retry": "Retry",
-      "tablePreferencesPlaceholder": "E.g.: Table by the window, quiet area..."
+      "tablePreferencesPlaceholder": "E.g. Near the window, quiet area, high chair for baby...",
+      "details": "Reservation Details",
+      "welcomeTitle": "Make a reservation",
+      "welcomeMessage": "Please complete the questions that will appear",
+      "selectDate": "Select Date",
+      "arrivalTime": "What time will you arrive?",
+      "numberOfPeople": "How many people?",
+      "selectZone": "Select Zone",
+      "advanceOrderDescription": "Save time when you arrive. Select your favorite dishes now.",
+      "viewFullMenu": "View full menu",
+      "totalReservation": "Total Reservation",
+      "guests": "Guests",
+      "zones": {
+        "interior": "Interior",
+        "terraza": "Terrace",
+        "jardin": "Garden"
+      },
+      "occasions": {
+        "birthday": "Birthday",
+        "anniversary": "Anniversary",
+        "business": "Business",
+        "date": "Date"
+      }
     },
     "menu": {
       "chefSuggestions": "Chef Suggestions",
@@ -1324,6 +1346,8 @@
       "addCocktail": "Add Cocktail",
       "newProduct": "New product",
       "productDescription": "Product description",
+      "notice": "Notice",
+      "noticePlaceholder": "E.g. Contains dairy. Gluten-free on request.",
       "tag": "Tag",
       "complementName": "Complement name",
       "noCost": "No cost",
@@ -1392,34 +1416,6 @@
         "friday": "Friday",
         "saturday": "Saturday",
         "sunday": "Sunday"
-      }
-    },
-    "reservations": {
-      "details": "Reservation Details",
-      "welcomeTitle": "Make a reservation",
-      "welcomeMessage": "Please complete the questions that will appear",
-      "selectDate": "Select Date",
-      "arrivalTime": "What time will you arrive?",
-      "numberOfPeople": "How many people?",
-      "selectZone": "Select Zone",
-      "specialOccasion": "Is it a special occasion?",
-      "tablePreferences": "Table Preferences",
-      "tablePreferencesPlaceholder": "E.g. Near the window, quiet area, high chair for baby...",
-      "advanceOrder": "Advance Order",
-      "advanceOrderDescription": "Save time when you arrive. Select your favorite dishes now.",
-      "viewFullMenu": "View full menu",
-      "totalReservation": "Total Reservation",
-      "guests": "Guests",
-      "zones": {
-        "interior": "Interior",
-        "terraza": "Terrace",
-        "jardin": "Garden"
-      },
-      "occasions": {
-        "birthday": "Birthday",
-        "anniversary": "Anniversary",
-        "business": "Business",
-        "date": "Date"
       }
     },
     "promotions": {

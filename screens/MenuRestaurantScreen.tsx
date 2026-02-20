@@ -1689,21 +1689,21 @@ const MenuRestaurantScreen: React.FC = () => {
                       setSelectedOrigin('');
                       setSelectedTag('');
                     }}
-                    className={`flex h-[65px] w-[65px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border transition-colors ${
+                    className={`flex min-h-[65px] h-auto min-w-[65px] w-auto max-w-[180px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border transition-colors py-2 px-2 ${
                       isActive
                         ? 'bg-primary border-primary shadow-md shadow-primary/20'
                         : 'bg-white dark:bg-[#322a1a] border-[#f4f3f0] dark:border-[#3d3321]'
                     }`}
                   >
                     <span
-                      className={`material-symbols-outlined text-[21px] leading-none ${
+                      className={`material-symbols-outlined text-[21px] leading-none shrink-0 ${
                         isActive ? 'text-white' : 'text-primary'
                       }`}
                       aria-hidden
                     >
                       {getCategoryTileIcon(selectedCategory)}
                     </span>
-                    <p className={`text-[10px] leading-tight text-center px-0.5 line-clamp-2 ${
+                    <p className={`text-[10px] leading-tight text-center px-0.5 whitespace-normal ${
                       isActive ? 'font-bold text-white' : 'font-semibold text-[#181611] dark:text-stone-300'
                     }`}>
                       {root}
@@ -1743,21 +1743,21 @@ const MenuRestaurantScreen: React.FC = () => {
                       setSelectedOrigin('');
                       setSelectedTag('');
                     }}
-                    className={`flex h-[65px] w-[65px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border transition-colors ${
+                    className={`flex min-h-[65px] h-auto min-w-[65px] w-auto max-w-[180px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border transition-colors py-2 px-2 ${
                       isActive
                         ? 'bg-primary border-primary shadow-md shadow-primary/20'
                         : 'bg-white dark:bg-[#322a1a] border-[#f4f3f0] dark:border-[#3d3321]'
                     }`}
                   >
                     <span
-                      className={`material-symbols-outlined text-[21px] leading-none ${
+                      className={`material-symbols-outlined text-[21px] leading-none shrink-0 ${
                         isActive ? 'text-white' : 'text-primary'
                       }`}
                       aria-hidden
                     >
                       {getCategoryTileIcon(selectedCategory)}
                     </span>
-                    <p className={`text-[10px] leading-tight text-center px-0.5 line-clamp-2 ${
+                    <p className={`text-[10px] leading-tight text-center px-0.5 whitespace-normal ${
                       isActive ? 'font-bold text-white' : 'font-semibold text-[#181611] dark:text-stone-300'
                     }`}>
                       {label}
